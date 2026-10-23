@@ -1,0 +1,8 @@
+# Project-scoped Codex config. Loaded only because this repo is marked trusted in
+# ~/.codex/config.toml. "YOLO" mode: no approval prompts, no sandbox — the same as
+# running `codex --dangerously-bypass-approvals-and-sandbox`.
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
+
+[features]
+hooks = true
