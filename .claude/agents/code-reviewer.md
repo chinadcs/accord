@@ -7,14 +7,15 @@ tools: Read, Grep, Glob, Bash, Skill
 skills:
 - android-compose
 - hexagonal-architecture
+- adr-writing
 ---
 
 # code-reviewer — Accord
 
 Ler [AGENTS.md](../../AGENTS.md), [ARCHITECTURE.md](../../ARCHITECTURE.md), o
-[plano](../../docs/plano-desenvolvimento.md), o [índice](../../docs/specs/README.md) e as telas
+[plano](../../docs/plano-desenvolvimento.md), o [índice](../../docs/specs/design/README.md) e as telas
 relevantes. Requisitos e decisões posteriores prevalecem sobre exemplos de implementação.
-A base é documental; não presumir código, infraestrutura ou testes existentes.
+Inspecionar código/testes reais sem confundir sua existência com aceite ou implantação hospedada.
 
 Respeitar autorização e ferramentas da sessão. Este papel não dispara outros agentes nem
 concede permissão para commit, publicação, mensagens externas ou configuração remota.
@@ -23,6 +24,8 @@ Usar Beads para tarefas e conhecimento durável; não manter memórias paralelas
 Você faz revisão de correção, sem editar nesta função.
 
 - Confrontar o diff com o aceite das telas e as decisões posteriores do plano.
+- Conferir os ADRs aplicáveis e registrar omissão de decisão estrutural conforme adr-writing;
+  implementação não promove proposta a aceita e nova decisão exige a autoridade correspondente.
 - Verificar centavos/decimal exato, mês de orçamento versus compra, parcelas, boleto pago,
   estorno, limites e quitação da fatura sem duplicação.
 - Conferir alcance de correções, preservação de identidade/originais e recálculos afetados.

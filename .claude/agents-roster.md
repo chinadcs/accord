@@ -1,10 +1,11 @@
 # Catálogo de agentes — Accord
 
-Revisão: 23/10/2026. [AGENTS.md](../AGENTS.md) define regras de trabalho;
-[ARCHITECTURE.md](../ARCHITECTURE.md) descreve a arquitetura planejada. Fontes de produto:
-[plano](../docs/plano-desenvolvimento.md), [índice](../docs/specs/README.md) e tela afetada.
-Decisões posteriores do plano §§14 e 16 prevalecem. A base ainda é documental; não há
-aplicativo, esquema, protocolo ou testes de produto implementados.
+Revisão: 24/10/2026. [AGENTS.md](../AGENTS.md) define regras de trabalho;
+[ARCHITECTURE.md](../ARCHITECTURE.md) resume o estado atual. Fontes de produto:
+[plano](../docs/plano-desenvolvimento.md), [índice](../docs/specs/design/README.md) e tela afetada.
+Decisões posteriores do plano §§14 e 16 prevalecem; [ADRs](../docs/adr/README.md) preservam
+motivos e autoridade. Há código/testes de S1 e partes de S2; implementação não aprova proposta
+nem comprova implantação hospedada ou medição nos aparelhos.
 
 Este catálogo organiza responsabilidades. Não autoriza disparar agentes: delegação depende
 das instruções ativas da sessão e do usuário. Quando não for autorizada/disponível, a conversa
@@ -28,6 +29,7 @@ risco e ao escopo, sem exigir todos os papéis em toda mudança.
 | [docs-auditor](agents/docs-auditor.md) | Conferir fontes e instruções sem editar | Alteração documental, renome ou alegação de implementação |
 | [dependency-bumper](agents/dependency-bumper.md) | Avaliar versão, compatibilidade e custo | Atualização/dependência necessária ao escopo |
 | [tech-writer](agents/tech-writer.md) | Escrever documentação/handoff preciso | Texto solicitado com evidência e referências |
+| [adr-writer](agents/adr-writer.md) | Redigir/revisar decisões estruturais com fontes e autoridade | Nova escolha, recuperação histórica ou substituição de ADR |
 | [session-learnings-curator](agents/session-learnings-curator.md) | Persistir aprendizado e corrigir drift da sessão | Encerramento com conhecimento durável |
 
 `frontend-android` substitui o papel herdado `frontend-next`. Não há camada web no produto
@@ -58,6 +60,7 @@ nem cópias independentes do corpo. Resolver links relativos a partir da fonte c
 | Skill | Assunto | Papéis que a carregam |
 | --- | --- | --- |
 | [beads](skills/beads/SKILL.md) | Tracker e conhecimento persistente | coordinator, product-manager |
+| [adr-writing](skills/adr-writing/SKILL.md) | Método de registro, revisão e substituição de ADRs | adr-writer, architect, tech-writer, code-reviewer, docs-auditor, session-learnings-curator |
 | [ooda-loop](skills/ooda-loop/SKILL.md) | Coordenação por evidência | coordinator |
 | [discovery-techniques](skills/discovery-techniques/SKILL.md) | Valor, decisões e fatias verificáveis | product-manager |
 | [domain-driven-design](skills/domain-driven-design/SKILL.md) | Conceitos e invariantes financeiros | architect |
@@ -104,7 +107,12 @@ trabalho dessa natureza solicitado; fonte nativa, Lucide, catálogo local e spec
 - Estas pastas existem na árvore atual e não estão ignoradas pelo `.gitignore` atual.
   Parte das fontes já era não rastreada; não presumir instalação privada ou arquivos commitados.
 
-Usar `bd` para tarefas e `bd remember` para conhecimento durável, sem memória privada de
+Decisões estruturais seguem o guia de ADRs; architect fornece justificativa, escritores registram,
+revisores conferem aderência e curador verifica o registro no encerramento. ADR não é aprovação
+por outro agente. O papel pode ser aplicado na conversa principal; descoberta nova exige recarga
+conforme o runtime, sem presumir que esta sessão já conheça `adr-writer` como subagente.
+
+Usar `bd` para tarefas e `bd remember` para conhecimento durável com referências, sem memória privada de
 runtime, `MEMORY.md` ou tracker Markdown. Perfil conservador/local: relatar aceite, checks,
 pendências e git status; commit, publicação, mensagens externas e operações remotas exigem
 pedido explícito. Autorizações já dadas continuam válidas, sem pedir a mesma permissão novamente.
