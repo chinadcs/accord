@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Accord</string>
+
+    <!-- Raízes de navegação -->
+    <string name="tab_chat">Chat</string>
+    <string name="tab_budget">Orçamento</string>
+    <string name="tab_entries">Lançamentos</string>
+    <string name="tab_review">Revisar</string>
+    <string name="tab_more">Mais</string>
+
+    <!-- Conteúdo provisório das raízes que S1 não implementa -->
+    <string name="chat_title">Chat</string>
+    <string name="chat_placeholder">O Chat chega em uma próxima etapa. Enquanto isso, registre pelo formulário.</string>
+    <string name="review_title">Revisar</string>
+    <string name="review_placeholder">A revisão e a importação chegam em uma próxima etapa.</string>
+    <string name="action_register_manually">Registrar manualmente</string>
+
+    <!-- Estados comuns -->
+    <string name="state_loading">Carregando…</string>
+    <string name="state_error">Não foi possível ler os dados deste aparelho.</string>
+    <string name="action_retry">Tentar de novo</string>
+    <string name="action_back">Voltar</string>
+    <string name="saved_on_device">Salvo no aparelho</string>
+
+    <!-- Orçamento (tela 05) -->
+    <string name="budget_criteria">Cartão pelo mês de vencimento da fatura, Pix pela movimentação e boleto pelo vencimento até ser pago.</string>
+    <string name="month_previous">Mês anterior</string>
+    <string name="month_next">Próximo mês</string>
+    <string name="summary_committed">Comprometido</string>
+    <string name="summary_limits">Limites</string>
+    <string name="summary_no_limits">Nenhum limite definido</string>
+    <string name="summary_paid">Já pago</string>
+    <string name="summary_paid_note">parte do comprometido</string>
+    <string name="summary_credits">Créditos de estorno</string>
+    <plurals name="links_to_confirm">
+        <item quantity="one">%d vínculo de fatura a conferir</item>
+        <item quantity="other">%d vínculos de fatura a conferir</item>
+    </plurals>
+    <string name="links_to_confirm_note">Esses valores estão no mês estimado, de forma provisória.</string>
+    <string name="income_received">Renda recebida</string>
+    <string name="income_to_receive">A receber</string>
+    <string name="to_classify_title">A classificar</string>
+    <plurals name="to_classify_detail">
+        <item quantity="one">%1$s · %2$d lançamento · sem limite</item>
+        <item quantity="other">%1$s · %2$d lançamentos · sem limite</item>
+    </plurals>
+    <string name="to_classify_action">Classificar</string>
+    <string name="categories_title">Categorias</string>
+    <string name="category_limit_undefined">Limite não definido</string>
+    <string name="category_of_limit">%1$s / %2$s</string>
+    <string name="category_remaining">Faltam %s</string>
+    <string name="category_excess">Passou %s</string>
+    <string name="category_credits_breakdown">Despesas %1$s · Créditos %2$s · Líquido %3$s</string>
+    <string name="category_net_credit">Crédito líquido de %s</string>
+    <string name="category_open">Abrir %s</string>
+    <string name="bar_within">Dentro do limite</string>
+    <string name="bar_attention">Atenção: perto do limite</string>
+    <string name="bar_excess">Limite excedido</string>
+    <string name="bar_none">Sem limite</string>
+    <string name="empty_month_title">Sem lançamentos neste mês</string>
+    <string name="empty_month_body">Quando houver registros, o orçamento aparece aqui.</string>
+    <string name="failed_last_view">Mostrando a última leitura de %s.</string>
+
+    <!-- Categoria no mês (tela 06) -->
+    <string name="category_committed_of_limit">%1$s comprometidos / %2$s de limite</string>
+    <string name="category_committed_no_limit">%s comprometidos · limite não definido</string>
+    <string name="category_remaining_paid">%1$s restantes · %2$s já pagos</string>
+    <string name="category_excess_paid">Passou %1$s do limite · %2$s já pagos</string>
+    <string name="category_paid_only">%s já pagos</string>
+    <string name="sub_none">Sem subcategoria</string>
+    <string name="sub_spent">gasto %s</string>
+    <string name="sub_part">parte do limite %s</string>
+    <string name="sub_remaining">restante %s</string>
+    <string name="sub_over">passou %s</string>
+    <string name="sub_no_split">sem divisão definida</string>
+    <string name="split_summary">Distribuído: %1$s · sem distribuir: %2$s</string>
+    <string name="remaining_after_spending">Restante da categoria após gastos: %s</string>
+    <string name="action_check_entries">Conferir lançamentos</string>
+    <string name="empty_category">Sem registros nesta categoria neste mês.</string>
+</resources>

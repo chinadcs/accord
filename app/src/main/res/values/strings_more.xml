@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Mais (tela 22) -->
+    <string name="more_title">Mais</string>
+    <string name="more_group_budget">Orçamento</string>
+    <string name="more_group_space">Espaço</string>
+    <string name="more_group_device">Neste aparelho</string>
+    <string name="more_categories">Categorias e subcategorias</string>
+    <string name="more_limits">Limites do orçamento</string>
+    <string name="more_card">Cartão e faturas</string>
+    <string name="more_incomes">Rendas</string>
+    <string name="more_commitments">Compromissos futuros</string>
+    <string name="more_accounts">Contas</string>
+    <string name="more_theme">Tema</string>
+    <string name="more_theme_system">Seguir o sistema</string>
+    <string name="more_theme_light">Claro</string>
+    <string name="more_theme_dark">Escuro</string>
+    <string name="more_theme_note">Vale só neste aparelho e não muda nenhum lançamento.</string>
+
+    <!-- Contas -->
+    <string name="accounts_title">Contas</string>
+    <string name="accounts_note">As contas são do casal. “Minha conta padrão” é só sua e preenche os registros novos; você sempre pode trocar na hora. Não pedimos agência, número, senha nem saldo.</string>
+    <string name="accounts_empty">Nenhuma conta cadastrada ainda.</string>
+    <string name="accounts_add">Adicionar conta</string>
+    <string name="accounts_add_title">Nova conta</string>
+    <string name="accounts_edit_title">Corrigir cadastro da conta</string>
+    <string name="accounts_edit">Editar conta</string>
+    <string name="accounts_set_default">Definir como minha conta padrão</string>
+    <string name="accounts_my_default">Minha conta padrão</string>
+    <string name="accounts_nickname">Apelido da conta</string>
+    <string name="accounts_nickname_required">Informe um apelido para a conta.</string>
+    <string name="accounts_bank_required">Escolha o banco ou use “Outro banco”.</string>
+    <string name="accounts_save">Salvar conta</string>
+    <string name="feedback_account_added">Conta adicionada.</string>
+    <string name="feedback_account_saved">Conta atualizada.</string>
+    <string name="feedback_default_account">Esta é a sua conta padrão.</string>
+</resources>

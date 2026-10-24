@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Lançamentos (tela 07) -->
+    <string name="entries_title">Lançamentos</string>
+    <string name="entries_new">Novo</string>
+    <string name="entries_search_label">Buscar descrição ou estabelecimento</string>
+    <string name="entries_search_clear">Limpar busca</string>
+    <string name="entries_filters">Filtros</string>
+    <string name="entries_filters_count">Filtros (%d)</string>
+    <string name="entries_criterion_budget">Critério: mês do orçamento</string>
+    <string name="entries_criterion_purchase">Critério: data da compra</string>
+    <string name="entries_criterion_change">Alterar</string>
+    <string name="entries_criterion_budget_hint">Mostra as parcelas que vencem no período.</string>
+    <string name="entries_criterion_purchase_hint">Mostra cada compra uma vez, pelo total.</string>
+    <string name="entries_period">%1$s a %2$s</string>
+    <string name="entries_clear_filters">Limpar filtros</string>
+    <string name="entries_empty_title">Nenhum lançamento por aqui</string>
+    <string name="entries_empty_body">Quando houver registros, eles aparecem nesta lista.</string>
+    <string name="entries_empty_filtered_title">Nenhum lançamento com esses filtros</string>
+    <string name="entries_loading_more">Carregando mais lançamentos…</string>
+    <string name="entries_error">Não foi possível buscar os lançamentos deste aparelho.</string>
+    <string name="entries_error_keep">Mostrando o resultado anterior.</string>
+    <string name="entries_row_open">Abrir %s</string>
+    <plurals name="entries_total">
+        <item quantity="one">%d lançamento</item>
+        <item quantity="other">%d lançamentos</item>
+    </plurals>
+    <string name="summary_expenses">Despesas</string>
+    <string name="summary_incomes">Rendas</string>
+    <string name="summary_credits_list">Créditos de estorno</string>
+    <string name="summary_invoice_payments">Quitações de fatura</string>
+    <string name="summary_note">Cada tipo é somado à parte; não formam um saldo.</string>
+
+    <!-- Painel de filtros -->
+    <string name="filter_title">Filtros</string>
+    <string name="filter_period">Período</string>
+    <string name="filter_from">De</string>
+    <string name="filter_to">Até</string>
+    <string name="filter_category">Categoria</string>
+    <string name="filter_category_all">Todas as categorias</string>
+    <string name="filter_method">Forma de pagamento</string>
+    <string name="filter_situation">Situação</string>
+    <string name="filter_apply">Aplicar</string>
+    <string name="filter_cancel">Cancelar</string>
+
+    <!-- Formas de pagamento e situações -->
+    <string name="method_pix">Pix</string>
+    <string name="method_debit">Débito</string>
+    <string name="method_cash">Dinheiro</string>
+    <string name="method_card">Cartão</string>
+    <string name="method_boleto">Boleto</string>
+    <string name="situation_to_classify">A classificar</string>
+    <string name="situation_link_to_confirm">A conferir</string>
+    <string name="situation_overdue">Vencido</string>
+    <string name="situation_paid">Pago</string>
+    <string name="situation_not_paid">Não pago</string>
+    <string name="situation_cancel_requested">Cancelamento solicitado</string>
+    <string name="situation_cancelled">Cancelada</string>
+    <string name="situation_divergent_payment">Pagamento divergente</string>
+
+    <!-- Tipos de lançamento -->
+    <string name="kind_direct">Pagamento</string>
+    <string name="kind_card_purchase">Compra no cartão</string>
+    <string name="kind_card_installment">Parcela</string>
+    <string name="kind_boleto">Boleto</string>
+    <string name="kind_income">Renda</string>
+    <string name="kind_refund">Estorno</string>
+    <string name="kind_invoice_payment">Quitação de fatura</string>
+    <string name="kind_occurrence">Recorrente</string>
+
+    <!-- Detalhe do lançamento (tela 08) -->
+    <string name="detail_title">Detalhe do lançamento</string>
+    <string name="detail_not_found_title">Lançamento não encontrado</string>
+    <string name="detail_not_found_body">Ele pode ter sido excluído. Volte à lista para conferir.</string>
+    <string name="detail_total_and_installments">Compra em %1$s · %2$dx de %3$s</string>
+    <string name="detail_purchase_total">Total da compra: %s</string>
+    <string name="detail_purchase_on">Compra em %s</string>
+    <string name="detail_installment_here">Parcela neste mês: %1$d/%2$d · %3$s</string>
+    <string name="detail_installment_of">Parcela %1$d/%2$d</string>
+    <string name="detail_invoice">Fatura: %s</string>
+    <string name="detail_due_on">Vencimento: %s</string>
+    <string name="detail_paid_on">Pagamento: %s</string>
+    <string name="detail_received_on">Recebimento: %s</string>
+    <string name="detail_expected_on">Previsto para %s</string>
+    <string name="detail_movement_on">Movimentação em %s</string>
+    <string name="detail_budget_month">Mês usado no orçamento: %s</string>
+    <string name="detail_expected_value">Valor previsto: %s</string>
+    <string name="detail_effective_value">Valor efetivo: %s</string>
+    <string name="detail_category_unset">Categoria: a classificar</string>
+    <string name="detail_registered_by">Registrado por %1$s · Origem: %2$s</string>
+    <string name="detail_spent_by">Quem gastou: %s</string>
+    <string name="detail_status">Situação: %s</string>
+    <string name="detail_account">Conta: %s</string>
+    <string name="detail_refunds">Estornos</string>
+    <string name="detail_refund_line">%1$s · %2$s</string>
+    <string name="refund_requested">Solicitado (ainda sem efeito nos totais)</string>
+    <string name="refund_confirmed">Confirmado em %s</string>
+    <string name="detail_deleted">Este lançamento foi excluído.</string>
+    <string name="detail_edit">Editar</string>
+    <string name="detail_delete">Excluir</string>
+    <string name="who_you">Você</string>
+    <string name="who_other">Outra pessoa</string>
+    <string name="origin_manual">manual</string>
+    <string name="origin_chat">conversa</string>
+    <string name="origin_import">importação</string>
+    <string name="sync_saved_on_device">salvo no aparelho</string>
+    <string name="sync_awaiting">aguardando envio</string>
+    <string name="sync_acknowledged">sincronizado</string>
+    <string name="sync_conflict">em conflito</string>
+
+    <!-- Excluir -->
+    <string name="delete_title">Excluir este lançamento?</string>
+    <string name="delete_effect">O lançamento sai dos totais e fica registrado como excluído. Isso não é estorno nem cancelamento.</string>
+    <string name="delete_effect_installments">A compra e todas as %d parcelas serão excluídas.</string>
+    <string name="delete_effect_refunds">Os estornos vinculados saem junto com a compra.</string>
+    <string name="delete_extra_title">Confirmar de novo</string>
+    <string name="delete_extra_paid_invoice">Este item está numa fatura já quitada.</string>
+    <string name="delete_extra_imported">Este lançamento veio de uma importação; os dados originais continuam preservados.</string>
+    <string name="delete_confirm">Excluir</string>
+    <string name="delete_keep">Manter</string>
+    <string name="delete_stale">Este lançamento mudou depois que você abriu a tela. Confira e tente de novo.</string>
+    <string name="delete_failed">Não foi possível excluir. Nada foi alterado.</string>
+</resources>

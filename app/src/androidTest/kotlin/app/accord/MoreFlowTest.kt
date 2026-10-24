@@ -1,0 +1,221 @@
+package app.accord
+
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.printToLog
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
+import androidx.test.core.app.ActivityScenario
+import androidx.test.core.app.ApplicationProvider
+import androidx.test.ext.junit.runners.AndroidJUnit4
+import app.accord.core.LimitEdit
+import app.accord.core.LimitScope
+import app.accord.core.Money
+import app.accord.core.TotalChange
+import app.accord.core.space.CategoryLimitEdit
+import app.accord.core.space.CommandId
+import app.accord.core.space.CommandResult
+import app.accord.core.space.CreateCategory
+import app.accord.core.space.DefineLimits
+import app.accord.core.space.Envelope
+import app.accord.ui.theme.ThemePreference
+import kotlinx.coroutines.runBlocking
+import org.junit.After
+import org.junit.Before
+import org.junit.Rule
+import org.junit.Test
+import org.junit.runner.RunWith
+import java.time.YearMonth
+import java.util.UUID
+
+/** Mais, contas, categorias e limites de ponta a ponta no banco do aparelho. */
+@RunWith(AndroidJUnit4::class)
+class MoreFlowTest {
+    @get:Rule
+    val compose = createEmptyComposeRule()
+
+    private var scenario: ActivityScenario<MainActivity>? = null
+    private val tag = UUID.randomUUID().toString().take(6)
+    private val mainName get() = "Cat $tag"
+    private val destName get() = "Dest $tag"
+    private val subName get() = "Sub $tag"
+    private var mainId = ""
+    private var subId = ""
+
+    private suspend fun create(space: app.accord.core.space.FinanceSpace, name: String, parent: String? = null): String =
+        (space.execute(Envelope(CommandId("more-$name")), CreateCategory(name, parent)) as CommandResult.Applied).receipt.changes.first().id
+
+    @Before
+    fun seed() = runBlocking {
+        val container = (ApplicationProvider.getApplicationContext<AccordApplication>()).container
+        val space = container.space()
+        mainId = create(space, mainName)
+        create(space, destName)
+        subId = create(space, subName, mainId)
+        // limite de R$ 500,00 com R$ 200,00 destinados à subcategoria, do mês atual em diante
+        space.execute(
+            Envelope(CommandId("more-limit-$tag")),
+            DefineLimits(
+                YearMonth.now(), LimitScope.FromThisMonth,
+                listOf(CategoryLimitEdit(mainId, LimitEdit(TotalChange.Set(Money(50_000)), mapOf(subId to Money(20_000))))),
+            ),
+        )
+        scenario = ActivityScenario.launch(MainActivity::class.java)
+        Unit
+    }
+
+    @After
+    fun close() {
+        scenario?.close()
+        (ApplicationProvider.getApplicationContext<AccordApplication>()).container.theme.set(ThemePreference.System)
+    }
+
+    private fun waitForText(text: String) {
+        try {
+            compose.waitUntil(8_000) { compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty() }
+        } catch (e: Throwable) {
+            android.util.Log.e("TREE", "esperava: " + text)
+            val roots = compose.onAllNodes(androidx.compose.ui.test.isRoot())
+            for (i in 0 until roots.fetchSemanticsNodes().size) roots[i].printToLog("TREE")
+            throw e
+        }
+    }
+
+    private fun waitGone(text: String) =
+        compose.waitUntil(8_000) { compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isEmpty() }
+
+    private fun scrollTo(text: String) {
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText(text, substring = true))
+    }
+
+    private fun tap(text: String) {
+        scrollTo(text)
+        compose.onAllNodes(hasText(text, substring = true)).onFirst().performSemanticsAction(SemanticsActions.OnClick)
+    }
+
+    private fun dialogButton(text: String) {
+        compose.onAllNodes(hasText(text) and hasClickAction()).onLast().performSemanticsAction(SemanticsActions.OnClick)
+    }
+
+    private fun openMore(item: String) {
+        compose.onNodeWithText("Mais").performClick()
+        waitForText("Categorias e subcategorias")
+        tap(item)
+    }
+
+    @Test
+    fun maisListaSoORecursoDisponivelETemaEscolhidoFicaGuardadoNoAparelho() {
+        compose.onNodeWithText("Mais").performClick()
+        waitForText("Categorias e subcategorias")
+        // recursos de fases seguintes não aparecem como botão vazio
+        assert(compose.onAllNodesWithText("Sincronização", substring = true).fetchSemanticsNodes().isEmpty())
+        assert(compose.onAllNodesWithText("Modelo no aparelho", substring = true).fetchSemanticsNodes().isEmpty())
+        tap("Escuro")
+        val container = (ApplicationProvider.getApplicationContext<AccordApplication>()).container
+        compose.waitUntil(5_000) { container.theme.preference.value == ThemePreference.Dark }
+    }
+
+    @Test
+    fun contaNovaComOutroBancoViraPadraoEPodeSerCorrigida() {
+        openMore("Contas")
+        waitForText("Adicionar conta")
+        tap("Adicionar conta")
+        waitForText("Nova conta")
+        // sem banco nem apelido, o formulário aponta os dois campos
+        tap("Salvar conta")
+        waitForText("Escolha o banco")
+        waitForText("Informe um apelido")
+
+        tap("Selecionar banco")
+        waitForText("Escolher banco")
+        compose.onNode(hasText("Outro banco (informar", substring = true) and hasClickAction()).performClick()
+        compose.onNodeWithText("Nome do banco").performTextInput("Banco $tag")
+        dialogButton("Usar este nome")
+        compose.onNodeWithText("Apelido da conta").performTextInput("Conta $tag")
+        tap("Salvar conta")
+        waitForText("Conta adicionada.")
+        scrollTo("Conta $tag")
+
+        // definir como padrão e corrigir o apelido, mantendo a mesma conta
+        compose.onAllNodes(hasText("Definir como minha conta padrão") and hasClickAction()).onLast().performSemanticsAction(SemanticsActions.OnClick)
+        waitForText("Esta é a sua conta padrão.")
+        scrollTo("Conta $tag")
+    }
+
+    @Test
+    fun categoriaNovaRejeitaNomeRepetidoNoMesmoNivelERenomeiaSemPerderIdentidade() {
+        openMore("Categorias e subcategorias")
+        waitForText("Categorias")
+        tap("Nova")
+        waitForText("Nova categoria")
+        compose.onNodeWithText("Nome").performTextInput(mainName)
+        dialogButton("Salvar")
+        waitForText("Já existe uma categoria com esse nome")
+
+        compose.onNodeWithText("Nome").performTextReplacement("Outra $tag")
+        dialogButton("Salvar")
+        waitForText("Categoria criada.")
+        scrollTo("Outra $tag")
+    }
+
+    @Test
+    fun moverSubcategoriaComParteDeLimiteExigeEscolhaPorMesAntesDeGravar() {
+        openMore("Categorias e subcategorias")
+        waitForText("Categorias")
+        scrollTo(mainName)
+        compose.onAllNodes(hasText("Mostrar subcategorias (1)") and hasClickAction()).onLast().performSemanticsAction(SemanticsActions.OnClick)
+        scrollTo(subName)
+        compose.onAllNodes(hasText("Mover") and hasClickAction()).onLast().performSemanticsAction(SemanticsActions.OnClick)
+        waitForText("Destino (categoria principal)")
+        compose.onAllNodes(hasText(destName)).onLast().performSemanticsAction(SemanticsActions.OnClick)
+        dialogButton("Confirmar")
+
+        // a parte de limite da subcategoria nunca é transferida sem uma escolha explícita
+        waitForText("Decida, mês a mês")
+        dialogButton("Mover e aplicar")
+        waitForText("Escolha uma opção para cada mês.")
+
+        // levar a parte para um destino sem limite principal é recusado pelo serviço, com o motivo na tela
+        compose.onAllNodes(hasText("Levar", substring = true) and hasClickAction()).onFirst().performSemanticsAction(SemanticsActions.OnClick)
+        dialogButton("Mover e aplicar")
+        waitForText("Defina o limite da categoria antes de dividi-lo")
+
+        compose.onAllNodes(hasText("Não levar", substring = true) and hasClickAction()).onFirst().performSemanticsAction(SemanticsActions.OnClick)
+        dialogButton("Mover e aplicar")
+        waitForText("Subcategoria movida daqui para frente.")
+    }
+
+    @Test
+    fun limitesExigemAlcanceMostramErroDeDivisaoEConfirmamOMes() {
+        openMore("Limites do orçamento")
+        waitForText("Total das categorias") // as linhas carregaram
+        scrollTo("Limite de $mainName")
+        compose.onNodeWithText("Limite de $mainName (R$)").performTextReplacement("600,00")
+
+        // sem escolher o alcance, não salva e não presume opção
+        compose.onNodeWithText("Salvar limites").performSemanticsAction(SemanticsActions.OnClick)
+        waitForText("Escolha a quais meses a alteração vale.")
+
+        // divisão acima do limite principal é recusada com o excesso
+        compose.onNodeWithText(subName).performTextReplacement("700,00")
+        compose.onNodeWithText("Salvar limites").performSemanticsAction(SemanticsActions.OnClick)
+        waitForText("A divisão passa do limite principal em")
+
+        compose.onNodeWithText(subName).performTextReplacement("250,00")
+        tap("meses seguintes")
+        waitForText("Resumo da alteração")
+        compose.onNodeWithText("Salvar limites").performSemanticsAction(SemanticsActions.OnClick)
+        waitForText("Limite atualizado a partir de")
+    }
+}

@@ -1,0 +1,286 @@
+package app.accord
+
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.performTextInput
+import app.accord.core.Money
+import app.accord.core.space.CategoryNode
+import app.accord.core.space.DateCriterion
+import app.accord.core.space.EntryKind
+import app.accord.core.space.EntryRow
+import app.accord.core.space.EntrySituation
+import app.accord.core.space.EntrySummary
+import app.accord.core.space.PaymentMethod
+import app.accord.ui.entries.EntriesFilterState
+import app.accord.ui.entries.EntriesScreen
+import app.accord.ui.entries.EntriesStatus
+import app.accord.ui.entries.EntriesUiState
+import app.accord.ui.theme.AccordTheme
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Rule
+import org.junit.Test
+import java.time.LocalDate
+import java.time.YearMonth
+
+/** Tela 07 com estado sintético: linhas, resumo separado, filtros em painel e estados de recuperação. */
+class EntriesUiTest {
+    @get:Rule
+    val compose = createComposeRule()
+
+    private val oct = YearMonth.of(2026, 10)
+    private fun brl(reais: Int) = Money(reais * 100L)
+    private val filter = EntriesFilterState(oct, oct)
+
+    private val categories = listOf(
+        CategoryNode("elec", null, "Eletrônicos", 0, "monitor-smartphone", null),
+        CategoryNode("equip", "elec", "Equipamentos", 0, "laptop", null),
+        CategoryNode("food", null, "Alimentação", 1, "utensils", null),
+        CategoryNode("market", "food", "Mercado", 0, "shopping-cart", null),
+    ).associateBy { it.id }
+
+    private fun row(
+        id: String, description: String, amount: Int, kind: EntryKind = EntryKind.DirectPayment, category: String? = "market",
+        method: PaymentMethod? = PaymentMethod.Pix, situations: Set<EntrySituation> = setOf(EntrySituation.Paid),
+        number: Int? = null, count: Int? = null, date: LocalDate = LocalDate.of(2026, 10, 20),
+    ) = EntryRow(id, kind, description, category, brl(amount), date, null, method, number, count, situations, "dev-person")
+
+    private fun state(
+        rows: List<EntryRow>,
+        status: EntriesStatus = EntriesStatus.Ready,
+        filter: EntriesFilterState = this.filter,
+        next: Int? = null,
+        stale: Boolean = false,
+        loadMoreFailed: Boolean = false,
+    ) = EntriesUiState(
+        filter = filter, rows = rows, total = rows.size,
+        summary = EntrySummary(brl(250), Money.ZERO, Money.ZERO, Money.ZERO),
+        nextCursor = next, status = status, loadMoreFailed = loadMoreFailed, categories = categories, stale = stale,
+    )
+
+    private fun show(
+        state: EntriesUiState,
+        onSearch: (String) -> Unit = {},
+        onApply: (EntriesFilterState) -> Unit = {},
+        onClear: () -> Unit = {},
+        onRetry: () -> Unit = {},
+        onLoadMore: () -> Unit = {},
+        onOpen: (String) -> Unit = {},
+        onNew: () -> Unit = {},
+    ) {
+        compose.setContent {
+            AccordTheme {
+                EntriesScreen(state, PaddingValues(), onSearch, onApply, onClear, onRetry, onLoadMore, onOpen, onNew)
+            }
+        }
+    }
+
+    private val sample = listOf(
+        row("p#1", "Equipamento", 200, EntryKind.CardInstallment, "equip", PaymentMethod.Card, setOf(EntrySituation.NotPaid), 1, 6, LocalDate.of(2026, 9, 25)),
+        row("m1", "Mercado", 50),
+    )
+
+    @Test
+    fun linhaMostraDataDescricaoCategoriaParcelaFormaEValor() {
+        show(state(sample))
+        compose.onNodeWithText("Equipamento").assertIsDisplayed()
+        compose.onNodeWithText(brl(200).format()).assertIsDisplayed()
+        compose.onNodeWithText("25/09 · Eletrônicos > Equipamentos · Parcela 1/6 · Cartão").assertIsDisplayed()
+        compose.onNodeWithText("20/10 · Alimentação > Mercado · Pix").assertIsDisplayed()
+    }
+
+    @Test
+    fun resumoSeparaTiposEMostraAContagemSemSaldoMisturado() {
+        show(state(sample))
+        compose.onNodeWithText("2 lançamentos").assertIsDisplayed()
+        compose.onNodeWithText("Despesas").assertIsDisplayed()
+        compose.onNodeWithText(brl(250).format()).assertIsDisplayed()
+        compose.onNodeWithText("Cada tipo é somado à parte; não formam um saldo.").assertIsDisplayed()
+    }
+
+    @Test
+    fun pagamentoDiretoNaoMostraPagoMasBoletoVencidoMostraVencido() {
+        show(
+            state(
+                listOf(
+                    row("m1", "Mercado", 50),
+                    row("b1", "Luz", 120, EntryKind.Boleto, "market", PaymentMethod.Boleto, setOf(EntrySituation.NotPaid, EntrySituation.Overdue)),
+                ),
+            ),
+        )
+        compose.onNodeWithText("Vencido").assertIsDisplayed()
+        assertEquals(0, compose.onAllNodes(hasText("Pago")).fetchSemanticsNodes().size)
+        assertEquals(0, compose.onAllNodes(hasText("Não pago")).fetchSemanticsNodes().size) // vencido já diz mais
+    }
+
+    @Test
+    fun marcasDeSituacaoTrazemTextoParaAClassificarEAConferir() {
+        show(
+            state(
+                listOf(
+                    row("a", "Amazon", 150, EntryKind.CardInstallment, null, PaymentMethod.Card, setOf(EntrySituation.ToClassify, EntrySituation.NotPaid)),
+                    row("j", "Janela", 80, EntryKind.CardInstallment, "equip", PaymentMethod.Card, setOf(EntrySituation.InvoiceLinkToConfirm, EntrySituation.NotPaid)),
+                ),
+            ),
+        )
+        compose.onNodeWithText("A classificar").assertIsDisplayed()
+        compose.onNodeWithText("A conferir").assertIsDisplayed()
+    }
+
+    @Test
+    fun tocarNaLinhaAbreODetalheComOIdEstavel() {
+        var opened: String? = null
+        show(state(sample), onOpen = { opened = it })
+        compose.onNode(hasContentDescription("Equipamento", substring = true)).performClick()
+        assertEquals("p#1", opened)
+    }
+
+    @Test
+    fun linhaTemEquivalenteTextualNaOrdemVisual() {
+        show(state(sample))
+        compose.onNode(hasContentDescription("Mercado. R\$", substring = true)).assertIsDisplayed()
+    }
+
+    @Test
+    fun buscaEnviaOTextoDigitadoELimparEstaDisponivel() {
+        val typed = mutableListOf<String>()
+        show(state(sample), onSearch = { typed += it })
+        compose.onNodeWithText("Buscar descrição ou estabelecimento").performTextInput("pão")
+        assertEquals("pão", typed.last())
+        compose.onNode(hasContentDescription("Limpar busca")).performClick()
+        assertEquals("", typed.last())
+    }
+
+    @Test
+    fun painelDeFiltrosAplicaApenasAoConfirmar() {
+        var applied: EntriesFilterState? = null
+        show(state(sample), onApply = { applied = it })
+        compose.onNodeWithText("Filtros").performClick()
+        compose.onNodeWithText("Cartão").performSemanticsAction(SemanticsActions.OnClick)
+        compose.onNodeWithText("A classificar").performSemanticsAction(SemanticsActions.OnClick)
+        compose.onNodeWithText("Aplicar").performClick()
+        val result = applied!!
+        assertEquals(setOf(PaymentMethod.Card), result.methods)
+        assertEquals(setOf(EntrySituation.ToClassify), result.situations)
+    }
+
+    @Test
+    fun cancelarOPainelNaoMudaOsFiltros() {
+        var applied: EntriesFilterState? = null
+        show(state(sample), onApply = { applied = it })
+        compose.onNodeWithText("Filtros").performClick()
+        compose.onNodeWithText("Pix").performClick()
+        compose.onNodeWithText("Cancelar").performClick()
+        assertEquals(null, applied)
+    }
+
+    @Test
+    fun painelEscolheCategoriaESubcategoria() {
+        var applied: EntriesFilterState? = null
+        show(state(sample), onApply = { applied = it })
+        compose.onNodeWithText("Filtros").performClick()
+        // há duas áreas rolantes (lista e painel); o painel é a última da árvore
+        compose.onAllNodes(hasScrollAction()).onLast().performScrollToNode(hasText("Equipamentos"))
+        compose.onNodeWithText("Equipamentos").performSemanticsAction(SemanticsActions.OnClick)
+        compose.onNodeWithText("Aplicar").performClick()
+        assertEquals("equip", applied!!.categoryId)
+    }
+
+    @Test
+    fun alternarOCriterioEnviaOutroCriterio() {
+        var applied: EntriesFilterState? = null
+        show(state(sample), onApply = { applied = it })
+        compose.onNodeWithText("Critério: mês do orçamento").assertIsDisplayed()
+        compose.onNodeWithText("Alterar").performClick()
+        assertEquals(DateCriterion.PurchaseDate, applied!!.criterion)
+    }
+
+    @Test
+    fun criterioDeDataDaCompraExplicaQueMostraCadaCompraUmaVez() {
+        show(state(sample, filter = filter.copy(criterion = DateCriterion.PurchaseDate)))
+        compose.onNodeWithText("Critério: data da compra").assertIsDisplayed()
+        compose.onNodeWithText("Mostra cada compra uma vez, pelo total.").assertIsDisplayed()
+    }
+
+    @Test
+    fun filtroAtivoMostraAContagemNoBotao() {
+        show(state(sample, filter = filter.copy(methods = setOf(PaymentMethod.Pix), situations = setOf(EntrySituation.Paid))))
+        compose.onNodeWithText("Filtros (2)").assertIsDisplayed()
+    }
+
+    @Test
+    fun vazioSemFiltroOfereceRegistrar() {
+        var new = 0
+        show(state(emptyList()), onNew = { new++ })
+        compose.onNodeWithText("Nenhum lançamento por aqui").assertIsDisplayed()
+        compose.onNodeWithText("Registrar manualmente").performClick()
+        assertEquals(1, new)
+    }
+
+    @Test
+    fun vazioComFiltroOfereceLimparFiltros() {
+        var cleared = 0
+        show(state(emptyList(), filter = filter.copy(search = "xyz")), onClear = { cleared++ })
+        compose.onNodeWithText("Nenhum lançamento com esses filtros").assertIsDisplayed()
+        compose.onNodeWithText("Limpar filtros").performClick()
+        assertEquals(1, cleared)
+    }
+
+    @Test
+    fun erroMantemAsLinhasAnterioresEOferecerTentarDeNovo() {
+        var retries = 0
+        show(state(sample, status = EntriesStatus.Failed, stale = true), onRetry = { retries++ })
+        compose.onNodeWithText("Não foi possível buscar os lançamentos deste aparelho.").assertIsDisplayed()
+        compose.onNodeWithText("Mostrando o resultado anterior.").assertIsDisplayed()
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Mercado"))
+        compose.onNodeWithText("Mercado").assertIsDisplayed()
+        compose.onNodeWithText("Tentar de novo").performClick()
+        assertEquals(1, retries)
+    }
+
+    @Test
+    fun erroSemLinhasNaoMostraZero() {
+        show(state(emptyList(), status = EntriesStatus.Failed))
+        compose.onNodeWithText("Tentar de novo").assertIsDisplayed()
+        assertEquals(0, compose.onAllNodes(hasText("R\$", substring = true)).fetchSemanticsNodes().size)
+    }
+
+    @Test
+    fun carregandoPreservaAsLinhasAnteriores() {
+        show(state(sample, status = EntriesStatus.Loading, stale = true))
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Mercado"))
+        compose.onNodeWithText("Mercado").assertIsDisplayed()
+    }
+
+    @Test
+    fun ChegarAoFimPedeAPaginaSeguinte() {
+        var loadMore = 0
+        val many = (1..40).map { row("m$it", "Item $it", it, date = LocalDate.of(2026, 10, 20).minusDays(it.toLong())) }
+        show(state(many, next = 40), onLoadMore = { loadMore++ })
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Item 40"))
+        compose.waitForIdle()
+        assertTrue("devia pedir mais linhas", loadMore > 0)
+    }
+
+    @Test
+    fun voltarAparecePeloCabecalhoQuandoAListaFoiAbertaPorOutraTela() {
+        var back = 0
+        compose.setContent {
+            AccordTheme {
+                EntriesScreen(state(sample), PaddingValues(), {}, {}, {}, {}, {}, {}, {}, onBack = { back++ })
+            }
+        }
+        compose.onNode(hasContentDescription("Voltar")).performClick()
+        assertEquals(1, back)
+    }
+}

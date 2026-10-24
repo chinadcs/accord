@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Cartão e faturas (tela 12) -->
+    <string name="card_title">Cartão e faturas</string>
+    <string name="card_bank">Banco</string>
+    <string name="card_bank_none">Banco não informado</string>
+    <string name="card_days">Fechamento: dia %1$d · Vencimento: dia %2$d</string>
+    <string name="card_edit">Editar cartão</string>
+    <string name="card_edit_title">Cartão padrão</string>
+    <string name="card_nickname">Apelido do cartão</string>
+    <string name="card_closing_day">Dia de fechamento</string>
+    <string name="card_due_day">Dia de vencimento</string>
+    <string name="card_edit_note">Os dias ajudam a sugerir a fatura de novos lançamentos, mas não garantem a atribuição do emissor. Faturas já registradas não são remapeadas: confira as que podem ter mudado.</string>
+    <string name="card_save">Salvar cartão</string>
+    <string name="card_invoices">Faturas</string>
+    <string name="card_no_invoices">Nenhuma fatura com lançamentos ainda.</string>
+    <string name="card_to_confirm">%1$d compra(s) com fatura a conferir</string>
+    <string name="feedback_card_saved">Cartão salvo no aparelho.</string>
+
+    <string name="invoice_status_open">Aberta</string>
+    <string name="invoice_status_closed_estimated">Fechada (estimada)</string>
+    <string name="invoice_status_closed">Fechada</string>
+    <string name="invoice_conferred">Conferida</string>
+    <string name="invoice_paid">Paga</string>
+    <string name="invoice_payment_in_review">Pagamento em revisão</string>
+
+    <!-- Detalhe da fatura (tela 13) -->
+    <string name="invoice_title">Fatura · %1$s</string>
+    <string name="invoice_due_line">Vencimento: %1$s · %2$s</string>
+    <string name="invoice_checked_total">Total conferido</string>
+    <string name="invoice_source_person">Informado por você, conforme o banco.</string>
+    <string name="invoice_source_import">Total vindo do arquivo importado.</string>
+    <string name="invoice_difference">O total informado difere da composição conhecida em %1$s. Confira antes de pagar; nenhum ajuste é feito automaticamente.</string>
+    <string name="invoice_composition">Composição conhecida</string>
+    <string name="invoice_purchases">Compras e parcelas</string>
+    <string name="invoice_charges">Juros e tarifas</string>
+    <string name="invoice_credits">Créditos de estorno</string>
+    <string name="invoice_known_total">Total conhecido</string>
+    <string name="invoice_paid_on">Paga em %1$s</string>
+    <string name="invoice_links_to_confirm">%1$d compra(s) desta fatura com vínculo a conferir.</string>
+    <string name="invoice_divergent_payment">Pagamento de %1$s em %2$s guardado para revisão.</string>
+    <string name="invoice_review_note">A fatura não foi marcada como paga e nenhuma despesa foi criada para fechar a diferença.</string>
+    <string name="invoice_see_entries">Ver todos os lançamentos</string>
+    <string name="invoice_pay">Registrar quitação integral</string>
+    <string name="invoice_pay_needs_total">A quitação só é aceita com o total conferido e o mesmo valor. Outro valor é guardado para revisão.</string>
+    <string name="invoice_enter_total">Informar total cobrado</string>
+    <string name="invoice_correct_total">Corrigir total cobrado</string>
+    <string name="invoice_total_title">Total cobrado pelo banco</string>
+    <string name="invoice_total_amount">Total da fatura (R$)</string>
+    <string name="invoice_total_note">Você informa o valor que o banco cobra, sob sua responsabilidade. Se coincidir com a composição, a fatura fica conferida; se não, a diferença fica para conferência.</string>
+    <string name="invoice_pay_title">Quitação da fatura</string>
+    <string name="invoice_pay_amount">Valor pago (R$)</string>
+    <string name="invoice_pay_date">Data do pagamento</string>
+    <string name="invoice_pay_note">Quitar não cria despesa nova: as compras da fatura passam a pagas. Pagamento parcial, maior ou divergente não marca a fatura como paga.</string>
+    <string name="feedback_invoice_total">Total da fatura registrado.</string>
+    <string name="feedback_invoice_paid">Fatura paga.</string>
+    <string name="feedback_invoice_payment_review">Pagamento guardado para revisão. A fatura não foi marcada como paga.</string>
+</resources>

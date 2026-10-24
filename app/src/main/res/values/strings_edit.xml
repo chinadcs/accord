@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Edição de lançamento (tela 09, modo edição) -->
+    <string name="edit_save">Salvar alterações</string>
+    <string name="edit_saving">Salvando…</string>
+    <string name="edit_not_found">Este lançamento não existe mais.</string>
+    <string name="edit_not_editable">Este tipo de lançamento não é editado por aqui.</string>
+    <string name="edit_nothing_changed">Nada foi alterado ainda.</string>
+    <string name="edit_amount_locked">Valor total: %1$s. O valor e a quantidade de parcelas de uma compra parcelada não mudam.</string>
+    <string name="edit_amount_locked_action">Para mudar, exclua a compra e registre de novo.</string>
+    <string name="edit_scope_all_installments">Descrição e categoria valem para todas as parcelas, inclusive as anteriores.</string>
+    <string name="edit_date_installments_note">A data da compra muda, mas a fatura das parcelas continua a mesma.</string>
+    <string name="edit_suggested_invoice">Pela nova data, a fatura seria %1$s. Se for o caso, corrija a fatura depois, no detalhe da compra.</string>
+    <string name="edit_paid_note">Este item já foi pago ou recebido: o valor efetivo continua o mesmo.</string>
+    <string name="edit_imported_note">Itens importados guardam os dados originais do arquivo; só a versão exibida muda.</string>
+    <string name="edit_scheduled_date">Data prevista: %1$s (a data da ocorrência não muda por aqui).</string>
+
+    <string name="edit_scope_title">Aplicar a quais ocorrências?</string>
+    <string name="edit_scope_only_this">Só esta ocorrência</string>
+    <string name="edit_scope_this_and_next">Esta e as próximas</string>
+    <string name="edit_scope_note">As anteriores não mudam.</string>
+    <string name="edit_replaced_occurrences">Esta edição substitui ajustes que já existiam nas ocorrências %1$s.</string>
+    <string name="error_scope_required">Escolha a quais ocorrências a mudança vale.</string>
+
+    <string name="edit_delete_occurrence">Excluir ocorrência</string>
+    <string name="edit_delete_title">Excluir quais ocorrências?</string>
+    <string name="edit_delete_confirm">Excluir</string>
+    <string name="edit_delete_note_only_this">A série continua nas datas seguintes.</string>
+    <string name="edit_delete_note_next">A série termina antes desta ocorrência.</string>
+
+    <string name="edit_extra_title">Confirmar alteração</string>
+    <string name="edit_extra_paid_invoice">Este item está numa fatura já quitada.</string>
+    <string name="edit_extra_imported">Este item veio de um arquivo importado.</string>
+    <string name="edit_extra_body">A alteração muda totais que você já conferiu. Deseja continuar?</string>
+    <string name="edit_extra_confirm">Alterar mesmo assim</string>
+
+    <string name="edit_realized_title">Há ocorrências já realizadas</string>
+    <string name="edit_realized_body">As ocorrências %1$s já foram pagas ou recebidas e mantêm o valor efetivo. Deseja continuar?</string>
+    <string name="edit_realized_confirm">Continuar</string>
+
+    <string name="edit_stale_title">Este lançamento mudou</string>
+    <string name="edit_stale_body">Ele foi alterado depois que você abriu a edição. Nada foi salvo. Veja a versão atual e refaça a mudança.</string>
+    <string name="edit_stale_confirm">Ver versão atual</string>
+
+    <string name="edit_discard_title">Descartar alterações?</string>
+    <string name="edit_discard_body">As mudanças feitas aqui ainda não foram salvas.</string>
+    <string name="edit_discard_confirm">Descartar</string>
+    <string name="edit_discard_keep">Continuar editando</string>
+    <string name="edit_cancel">Cancelar</string>
+
+    <!-- Ações vinculadas no detalhe -->
+    <string name="feedback_paid">Pagamento registrado.</string>
+    <string name="feedback_received">Recebimento registrado.</string>
+    <string name="feedback_refund_registered">Estorno registrado.</string>
+    <string name="feedback_refund_confirmed">Estorno confirmado.</string>
+    <string name="feedback_cancel_requested">Cancelamento solicitado.</string>
+    <string name="feedback_non_charge">Parcelas retiradas do comprometido.</string>
+
+    <string name="linked_actions_title">Ações</string>
+    <string name="linked_pay">Registrar pagamento</string>
+    <string name="linked_receive">Registrar recebimento</string>
+    <string name="linked_refund">Registrar estorno</string>
+    <string name="linked_refund_confirm">Confirmar estorno de %1$s</string>
+    <string name="linked_cancel_request">Pedir cancelamento de parcelas</string>
+    <string name="linked_non_charge">Confirmar que não foram cobradas</string>
+
+    <string name="linked_pay_title">Registrar pagamento</string>
+    <string name="linked_receive_title">Registrar recebimento</string>
+    <string name="linked_refund_title">Registrar estorno</string>
+    <string name="linked_refund_confirm_title">Confirmar estorno</string>
+    <string name="linked_cancel_title">Pedir cancelamento</string>
+    <string name="linked_non_charge_title">Confirmar não cobrança</string>
+
+    <string name="linked_date_paid">Data do pagamento</string>
+    <string name="linked_date_received">Data do recebimento</string>
+    <string name="linked_date_refund">Data da devolução</string>
+    <string name="linked_amount_effective">Valor efetivo (R$)</string>
+    <string name="linked_amount_effective_hint">Deixe vazio para usar %1$s</string>
+    <string name="linked_amount_refund">Valor do estorno (R$)</string>
+    <string name="linked_amount_returned">Valor devolvido (R$)</string>
+    <string name="linked_refund_status">Este estorno já voltou?</string>
+    <string name="linked_refund_status_confirmed">Já foi devolvido</string>
+    <string name="linked_refund_status_requested">Ainda aguardo a devolução</string>
+    <string name="linked_refund_note">Só estorno confirmado abate a categoria. Ele não vira renda.</string>
+    <string name="linked_cancel_pick">Quais parcelas?</string>
+    <string name="linked_cancel_note">Continuam no comprometido como “cancelamento solicitado” até você confirmar que não foram cobradas. Não há crédito até lá.</string>
+    <string name="linked_non_charge_note">Só as parcelas marcadas saem do comprometido. O histórico fica e nenhum crédito é criado.</string>
+    <string name="linked_installment_line">Parcela %1$d</string>
+    <string name="linked_confirm">Confirmar</string>
+    <string name="linked_working">Salvando…</string>
+    <string name="linked_stale">Este lançamento mudou depois que você abriu a tela. Atualizamos os dados; confira e tente de novo.</string>
+    <string name="linked_failed">Não foi possível concluir. Nada foi alterado.</string>
+    <string name="error_amount_effective">Informe um valor válido ou deixe vazio.</string>
+    <string name="error_refund_status">Escolha se o estorno já foi devolvido.</string>
+    <string name="error_installments_pick">Marque ao menos uma parcela.</string>
+</resources>
