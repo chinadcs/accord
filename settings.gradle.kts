@@ -18,4 +18,5 @@ dependencyResolutionManagement {
 
 include(":core")
 include(":persistence")
+include(":remote")
 include(":app")
