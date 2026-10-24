@@ -575,14 +575,20 @@ interface SpaceDao {
         EntitySyncRow::class, DraftRow::class, RefundRow::class, LimitPlanRow::class, LimitEntryRow::class, CategoryMoveRow::class, InvoiceRow::class, InvoicePaymentRow::class, RecurrenceRow::class, RecurrenceSegmentRow::class, RecurrenceOverrideRow::class, RecurrenceSettlementRow::class,
         OperationRow::class, OperationChangeRow::class,
         SyncStateRow::class, ConflictRow::class, ConflictEntityRow::class,
+        ChatMessageRow::class, ChatAttemptRow::class, ChatQuestionRow::class, ChatReceiptRow::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2, spec = Migration1To2::class)],
+    autoMigrations = [
+        AutoMigration(from = 1, to = 2, spec = Migration1To2::class),
+        // S3: histórico do Chat, só neste aparelho.
+        AutoMigration(from = 2, to = 3),
+    ],
 )
 abstract class AccordDatabase : RoomDatabase() {
     abstract fun dao(): SpaceDao
     abstract fun syncDao(): SyncDao
+    abstract fun chatDao(): ChatDao
 }
 
 /** S2: operações já reconhecidas na versão 1 passam ao estado ACKNOWLEDGED. */

@@ -147,7 +147,7 @@ object ChatBattery {
         Case(
             "conversa-1", "Conversa", "foi pix",
             Proposal.Correct(target = "r1", field = CorrectionField.Payment, payment = ChatPayment.Pix),
-            Expected.Corrects(EntryChange.Payment(ChatPayment.Pix, "account-1")),
+            Expected.Corrects(EntryChange.Payment(ChatPayment.Pix, null)),
         ),
         Case(
             "conversa-2", "Conversa", "troca para casa",

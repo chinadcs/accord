@@ -22,7 +22,15 @@ data class AccountItem(val ref: String, val id: String, val label: String)
 data class MemberItem(val ref: String, val id: String, val name: String)
 
 /** Recibo recente desta conversa: alvo possível de uma correção. */
-data class ReceiptItem(val ref: String, val receiptId: String, val entryId: String, val label: String, val installments: Int = 1)
+data class ReceiptItem(
+    val ref: String,
+    val receiptId: String,
+    val entryId: String,
+    val label: String,
+    val installments: Int = 1,
+    /** O lançamento já tem conta (Pix ou débito): trocar entre os dois mantém a mesma conta. */
+    val hasAccount: Boolean = false,
+)
 
 /** Valor que uma opção de pergunta representa; é o que o toque (ou a escolha por referência) aplica. */
 sealed interface OptionValue {

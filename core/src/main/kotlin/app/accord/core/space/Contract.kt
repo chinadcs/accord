@@ -463,6 +463,20 @@ data class CorrectEntry(
     val expectedRevision: Long? = null,
 ) : Command
 
+/**
+ * Troca a forma de pagamento para Pix, débito ou dinheiro ("foi Pix", "foi débito" no Chat). Entre
+ * lançamentos diretos mantém a identidade. Compra à vista no cartão (sem estorno, sem fatura quitada e
+ * não importada) vira lançamento direto com nova identidade e a compra fica como registro de exclusão,
+ * tudo numa só operação desfazível. Parcelada, importada e outras origens não mudam por aqui.
+ * Pix e débito usam a conta informada, a atual ou o padrão do autor; dinheiro não tem conta.
+ */
+data class ChangePaymentMethod(
+    val entityId: String,
+    val kind: DirectPaymentKind,
+    val accountId: String? = null,
+    val expectedRevision: Long? = null,
+) : Command
+
 /** Desfaz uma operação aplicada, se nada nas entidades afetadas mudou depois dela. */
 data class Undo(val operationId: String) : Command
 

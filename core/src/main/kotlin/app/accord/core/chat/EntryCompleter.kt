@@ -149,8 +149,10 @@ object CorrectionCompleter {
                 ChatPayment.Card -> if (!context.hasCard) return ChatDecision.Refuse(RefuseReason.NoCard)
                 ChatPayment.Cash -> return ChatDecision.Correct(CorrectionPlan(receipt.receiptId, entryId, change.copy(accountId = null)))
                 ChatPayment.Pix, ChatPayment.Debit -> {
-                    val account = change.accountId ?: context.defaultAccount?.id
-                        ?: return if (context.accounts.isEmpty()) {
+                    // Sem conta citada, a fachada mantém a conta atual ou usa o padrão de quem registra.
+                    val known = change.accountId != null || receipt.hasAccount || context.defaultAccount != null
+                    if (!known) {
+                        return if (context.accounts.isEmpty()) {
                             ChatDecision.Refuse(RefuseReason.NoAccounts)
                         } else {
                             ChatDecision.AskCorrection(
@@ -158,7 +160,8 @@ object CorrectionCompleter {
                                 ChatQuestion(QuestionField.Account, EntryCompleter.accountOptions(context)),
                             )
                         }
-                    return ChatDecision.Correct(CorrectionPlan(receipt.receiptId, entryId, change.copy(accountId = account)))
+                    }
+                    return ChatDecision.Correct(CorrectionPlan(receipt.receiptId, entryId, change))
                 }
             }
             return ChatDecision.Correct(CorrectionPlan(receipt.receiptId, entryId, change.copy(accountId = null)))
