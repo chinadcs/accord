@@ -391,6 +391,39 @@ class SyncStore(
         return id
     }
 
+    // ---- diagnóstico ----
+
+    /**
+     * Relatório mínimo para quem precisa entender uma falha: IDs de operação, tipo de comando e de
+     * entidade, estado, categoria do erro, tentativas e versões. Nunca inclui e-mail, senha, token,
+     * valores, descrições, estabelecimentos, texto do Chat nem conteúdo bancário (S2 "Diagnóstico").
+     */
+    suspend fun diagnostics(limit: Int = 50): String {
+        val state = sync.syncState()
+        val summary = summary()
+        val recent = sync.recentOperations(limit)
+        val changes = sync.changesOfAll(recent.map { it.operationId }).groupBy { it.operationId }
+        val unresolved = sync.unresolvedConflicts()
+        return buildString {
+            appendLine("accord-diagnostico v1")
+            appendLine("instalacao=${state?.installationId ?: "-"}")
+            appendLine("cursor=${summary.cursor} ultima-sincronizacao=${summary.lastSyncMillis ?: "-"}")
+            appendLine("aguardando=${summary.awaitingOperations} conflitos=${summary.openConflicts} recusadas=${summary.rejectedOperations}")
+            for (op in recent) {
+                val touched = changes[op.operationId].orEmpty().joinToString(",") { "${it.entityType}/base:${it.baseVersion ?: "-"}" }
+                appendLine(
+                    "op id=${op.operationId} estado=${op.syncState} comando=${op.commandType} tentativas=${op.attempts} " +
+                        "falha=${op.lastFailure?.substringBefore(':') ?: "-"} alteracoes=$touched",
+                )
+            }
+            for (conflict in unresolved) {
+                val rows = sync.conflictEntities(conflict.operationId)
+                val entities = rows.joinToString(",") { "${it.entityType}(remota v${it.remoteVersion ?: "-"})" }
+                appendLine("conflito op=${conflict.operationId} situacao=${conflict.status} entidades=$entities")
+            }
+        }
+    }
+
     // ---- operações com problema ----
 
     suspend fun problems(): List<ProblemOperation> {
