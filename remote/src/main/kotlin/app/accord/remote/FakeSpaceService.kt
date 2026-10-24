@@ -120,6 +120,7 @@ class FakeSpaceService(
 
     fun memberCount(spaceId: String): Int = spaces[spaceId]?.members?.size ?: 0
     fun spaceCount(): Int = spaces.size
+    fun storedSpaceIds(): List<String> = spaces.keys.toList()
     fun accountCount(): Int = accounts.size
     fun storedEntity(spaceId: String, type: String, id: String): RemoteEntityState? =
         spaces[spaceId]?.entities?.get(EntityKey(type, id))

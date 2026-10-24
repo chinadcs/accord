@@ -26,6 +26,8 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.ui.semantics.semantics
 import app.accord.R
+import app.accord.core.sync.AccountView
+import app.accord.core.sync.SessionState
 import app.accord.ui.components.DecorativeIcon
 import app.accord.ui.theme.AccordSpacing
 import app.accord.ui.theme.ThemePreference
@@ -40,10 +42,21 @@ data class MoreActions(
     val onIncomes: () -> Unit,
     val onCommitments: () -> Unit,
     val onRegister: () -> Unit = {},
+    val onSpace: () -> Unit = {},
+    val onFirstSteps: () -> Unit = {},
+    val onSignOut: () -> Unit = {},
+    val onRenew: () -> Unit = {},
 )
 
 @Composable
-fun MoreScreen(padding: PaddingValues, theme: ThemePreference, onTheme: (ThemePreference) -> Unit, actions: MoreActions) {
+fun MoreScreen(
+    padding: PaddingValues,
+    theme: ThemePreference,
+    onTheme: (ThemePreference) -> Unit,
+    actions: MoreActions,
+    account: AccountView? = null,
+    sessionState: SessionState = SessionState.Valid,
+) {
     Column(
         Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
         verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
@@ -63,7 +76,18 @@ fun MoreScreen(padding: PaddingValues, theme: ThemePreference, onTheme: (ThemePr
         MoreRow(R.string.more_commitments, Lucide.drawable.lucide_ic_calendar, actions.onCommitments)
 
         Section(R.string.more_group_space)
+        MoreRow(R.string.more_space, Lucide.drawable.lucide_ic_users, actions.onSpace)
         MoreRow(R.string.more_accounts, Lucide.drawable.lucide_ic_landmark, actions.onAccounts)
+        MoreRow(R.string.more_first_steps, Lucide.drawable.lucide_ic_list_checks, actions.onFirstSteps)
+
+        if (account != null) {
+            Section(R.string.more_group_account)
+            Text(stringResource(R.string.more_signed_as, account.email), style = MaterialTheme.typography.bodyMedium)
+            if (sessionState == SessionState.NeedsRenewal) {
+                MoreRow(R.string.more_renew_access, Lucide.drawable.lucide_ic_log_in, actions.onRenew)
+            }
+            MoreRow(R.string.more_sign_out, Lucide.drawable.lucide_ic_log_out, actions.onSignOut)
+        }
 
         Section(R.string.more_group_device)
         Text(stringResource(R.string.more_theme), style = MaterialTheme.typography.titleSmall)
