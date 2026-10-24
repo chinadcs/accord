@@ -41,6 +41,40 @@ import app.accord.UndoOutcome
 import app.accord.R
 import app.accord.core.space.DateCriterion
 import app.accord.core.space.EntrySituation
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Surface
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import app.accord.core.sync.EntryStage
+import app.accord.core.sync.SessionState
+import app.accord.ui.access.AccessRoute
+import app.accord.ui.access.AccessViewModel
+import app.accord.ui.firststeps.FirstStepsRoute
+import app.accord.ui.firststeps.FirstStepsViewModel
+import app.accord.ui.firststeps.StepActions
+import app.accord.ui.nav.ROUTE_ACCESS
+import app.accord.ui.nav.ROUTE_FIRST_STEPS
+import app.accord.ui.nav.ROUTE_SPACE
+import app.accord.ui.space.SpaceRoute
+import app.accord.ui.space.SpaceViewModel
+import app.accord.ui.theme.AccordSpacing
 import app.accord.ui.budget.BudgetRoute
 import app.accord.ui.budget.BudgetViewModel
 import app.accord.ui.category.CategoryRoute
@@ -93,9 +127,64 @@ import app.accord.ui.register.RegisterRoute
 import app.accord.ui.register.RegisterViewModel
 import java.time.YearMonth
 
+/**
+ * Raiz do aplicativo: o estágio de entrada decide a tela. Sem conta, Acesso (01); com conta e sem
+ * espaço, Espaço do casal (02); com espaço novo, Primeiros passos (03); depois, o aplicativo.
+ */
 @Composable
 fun AccordApp(container: AppContainer) {
+    val access by container.access.status.collectAsStateWithLifecycle()
+    // O fluxo de espaço continua na tela 02 depois de criar ou entrar, até a pessoa seguir adiante.
+    var spaceIntro by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(access.stage) {
+        when (access.stage) {
+            EntryStage.NoSpace -> spaceIntro = true
+            EntryStage.SignedOut -> spaceIntro = false
+            else -> Unit
+        }
+    }
+    when {
+        access.stage == EntryStage.Loading -> LoadingGate()
+        access.stage == EntryStage.SignedOut -> AccessGate(container)
+        access.stage == EntryStage.NoSpace || spaceIntro -> SpaceGate(container, onContinue = { spaceIntro = false })
+        else -> {
+            // Fixada na primeira composição: trocar a rota inicial depois recriaria o grafo de navegação.
+            val startRoute = remember { if (access.stage == EntryStage.FirstSteps) ROUTE_FIRST_STEPS else Root.Chat.graph }
+            MainApp(container, startRoute)
+        }
+    }
+}
+
+@Composable
+private fun LoadingGate() {
+    Scaffold { padding ->
+        Column(Modifier.fillMaxSize().padding(padding), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            CircularProgressIndicator()
+            Text(stringResource(R.string.access_loading), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(top = AccordSpacing.s3))
+        }
+    }
+}
+
+@Composable
+private fun AccessGate(container: AppContainer) {
+    Scaffold { padding ->
+        val viewModel: AccessViewModel = viewModel(factory = viewModelFactory { initializer { AccessViewModel(container.access) } })
+        AccessRoute(viewModel, padding)
+    }
+}
+
+@Composable
+private fun SpaceGate(container: AppContainer, onContinue: () -> Unit) {
+    Scaffold { padding ->
+        val viewModel: SpaceViewModel = viewModel(factory = viewModelFactory { initializer { SpaceViewModel(container.access) } })
+        SpaceRoute(viewModel, padding, firstRun = true, onContinue = onContinue)
+    }
+}
+
+@Composable
+private fun MainApp(container: AppContainer, startRoute: String) {
     val navController = rememberNavController()
+    val access by container.access.status.collectAsStateWithLifecycle()
     val entry by navController.currentBackStackEntryAsState()
     val destination = entry?.destination
     // A barra inferior só aparece nas raízes; detalhes e formulários escondem-na.
@@ -130,6 +219,12 @@ fun AccordApp(container: AppContainer) {
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
+        topBar = {
+            // Sessão vencida: os dados e a fila ficam; só a pessoa pode entrar de novo, com a mesma conta.
+            if (access.session == SessionState.NeedsRenewal && destination?.route != ROUTE_ACCESS) {
+                RenewalBanner(onRenew = { navController.navigate(ROUTE_ACCESS) })
+            }
+        },
         bottomBar = {
             if (onRoot) {
                 NavigationBar {
@@ -145,7 +240,7 @@ fun AccordApp(container: AppContainer) {
             }
         },
     ) { padding ->
-        NavHost(navController, startDestination = Root.Chat.graph) {
+        NavHost(navController, startDestination = startRoute) {
             val register = { navController.navigate(ROUTE_REGISTER) }
             val openEntry = { id: String -> navController.navigate("$ROUTE_ENTRY/${Uri.encode(id)}") }
 
@@ -210,6 +305,8 @@ fun AccordApp(container: AppContainer) {
             navigation(startDestination = Root.More.start, route = Root.More.graph) {
                 composable(Root.More.start) {
                     val theme by container.theme.preference.collectAsStateWithLifecycle()
+                    val scope = rememberCoroutineScope()
+                    var signOutPending by remember { mutableStateOf<Int?>(null) }
                     MoreScreen(
                         padding, theme, onTheme = container.theme::set,
                         actions = MoreActions(
@@ -220,8 +317,27 @@ fun AccordApp(container: AppContainer) {
                             onIncomes = { navController.navigate(ROUTE_INCOMES) },
                             onCommitments = { navController.navigate(ROUTE_COMMITMENTS) },
                             onRegister = register,
+                            onSpace = { navController.navigate(ROUTE_SPACE) },
+                            onFirstSteps = { navController.navigate(ROUTE_FIRST_STEPS) },
+                            onSignOut = {
+                                // Sempre uma decisão explícita, com o número de operações por enviar à vista.
+                                scope.launch {
+                                    val summary = container.access.runtime.value?.syncStore?.summary()
+                                    signOutPending = summary?.let { it.awaitingOperations + it.openConflicts + it.rejectedOperations } ?: 0
+                                }
+                            },
+                            onRenew = { navController.navigate(ROUTE_ACCESS) },
                         ),
+                        account = access.account,
+                        sessionState = access.session,
                     )
+                    signOutPending?.let { pending ->
+                        SignOutDialog(
+                            pending,
+                            onConfirm = { signOutPending = null; scope.launch { container.access.signOut(confirmPending = true) } },
+                            onDismiss = { signOutPending = null },
+                        )
+                    }
                 }
             }
 
@@ -290,6 +406,37 @@ fun AccordApp(container: AppContainer) {
                 CommitmentDetailRoute(
                     viewModel, padding, onBack = { navController.popBackStack() }, onOpenEntry = openEntry,
                     onEdit = { id -> navController.navigate("$ROUTE_EDIT/${Uri.encode(id)}") },
+                )
+            }
+            composable(ROUTE_ACCESS) {
+                val viewModel: AccessViewModel = viewModel(
+                    factory = viewModelFactory { initializer { AccessViewModel(container.access, renewal = true) } },
+                )
+                AccessRoute(viewModel, padding, onEntered = { navController.popBackStack() }, onBack = { navController.popBackStack() })
+            }
+            composable(ROUTE_SPACE) {
+                val viewModel: SpaceViewModel = viewModel(factory = viewModelFactory { initializer { SpaceViewModel(container.access) } })
+                SpaceRoute(viewModel, padding, firstRun = false, onContinue = {}, onBack = { navController.popBackStack() })
+            }
+            composable(ROUTE_FIRST_STEPS) {
+                val viewModel: FirstStepsViewModel = viewModel(
+                    factory = viewModelFactory { initializer { FirstStepsViewModel(container, container.access) } },
+                )
+                val goToChat: () -> Unit = {
+                    navController.navigate(Root.Chat.graph) { popUpTo(ROUTE_FIRST_STEPS) { inclusive = true } }
+                }
+                FirstStepsRoute(
+                    viewModel, padding,
+                    StepActions(
+                        onCategories = { navController.navigate(ROUTE_CATEGORIES) },
+                        onCard = { navController.navigate(ROUTE_CARD) },
+                        onAccounts = { navController.navigate(ROUTE_ACCOUNTS) },
+                        onLimits = { navController.navigate(ROUTE_LIMITS) },
+                        onSpace = { navController.navigate(ROUTE_SPACE) },
+                        onStart = { viewModel.start(goToChat) },
+                        onRegisterManually = { viewModel.start { navController.navigate(ROUTE_REGISTER) { popUpTo(ROUTE_FIRST_STEPS) { inclusive = true } } } },
+                        onBack = if (navController.previousBackStackEntry != null) ({ navController.popBackStack() }) else null,
+                    ),
                 )
             }
             composable(ROUTE_CATEGORIES) {
@@ -381,5 +528,36 @@ private fun NavBackStackEntry.initialFilter(default: YearMonth): EntriesFilterSt
         from = month, to = month, criterion = DateCriterion.BudgetMonth,
         categoryId = arguments?.getString(ARG_FILTER_CATEGORY),
         situations = arguments?.getString(ARG_FILTER_SITUATION)?.let { setOf(EntrySituation.valueOf(it)) }.orEmpty(),
+    )
+}
+
+@Composable
+private fun RenewalBanner(onRenew: () -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.tertiaryContainer, contentColor = MaterialTheme.colorScheme.onTertiaryContainer) {
+        Row(
+            Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars).padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+        ) {
+            Text(stringResource(R.string.renew_banner), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            TextButton(onClick = onRenew, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.more_renew_access)) }
+        }
+    }
+}
+
+@Composable
+private fun SignOutDialog(pendingOperations: Int, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.signout_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                Text(stringResource(R.string.signout_body))
+                if (pendingOperations > 0) {
+                    Text(pluralStringResource(R.plurals.signout_pending, pendingOperations, pendingOperations), style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onConfirm, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.signout_confirm)) } },
+        dismissButton = { TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.signout_cancel)) } },
     )
 }

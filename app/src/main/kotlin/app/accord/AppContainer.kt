@@ -1,22 +1,27 @@
 package app.accord
 
 import android.content.Context
-import androidx.room.Room
-import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import app.accord.core.BudgetClock
 import app.accord.core.space.CommandId
 import app.accord.core.space.CommandResult
 import app.accord.core.space.Envelope
 import app.accord.core.space.ErrorCode
 import app.accord.core.space.FinanceSpace
-import app.accord.core.space.Session
 import app.accord.core.space.Undo
-import app.accord.persistence.AccordDatabase
-import app.accord.persistence.AccordDatabase_Impl
-import app.accord.persistence.RoomFinanceSpace
+import app.accord.access.AndroidSpaceRuntimeFactory
+import app.accord.access.SecureAccessStore
+import app.accord.core.sync.AccessStore
+import app.accord.core.sync.RemoteSpaceService
+import app.accord.persistence.AccessCenter
+import app.accord.remote.SupabaseSpaceService
+import app.accord.remote.UnconfiguredSpaceService
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import java.util.UUID
 
 /** O que as telas precisam para ler e alterar dados: a fachada e o relógio do orçamento. */
@@ -31,32 +36,44 @@ interface SpaceProvider {
 }
 
 /**
- * Dependências do aplicativo. O banco é local e persistido; não há rede nem modelo de IA aqui.
- * A identidade é a de desenvolvimento da Etapa 1: S2 passa a fornecer o espaço e a pessoa reais,
- * e dados criados com ela não são migrados (S1, "Dependências").
+ * Dependências do aplicativo. Banco e fila são locais e persistidos, um por (conta, espaço); a rede
+ * só entra pelo [RemoteSpaceService], com a URL e a chave pública do build (nunca a chave secreta).
+ * Tema e modelo são preferências do aparelho e não sincronizam.
  */
-class AppContainer(private val context: Context) : SpaceProvider {
+class AppContainer(
+    private val context: Context,
+    accessStore: AccessStore = SecureAccessStore(context),
+    val remote: RemoteSpaceService = defaultRemote(),
+) : SpaceProvider {
     override val clock: BudgetClock = BudgetClock.system()
-    override val personId: String = DEV_PERSON_ID
     override val feedback = FeedbackBus()
 
     /** Preferência de tema deste aparelho; não é dado financeiro. */
     val theme = ThemeStore(context)
 
-    private val session = Session(spaceId = DEV_SPACE_ID, personId = DEV_PERSON_ID)
-    private val mutex = Mutex()
-    private var space: FinanceSpace? = null
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    /** Abre a fachada uma vez; as chamadas seguintes devolvem a mesma. */
-    override suspend fun space(): FinanceSpace = mutex.withLock {
-        space ?: run {
-            val database = Room.databaseBuilder<AccordDatabase>(context, DATABASE_NAME) { AccordDatabase_Impl() }
-                .setDriver(BundledSQLiteDriver())
-                .setQueryCoroutineContext(Dispatchers.IO)
-                .build()
-            RoomFinanceSpace.open(database, clock, { session }).also { space = it }
+    /** Conta, sessão, espaço, convite e primeiros passos (tela 01, 02 e 03). */
+    val access = AccessCenter(
+        remote = remote,
+        store = accessStore,
+        runtimes = AndroidSpaceRuntimeFactory(context, clock, remote),
+        currentMonth = { clock.currentMonth() },
+    )
+
+    /** Quem registra é a conta da sessão; as telas só existem com conta e espaço. */
+    override val personId: String get() = access.status.value.account?.accountId.orEmpty()
+
+    init {
+        appScope.launch {
+            access.restore()
+            // Com um espaço aberto, um ciclo de envio e recebimento; a agenda em segundo plano vem com a tela 26.
+            access.runtime.collectLatest { runtime -> runtime?.engine?.syncNow() }
         }
     }
+
+    /** Espera a fachada do espaço da conta atual; só é chamada por telas que existem com espaço aberto. */
+    override suspend fun space(): FinanceSpace = access.runtime.filterNotNull().first().space
 
     override suspend fun undo(operationId: String): UndoOutcome =
         when (val result = space().execute(Envelope(CommandId(UUID.randomUUID().toString())), Undo(operationId))) {
@@ -67,8 +84,17 @@ class AppContainer(private val context: Context) : SpaceProvider {
         }
 
     companion object {
-        const val DATABASE_NAME = "accord.db"
+        /** Identidade fixa só dos testes de instrumentação; o aplicativo real usa a conta da sessão. */
         const val DEV_SPACE_ID = "dev-space"
         const val DEV_PERSON_ID = "dev-person"
+        const val DATABASE_NAME = "accord-$DEV_PERSON_ID-$DEV_SPACE_ID.db"
+
+        /** URL e chave pública do build; sem elas, o serviço é "não configurado" e o app segue só neste aparelho. */
+        fun defaultRemote(): RemoteSpaceService =
+            if (BuildConfig.SUPABASE_URL.isBlank() || BuildConfig.SUPABASE_PUBLISHABLE_KEY.isBlank()) {
+                UnconfiguredSpaceService
+            } else {
+                SupabaseSpaceService(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_PUBLISHABLE_KEY)
+            }
     }
 }

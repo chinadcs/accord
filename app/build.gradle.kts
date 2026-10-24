@@ -1,6 +1,16 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+}
+
+// Só a URL do projeto e a chave PÚBLICA (publishable) do serviço entram no aplicativo. A chave secreta
+// (service role) nunca: ela existe só no ambiente do responsável pelo piloto. Os valores vêm de
+// local.properties (fora do repositório), de propriedade do Gradle ou do ambiente.
+fun serviceSetting(name: String, env: String): String {
+    val local = Properties().apply { rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use(::load) }
+    return (local.getProperty(name) ?: providers.gradleProperty(name).orNull ?: System.getenv(env) ?: "")
 }
 
 android {
@@ -14,11 +24,14 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "0.1.0"
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "app.accord.AccordTestRunner"
+        buildConfigField("String", "SUPABASE_URL", "\"${serviceSetting("accord.supabase.url", "ACCORD_SUPABASE_URL")}\"")
+        buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"${serviceSetting("accord.supabase.publishableKey", "ACCORD_SUPABASE_PUBLISHABLE_KEY")}\"")
     }
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     compileOptions {
@@ -41,6 +54,7 @@ kotlin {
 dependencies {
     implementation(project(":core"))
     implementation(project(":persistence"))
+    implementation(project(":remote"))
     implementation(libs.sqlite.bundled)
     implementation(libs.coroutines.android)
 

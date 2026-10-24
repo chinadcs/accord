@@ -32,7 +32,7 @@ class FacadeOnDeviceTest {
     fun registraEConsultaNoBancoDoAparelho() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         context.deleteDatabase(AppContainer.DATABASE_NAME)
-        val container = AppContainer(context)
+        val container = DevIdentity.container(context)
         val space = container.space()
 
         val categories = (space.categories() as QueryResult.Data).value
