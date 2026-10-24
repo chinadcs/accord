@@ -411,6 +411,7 @@ declare
   v_base bigint;
   v_current public.space_entities;
   v_divergent jsonb := '[]'::jsonb;
+  v_unchanged jsonb := '[]'::jsonb;
   v_versions jsonb := '[]'::jsonb;
   v_cursor bigint;
   v_version bigint;
@@ -476,10 +477,12 @@ begin
       return accord_private.rejected(v_id, 'InvalidEnvelope', 'versão base sem entidade');
     elsif v_base is not null and v_current.version <> v_base then
       v_divergent := v_divergent || accord_private.entity_json(v_current);
+    elsif found then
+      v_unchanged := v_unchanged || accord_private.entity_json(v_current);
     end if;
   end loop;
   if jsonb_array_length(v_divergent) > 0 then
-    return jsonb_build_object('operationId', v_id, 'result', 'conflict', 'current', v_divergent);
+    return jsonb_build_object('operationId', v_id, 'result', 'conflict', 'current', v_divergent, 'unchanged', v_unchanged);
   end if;
 
   for v_ch in select c from jsonb_array_elements(v_changes) c loop
