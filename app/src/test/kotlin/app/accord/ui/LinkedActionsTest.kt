@@ -1,0 +1,167 @@
+package app.accord.ui
+
+import app.accord.core.Money
+import app.accord.core.space.AssignmentState
+import app.accord.core.space.BoletoView
+import app.accord.core.space.CancelState
+import app.accord.core.space.Classification
+import app.accord.core.space.ConfirmNonCharge
+import app.accord.core.space.ConfirmRefund
+import app.accord.core.space.EntryDetail
+import app.accord.core.space.EntryKind
+import app.accord.core.space.InstallmentView
+import app.accord.core.space.IncomeView
+import app.accord.core.space.ItemSync
+import app.accord.core.space.PayBoleto
+import app.accord.core.space.PurchaseDetail
+import app.accord.core.space.ReceiveIncome
+import app.accord.core.space.RefundStatus
+import app.accord.core.space.RefundView
+import app.accord.core.space.RegisterRefund
+import app.accord.core.space.RequestInstallmentCancellation
+import app.accord.ui.detail.LinkedAction
+import app.accord.ui.detail.LinkedBuilt
+import app.accord.ui.detail.LinkedError
+import app.accord.ui.detail.LinkedField
+import app.accord.ui.detail.LinkedForm
+import app.accord.ui.detail.availableActions
+import app.accord.ui.detail.build
+import java.time.LocalDate
+import java.time.YearMonth
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+class LinkedActionsTest {
+    private val today = LocalDate.of(2026, 10, 24)
+    private val form = LinkedForm(date = today)
+
+    private fun detail(
+        kind: EntryKind,
+        boleto: BoletoView? = null,
+        income: IncomeView? = null,
+        purchase: PurchaseDetail? = null,
+        refunds: List<RefundView> = emptyList(),
+        voided: Boolean = false,
+    ) = EntryDetail(
+        id = "id", kind = kind, description = "x", classification = Classification.ToClassify, amount = Money(10_000), purchaseDate = today,
+        dueDate = today, settledDate = null, method = null, accountId = null, authorId = null, spentBy = null, origin = null, revision = 4,
+        voided = voided, sync = ItemSync.SavedOnDevice, purchase = purchase, boleto = boleto, income = income, occurrence = null, refunds = refunds,
+    )
+
+    private fun boleto(paid: Boolean) = BoletoView(
+        "b", "Luz", Classification.ToClassify, today, Money(10_000), today.takeIf { paid }, Money(10_000).takeIf { paid }, null,
+        YearMonth.from(today), false, 7, false,
+    )
+
+    private fun purchase(vararg states: CancelState) = PurchaseDetail(
+        "p", "Compra", Classification.ToClassify, today, Money(30_000), false, 5, false,
+        states.mapIndexed { i, c -> InstallmentView(i + 1, Money(10_000), YearMonth.of(2026, 11 + i % 2), AssignmentState.Estimated, c) },
+    )
+
+    @Test
+    fun boletoNaoPagoOfereceRegistrarPagamentoEPagoNao() {
+        val unpaid = availableActions(detail(EntryKind.Boleto, boleto = boleto(paid = false)))
+        assertIs<LinkedAction.Settle>(unpaid.first())
+        assertTrue(unpaid.none { it is LinkedAction.Settle && it.receiving })
+        assertTrue(availableActions(detail(EntryKind.Boleto, boleto = boleto(paid = true))).none { it is LinkedAction.Settle })
+    }
+
+    @Test
+    fun excluidoOuEstornoNaoOferecemNada() {
+        assertTrue(availableActions(detail(EntryKind.Boleto, boleto = boleto(false), voided = true)).isEmpty())
+        assertTrue(availableActions(detail(EntryKind.Refund)).isEmpty())
+        assertTrue(availableActions(detail(EntryKind.InvoicePayment)).isEmpty())
+    }
+
+    @Test
+    fun rendaNaoRecebidaOfereceRecebimentoEnaoEstorno() {
+        val income = IncomeView("i", "Salário", Money(600_000), today, null, null, null, YearMonth.from(today), 2, false)
+        val actions = availableActions(detail(EntryKind.Income, income = income))
+        val settle = assertIs<LinkedAction.Settle>(actions.single())
+        assertTrue(settle.receiving)
+    }
+
+    @Test
+    fun compraParceladaOfereceEstornoECancelamentoESoOQueFoiPedidoPodeSerConfirmado() {
+        val actions = availableActions(detail(EntryKind.CardInstallment, purchase = purchase(CancelState.Active, CancelState.CancelRequested, CancelState.Active)))
+        val refund = assertIs<LinkedAction.NewRefund>(actions.first())
+        assertEquals("p", refund.originId) // o estorno é da compra, nunca de uma parcela
+        val cancels = actions.filterIsInstance<LinkedAction.Cancellation>()
+        assertEquals(listOf(1, 3), cancels.single { !it.nonCharge }.candidates)
+        assertEquals(listOf(2), cancels.single { it.nonCharge }.candidates)
+    }
+
+    @Test
+    fun estornoSolicitadoOfereceConfirmarEConfirmadoNao() {
+        val requested = RefundView("r1", "p", Money(5_000), RefundStatus.Requested, null, null, 1, false)
+        val confirmed = RefundView("r2", "p", Money(2_000), RefundStatus.Confirmed, today, YearMonth.from(today), 1, false)
+        val actions = availableActions(detail(EntryKind.DirectPayment, refunds = listOf(requested, confirmed)))
+        assertEquals(listOf("r1"), actions.filterIsInstance<LinkedAction.ConfirmRefundOf>().map { it.refund.id })
+    }
+
+    @Test
+    fun pagamentoSemValorConfirmaOPrevistoEComValorLevaOEfetivo() {
+        val settle = LinkedAction.Settle(LinkedAction.Settle.Kind.Boleto, "b", Money(10_000), revision = 7)
+        val same = assertIs<PayBoleto>(assertIs<LinkedBuilt.Ok>(settle.build(form)).command)
+        assertNull(same.payment.amount)
+        assertEquals(7, same.expectedRevision)
+        val other = assertIs<PayBoleto>(assertIs<LinkedBuilt.Ok>(settle.build(form.copy(amountText = "98,40"))).command)
+        assertEquals(Money(9_840), other.payment.amount)
+        assertEquals(today, other.payment.date)
+    }
+
+    @Test
+    fun recebimentoDeRendaUsaReceiveIncome() {
+        val settle = LinkedAction.Settle(LinkedAction.Settle.Kind.Income, "i", Money(600_000), revision = 2)
+        assertIs<ReceiveIncome>(assertIs<LinkedBuilt.Ok>(settle.build(form)).command)
+    }
+
+    @Test
+    fun valorAmbiguoNoPagamentoEErroDoCampo() {
+        val settle = LinkedAction.Settle(LinkedAction.Settle.Kind.Boleto, "b", Money(10_000), revision = 7)
+        val invalid = assertIs<LinkedBuilt.Invalid>(settle.build(form.copy(amountText = "1.20")))
+        assertEquals(LinkedError.AmountAmbiguous, invalid.errors[LinkedField.Amount])
+    }
+
+    @Test
+    fun estornoExigeValorEEscolhaDeStatusSemPresumirDevolucao() {
+        val refund = LinkedAction.NewRefund("p", Money(30_000), 5)
+        val invalid = assertIs<LinkedBuilt.Invalid>(refund.build(form))
+        assertEquals(LinkedError.AmountEmpty, invalid.errors[LinkedField.Amount])
+        assertEquals(LinkedError.StatusRequired, invalid.errors[LinkedField.Status])
+    }
+
+    @Test
+    fun estornoSolicitadoNaoLevaDataEConfirmadoLeva() {
+        val refund = LinkedAction.NewRefund("p", Money(30_000), 5)
+        val requested = assertIs<RegisterRefund>(assertIs<LinkedBuilt.Ok>(refund.build(form.copy(amountText = "100", refundStatus = RefundStatus.Requested))).command)
+        assertNull(requested.date)
+        val confirmed = assertIs<RegisterRefund>(assertIs<LinkedBuilt.Ok>(refund.build(form.copy(amountText = "100", refundStatus = RefundStatus.Confirmed))).command)
+        assertEquals(today, confirmed.date)
+        assertEquals(Money(10_000), confirmed.amount)
+    }
+
+    @Test
+    fun confirmarEstornoLevaOValorEfetivamenteDevolvidoEAVersaoDele() {
+        val view = RefundView("r1", "p", Money(5_000), RefundStatus.Requested, null, null, 3, false)
+        val command = assertIs<ConfirmRefund>(assertIs<LinkedBuilt.Ok>(LinkedAction.ConfirmRefundOf(view).build(form.copy(amountText = "30,00"))).command)
+        assertEquals(Money(3_000), command.amount) // devolução parcial: não presume integral
+        assertEquals(3, command.expectedRevision)
+    }
+
+    @Test
+    fun cancelamentoExigeParcelaMarcadaEPedirDifereDeConfirmarNaoCobranca() {
+        val request = LinkedAction.Cancellation("p", listOf(1, 3), nonCharge = false, revision = 5)
+        val invalid = assertIs<LinkedBuilt.Invalid>(request.build(form))
+        assertEquals(LinkedError.NothingSelected, invalid.errors[LinkedField.Installments])
+        val asked = assertIs<RequestInstallmentCancellation>(assertIs<LinkedBuilt.Ok>(request.build(form.copy(selected = setOf(3, 1)))).command)
+        assertEquals(listOf(1, 3), asked.installmentNumbers)
+        val confirmed = assertIs<ConfirmNonCharge>(
+            assertIs<LinkedBuilt.Ok>(LinkedAction.Cancellation("p", listOf(2), nonCharge = true, revision = 5).build(form.copy(selected = setOf(2)))).command,
+        )
+        assertEquals(listOf(2), confirmed.installmentNumbers)
+    }
+}

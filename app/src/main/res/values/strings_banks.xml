@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Seletor de banco (catálogo local) -->
+    <string name="bank_picker_title">Escolher banco</string>
+    <string name="bank_search">Buscar por nome</string>
+    <string name="bank_other">Outro banco (informar o nome)</string>
+    <string name="bank_other_name">Nome do banco</string>
+    <string name="bank_use_other">Usar este nome</string>
+    <string name="bank_back_to_list">Voltar à lista</string>
+    <string name="bank_no_results">Nenhum banco encontrado. Use “Outro banco” para informar o nome.</string>
+    <string name="bank_none">Selecionar banco</string>
+</resources>

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Compromissos futuros (tela 10) -->
+    <string name="commitments_title">Compromissos futuros</string>
+    <string name="commitments_kind_all">Todos os compromissos</string>
+    <string name="commitments_kind_installments">Parcelas</string>
+    <string name="commitments_kind_recurrences">Recorrências</string>
+    <string name="commitments_kind_bills">Boletos</string>
+    <string name="commitments_known_total">Conhecidos neste mês</string>
+    <string name="commitments_card_link">Cartão: parcelas e compras da fatura</string>
+    <string name="commitments_variable_note">Estimativas variáveis e intenções de compra não entram aqui.</string>
+    <string name="commitments_empty_title">Nenhum compromisso conhecido neste mês</string>
+    <string name="commitments_empty_body">Isso mostra só o que já foi registrado: parcelas, recorrências e boletos. Não significa que não haverá gastos.</string>
+    <string name="commitments_register">Registrar compromisso</string>
+    <string name="commitments_failed">Não foi possível ler os compromissos. Nada foi apagado; tente de novo.</string>
+    <string name="commitments_line_finite">%1$d/%2$d · vence %3$s</string>
+    <string name="commitments_line_recurring">Recorrente · vence %1$s</string>
+    <string name="commitments_line_bill">Boleto · vence %1$s</string>
+
+    <!-- Detalhe do compromisso (tela 11) -->
+    <string name="commitment_title">Compromisso</string>
+    <string name="commitment_not_found_title">Compromisso não encontrado</string>
+    <string name="commitment_not_found_body">Ele pode ter sido excluído. Volte à lista para ver os compromissos atuais.</string>
+    <string name="commitment_installments_summary">Compra em %1$d parcelas</string>
+    <string name="commitment_each">Primeira parcela: %1$s</string>
+    <string name="commitment_purchase_line">Compra: %1$s · %2$s</string>
+    <string name="commitment_schedule">Cronograma</string>
+    <string name="commitment_schedule_line">%1$d/%2$d · vence %3$s</string>
+    <string name="commitment_edit">Editar compromisso</string>
+    <string name="commitment_check_entry">Conferir lançamento</string>
+    <string name="commitment_payment_note">Parcela de cartão é paga pela quitação integral da fatura, não parcela a parcela.</string>
+    <string name="commitment_recurring_summary">Recorrência · %1$s · sem data de término</string>
+    <string name="commitment_frequency_monthly">todo mês</string>
+    <string name="commitment_frequency_annual">todo ano</string>
+    <string name="commitment_current">Ocorrência de referência: %1$s</string>
+    <string name="commitment_next">Próxima: %1$s · %2$s</string>
+    <string name="commitment_no_next">Não há próxima ocorrência: a série termina aqui.</string>
+    <string name="commitment_paid_occurrence">Paga em %1$s</string>
+    <string name="commitment_see_occurrence">Ver ocorrência</string>
+    <string name="commitment_bill_overdue">Venceu em %1$s e ainda não foi pago. Continua no mês do vencimento, como pendente.</string>
+    <string name="commitment_bill_planned">Previsto em %1$s</string>
+    <string name="commitment_pay_bill">Registrar pagamento</string>
+    <string name="detail_see_commitment">Ver compromisso</string>
+</resources>

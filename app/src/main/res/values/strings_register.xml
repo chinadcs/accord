@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Aviso depois de salvar e desfazer -->
+    <string name="feedback_saved">Salvo no aparelho.</string>
+    <string name="feedback_saved_corrected">Alteração salva no aparelho.</string>
+    <string name="feedback_deleted">Lançamento excluído.</string>
+    <string name="action_undo">Desfazer</string>
+    <string name="undo_done">Desfeito.</string>
+    <string name="undo_changed_after">Não foi possível desfazer: o lançamento foi alterado depois.</string>
+    <string name="undo_failed">Não foi possível desfazer.</string>
+
+    <!-- Registro manual (tela 09) -->
+    <string name="register_title">Novo lançamento</string>
+    <string name="register_edit_title">Editar lançamento</string>
+    <string name="register_kind_expense">Despesa</string>
+    <string name="register_kind_income">Renda</string>
+    <string name="register_payment">Pagamento</string>
+    <string name="register_form_card">Cartão</string>
+    <string name="register_form_pix">Pix</string>
+    <string name="register_form_debit">Débito</string>
+    <string name="register_form_cash">Dinheiro</string>
+    <string name="register_form_boleto">Boleto</string>
+    <string name="register_description">Descrição</string>
+    <string name="register_amount">Valor (R$)</string>
+    <string name="register_amount_hint">Ex.: 68,00</string>
+    <string name="register_date">Data</string>
+    <string name="register_date_due">Vencimento</string>
+    <string name="register_date_expected">Data prevista</string>
+    <string name="register_category">Categoria</string>
+    <string name="register_category_pick">Escolher categoria</string>
+    <string name="register_account">Conta</string>
+    <string name="register_account_none">Nenhuma conta cadastrada</string>
+    <string name="register_account_pick">Escolher conta</string>
+    <string name="register_more_options">Mais opções: parcelas, recorrência, fatura e pagamento</string>
+    <string name="register_less_options">Menos opções</string>
+    <string name="register_installments">Parcelas</string>
+    <string name="register_installments_hint">1 é à vista</string>
+    <string name="register_meaning_title">O valor é total ou de cada parcela?</string>
+    <string name="register_meaning_total">Total da compra</string>
+    <string name="register_meaning_each">Valor de cada parcela</string>
+    <string name="register_repeat">Repete</string>
+    <string name="register_repeat_none">Não repete</string>
+    <string name="register_repeat_monthly">Todo mês</string>
+    <string name="register_repeat_annual">Todo ano</string>
+    <string name="register_repeat_note">Sem data de término. Para parar, exclua “esta e as próximas” na ocorrência.</string>
+    <string name="register_invoice_title">Fatura</string>
+    <string name="register_invoice_estimated">Fatura estimada: %s</string>
+    <string name="register_invoice_estimated_check">Fatura estimada: %s · a conferir</string>
+    <string name="register_invoice_informed">Fatura informada: %s</string>
+    <string name="register_invoice_correct">Corrigir</string>
+    <string name="register_invoice_estimate">Usar a estimada</string>
+    <string name="register_schedule_title">Parcelas</string>
+    <string name="register_schedule_line">%1$d/%2$d · %3$s · %4$s</string>
+    <string name="register_settled_boleto">Já foi pago</string>
+    <string name="register_settled_income">Já recebi</string>
+    <string name="register_settled_date_boleto">Data do pagamento</string>
+    <string name="register_settled_date_income">Data do recebimento</string>
+    <string name="register_settled_amount">Valor efetivo (opcional)</string>
+    <string name="register_settled_amount_hint">Deixe vazio para usar o valor previsto</string>
+    <string name="register_month_change">Previsão de %1$s → %2$s em %3$s</string>
+    <string name="register_month_change_paid">pago</string>
+    <string name="register_month_change_received">recebido</string>
+    <string name="register_save">Salvar lançamento</string>
+    <string name="register_saving">Salvando…</string>
+    <string name="register_draft_recovered">Rascunho recuperado. Confira os campos antes de salvar.</string>
+    <string name="register_draft_discard">Descartar rascunho</string>
+    <string name="register_load_failed">Não foi possível carregar categorias e contas deste aparelho.</string>
+    <string name="register_back_title">Sair sem salvar?</string>
+    <string name="register_back_body">Você digitou dados que ainda não foram salvos.</string>
+    <string name="register_back_keep">Continuar editando</string>
+    <string name="register_back_draft">Guardar rascunho</string>
+    <string name="register_back_discard">Descartar</string>
+    <string name="register_date_pick_ok">Escolher</string>
+    <string name="register_date_pick_cancel">Cancelar</string>
+    <string name="register_picker_close">Fechar</string>
+
+    <!-- Erros por campo -->
+    <string name="error_required">Preencha este campo.</string>
+    <string name="error_amount_empty">Informe o valor.</string>
+    <string name="error_amount_negative">O valor não pode ser negativo.</string>
+    <string name="error_amount_ambiguous">Valor ambíguo. Use vírgula nos centavos, como 1.200,00.</string>
+    <string name="error_amount_invalid">Valor inválido. Use só números e vírgula, como 35,90.</string>
+    <string name="error_amount_too_large">Esse valor é grande demais.</string>
+    <string name="error_must_be_positive">O valor precisa ser maior que zero.</string>
+    <string name="error_installments_invalid">Informe um número de parcelas, a partir de 1.</string>
+    <string name="error_meaning_required">Escolha se o valor é o total ou o de cada parcela.</string>
+    <string name="error_account_required">Escolha a conta; você ainda não definiu uma conta padrão.</string>
+    <string name="error_account_not_allowed">Esta forma de pagamento não usa conta.</string>
+    <string name="error_category_required">Escolha a categoria.</string>
+</resources>

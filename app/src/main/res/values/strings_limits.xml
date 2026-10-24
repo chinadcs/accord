@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Limites do orçamento (tela 24) -->
+    <string name="limits_title">Limites do orçamento</string>
+    <string name="limits_reference">Referência: %1$s</string>
+    <string name="limits_field_total">Limite de %1$s (R$)</string>
+    <string name="limits_undefined">Não definido</string>
+    <string name="limits_spent">Gasto no mês: %1$s</string>
+    <string name="limits_later_changes">Já existem alterações em %1$s.</string>
+    <string name="limits_split_toggle">Dividir entre subcategorias</string>
+    <string name="limits_no_split">Sem divisão definida</string>
+    <string name="limits_distributed">Distribuído: %1$s de %2$s</string>
+    <string name="limits_undistributed">Sem distribuir: %1$s</string>
+    <string name="limits_split_note">A divisão faz parte do mesmo limite: não soma outra vez. Subcategoria sem valor não tem limite zero; os gastos dela contam na categoria.</string>
+    <string name="limits_total">Total das categorias</string>
+    <string name="limits_total_note">Soma só os limites das categorias principais. Categoria sem limite não entra como zero.</string>
+    <string name="limits_scope_title">Aplicar a alteração</string>
+    <string name="limits_scope_only">Somente %1$s</string>
+    <string name="limits_scope_from">%1$s e meses seguintes</string>
+    <string name="limits_scope_required">Escolha a quais meses a alteração vale.</string>
+    <string name="limits_summary">Resumo da alteração</string>
+    <string name="limits_summary_line">%1$s: %2$s → %3$s</string>
+    <string name="limits_summary_only">Vale só para %1$s; os outros meses ficam como estão.</string>
+    <string name="limits_summary_from">Vale a partir de %1$s; meses anteriores não mudam.</string>
+    <string name="limits_replaced">Esta alteração substitui ajustes que já existiam em %1$s.</string>
+    <string name="limits_save">Salvar limites</string>
+    <string name="limits_nothing_changed">Nada foi alterado ainda.</string>
+    <string name="limits_discard_body">Os limites digitados aqui ainda não foram salvos.</string>
+    <string name="limits_error_negative">O valor não pode ser negativo.</string>
+    <string name="limits_error_split_exceeds">A divisão passa do limite principal em %1$s. Ajuste a divisão ou o limite.</string>
+    <string name="limits_error_split_without_total">Defina o limite principal antes de dividir.</string>
+    <string name="feedback_limits_only_month">Limite atualizado somente em %1$s.</string>
+    <string name="feedback_limits_from_month">Limite atualizado a partir de %1$s.</string>
+    <string name="limits_month_blocked">Salve ou descarte as alterações antes de trocar o mês.</string>
+</resources>
