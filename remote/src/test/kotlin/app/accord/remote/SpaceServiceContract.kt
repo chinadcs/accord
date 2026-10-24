@@ -172,6 +172,16 @@ abstract class SpaceServiceContract {
     }
 
     @Test
+    fun `a conta descobre o próprio espaço ao entrar num aparelho novo`() = test {
+        val creator = signUp()
+        assertEquals(null, ok(service.currentSpace(creator.accessToken)))
+        val id = UUID.randomUUID().toString()
+        ok(service.createSpace(creator.accessToken, id, "Casa"))
+        val again = ok(service.signIn(creator.email, password))
+        assertEquals(SpaceRef(id, "Casa"), ok(service.currentSpace(again.accessToken)))
+    }
+
+    @Test
     fun `quem já participa de um espaço recebe esse espaço em vez de criar outro`() = test {
         val creator = signUp()
         val first = UUID.randomUUID().toString()

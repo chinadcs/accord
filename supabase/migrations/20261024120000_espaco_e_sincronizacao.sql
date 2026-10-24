@@ -223,6 +223,30 @@ begin
 end;
 $$;
 
+create function public.current_space()
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_account uuid := (select auth.uid());
+  v_space uuid;
+  v_name text;
+begin
+  if v_account is null then
+    raise exception 'not_authenticated' using errcode = '28000';
+  end if;
+  select m.space_id, s.name into v_space, v_name
+  from public.space_members m join public.spaces s on s.id = m.space_id
+  where m.account_id = v_account;
+  if v_space is null then
+    return jsonb_build_object('space', null);
+  end if;
+  return jsonb_build_object('space', jsonb_build_object('spaceId', v_space, 'name', v_name));
+end;
+$$;
+
 create function public.generate_invite(p_space uuid)
 returns jsonb
 language plpgsql
@@ -573,6 +597,7 @@ grant all on all sequences in schema public to service_role;
 
 -- Apenas contas autenticadas executam as funções expostas; anon não executa nenhuma.
 revoke all on function public.create_space(uuid, text) from public, anon;
+revoke all on function public.current_space() from public, anon;
 revoke all on function public.generate_invite(uuid) from public, anon;
 revoke all on function public.active_invite(uuid) from public, anon;
 revoke all on function public.join_with_code(text) from public, anon;
@@ -580,6 +605,7 @@ revoke all on function public.list_participants(uuid) from public, anon;
 revoke all on function public.push_operations(uuid, jsonb) from public, anon;
 revoke all on function public.pull_changes(uuid, bigint, int) from public, anon;
 grant execute on function public.create_space(uuid, text) to authenticated;
+grant execute on function public.current_space() to authenticated;
 grant execute on function public.generate_invite(uuid) to authenticated;
 grant execute on function public.active_invite(uuid) to authenticated;
 grant execute on function public.join_with_code(text) to authenticated;

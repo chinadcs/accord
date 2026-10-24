@@ -2,7 +2,7 @@
 -- espaço E1, U3 no espaço E2, U4 e U5 sem espaço, e chamadas anônimas. Valores fictícios.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(46);
+select plan(47);
 
 create schema tests;
 grant usage on schema tests to anon, authenticated;
@@ -71,6 +71,7 @@ select throws_ok($$select public.join_with_code('ABCDEFGH')$$, '42501', null, 'a
 select throws_ok($$select public.push_operations('00000000-0000-0000-0000-0000000000e1', '[]')$$, '42501', null, 'anon não envia');
 select throws_ok($$select public.pull_changes('00000000-0000-0000-0000-0000000000e1', 0, 10)$$, '42501', null, 'anon não recebe');
 select throws_ok($$select public.list_participants('00000000-0000-0000-0000-0000000000e1')$$, '42501', null, 'anon não lista participantes');
+select throws_ok($$select public.current_space()$$, '42501', null, 'anon não consulta o próprio espaço');
 select tests.back();
 
 -- ---- U3 (espaço E2) não vê nem altera o espaço E1, mesmo conhecendo os identificadores ----

@@ -605,7 +605,15 @@ data class MovementRow(
     val revision: Long,
 )
 
-data class CardInfo(val id: String, val bank: BankRef?, val nickname: String, val closingDay: Int, val dueDay: Int)
+data class CardInfo(
+    val id: String,
+    val bank: BankRef?,
+    val nickname: String,
+    val closingDay: Int,
+    val dueDay: Int,
+    /** Verdadeiro depois que alguém configurou o cartão (aqui ou no outro aparelho); a semente 8/15 não conta. */
+    val configured: Boolean = true,
+)
 
 /** Estado da atribuição de fatura de uma parcela (S1 §6). */
 enum class AssignmentState { Estimated, ToConfirm, Confirmed }
