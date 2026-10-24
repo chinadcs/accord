@@ -130,7 +130,7 @@ class SyncEngineTest : SpaceTestBase() {
     // ---- idempotência e atomicidade ----
 
     @Test
-    fun `resposta perdida, seguida de reenvio, deixa um lançamento só e Delivery de novembro em R$ 68`() = runBlocking {
+    fun `resposta perdida, seguida de reenvio, deixa um lançamento só e Delivery de novembro em R$ 68`() = runBlocking<Unit> {
         couple()
         val id = ana.cardPurchase(68)
         service.loseNextResponse()
@@ -149,7 +149,7 @@ class SyncEngineTest : SpaceTestBase() {
     }
 
     @Test
-    fun `morte do processo depois do envio e antes de registrar a resposta reenvia o mesmo ID sem duplicar`() = runBlocking {
+    fun `morte do processo depois do envio e antes de registrar a resposta reenvia o mesmo ID sem duplicar`() = runBlocking<Unit> {
         couple()
         val id = ana.pix()
         // O serviço aplicou, mas o aparelho morreu antes de gravar o resultado.
@@ -167,7 +167,7 @@ class SyncEngineTest : SpaceTestBase() {
     // ---- estado observável ----
 
     @Test
-    fun `salvo localmente difere de reconhecido e a fila só zera depois do resultado do serviço`() = runBlocking {
+    fun `salvo localmente difere de reconhecido e a fila só zera depois do resultado do serviço`() = runBlocking<Unit> {
         couple()
         ana.pix()
         ana.pix(10)
@@ -206,7 +206,7 @@ class SyncEngineTest : SpaceTestBase() {
     }
 
     @Test
-    fun `conflito da tela 19 mostra as duas versões, sem mescla, e sua edição vence nos dois aparelhos`() = runBlocking {
+    fun `conflito da tela 19 mostra as duas versões, sem mescla, e sua edição vence nos dois aparelhos`() = runBlocking<Unit> {
         couple()
         val (id, opId, view) = conflictOnL1()
         val entity = view.entities.single()
@@ -232,7 +232,7 @@ class SyncEngineTest : SpaceTestBase() {
     }
 
     @Test
-    fun `escolher a edição da outra pessoa deixa R$ 68 em Restaurantes nos dois aparelhos`() = runBlocking {
+    fun `escolher a edição da outra pessoa deixa R$ 68 em Restaurantes nos dois aparelhos`() = runBlocking<Unit> {
         couple()
         val (_, opId, view) = conflictOnL1()
         assertIs<ResolveResult.Resolved>(ana.store.resolveWithRemote(opId, view.seenRemoteVersions))
@@ -246,7 +246,7 @@ class SyncEngineTest : SpaceTestBase() {
     }
 
     @Test
-    fun `nova edição da outra pessoa durante a revisão exige nova comparação`() = runBlocking {
+    fun `nova edição da outra pessoa durante a revisão exige nova comparação`() = runBlocking<Unit> {
         couple()
         val (id, opId, view) = conflictOnL1()
         bruno.space.execute(bruno.handle.env(), CorrectEntry(id, amount = brl(85))).applied() // versão 3
@@ -263,7 +263,7 @@ class SyncEngineTest : SpaceTestBase() {
     }
 
     @Test
-    fun `revisar depois mantém as duas versões, a fila retém e o orçamento nunca soma as duas`() = runBlocking {
+    fun `revisar depois mantém as duas versões, a fila retém e o orçamento nunca soma as duas`() = runBlocking<Unit> {
         couple()
         val (id, opId, _) = conflictOnL1()
         ana.store.defer(opId)
@@ -275,7 +275,7 @@ class SyncEngineTest : SpaceTestBase() {
     }
 
     @Test
-    fun `compra parcelada em conflito é resolvida inteira, sem metade da série em cada categoria`() = runBlocking {
+    fun `compra parcelada em conflito é resolvida inteira, sem metade da série em cada categoria`() = runBlocking<Unit> {
         couple()
         val id = ana.space.execute(
             ana.handle.env(),
@@ -301,7 +301,7 @@ class SyncEngineTest : SpaceTestBase() {
     }
 
     @Test
-    fun `mudanças simultâneas na divisão do limite viram conflito e a soma nunca passa de R$ 1200`() = runBlocking {
+    fun `mudanças simultâneas na divisão do limite viram conflito e a soma nunca passa de R$ 1200`() = runBlocking<Unit> {
         couple()
         val delivery = seed("alimentacao.delivery")
         val mercado = seed("alimentacao.mercado")
@@ -335,7 +335,7 @@ class SyncEngineTest : SpaceTestBase() {
     }
 
     @Test
-    fun `boleto pago em duas datas é conflito e o escolhido conta uma única vez`() = runBlocking {
+    fun `boleto pago em duas datas é conflito e o escolhido conta uma única vez`() = runBlocking<Unit> {
         couple()
         val boleto = ana.space.execute(
             ana.handle.env(),
@@ -358,7 +358,7 @@ class SyncEngineTest : SpaceTestBase() {
     }
 
     @Test
-    fun `edições em lançamentos diferentes no mesmo intervalo são aplicadas sem conflito`() = runBlocking {
+    fun `edições em lançamentos diferentes no mesmo intervalo são aplicadas sem conflito`() = runBlocking<Unit> {
         couple()
         val a = ana.pix(10, description = "A")
         val b = ana.pix(20, description = "B")
@@ -374,7 +374,7 @@ class SyncEngineTest : SpaceTestBase() {
     }
 
     @Test
-    fun `desfazer depois da sincronização, com edição não recebida da outra pessoa, vira conflito e não apagamento`() = runBlocking {
+    fun `desfazer depois da sincronização, com edição não recebida da outra pessoa, vira conflito e não apagamento`() = runBlocking<Unit> {
         couple()
         val id = ana.pix(68)
         val created = ana.space.operations().value().last().operationId
@@ -392,7 +392,7 @@ class SyncEngineTest : SpaceTestBase() {
     }
 
     @Test
-    fun `operação encadeada a um conflito fica retida e sai depois da escolha com a base recalculada`() = runBlocking {
+    fun `operação encadeada a um conflito fica retida e sai depois da escolha com a base recalculada`() = runBlocking<Unit> {
         couple()
         val (id, opId, view) = conflictOnL1()
         ana.space.execute(ana.handle.env(), CorrectEntry(id, description = "Retida")).applied()
@@ -408,7 +408,7 @@ class SyncEngineTest : SpaceTestBase() {
     // ---- privacidade e pendência híbrida ----
 
     @Test
-    fun `texto do Chat, rascunhos e arquivos nunca aparecem em nenhuma carga enviada`() = runBlocking {
+    fun `texto do Chat, rascunhos e arquivos nunca aparecem em nenhuma carga enviada`() = runBlocking<Unit> {
         couple()
         val marker = "MARCADOR-PRIVADO-7F3A"
         ana.space.saveDraft(LocalDraft(source = DraftSource.Chat, fields = mapOf("description" to marker), missing = listOf("amount"), reason = marker)).value()
@@ -422,7 +422,7 @@ class SyncEngineTest : SpaceTestBase() {
     }
 
     @Test
-    fun `lançamento a classificar chega sem texto do Chat e a classificação do outro aparelho conta uma vez`() = runBlocking {
+    fun `lançamento a classificar chega sem texto do Chat e a classificação do outro aparelho conta uma vez`() = runBlocking<Unit> {
         couple()
         val id = ana.space.execute(
             ana.handle.env(),
@@ -440,7 +440,7 @@ class SyncEngineTest : SpaceTestBase() {
     }
 
     @Test
-    fun `classificar offline em categorias diferentes nos dois aparelhos é conflito`() = runBlocking {
+    fun `classificar offline em categorias diferentes nos dois aparelhos é conflito`() = runBlocking<Unit> {
         couple()
         val id = ana.space.execute(
             ana.handle.env(),
@@ -458,7 +458,7 @@ class SyncEngineTest : SpaceTestBase() {
     // ---- falhas, sessão e custo ----
 
     @Test
-    fun `sem rede, serviço indisponível, pausado ou sem quota a fila fica inteira, na ordem, com a causa`() = runBlocking {
+    fun `sem rede, serviço indisponível, pausado ou sem quota a fila fica inteira, na ordem, com a causa`() = runBlocking<Unit> {
         couple()
         ana.pix(1)
         ana.pix(2)
@@ -487,7 +487,7 @@ class SyncEngineTest : SpaceTestBase() {
     }
 
     @Test
-    fun `sessão vencida é renovada uma vez e o envio segue`() = runBlocking {
+    fun `sessão vencida é renovada uma vez e o envio segue`() = runBlocking<Unit> {
         val short = FakeSpaceService(clock = { now }, accessTtlMillis = 1_000)
         val a = (short.signUp("c@x.test", "senha-123") as RemoteResult.Ok).value
         short.createSpace(a.accessToken, spaceId, "Casa")
@@ -507,7 +507,7 @@ class SyncEngineTest : SpaceTestBase() {
     }
 
     @Test
-    fun `sessão revogada para o envio sem perder a fila e a mesma conta retoma sem duplicar`() = runBlocking {
+    fun `sessão revogada para o envio sem perder a fila e a mesma conta retoma sem duplicar`() = runBlocking<Unit> {
         couple()
         val id = ana.pix()
         service.revokeSessions("ana@x.test")
@@ -522,7 +522,7 @@ class SyncEngineTest : SpaceTestBase() {
     }
 
     @Test
-    fun `outra conta no mesmo aparelho não envia a fila anterior`() = runBlocking {
+    fun `outra conta no mesmo aparelho não envia a fila anterior`() = runBlocking<Unit> {
         couple()
         ana.pix()
         ana.override = SessionCheck.OtherAccount
@@ -536,7 +536,7 @@ class SyncEngineTest : SpaceTestBase() {
     }
 
     @Test
-    fun `protocolo não suportado recusa a operação, preserva a fila e pede atualização`() = runBlocking {
+    fun `protocolo não suportado recusa a operação, preserva a fila e pede atualização`() = runBlocking<Unit> {
         couple()
         ana.pix()
         service.supportedProtocolVersion = PROTOCOL_VERSION + 1
@@ -553,7 +553,7 @@ class SyncEngineTest : SpaceTestBase() {
     }
 
     @Test
-    fun `receber enquanto se registra não bloqueia o app e dois ciclos simultâneos não se atropelam`() = runBlocking {
+    fun `receber enquanto se registra não bloqueia o app e dois ciclos simultâneos não se atropelam`() = runBlocking<Unit> {
         couple()
         ana.pix()
         val results = listOf(async { ana.sync() }, async { ana.sync() }).map { it.await() }

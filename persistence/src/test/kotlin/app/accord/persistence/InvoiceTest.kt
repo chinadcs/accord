@@ -69,7 +69,7 @@ class InvoiceTest : SpaceTestBase() {
     // ---- composição (cenário 9) ----
 
     @Test
-    fun `R$ 1000 em compras mais R$ 15 de tarifa totalizam R$ 1015 e a tarifa entra uma vez em Serviços`() = runBlocking {
+    fun `R$ 1000 em compras mais R$ 15 de tarifa totalizam R$ 1015 e a tarifa entra uma vez em Serviços`() = runBlocking<Unit> {
         val h = open()
         h.buy(1000)
         h.buy(15, isCharge = true, toClassify = true)
@@ -83,7 +83,7 @@ class InvoiceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `R$ 1300 em despesas menos R$ 100 de estorno são R$ 1200 líquidos, separados na composição`() = runBlocking {
+    fun `R$ 1300 em despesas menos R$ 100 de estorno são R$ 1200 líquidos, separados na composição`() = runBlocking<Unit> {
         val h = open()
         val id = h.buy(1300)
         h.space.execute(h.env(), RegisterRefund(id, brl(100), RefundStatus.Confirmed, d(2026, 10, 2), invoice = oct)).applied()
@@ -94,7 +94,7 @@ class InvoiceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `fatura sem nada ainda existe com tudo zerado e aberta`() = runBlocking {
+    fun `fatura sem nada ainda existe com tudo zerado e aberta`() = runBlocking<Unit> {
         val h = open()
         val inv = h.invoice(ym(2027, 5))
         assertEquals(Money.ZERO, inv.knownTotal)
@@ -106,7 +106,7 @@ class InvoiceTest : SpaceTestBase() {
     // ---- conferência sem arquivo ----
 
     @Test
-    fun `digitar R$ 1300 numa fatura de R$ 1300 deixa conferida e R$ 1320 vira pendência de R$ 20 sem ajustar nada`() = runBlocking {
+    fun `digitar R$ 1300 numa fatura de R$ 1300 deixa conferida e R$ 1320 vira pendência de R$ 20 sem ajustar nada`() = runBlocking<Unit> {
         val h = open()
         h.buy(1300)
         h.registerTotal(oct, 1300)
@@ -122,7 +122,7 @@ class InvoiceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `fechamento 8 e relógio em 07 10 deixa a fatura em aberto, em 08 10 fechada estimada e com total registrado fechada`() = runBlocking {
+    fun `fechamento 8 e relógio em 07 10 deixa a fatura em aberto, em 08 10 fechada estimada e com total registrado fechada`() = runBlocking<Unit> {
         val before = open(now = Instant.parse("2026-10-07T15:00:00Z"))
         assertEquals(InvoiceStatus.Open, before.invoice(oct).status)
 
@@ -134,7 +134,7 @@ class InvoiceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `corrigir vínculo de compra a conferir continua permitido enquanto a fatura é só estimada`() = runBlocking {
+    fun `corrigir vínculo de compra a conferir continua permitido enquanto a fatura é só estimada`() = runBlocking<Unit> {
         val h = open(now = Instant.parse("2026-10-09T15:00:00Z"))
         val id = h.space.execute(
             h.env(),
@@ -146,7 +146,7 @@ class InvoiceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `total registrado entra na lista de faturas e a fatura vira conferida de novo se a composição voltar a coincidir`() = runBlocking {
+    fun `total registrado entra na lista de faturas e a fatura vira conferida de novo se a composição voltar a coincidir`() = runBlocking<Unit> {
         val h = open()
         h.buy(1000)
         h.registerTotal(oct, 1015)
@@ -159,7 +159,7 @@ class InvoiceTest : SpaceTestBase() {
     // ---- quitação (cenário 8) ----
 
     @Test
-    fun `fatura conferida em R$ 1300 e pagamento de R$ 1300 — paga, comprometido inalterado, nenhuma despesa nova`() = runBlocking {
+    fun `fatura conferida em R$ 1300 e pagamento de R$ 1300 — paga, comprometido inalterado, nenhuma despesa nova`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.buy(1300)
@@ -179,7 +179,7 @@ class InvoiceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `pagamento de R$ 500 numa fatura de R$ 1300 fica preservado em revisão, sem pagar a fatura nem criar despesa de R$ 800`() = runBlocking {
+    fun `pagamento de R$ 500 numa fatura de R$ 1300 fica preservado em revisão, sem pagar a fatura nem criar despesa de R$ 800`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.buy(1300)
@@ -196,7 +196,7 @@ class InvoiceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `quitação sem total conferido vira pendência de pagamento divergente`() = runBlocking {
+    fun `quitação sem total conferido vira pendência de pagamento divergente`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.buy(1300)
@@ -207,7 +207,7 @@ class InvoiceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `conferida em R$ 1320 com composição de R$ 1300 não aceita quitação`() = runBlocking {
+    fun `conferida em R$ 1320 com composição de R$ 1300 não aceita quitação`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.buy(1300)
@@ -218,7 +218,7 @@ class InvoiceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `parcelas de fatura quitada contam como pagas, as de outra fatura não`() = runBlocking {
+    fun `parcelas de fatura quitada contam como pagas, as de outra fatura não`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.buy(400, installments = 2) // R$ 200 em outubro e novembro
@@ -229,7 +229,7 @@ class InvoiceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `crédito de estorno só desconta do pago quando a fatura que o recebe está quitada`() = runBlocking {
+    fun `crédito de estorno só desconta do pago quando a fatura que o recebe está quitada`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.buy(1300)
@@ -242,7 +242,7 @@ class InvoiceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `pagar fatura já paga ou sem conta padrão é rejeitado`() = runBlocking {
+    fun `pagar fatura já paga ou sem conta padrão é rejeitado`() = runBlocking<Unit> {
         val h = open()
         h.buy(100)
         h.registerTotal(oct, 100)
@@ -255,7 +255,7 @@ class InvoiceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `valor de quitação zero é rejeitado`() = runBlocking {
+    fun `valor de quitação zero é rejeitado`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val r = h.pay(oct, 0)
@@ -263,7 +263,7 @@ class InvoiceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `desfazer a quitação devolve itens a não pagos`() = runBlocking {
+    fun `desfazer a quitação devolve itens a não pagos`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.buy(100)
@@ -277,7 +277,7 @@ class InvoiceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `desfazer o total registrado volta ao total anterior`() = runBlocking {
+    fun `desfazer o total registrado volta ao total anterior`() = runBlocking<Unit> {
         val h = open()
         h.buy(100)
         h.registerTotal(oct, 100)
@@ -288,7 +288,7 @@ class InvoiceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `total de origem importação fica registrado como tal`() = runBlocking {
+    fun `total de origem importação fica registrado como tal`() = runBlocking<Unit> {
         val h = open()
         h.buy(100)
         h.space.execute(h.env(), RegisterInvoiceTotal(oct, brl(100), InvoiceTotalSource.Import)).applied()
@@ -298,7 +298,7 @@ class InvoiceTest : SpaceTestBase() {
     // ---- deslocamento bloqueado por fatura quitada (25d) ----
 
     @Test
-    fun `corrigir a 1ª parcela para novembro com outubro e novembro quitados é rejeitado listando as duas e nada é movido`() = runBlocking {
+    fun `corrigir a 1ª parcela para novembro com outubro e novembro quitados é rejeitado listando as duas e nada é movido`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.buy(1200, installments = 6)
@@ -315,7 +315,7 @@ class InvoiceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `sem fatura quitada no intervalo o deslocamento acontece`() = runBlocking {
+    fun `sem fatura quitada no intervalo o deslocamento acontece`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.buy(1200, installments = 6)

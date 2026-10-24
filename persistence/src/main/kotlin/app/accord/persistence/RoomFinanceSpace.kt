@@ -118,6 +118,8 @@ import app.accord.core.space.Undo
 import app.accord.core.label
 import app.accord.core.sum
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import java.net.URLDecoder
 import java.net.URLEncoder
 import java.time.LocalDate
@@ -1314,7 +1316,9 @@ class RoomFinanceSpace private constructor(
     private suspend fun <T> query(block: suspend () -> T): QueryResult<T> = try {
         QueryResult.Data(block())
     } catch (e: CancellationException) {
-        throw e
+        // Cancelamento de quem chamou segue adiante; já o banco fechado por baixo (sair da conta, por
+        // exemplo) cancela a consulta sem cancelar quem chamou e vira falha identificada, nunca zero.
+        if (currentCoroutineContext().isActive) QueryResult.Failure(e) else throw e
     } catch (e: Exception) {
         QueryResult.Failure(e)
     }

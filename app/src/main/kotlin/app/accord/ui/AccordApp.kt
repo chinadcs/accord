@@ -70,6 +70,20 @@ import app.accord.ui.firststeps.FirstStepsRoute
 import app.accord.ui.firststeps.FirstStepsViewModel
 import app.accord.ui.firststeps.StepActions
 import app.accord.ui.nav.ROUTE_ACCESS
+import app.accord.ui.nav.ROUTE_CONFLICT
+import app.accord.ui.nav.ROUTE_SYNC
+import app.accord.ui.sync.ConflictRoute
+import app.accord.ui.sync.ConflictViewModel
+import app.accord.ui.sync.LocalOpenSync
+import app.accord.ui.sync.LocalSyncStatus
+import app.accord.ui.sync.ReviewConflicts
+import app.accord.ui.sync.ReviewViewModel
+import app.accord.ui.sync.SyncIndicator
+import app.accord.ui.sync.SyncRoute
+import app.accord.ui.sync.SyncViewModel
+import app.accord.ui.components.RefreshOnResume
+import androidx.compose.runtime.CompositionLocalProvider
+import app.accord.core.sync.ConnectionState
 import app.accord.ui.nav.ROUTE_FIRST_STEPS
 import app.accord.ui.nav.ROUTE_SPACE
 import app.accord.ui.space.SpaceRoute
@@ -185,6 +199,7 @@ private fun SpaceGate(container: AppContainer, onContinue: () -> Unit) {
 private fun MainApp(container: AppContainer, startRoute: String) {
     val navController = rememberNavController()
     val access by container.access.status.collectAsStateWithLifecycle()
+    val syncStatus by container.sync.status.collectAsStateWithLifecycle()
     val entry by navController.currentBackStackEntryAsState()
     val destination = entry?.destination
     // A barra inferior só aparece nas raízes; detalhes e formulários escondem-na.
@@ -199,7 +214,18 @@ private fun MainApp(container: AppContainer, startRoute: String) {
     LaunchedEffect(container) {
         container.feedback.events.collect { event ->
             launch {
-                val message = context.getString(event.messageRes, *event.args.toTypedArray())
+                // O recibo diz só o que é verdade: salvo neste aparelho e, se der para enviar, aguardando envio.
+                val messageRes = if (event.messageRes == R.string.feedback_saved) {
+                    val status = container.sync.status.value
+                    if (status != null && status.session == SessionState.Valid && status.connection != ConnectionState.Offline) {
+                        R.string.feedback_saved_awaiting
+                    } else {
+                        R.string.feedback_saved_local
+                    }
+                } else {
+                    event.messageRes
+                }
+                val message = context.getString(messageRes, *event.args.toTypedArray())
                 val undoLabel = event.undoOperationId?.let { context.getString(R.string.action_undo) }
                 // O Desfazer visível é sempre o da última ação: o aviso antigo não fica esperando na fila.
                 snackbar.currentSnackbarData?.dismiss()
@@ -240,13 +266,17 @@ private fun MainApp(container: AppContainer, startRoute: String) {
             }
         },
     ) { padding ->
+        CompositionLocalProvider(
+            LocalSyncStatus provides syncStatus,
+            LocalOpenSync provides { navController.navigate(ROUTE_SYNC) },
+        ) {
         NavHost(navController, startDestination = startRoute) {
             val register = { navController.navigate(ROUTE_REGISTER) }
             val openEntry = { id: String -> navController.navigate("$ROUTE_ENTRY/${Uri.encode(id)}") }
 
             navigation(startDestination = Root.Chat.start, route = Root.Chat.graph) {
                 composable(Root.Chat.start) {
-                    ProvisionalRoot(stringResource(R.string.chat_title), stringResource(R.string.chat_placeholder), padding, register)
+                    ProvisionalRoot(stringResource(R.string.chat_title), stringResource(R.string.chat_placeholder), padding, register, extra = { SyncIndicator() })
                 }
             }
             navigation(startDestination = Root.Budget.start, route = Root.Budget.graph) {
@@ -299,7 +329,13 @@ private fun MainApp(container: AppContainer, startRoute: String) {
             }
             navigation(startDestination = Root.Review.start, route = Root.Review.graph) {
                 composable(Root.Review.start) {
-                    ProvisionalRoot(stringResource(R.string.review_title), stringResource(R.string.review_placeholder), padding, register)
+                    val viewModel: ReviewViewModel = viewModel(factory = viewModelFactory { initializer { ReviewViewModel(container.sync) } })
+                    val conflicts by viewModel.conflicts.collectAsStateWithLifecycle()
+                    RefreshOnResume(viewModel::refresh)
+                    ProvisionalRoot(
+                        stringResource(R.string.review_title), stringResource(R.string.review_placeholder), padding, register,
+                        extra = { ReviewConflicts(conflicts) { id -> navController.navigate("$ROUTE_CONFLICT/${Uri.encode(id)}") } },
+                    )
                 }
             }
             navigation(startDestination = Root.More.start, route = Root.More.graph) {
@@ -327,9 +363,11 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                                 }
                             },
                             onRenew = { navController.navigate(ROUTE_ACCESS) },
+                            onSync = { navController.navigate(ROUTE_SYNC) },
                         ),
                         account = access.account,
                         sessionState = access.session,
+                        syncStatus = syncStatus,
                     )
                     signOutPending?.let { pending ->
                         SignOutDialog(
@@ -407,6 +445,26 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     viewModel, padding, onBack = { navController.popBackStack() }, onOpenEntry = openEntry,
                     onEdit = { id -> navController.navigate("$ROUTE_EDIT/${Uri.encode(id)}") },
                 )
+            }
+            composable(ROUTE_SYNC) {
+                val viewModel: SyncViewModel = viewModel(factory = viewModelFactory { initializer { SyncViewModel(container, container.sync) } })
+                SyncRoute(
+                    viewModel, padding,
+                    onBack = { navController.popBackStack() },
+                    onOpenEntry = openEntry,
+                    onOpenConflict = { id -> navController.navigate("$ROUTE_CONFLICT/${Uri.encode(id)}") },
+                    onRenew = { navController.navigate(ROUTE_ACCESS) },
+                )
+            }
+            composable(
+                "$ROUTE_CONFLICT/{operationId}",
+                arguments = listOf(navArgument("operationId") { type = NavType.StringType }),
+            ) { backStackEntry ->
+                val operationId = checkNotNull(backStackEntry.arguments?.getString("operationId"))
+                val viewModel: ConflictViewModel = viewModel(
+                    factory = viewModelFactory { initializer { ConflictViewModel(container, container.sync, operationId) } },
+                )
+                ConflictRoute(viewModel, padding, onFinished = { navController.popBackStack() }, onBack = { navController.popBackStack() })
             }
             composable(ROUTE_ACCESS) {
                 val viewModel: AccessViewModel = viewModel(
@@ -503,6 +561,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 )
                 RegisterRoute(viewModel, padding, onExit = { navController.popBackStack() })
             }
+        }
         }
     }
 }

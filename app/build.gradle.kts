@@ -67,6 +67,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.lucide.icons)
+    implementation(libs.work.runtime)
+    implementation(libs.serialization.json)
 
     debugImplementation(libs.compose.ui.tooling)
 

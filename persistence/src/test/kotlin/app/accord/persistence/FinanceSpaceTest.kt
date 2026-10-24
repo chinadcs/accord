@@ -56,7 +56,7 @@ class FinanceSpaceTest : SpaceTestBase() {
     // ---- sementes ----
 
     @Test
-    fun `categorias iniciais existem com identidade determinística e sem operação`() = runBlocking {
+    fun `categorias iniciais existem com identidade determinística e sem operação`() = runBlocking<Unit> {
         val h = open()
         val cats = h.space.categories().value()
         val delivery = cats.single { it.id == seed("alimentacao.delivery") }
@@ -72,7 +72,7 @@ class FinanceSpaceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `abrir duas vezes não duplica a semente`() = runBlocking {
+    fun `abrir duas vezes não duplica a semente`() = runBlocking<Unit> {
         val db = newDatabase()
         val first = open("ana", db)
         val second = open("ana", db)
@@ -83,7 +83,7 @@ class FinanceSpaceTest : SpaceTestBase() {
     // ---- Pix, débito e dinheiro (cenário 4) e subcategoria (6) ----
 
     @Test
-    fun `Pix usa a conta padrão do autor, ocupa o mês da movimentação e já nasce pago`() = runBlocking {
+    fun `Pix usa a conta padrão do autor, ocupa o mês da movimentação e já nasce pago`() = runBlocking<Unit> {
         val h = open()
         val account = h.withDefaultAccount()
         h.space.execute(h.env(), pix()).applied()
@@ -97,7 +97,7 @@ class FinanceSpaceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `débito com conta e dinheiro sem conta entram em outubro já pagos`() = runBlocking {
+    fun `débito com conta e dinheiro sem conta entram em outubro já pagos`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.space.execute(h.env(), pix(kind = DirectPaymentKind.Debit, amount = brl(30))).applied()
@@ -112,7 +112,7 @@ class FinanceSpaceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `dinheiro com conta informada é rejeitado`() = runBlocking {
+    fun `dinheiro com conta informada é rejeitado`() = runBlocking<Unit> {
         val h = open()
         val account = h.withDefaultAccount()
         val r = h.space.execute(h.env(), pix(kind = DirectPaymentKind.Cash, accountId = account))
@@ -121,7 +121,7 @@ class FinanceSpaceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `Pix sem conta informada e sem conta padrão é rejeitado`() = runBlocking {
+    fun `Pix sem conta informada e sem conta padrão é rejeitado`() = runBlocking<Unit> {
         val h = open()
         val r = h.space.execute(h.env(), pix())
         val rejected = assertIs<CommandResult.Rejected>(r)
@@ -130,7 +130,7 @@ class FinanceSpaceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `R$ 50 em Delivery conta em Delivery, Alimentação e no total geral uma única vez`() = runBlocking {
+    fun `R$ 50 em Delivery conta em Delivery, Alimentação e no total geral uma única vez`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.space.execute(h.env(), pix(category = "alimentacao.delivery")).applied()
@@ -144,7 +144,7 @@ class FinanceSpaceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `gasto direto na categoria principal fica em sem subcategoria`() = runBlocking {
+    fun `gasto direto na categoria principal fica em sem subcategoria`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.space.execute(h.env(), pix(category = "alimentacao")).applied()
@@ -153,7 +153,7 @@ class FinanceSpaceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `duas compras iguais com IDs de comando diferentes são dois lançamentos`() = runBlocking {
+    fun `duas compras iguais com IDs de comando diferentes são dois lançamentos`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.space.execute(h.env(), pix(description = "mercado 80", amount = brl(80))).applied()
@@ -165,7 +165,7 @@ class FinanceSpaceTest : SpaceTestBase() {
     // ---- validação ----
 
     @Test
-    fun `valor zero, descrição vazia e referências inexistentes são rejeitados por campo sem gravar`() = runBlocking {
+    fun `valor zero, descrição vazia e referências inexistentes são rejeitados por campo sem gravar`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val before = h.space.operations().value().size
@@ -186,7 +186,7 @@ class FinanceSpaceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `comando rejeitado pode ser reenviado com o mesmo ID depois de corrigido`() = runBlocking {
+    fun `comando rejeitado pode ser reenviado com o mesmo ID depois de corrigido`() = runBlocking<Unit> {
         val h = open()
         val id = CommandId("tentativa-1")
         assertIs<CommandResult.Rejected>(h.space.execute(Envelope(id), pix(amount = Money.ZERO)))
@@ -197,7 +197,7 @@ class FinanceSpaceTest : SpaceTestBase() {
     // ---- idempotência, atomicidade, operações (22–24) ----
 
     @Test
-    fun `mesmo ID de comando duas vezes gera um lançamento, uma operação e Já aplicado`() = runBlocking {
+    fun `mesmo ID de comando duas vezes gera um lançamento, uma operação e Já aplicado`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = CommandId("duplo-toque")
@@ -210,7 +210,7 @@ class FinanceSpaceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `falha na gravação não deixa nem a entidade nem a operação e o comando pode ser repetido`() = runBlocking {
+    fun `falha na gravação não deixa nem a entidade nem a operação e o comando pode ser repetido`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = CommandId("vai-falhar")
@@ -225,7 +225,7 @@ class FinanceSpaceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `cada comando aplicado gera exatamente uma operação com sequência crescente e entidades afetadas`() = runBlocking {
+    fun `cada comando aplicado gera exatamente uma operação com sequência crescente e entidades afetadas`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount() // 2 operações: adicionar conta e conta padrão
         val r = h.space.execute(h.env(), pix()).applied()
@@ -247,7 +247,7 @@ class FinanceSpaceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `a operação registra o autor e a origem do comando`() = runBlocking {
+    fun `a operação registra o autor e a origem do comando`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.space.execute(Envelope(CommandId("do-chat"), app.accord.core.space.Origin.Chat), pix()).applied()
@@ -256,7 +256,7 @@ class FinanceSpaceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `operations lê a partir de uma sequência`() = runBlocking {
+    fun `operations lê a partir de uma sequência`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.space.execute(h.env(), pix()).applied()
@@ -268,7 +268,7 @@ class FinanceSpaceTest : SpaceTestBase() {
     // ---- desfazer (26) ----
 
     @Test
-    fun `desfazer registro recente anula, recalcula e gera nova operação`() = runBlocking {
+    fun `desfazer registro recente anula, recalcula e gera nova operação`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val registered = h.space.execute(h.env(), pix()).applied()
@@ -285,7 +285,7 @@ class FinanceSpaceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `desfazer duas vezes é rejeitado porque a entidade já mudou depois da operação`() = runBlocking {
+    fun `desfazer duas vezes é rejeitado porque a entidade já mudou depois da operação`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val registered = h.space.execute(h.env(), pix()).applied()
@@ -295,7 +295,7 @@ class FinanceSpaceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `desfazer operação inexistente é rejeitado`() = runBlocking {
+    fun `desfazer operação inexistente é rejeitado`() = runBlocking<Unit> {
         val h = open()
         val r = h.space.execute(h.env(), Undo("nao-existe"))
         assertEquals(ErrorCode.UnknownReference, assertIs<CommandResult.Rejected>(r).errors.single().code)
@@ -304,7 +304,7 @@ class FinanceSpaceTest : SpaceTestBase() {
     // ---- a classificar (30, 32) ----
 
     @Test
-    fun `Pix de R$ 150 a classificar entra no total geral e no pago, numa linha própria, sem categoria`() = runBlocking {
+    fun `Pix de R$ 150 a classificar entra no total geral e no pago, numa linha própria, sem categoria`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val r = h.space.execute(
@@ -329,7 +329,7 @@ class FinanceSpaceTest : SpaceTestBase() {
     // ---- leitura com falha (29) ----
 
     @Test
-    fun `falha de leitura vem identificada e não como zero`() = runBlocking {
+    fun `falha de leitura vem identificada e não como zero`() = runBlocking<Unit> {
         val h = open()
         h.database.close()
         val r = h.space.budget(ym(2026, 10))
@@ -339,7 +339,7 @@ class FinanceSpaceTest : SpaceTestBase() {
     // ---- categorias ----
 
     @Test
-    fun `nome igual no mesmo nível é rejeitado ignorando maiúsculas, acentos e espaços`() = runBlocking {
+    fun `nome igual no mesmo nível é rejeitado ignorando maiúsculas, acentos e espaços`() = runBlocking<Unit> {
         val h = open()
         val dup = h.space.execute(h.env(), CreateCategory("  MERCADO ", seed("alimentacao")))
         assertEquals(ErrorCode.DuplicateName, assertIs<CommandResult.Rejected>(dup).errors.single().code)
@@ -348,7 +348,7 @@ class FinanceSpaceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `níveis diferentes podem repetir o nome e a nova categoria usa o ícone tag`() = runBlocking {
+    fun `níveis diferentes podem repetir o nome e a nova categoria usa o ícone tag`() = runBlocking<Unit> {
         val h = open()
         val r = h.space.execute(h.env(), CreateCategory("Alimentação", seed("compras"))).applied()
         val created = h.space.categories().value().single { it.id == r.changes.single().id }
@@ -358,14 +358,14 @@ class FinanceSpaceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `subcategoria de subcategoria não existe`() = runBlocking {
+    fun `subcategoria de subcategoria não existe`() = runBlocking<Unit> {
         val h = open()
         val r = h.space.execute(h.env(), CreateCategory("Extra", seed("alimentacao.delivery")))
         assertEquals(ErrorCode.NotAllowed, assertIs<CommandResult.Rejected>(r).errors.single().code)
     }
 
     @Test
-    fun `categoria nova vai para o fim da lista do nível`() = runBlocking {
+    fun `categoria nova vai para o fim da lista do nível`() = runBlocking<Unit> {
         val h = open()
         h.space.execute(h.env(), CreateCategory("Educação")).applied()
         val mains = h.space.categories().value().filter { it.parentId == null }.sortedBy { it.order }
@@ -375,7 +375,7 @@ class FinanceSpaceTest : SpaceTestBase() {
     // ---- contas (18) ----
 
     @Test
-    fun `duas contas do mesmo banco com apelidos diferentes e conta padrão só da pessoa`() = runBlocking {
+    fun `duas contas do mesmo banco com apelidos diferentes e conta padrão só da pessoa`() = runBlocking<Unit> {
         val db = newDatabase()
         val ana = open("ana", db)
         val bia = open("bia", db)
@@ -394,7 +394,7 @@ class FinanceSpaceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `conta exige apelido e a padrão precisa existir`() = runBlocking {
+    fun `conta exige apelido e a padrão precisa existir`() = runBlocking<Unit> {
         val h = open()
         val noNick = h.space.execute(h.env(), AddAccount(BankRef.Other("Banco Pequeno"), " "))
         assertEquals("nickname", assertIs<CommandResult.Rejected>(noNick).errors.single().field)

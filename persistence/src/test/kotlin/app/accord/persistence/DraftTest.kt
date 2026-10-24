@@ -40,7 +40,7 @@ class DraftTest : SpaceTestBase() {
     )
 
     @Test
-    fun `registro sem valor é rejeitado e o rascunho guardado não gera operação nem altera totais`() = runBlocking {
+    fun `registro sem valor é rejeitado e o rascunho guardado não gera operação nem altera totais`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val before = h.space.operations().value().size
@@ -57,7 +57,7 @@ class DraftTest : SpaceTestBase() {
     }
 
     @Test
-    fun `salvar com o mesmo ID atualiza o rascunho`() = runBlocking {
+    fun `salvar com o mesmo ID atualiza o rascunho`() = runBlocking<Unit> {
         val h = open()
         val id = h.space.saveDraft(draft()).value()
         h.space.saveDraft(draft(id).copy(fields = mapOf("description" to "Padaria"), missing = emptyList())).value()
@@ -67,7 +67,7 @@ class DraftTest : SpaceTestBase() {
     }
 
     @Test
-    fun `efetivar o rascunho com valor grava um lançamento e descarta o rascunho na mesma transação`() = runBlocking {
+    fun `efetivar o rascunho com valor grava um lançamento e descarta o rascunho na mesma transação`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.space.saveDraft(draft()).value()
@@ -79,7 +79,7 @@ class DraftTest : SpaceTestBase() {
     }
 
     @Test
-    fun `se a gravação falha o rascunho permanece e o lançamento não existe`() = runBlocking {
+    fun `se a gravação falha o rascunho permanece e o lançamento não existe`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.space.saveDraft(draft()).value()
@@ -91,7 +91,7 @@ class DraftTest : SpaceTestBase() {
     }
 
     @Test
-    fun `comando rejeitado não descarta o rascunho`() = runBlocking {
+    fun `comando rejeitado não descarta o rascunho`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.space.saveDraft(draft()).value()
@@ -100,7 +100,7 @@ class DraftTest : SpaceTestBase() {
     }
 
     @Test
-    fun `descartar remove só o rascunho`() = runBlocking {
+    fun `descartar remove só o rascunho`() = runBlocking<Unit> {
         val h = open()
         val id = h.space.saveDraft(draft()).value()
         h.space.discardDraft(id).value()
@@ -108,7 +108,7 @@ class DraftTest : SpaceTestBase() {
     }
 
     @Test
-    fun `rascunhos não aparecem na fila de operações lida pelo S2`() = runBlocking {
+    fun `rascunhos não aparecem na fila de operações lida pelo S2`() = runBlocking<Unit> {
         val h = open()
         h.space.saveDraft(draft()).value()
         assertEquals(emptyList(), h.space.operations().value())

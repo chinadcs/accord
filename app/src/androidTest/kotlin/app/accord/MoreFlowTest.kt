@@ -118,8 +118,8 @@ class MoreFlowTest {
     fun maisListaSoORecursoDisponivelETemaEscolhidoFicaGuardadoNoAparelho() {
         compose.onNodeWithText("Mais").performClick()
         waitForText("Categorias e subcategorias")
-        // recursos de fases seguintes não aparecem como botão vazio
-        assert(compose.onAllNodesWithText("Sincronização", substring = true).fetchSemanticsNodes().isEmpty())
+        // recursos de fases seguintes não aparecem como botão vazio; a Sincronização já existe (S2)
+        assert(compose.onAllNodesWithText("Sincronização", substring = true).fetchSemanticsNodes().isNotEmpty())
         assert(compose.onAllNodesWithText("Modelo no aparelho", substring = true).fetchSemanticsNodes().isEmpty())
         tap("Escuro")
         val container = (ApplicationProvider.getApplicationContext<AccordApplication>()).container

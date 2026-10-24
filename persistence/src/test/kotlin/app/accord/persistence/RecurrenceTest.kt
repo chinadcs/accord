@@ -62,7 +62,7 @@ class RecurrenceTest : SpaceTestBase() {
     // ---- série sem término ----
 
     @Test
-    fun `recorrência mensal sem término aparece nos meses seguintes como comprometido ainda não pago`() = runBlocking {
+    fun `recorrência mensal sem término aparece nos meses seguintes como comprometido ainda não pago`() = runBlocking<Unit> {
         val h = open()
         val id = h.create()
         for (m in listOf(ym(2026, 9), ym(2026, 10), ym(2027, 6), ym(2030, 1))) {
@@ -78,7 +78,7 @@ class RecurrenceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `mensal no dia 31 usa 30 de novembro e 28 de fevereiro e anual de 29 de fevereiro cai em 28`() = runBlocking {
+    fun `mensal no dia 31 usa 30 de novembro e 28 de fevereiro e anual de 29 de fevereiro cai em 28`() = runBlocking<Unit> {
         val h = open()
         val monthly = h.create(gym(first = d(2026, 10, 31)))
         val nov = h.space.occurrences(ym(2026, 11)).value().single { it.recurrenceId == monthly }
@@ -93,7 +93,7 @@ class RecurrenceTest : SpaceTestBase() {
     // ---- editar (cenário 16) ----
 
     @Test
-    fun `só esta ocorrência em outubro para 120 mantém setembro e novembro em 100`() = runBlocking {
+    fun `só esta ocorrência em outubro para 120 mantém setembro e novembro em 100`() = runBlocking<Unit> {
         val h = open()
         val id = h.create()
         h.space.execute(h.env(), EditRecurrence(id, 2, RecurrenceScope.OnlyThis, RecurrenceFields(amount = brl(120)))).applied()
@@ -103,7 +103,7 @@ class RecurrenceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `esta e as próximas dá 100 120 120 e dezembro 120 numa só série`() = runBlocking {
+    fun `esta e as próximas dá 100 120 120 e dezembro 120 numa só série`() = runBlocking<Unit> {
         val h = open()
         val id = h.create()
         h.space.execute(h.env(), EditRecurrence(id, 2, RecurrenceScope.ThisAndNext, RecurrenceFields(amount = brl(120)))).applied()
@@ -115,7 +115,7 @@ class RecurrenceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `sem escolher o alcance pede decisão e não altera nada`() = runBlocking {
+    fun `sem escolher o alcance pede decisão e não altera nada`() = runBlocking<Unit> {
         val h = open()
         val id = h.create()
         val before = h.space.operations().value().size
@@ -128,7 +128,7 @@ class RecurrenceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `aluguel com dezembro em 1600 e esta e as próximas de novembro para 1550 — a prévia lista dezembro`() = runBlocking {
+    fun `aluguel com dezembro em 1600 e esta e as próximas de novembro para 1550 — a prévia lista dezembro`() = runBlocking<Unit> {
         val h = open()
         val id = h.create(gym(1500))
         h.space.execute(h.env(), EditRecurrence(id, 4, RecurrenceScope.OnlyThis, RecurrenceFields(amount = brl(1600)))).applied()
@@ -144,7 +144,7 @@ class RecurrenceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `corrigir categoria da série altera o orçamento das duas categorias a partir da ocorrência`() = runBlocking {
+    fun `corrigir categoria da série altera o orçamento das duas categorias a partir da ocorrência`() = runBlocking<Unit> {
         val h = open()
         val id = h.create()
         h.space.execute(
@@ -159,7 +159,7 @@ class RecurrenceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `categoria inexistente na edição é rejeitada`() = runBlocking {
+    fun `categoria inexistente na edição é rejeitada`() = runBlocking<Unit> {
         val h = open()
         val id = h.create()
         val r = h.space.execute(h.env(), EditRecurrence(id, 2, RecurrenceScope.OnlyThis, RecurrenceFields(classificationId = "nada")))
@@ -169,7 +169,7 @@ class RecurrenceTest : SpaceTestBase() {
     // ---- excluir ----
 
     @Test
-    fun `excluir esta e as próximas a partir de novembro mantém setembro e outubro e encerra a mesma série`() = runBlocking {
+    fun `excluir esta e as próximas a partir de novembro mantém setembro e outubro e encerra a mesma série`() = runBlocking<Unit> {
         val h = open()
         val id = h.create()
         h.space.execute(h.env(), DeleteRecurrence(id, 3, RecurrenceScope.ThisAndNext)).applied()
@@ -182,7 +182,7 @@ class RecurrenceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `excluir só esta em janeiro mantém dezembro e fevereiro`() = runBlocking {
+    fun `excluir só esta em janeiro mantém dezembro e fevereiro`() = runBlocking<Unit> {
         val h = open()
         val id = h.create()
         h.space.execute(h.env(), DeleteRecurrence(id, 5, RecurrenceScope.OnlyThis)).applied()
@@ -195,7 +195,7 @@ class RecurrenceTest : SpaceTestBase() {
     // ---- ocorrências realizadas ----
 
     @Test
-    fun `ocorrência paga no intervalo pede confirmação e depois da confirmação mantém o valor pago`() = runBlocking {
+    fun `ocorrência paga no intervalo pede confirmação e depois da confirmação mantém o valor pago`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.create()
@@ -213,7 +213,7 @@ class RecurrenceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `aluguel por Pix com vencimento em 5 de novembro pago em 30 de outubro por 1520`() = runBlocking {
+    fun `aluguel por Pix com vencimento em 5 de novembro pago em 30 de outubro por 1520`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.create(gym(1500, first = d(2026, 11, 5)))
@@ -228,7 +228,7 @@ class RecurrenceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `desfazer o pagamento da ocorrência devolve a previsão ao mês original`() = runBlocking {
+    fun `desfazer o pagamento da ocorrência devolve a previsão ao mês original`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.create(gym(1500, first = d(2026, 11, 5)))
@@ -239,7 +239,7 @@ class RecurrenceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `pagar a mesma ocorrência duas vezes e pagar ocorrência inexistente são rejeitados`() = runBlocking {
+    fun `pagar a mesma ocorrência duas vezes e pagar ocorrência inexistente são rejeitados`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.create()
@@ -254,7 +254,7 @@ class RecurrenceTest : SpaceTestBase() {
     // ---- cartão ----
 
     @Test
-    fun `recorrência no cartão recebe fatura como compra à vista e não é paga por pagamento direto`() = runBlocking {
+    fun `recorrência no cartão recebe fatura como compra à vista e não é paga por pagamento direto`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.create(gym(first = d(2026, 10, 22), form = RecurrenceForm.Card))
@@ -269,7 +269,7 @@ class RecurrenceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `ocorrência no cartão na janela do fechamento fica a conferir`() = runBlocking {
+    fun `ocorrência no cartão na janela do fechamento fica a conferir`() = runBlocking<Unit> {
         val h = open()
         h.create(gym(first = d(2026, 10, 8), form = RecurrenceForm.Card))
         assertEquals(1, h.space.budget(ym(2026, 11)).value().invoiceLinksToConfirm)
@@ -278,7 +278,7 @@ class RecurrenceTest : SpaceTestBase() {
     // ---- renda recorrente ----
 
     @Test
-    fun `salário mensal recorrente aparece a receber e vira recebido ao confirmar o recebimento`() = runBlocking {
+    fun `salário mensal recorrente aparece a receber e vira recebido ao confirmar o recebimento`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.space.execute(
@@ -303,7 +303,7 @@ class RecurrenceTest : SpaceTestBase() {
     // ---- validação, versão e desfazer ----
 
     @Test
-    fun `dados inválidos da recorrência são rejeitados por campo`() = runBlocking {
+    fun `dados inválidos da recorrência são rejeitados por campo`() = runBlocking<Unit> {
         val h = open()
         val r = h.space.execute(h.env(), gym(0).copy(description = " ", categoryId = null))
         val fields = assertIs<CommandResult.Rejected>(r).errors.map { it.field }.toSet()
@@ -313,7 +313,7 @@ class RecurrenceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `versão antiga na edição devolve a atual e não altera`() = runBlocking {
+    fun `versão antiga na edição devolve a atual e não altera`() = runBlocking<Unit> {
         val h = open()
         val id = h.create()
         val r = h.space.execute(h.env(), EditRecurrence(id, 2, RecurrenceScope.OnlyThis, RecurrenceFields(amount = brl(120)), expectedRevision = 9))
@@ -322,7 +322,7 @@ class RecurrenceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `edição gera nova revisão e uma operação com a série`() = runBlocking {
+    fun `edição gera nova revisão e uma operação com a série`() = runBlocking<Unit> {
         val h = open()
         val id = h.create()
         val receipt = h.space.execute(h.env(), EditRecurrence(id, 2, RecurrenceScope.OnlyThis, RecurrenceFields(amount = brl(120)))).applied()
@@ -332,7 +332,7 @@ class RecurrenceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `desfazer a criação da recorrência tira todas as ocorrências dos totais`() = runBlocking {
+    fun `desfazer a criação da recorrência tira todas as ocorrências dos totais`() = runBlocking<Unit> {
         val h = open()
         val created = h.space.execute(h.env(), gym()).applied()
         h.space.execute(h.env(), Undo(created.operationId)).applied()
@@ -342,7 +342,7 @@ class RecurrenceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `mesmo ID de comando não duplica a série`() = runBlocking {
+    fun `mesmo ID de comando não duplica a série`() = runBlocking<Unit> {
         val h = open()
         val env = h.env()
         h.space.execute(env, gym()).applied()

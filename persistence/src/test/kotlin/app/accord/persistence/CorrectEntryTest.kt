@@ -75,7 +75,7 @@ class CorrectEntryTest : SpaceTestBase() {
     // ---- despesa direta ----
 
     @Test
-    fun `corrigir descrição, valor, data, categoria e conta do Pix mantém o lançamento e move os meses`() = runBlocking {
+    fun `corrigir descrição, valor, data, categoria e conta do Pix mantém o lançamento e move os meses`() = runBlocking<Unit> {
         val h = open()
         val (_, b) = h.withAccounts()
         val id = h.pix()
@@ -100,7 +100,7 @@ class CorrectEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `só o que vem preenchido muda`() = runBlocking {
+    fun `só o que vem preenchido muda`() = runBlocking<Unit> {
         val h = open()
         h.withAccounts()
         val id = h.pix()
@@ -112,7 +112,7 @@ class CorrectEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `dinheiro com conta, valor zero, descrição vazia e referências inexistentes são rejeitados`() = runBlocking {
+    fun `dinheiro com conta, valor zero, descrição vazia e referências inexistentes são rejeitados`() = runBlocking<Unit> {
         val h = open()
         val (a, _) = h.withAccounts()
         val cash = h.space.execute(
@@ -129,7 +129,7 @@ class CorrectEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `sem nenhum campo é rejeitado e lançamento inexistente também`() = runBlocking {
+    fun `sem nenhum campo é rejeitado e lançamento inexistente também`() = runBlocking<Unit> {
         val h = open()
         h.withAccounts()
         val id = h.pix()
@@ -138,7 +138,7 @@ class CorrectEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `reduzir o valor abaixo do que já foi estornado é rejeitado informando o restante`() = runBlocking {
+    fun `reduzir o valor abaixo do que já foi estornado é rejeitado informando o restante`() = runBlocking<Unit> {
         val h = open()
         h.withAccounts()
         val id = h.pix(amount = 100)
@@ -151,7 +151,7 @@ class CorrectEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `versão antiga devolve a atual e lançamento excluído é rejeitado`() = runBlocking {
+    fun `versão antiga devolve a atual e lançamento excluído é rejeitado`() = runBlocking<Unit> {
         val h = open()
         h.withAccounts()
         val id = h.pix()
@@ -161,7 +161,7 @@ class CorrectEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `desfazer a correção restaura os valores anteriores`() = runBlocking {
+    fun `desfazer a correção restaura os valores anteriores`() = runBlocking<Unit> {
         val h = open()
         val (_, b) = h.withAccounts()
         val id = h.pix()
@@ -179,7 +179,7 @@ class CorrectEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `lançamento importado exige confirmação extra para ser corrigido`() = runBlocking {
+    fun `lançamento importado exige confirmação extra para ser corrigido`() = runBlocking<Unit> {
         val h = open()
         h.withAccounts()
         val id = h.pix(origin = Origin.Import)
@@ -191,7 +191,7 @@ class CorrectEntryTest : SpaceTestBase() {
     // ---- compra parcelada ----
 
     @Test
-    fun `corrigir categoria da parcelada de Compras para Eletrônicos move as seis parcelas e preserva valores e faturas`() = runBlocking {
+    fun `corrigir categoria da parcelada de Compras para Eletrônicos move as seis parcelas e preserva valores e faturas`() = runBlocking<Unit> {
         val h = open()
         val id = h.card()
         val before = h.space.purchase(id).value()!!.installments
@@ -207,7 +207,7 @@ class CorrectEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `corrigir a descrição para Monitor aparece em todas e outra compra parecida não muda`() = runBlocking {
+    fun `corrigir a descrição para Monitor aparece em todas e outra compra parecida não muda`() = runBlocking<Unit> {
         val h = open()
         val id = h.card()
         val other = h.card(description = "Equipamento", installments = 2, amount = 200)
@@ -217,7 +217,7 @@ class CorrectEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `valor de compra parcelada não é editável e a orientação é excluir e registrar de novo`() = runBlocking {
+    fun `valor de compra parcelada não é editável e a orientação é excluir e registrar de novo`() = runBlocking<Unit> {
         val h = open()
         val id = h.card(amount = 3000, installments = 10)
         val r = h.correct(CorrectEntry(id, amount = brl(3200)))
@@ -232,7 +232,7 @@ class CorrectEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `data da parcelada muda só a data da compra e a prévia sugere a fatura sem aplicar`() = runBlocking {
+    fun `data da parcelada muda só a data da compra e a prévia sugere a fatura sem aplicar`() = runBlocking<Unit> {
         val h = open()
         val id = h.card(amount = 1200, installments = 6, invoice = nov, date = d(2026, 10, 5))
         val command = CorrectEntry(id, date = d(2026, 10, 3))
@@ -246,7 +246,7 @@ class CorrectEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `sem sugestão quando a nova data aponta para a mesma fatura`() = runBlocking {
+    fun `sem sugestão quando a nova data aponta para a mesma fatura`() = runBlocking<Unit> {
         val h = open()
         val id = h.card(amount = 1200, installments = 6, invoice = nov, date = d(2026, 10, 22))
         val ready = assertIs<PreviewResult.Ready>(h.space.preview(CorrectEntry(id, date = d(2026, 10, 23))))
@@ -256,7 +256,7 @@ class CorrectEntryTest : SpaceTestBase() {
     // ---- compra à vista no cartão ----
 
     @Test
-    fun `mudar a data de compra à vista reestima a atribuição ainda estimada`() = runBlocking {
+    fun `mudar a data de compra à vista reestima a atribuição ainda estimada`() = runBlocking<Unit> {
         val h = open()
         val id = h.card(amount = 100, installments = 1, invoice = null, date = d(2026, 10, 22)) // fatura de novembro, sem marca
         assertEquals(nov, h.space.purchase(id).value()!!.installments.single().invoiceMonth)
@@ -269,7 +269,7 @@ class CorrectEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `data na janela do fechamento reestima com selo a conferir`() = runBlocking {
+    fun `data na janela do fechamento reestima com selo a conferir`() = runBlocking<Unit> {
         val h = open()
         val id = h.card(amount = 100, installments = 1, invoice = null, date = d(2026, 10, 22))
         h.correct(CorrectEntry(id, date = d(2026, 10, 8))).applied()
@@ -279,7 +279,7 @@ class CorrectEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `atribuição confirmada pela pessoa não muda ao corrigir a data`() = runBlocking {
+    fun `atribuição confirmada pela pessoa não muda ao corrigir a data`() = runBlocking<Unit> {
         val h = open()
         val id = h.card(amount = 100, installments = 1, invoice = nov, date = d(2026, 10, 22))
         h.correct(CorrectEntry(id, date = d(2026, 10, 5))).applied()
@@ -289,7 +289,7 @@ class CorrectEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `corrigir o valor da compra à vista atualiza o total e a parcela`() = runBlocking {
+    fun `corrigir o valor da compra à vista atualiza o total e a parcela`() = runBlocking<Unit> {
         val h = open()
         val id = h.card(amount = 100, installments = 1, invoice = oct)
         h.correct(CorrectEntry(id, amount = brl(130))).applied()
@@ -300,7 +300,7 @@ class CorrectEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `item de fatura quitada exige a confirmação extra`() = runBlocking {
+    fun `item de fatura quitada exige a confirmação extra`() = runBlocking<Unit> {
         val h = open()
         h.withAccounts()
         val id = h.card(amount = 100, installments = 1, invoice = oct)
@@ -313,7 +313,7 @@ class CorrectEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `desfazer a correção da compra restaura descrição, categoria e data`() = runBlocking {
+    fun `desfazer a correção da compra restaura descrição, categoria e data`() = runBlocking<Unit> {
         val h = open()
         val id = h.card(amount = 100, installments = 1, invoice = null, date = d(2026, 10, 22))
         val receipt = h.correct(
@@ -331,7 +331,7 @@ class CorrectEntryTest : SpaceTestBase() {
     // ---- boleto e renda ----
 
     @Test
-    fun `corrigir o vencimento de boleto não pago muda o mês previsto`() = runBlocking {
+    fun `corrigir o vencimento de boleto não pago muda o mês previsto`() = runBlocking<Unit> {
         val h = open()
         h.withAccounts()
         val id = h.space.execute(
@@ -345,7 +345,7 @@ class CorrectEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `boleto pago mantém o valor efetivo ao corrigir o previsto`() = runBlocking {
+    fun `boleto pago mantém o valor efetivo ao corrigir o previsto`() = runBlocking<Unit> {
         val h = open()
         h.withAccounts()
         val id = h.space.execute(
@@ -362,7 +362,7 @@ class CorrectEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `corrigir renda prevista muda valor e data e desfazer restaura`() = runBlocking {
+    fun `corrigir renda prevista muda valor e data e desfazer restaura`() = runBlocking<Unit> {
         val h = open()
         h.withAccounts()
         val id = h.space.execute(h.env(), RegisterIncome("Salário", brl(500), d(2026, 10, 25))).applied().changes.single().id
@@ -375,7 +375,7 @@ class CorrectEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `renda já recebida mantém o recebido ao corrigir o previsto`() = runBlocking {
+    fun `renda já recebida mantém o recebido ao corrigir o previsto`() = runBlocking<Unit> {
         val h = open()
         h.withAccounts()
         val id = h.space.execute(h.env(), RegisterIncome("Salário", brl(500), d(2026, 10, 25))).applied().changes.single().id
@@ -388,7 +388,7 @@ class CorrectEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `a prévia de correção mostra os meses afetados e não grava`() = runBlocking {
+    fun `a prévia de correção mostra os meses afetados e não grava`() = runBlocking<Unit> {
         val h = open()
         h.withAccounts()
         val id = h.pix()
@@ -399,7 +399,7 @@ class CorrectEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `mesmo ID de comando não aplica duas vezes`() = runBlocking {
+    fun `mesmo ID de comando não aplica duas vezes`() = runBlocking<Unit> {
         val h = open()
         h.withAccounts()
         val id = h.pix()

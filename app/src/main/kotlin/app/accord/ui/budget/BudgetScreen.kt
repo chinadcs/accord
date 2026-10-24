@@ -35,6 +35,7 @@ import app.accord.core.space.CategoryBudget
 import app.accord.ui.components.AdaptiveRow
 import app.accord.ui.components.BudgetBar
 import app.accord.ui.components.DecorativeIcon
+import app.accord.ui.sync.SyncIndicator
 import app.accord.ui.components.MonthSelector
 import app.accord.ui.components.RefreshOnResume
 import app.accord.ui.components.ScreenTitle
@@ -98,15 +99,8 @@ fun BudgetScreen(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                // Antes da sincronização (S2), nada é apresentado como sincronizado.
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
-                    DecorativeIcon(Lucide.drawable.lucide_ic_smartphone, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(
-                        stringResource(R.string.saved_on_device),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                // "Salvo no aparelho" até haver sincronização concluída; depois, a data, nunca um selo de "em dia".
+                SyncIndicator()
             }
         }
         when (val content = state.content) {

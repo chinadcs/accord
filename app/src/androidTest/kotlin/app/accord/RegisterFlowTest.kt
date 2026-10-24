@@ -129,7 +129,7 @@ class RegisterFlowTest {
         fill("Valor (R$)", "50,00")
         pickCategory("Mercado")
         saveAndLeave()
-        waitForText("Salvo no aparelho.")
+        waitForText("Salvo neste aparelho")
 
         findInEntries("Mercado $tag")
         compose.onAllNodesWithText("Pix", substring = true).onFirst().assertIsDisplayed()
@@ -146,7 +146,7 @@ class RegisterFlowTest {
         fill("Valor (R$)", "12,00")
         pickCategory("Mercado")
         saveAndLeave()
-        waitForText("Salvo no aparelho.")
+        waitForText("Salvo neste aparelho")
         compose.onNodeWithText("Desfazer").performClick()
         waitForText("Desfeito.")
         findInEntries("Mercado $tag")
@@ -225,7 +225,7 @@ class RegisterFlowTest {
         compose.onAllNodesWithText("200,00", substring = true).onFirst().assertExists()
 
         saveAndLeave()
-        waitForText("Salvo no aparelho.")
+        waitForText("Salvo neste aparelho")
         // comprado depois do fechamento (dia 8): a 1ª parcela vence na fatura de novembro
         compose.onNodeWithText("Lançamentos").performClick()
         compose.onNodeWithText("Buscar descrição ou estabelecimento").performTextInput(tag)
@@ -244,7 +244,7 @@ class RegisterFlowTest {
         fill("Descrição", "Salário $tag")
         fill("Valor (R$)", "6.000,00")
         saveAndLeave()
-        waitForText("Salvo no aparelho.")
+        waitForText("Salvo neste aparelho")
         findInEntries("Salário $tag")
     }
 }

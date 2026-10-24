@@ -43,7 +43,7 @@ class BoletoIncomeTest : SpaceTestBase() {
     // ---- boleto (cenário 5) ----
 
     @Test
-    fun `boleto não pago fica previsto no mês do vencimento e não conta como pago`() = runBlocking {
+    fun `boleto não pago fica previsto no mês do vencimento e não conta como pago`() = runBlocking<Unit> {
         val h = open()
         h.registerBoleto(boleto(d(2026, 10, 30)))
         val oct = h.space.budget(ym(2026, 10)).value()
@@ -53,7 +53,7 @@ class BoletoIncomeTest : SpaceTestBase() {
     }
 
     @Test
-    fun `vence em outubro e é pago em novembro — outubro zera e novembro tem R$ 100 pagos com vencimento preservado`() = runBlocking {
+    fun `vence em outubro e é pago em novembro — outubro zera e novembro tem R$ 100 pagos com vencimento preservado`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.registerBoleto(boleto(d(2026, 10, 30)))
@@ -70,7 +70,7 @@ class BoletoIncomeTest : SpaceTestBase() {
     }
 
     @Test
-    fun `desfazer o pagamento devolve a previsão ao mês do vencimento`() = runBlocking {
+    fun `desfazer o pagamento devolve a previsão ao mês do vencimento`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.registerBoleto(boleto(d(2026, 10, 30)))
@@ -85,7 +85,7 @@ class BoletoIncomeTest : SpaceTestBase() {
     }
 
     @Test
-    fun `vence em novembro e é pago em outubro — outubro pago e novembro sem previsão`() = runBlocking {
+    fun `vence em novembro e é pago em outubro — outubro pago e novembro sem previsão`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.registerBoleto(boleto(d(2026, 11, 5)))
@@ -97,7 +97,7 @@ class BoletoIncomeTest : SpaceTestBase() {
     }
 
     @Test
-    fun `vencido sem pagamento continua no mês original e fica marcado como pendente`() = runBlocking {
+    fun `vencido sem pagamento continua no mês original e fica marcado como pendente`() = runBlocking<Unit> {
         val h = open() // relógio em 24/10/2026
         val overdue = h.registerBoleto(boleto(d(2026, 9, 28)))
         val future = h.registerBoleto(boleto(d(2026, 10, 30)))
@@ -109,7 +109,7 @@ class BoletoIncomeTest : SpaceTestBase() {
     }
 
     @Test
-    fun `previsto R$ 100 pago R$ 104 no mesmo mês — conta o efetivo e guarda o previsto num só movimento`() = runBlocking {
+    fun `previsto R$ 100 pago R$ 104 no mesmo mês — conta o efetivo e guarda o previsto num só movimento`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.registerBoleto(boleto(d(2026, 10, 30)))
@@ -124,7 +124,7 @@ class BoletoIncomeTest : SpaceTestBase() {
     }
 
     @Test
-    fun `boleto registrado já com pagamento ocupa só o mês do pagamento`() = runBlocking {
+    fun `boleto registrado já com pagamento ocupa só o mês do pagamento`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.registerBoleto(boleto(d(2026, 11, 5), payment = Settlement(d(2026, 10, 30))))
@@ -133,7 +133,7 @@ class BoletoIncomeTest : SpaceTestBase() {
     }
 
     @Test
-    fun `pagar boleto sem conta e sem conta padrão é rejeitado`() = runBlocking {
+    fun `pagar boleto sem conta e sem conta padrão é rejeitado`() = runBlocking<Unit> {
         val h = open()
         val id = h.registerBoleto(boleto(d(2026, 10, 30)))
         val r = h.space.execute(h.env(), PayBoleto(id, Settlement(d(2026, 10, 25))))
@@ -141,7 +141,7 @@ class BoletoIncomeTest : SpaceTestBase() {
     }
 
     @Test
-    fun `pagar duas vezes é rejeitado e versão antiga devolve a atual`() = runBlocking {
+    fun `pagar duas vezes é rejeitado e versão antiga devolve a atual`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.registerBoleto(boleto(d(2026, 10, 30)))
@@ -153,7 +153,7 @@ class BoletoIncomeTest : SpaceTestBase() {
     }
 
     @Test
-    fun `boleto a classificar entra no total e na linha própria`() = runBlocking {
+    fun `boleto a classificar entra no total e na linha própria`() = runBlocking<Unit> {
         val h = open()
         h.registerBoleto(boleto(d(2026, 10, 30)).copy(classification = Classification.ToClassify))
         val b = h.space.budget(ym(2026, 10)).value()
@@ -162,7 +162,7 @@ class BoletoIncomeTest : SpaceTestBase() {
     }
 
     @Test
-    fun `valores inválidos do boleto são rejeitados`() = runBlocking {
+    fun `valores inválidos do boleto são rejeitados`() = runBlocking<Unit> {
         val h = open()
         val r = h.space.execute(h.env(), boleto(d(2026, 10, 30), Money.ZERO).copy(description = ""))
         assertEquals(setOf("description", "amount"), assertIs<CommandResult.Rejected>(r).errors.map { it.field }.toSet())
@@ -175,7 +175,7 @@ class BoletoIncomeTest : SpaceTestBase() {
     )
 
     @Test
-    fun `R$ 6000 recebidos mais R$ 500 previstos dão esperado de R$ 6500 e receber os 500 não vira 7000`() = runBlocking {
+    fun `R$ 6000 recebidos mais R$ 500 previstos dão esperado de R$ 6500 e receber os 500 não vira 7000`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.space.execute(h.env(), income(brl(6000), d(2026, 10, 5), Settlement(d(2026, 10, 5)))).applied()
@@ -195,7 +195,7 @@ class BoletoIncomeTest : SpaceTestBase() {
     }
 
     @Test
-    fun `recebimento corrigido para R$ 450 conta o efetivo e mantém o previsto visível sem pendência`() = runBlocking {
+    fun `recebimento corrigido para R$ 450 conta o efetivo e mantém o previsto visível sem pendência`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.space.execute(h.env(), income(brl(6000), d(2026, 10, 5), Settlement(d(2026, 10, 5)))).applied()
@@ -211,7 +211,7 @@ class BoletoIncomeTest : SpaceTestBase() {
     }
 
     @Test
-    fun `renda prevista para 30 10 e recebida em 03 11 sai de outubro e conta em novembro com as duas datas`() = runBlocking {
+    fun `renda prevista para 30 10 e recebida em 03 11 sai de outubro e conta em novembro com as duas datas`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.space.execute(h.env(), income(brl(1000), d(2026, 10, 30))).applied().changes.single().id
@@ -228,7 +228,7 @@ class BoletoIncomeTest : SpaceTestBase() {
     }
 
     @Test
-    fun `renda não entra no comprometido nem no pago`() = runBlocking {
+    fun `renda não entra no comprometido nem no pago`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.space.execute(h.env(), income(brl(6000), d(2026, 10, 5), Settlement(d(2026, 10, 5)))).applied()
@@ -239,7 +239,7 @@ class BoletoIncomeTest : SpaceTestBase() {
     }
 
     @Test
-    fun `desfazer o recebimento volta a renda para a receber no mês previsto`() = runBlocking {
+    fun `desfazer o recebimento volta a renda para a receber no mês previsto`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.space.execute(h.env(), income(brl(500), d(2026, 10, 25))).applied().changes.single().id
@@ -250,7 +250,7 @@ class BoletoIncomeTest : SpaceTestBase() {
     }
 
     @Test
-    fun `renda com valor zero ou sem descrição é rejeitada e a conta padrão é exigida`() = runBlocking {
+    fun `renda com valor zero ou sem descrição é rejeitada e a conta padrão é exigida`() = runBlocking<Unit> {
         val h = open()
         val noAccount = h.space.execute(h.env(), income(brl(10), d(2026, 10, 5)))
         assertEquals("accountId", assertIs<CommandResult.Rejected>(noAccount).errors.single().field)

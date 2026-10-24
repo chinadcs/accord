@@ -55,7 +55,7 @@ class AccessFlowTest {
         scenario?.close()
         val app = ApplicationProvider.getApplicationContext<AccordApplication>()
         container = AppContainer(app, accessStore, service)
-        runBlocking { container.access.restore() }
+        runBlocking { container.awaitReady() }
         app.container = container
         scenario = ActivityScenario.launch(MainActivity::class.java)
     }

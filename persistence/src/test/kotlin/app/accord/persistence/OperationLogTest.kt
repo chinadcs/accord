@@ -25,14 +25,14 @@ class OperationLogTest : SpaceTestBase() {
     }
 
     @Test
-    fun `salvo no aparelho difere de reconhecido e nada é apresentado como sincronizado antes do S2`() = runBlocking {
+    fun `salvo no aparelho difere de reconhecido e nada é apresentado como sincronizado antes do S2`() = runBlocking<Unit> {
         val h = open()
         h.account()
         assertTrue(h.space.operations().value().none { it.acknowledged })
     }
 
     @Test
-    fun `reconhecer a operação a marca como reconhecida e guarda a versão do serviço`() = runBlocking {
+    fun `reconhecer a operação a marca como reconhecida e guarda a versão do serviço`() = runBlocking<Unit> {
         val h = open()
         val account = h.account()
         val first = h.space.operations().value().first()
@@ -43,7 +43,7 @@ class OperationLogTest : SpaceTestBase() {
     }
 
     @Test
-    fun `a versão reconhecida vira a versão base da próxima operação sobre a mesma entidade`() = runBlocking {
+    fun `a versão reconhecida vira a versão base da próxima operação sobre a mesma entidade`() = runBlocking<Unit> {
         val h = open()
         val account = h.account()
         val ops = h.space.operations().value()
@@ -61,7 +61,7 @@ class OperationLogTest : SpaceTestBase() {
     }
 
     @Test
-    fun `operação desconhecida no reconhecimento é falha identificada e nada muda`() = runBlocking {
+    fun `operação desconhecida no reconhecimento é falha identificada e nada muda`() = runBlocking<Unit> {
         val h = open()
         h.account()
         assertIs<QueryResult.Failure>(h.space.recordAcknowledgement("nada", emptyMap()))
@@ -69,7 +69,7 @@ class OperationLogTest : SpaceTestBase() {
     }
 
     @Test
-    fun `operações são imutáveis — desfazer e correções entram como novas`() = runBlocking {
+    fun `operações são imutáveis — desfazer e correções entram como novas`() = runBlocking<Unit> {
         val h = open()
         h.account()
         val r = h.space.execute(
