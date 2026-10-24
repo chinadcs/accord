@@ -1,0 +1,970 @@
+package app.accord.core.space
+
+import app.accord.core.Frequency
+import app.accord.core.LimitEdit
+import app.accord.core.LimitScope
+import app.accord.core.LimitSetting
+import app.accord.core.LimitView
+import app.accord.core.Money
+import app.accord.core.RecurrenceFields
+import app.accord.core.RecurrenceScope
+import java.time.LocalDate
+import java.time.YearMonth
+
+/**
+ * Contrato da fachada do espaço financeiro (S1 §1, §3, §4, §8). Única porta de entrada para ler
+ * e alterar dados financeiros e cadastros; Chat, importação e formulários usam os mesmos comandos.
+ */
+interface FinanceSpace {
+    suspend fun execute(envelope: Envelope, command: Command): CommandResult
+
+    /** Mesmas regras do [execute], sem persistir nada. A gravação reaplica regras e versões. */
+    suspend fun preview(command: Command): PreviewResult
+
+    suspend fun categories(): QueryResult<List<CategoryNode>>
+    suspend fun accounts(): QueryResult<AccountsView>
+    suspend fun budget(month: YearMonth): QueryResult<MonthBudget>
+
+    /** Limite vigente de cada categoria principal em [month], com a origem da vigência. */
+    suspend fun limits(month: YearMonth): QueryResult<List<CategoryLimit>>
+    suspend fun card(): QueryResult<CardInfo>
+    suspend fun boleto(id: String): QueryResult<BoletoView?>
+    suspend fun income(id: String): QueryResult<IncomeView?>
+    suspend fun incomes(month: YearMonth): QueryResult<IncomeSummary>
+    suspend fun recurrence(id: String): QueryResult<RecurrenceView?>
+
+    /** Estornos vinculados à origem, em ordem de registro. */
+    suspend fun refunds(originId: String): QueryResult<List<RefundView>>
+
+    /** Ocorrências que ocupam o [month] do orçamento (calculadas sob demanda), em ordem de data. */
+    suspend fun occurrences(month: YearMonth): QueryResult<List<OccurrenceView>>
+    suspend fun purchase(id: String): QueryResult<PurchaseDetail?>
+
+    /** Fatura pelo mês de vencimento, mesmo sem itens: composição, conferência, quitação e pendências. */
+    suspend fun invoice(dueMonth: YearMonth): QueryResult<InvoiceView>
+
+    /** Faturas com algum dado (itens, total registrado ou pagamento), da mais antiga para a mais nova. */
+    suspend fun invoices(): QueryResult<List<InvoiceView>>
+
+    /** Lançamentos que ocupam o [month] do orçamento, do mais recente para o mais antigo. */
+    suspend fun movements(month: YearMonth): QueryResult<List<MovementRow>>
+
+    /**
+     * Rascunhos locais (S1 §3.1): não são financeiros. Não geram operação, não entram em nenhum
+     * total, não sincronizam e só existem neste aparelho. [saveDraft] com um ID existente atualiza.
+     */
+    suspend fun saveDraft(draft: LocalDraft): QueryResult<String>
+    suspend fun discardDraft(id: String): QueryResult<Unit>
+    suspend fun drafts(): QueryResult<List<LocalDraft>>
+
+    /**
+     * S2 registra que o serviço reconheceu a operação, com a versão de cada entidade no serviço.
+     * S1 só guarda: a versão vira a "versão base" das próximas operações sobre a mesma entidade.
+     */
+    suspend fun recordAcknowledgement(operationId: String, serviceVersions: Map<EntityRef, Long>): QueryResult<Unit>
+
+    /** Lista de Lançamentos (tela 07) com filtros, critério de data e paginação estável. */
+    suspend fun entries(filter: EntryFilter, cursor: Int = 0, pageSize: Int = 50): QueryResult<EntryPage>
+
+    /** Detalhe do lançamento (tela 08) por ID estável; nulo se não existe. */
+    suspend fun entry(id: String): QueryResult<EntryDetail?>
+
+    /** Compromissos conhecidos do mês (tela 10): parcelas, recorrências e contas previstas. */
+    suspend fun commitments(month: YearMonth, kind: CommitmentKind = CommitmentKind.All): QueryResult<MonthCommitments>
+
+    /** Detalhe do compromisso (tela 11): cronograma de parcelas ou frequência de recorrência. */
+    suspend fun commitment(id: String): QueryResult<CommitmentDetail?>
+
+    /** Pendências compartilhadas de S1 (tela 18), derivadas do estado dos lançamentos e faturas. */
+    suspend fun pendings(): QueryResult<List<PendingItem>>
+
+    /** Operações locais em ordem de sequência, a partir de [afterSequence] (exclusive). */
+    suspend fun operations(afterSequence: Long = 0, limit: Int = 100): QueryResult<List<LocalOperation>>
+}
+
+// ---- rascunhos locais ----
+
+enum class DraftSource { Chat, Form }
+
+/**
+ * Registro sem valor, intenção ou outro campo essencial, ou formulário em edição. Guarda só campos
+ * estruturados; o texto do Chat fica no histórico do aparelho, nunca aqui.
+ */
+data class LocalDraft(
+    /** Vazio pede um ID novo. */
+    val id: String = "",
+    val source: DraftSource,
+    /** Campos conhecidos, por nome (ex.: `description`, `date`). */
+    val fields: Map<String, String>,
+    /** Campos que faltam para efetivar. */
+    val missing: List<String> = emptyList(),
+    val reason: String = "",
+    val updatedAtMillis: Long = 0,
+)
+
+// ---- identidade e envelope ----
+
+/** Espaço e pessoa da sessão; fornecidos por S2 (nos testes e na Etapa 1, identidade de desenvolvimento). */
+data class Session(val spaceId: String, val personId: String)
+
+fun interface SessionProvider {
+    fun current(): Session
+}
+
+/** Gerado por quem chama, uma vez por intenção de salvar; repetir devolve o resultado original. */
+@JvmInline
+value class CommandId(val value: String) {
+    init {
+        require(value.isNotBlank()) { "ID do comando não pode ser vazio" }
+    }
+}
+
+enum class Origin { Manual, Chat, Import }
+
+/**
+ * [draftId]: ao efetivar um rascunho local, o comando de registro cita o rascunho, que é descartado
+ * na mesma transação em que o lançamento é gravado (e só se o comando for aplicado).
+ */
+data class Envelope(
+    val commandId: CommandId,
+    val origin: Origin = Origin.Manual,
+    val draftId: String? = null,
+)
+
+// ---- comandos ----
+
+/** Categoria principal, subcategoria ou, nos registros de despesa, "a classificar" (§3.1). */
+sealed interface Classification {
+    data class Category(val id: String) : Classification
+    data object ToClassify : Classification
+}
+
+sealed interface BankRef {
+    /** Banco do catálogo local, identificado por ISPB, nunca por semelhança de nome. */
+    data class Catalog(val ispb: String, val name: String) : BankRef
+    data class Other(val name: String) : BankRef
+}
+
+enum class DirectPaymentKind { Pix, Debit, Cash }
+
+sealed interface Command
+
+data class CreateCategory(val name: String, val parentId: String? = null) : Command
+
+data class AddAccount(val bank: BankRef, val nickname: String) : Command
+
+data class SetMyDefaultAccount(val accountId: String) : Command
+
+/** Pix, débito ou dinheiro: ocupa o mês da movimentação e já nasce pago. */
+data class RegisterDirectPayment(
+    val kind: DirectPaymentKind,
+    val description: String,
+    val classification: Classification,
+    val date: LocalDate,
+    val amount: Money,
+    /** Pix e débito: o padrão do autor quando omitida. Dinheiro não tem conta. */
+    val accountId: String? = null,
+    val spentBy: String? = null,
+) : Command
+
+enum class AmountMeaning { Total, PerInstallment }
+
+/** Um único cartão por espaço no P0; os dias sugerem a fatura sem garantir a atribuição do emissor. */
+data class ConfigureCard(
+    val bank: BankRef?,
+    val nickname: String,
+    val closingDay: Int,
+    val dueDay: Int,
+) : Command
+
+/**
+ * Compra no cartão, à vista (1 parcela) ou parcelada. Com mais de uma parcela, [amountMeaning]
+ * é obrigatório: o aplicativo não adivinha se o valor é total ou da parcela.
+ * [isCharge] marca tarifa ou juros confirmado; sem classificação usa Serviços > Tarifas e juros.
+ * [invoice] é a fatura (mês de vencimento) informada pela pessoa: fica confirmada, sem selo.
+ */
+data class RegisterCardPurchase(
+    val description: String,
+    val classification: Classification,
+    val date: LocalDate,
+    val amount: Money,
+    val amountMeaning: AmountMeaning? = null,
+    val installments: Int = 1,
+    val spentBy: String? = null,
+    val isCharge: Boolean = false,
+    val invoice: YearMonth? = null,
+) : Command
+
+/**
+ * Corrige a fatura atribuída da 1ª parcela; as demais acompanham, uma por mês. Só a 1ª parcela
+ * muda de fatura; deslocamento que toca fatura quitada ou parcela cancelada é rejeitado.
+ */
+data class CorrectInvoiceAssignment(
+    val purchaseId: String,
+    val installmentNumber: Int,
+    val invoice: YearMonth,
+    val expectedRevision: Long? = null,
+) : Command
+
+/** Dá categoria a um lançamento "a classificar" (todas as parcelas, se parcelado); total geral inalterado. */
+data class ClassifyEntry(
+    val entityId: String,
+    val category: Classification.Category,
+    val expectedRevision: Long? = null,
+) : Command
+
+/** Data efetiva de um pagamento ou recebimento; [amount] nulo confirma o valor previsto. */
+data class Settlement(val date: LocalDate, val amount: Money? = null)
+
+/**
+ * Boleto: previsto no mês do vencimento enquanto não pago; pago ocupa só o mês do pagamento
+ * efetivo. As duas datas e os dois valores ficam guardados.
+ */
+data class RegisterBoleto(
+    val description: String,
+    val classification: Classification,
+    val dueDate: LocalDate,
+    val amount: Money,
+    val accountId: String? = null,
+    val payment: Settlement? = null,
+) : Command
+
+data class PayBoleto(
+    val boletoId: String,
+    val payment: Settlement,
+    /** Padrão do autor quando omitida. */
+    val accountId: String? = null,
+    val expectedRevision: Long? = null,
+) : Command
+
+/** Renda prevista (ou já recebida, se [received] vier junto). Conta no mês do recebimento efetivo. */
+data class RegisterIncome(
+    val description: String,
+    val expectedAmount: Money,
+    val expectedDate: LocalDate,
+    val accountId: String? = null,
+    val received: Settlement? = null,
+) : Command
+
+data class ReceiveIncome(
+    val incomeId: String,
+    val receipt: Settlement,
+    val accountId: String? = null,
+    val expectedRevision: Long? = null,
+) : Command
+
+enum class RecurrenceKind { Expense, Income }
+
+/** Fora do cartão segue a regra do boleto; no cartão, cada ocorrência recebe fatura como compra à vista. */
+enum class RecurrenceForm { OffCard, Card }
+
+/**
+ * Série sem término no cadastro (mensal ou anual). Despesa exige categoria; renda não tem categoria.
+ * [form] só vale para despesa.
+ */
+data class CreateRecurrence(
+    val kind: RecurrenceKind,
+    val description: String,
+    val categoryId: String?,
+    val amount: Money,
+    val form: RecurrenceForm = RecurrenceForm.OffCard,
+    val accountId: String? = null,
+    val frequency: Frequency,
+    val firstDate: LocalDate,
+) : Command
+
+/**
+ * Edita a ocorrência [occurrence] (número na sequência original). O alcance é obrigatório:
+ * sem ele o resultado é Decisão necessária e nada muda. Ocorrências já realizadas no alcance
+ * exigem [confirmRealized]; o que foi pago continua com o valor efetivo.
+ */
+data class EditRecurrence(
+    val recurrenceId: String,
+    val occurrence: Int,
+    val scope: RecurrenceScope?,
+    val fields: RecurrenceFields,
+    val confirmRealized: Boolean = false,
+    val expectedRevision: Long? = null,
+) : Command
+
+/**
+ * Exclui [occurrence] só ela (a série continua) ou ela e as próximas (a série termina).
+ * Anteriores ficam intactas.
+ */
+data class DeleteRecurrence(
+    val recurrenceId: String,
+    val occurrence: Int,
+    val scope: RecurrenceScope?,
+    val confirmRealized: Boolean = false,
+    val expectedRevision: Long? = null,
+) : Command
+
+/**
+ * Pagamento de uma ocorrência fora do cartão (ou recebimento de renda recorrente): segue a
+ * regra do boleto. No cartão, a ocorrência é paga pela quitação da fatura.
+ */
+data class PayOccurrence(
+    val recurrenceId: String,
+    val occurrence: Int,
+    val settlement: Settlement,
+    val accountId: String? = null,
+    val expectedRevision: Long? = null,
+) : Command
+
+enum class RefundStatus { Requested, Confirmed }
+
+/**
+ * Estorno vinculado a uma compra, boleto ou lançamento direto ([originId]). A soma dos estornos
+ * vinculados (solicitados inclusive) não supera o valor da origem (a compra inteira, se parcelada).
+ * Só o confirmado afeta totais: abate a categoria da origem no mês da devolução ([date]) ou, no
+ * cartão, no mês de vencimento da fatura que recebe o crédito ([invoice], ou a estimada pela data).
+ * Estorno não é renda.
+ */
+data class RegisterRefund(
+    val originId: String,
+    val amount: Money,
+    val status: RefundStatus,
+    val date: LocalDate? = null,
+    val invoice: YearMonth? = null,
+) : Command
+
+/** Confirma um estorno solicitado pelo valor efetivamente devolvido, sem presumir devolução integral. */
+data class ConfirmRefund(
+    val refundId: String,
+    val amount: Money,
+    val date: LocalDate,
+    val invoice: YearMonth? = null,
+    val expectedRevision: Long? = null,
+) : Command
+
+/**
+ * Pedido de cancelamento de parcelas: continuam no comprometido ("cancelamento solicitado").
+ * Não há comando para retirar o pedido; só o desfazer o anula.
+ */
+data class RequestInstallmentCancellation(
+    val purchaseId: String,
+    val installmentNumbers: List<Int>,
+    val expectedRevision: Long? = null,
+) : Command
+
+/** Somente as parcelas informadas saem do comprometido; as demais e o histórico permanecem, sem crédito. */
+data class ConfirmNonCharge(
+    val purchaseId: String,
+    val installmentNumbers: List<Int>,
+    val expectedRevision: Long? = null,
+) : Command
+
+enum class InvoiceTotalSource { Person, Import }
+
+/**
+ * Registra o total cobrado pelo banco. A fatura passa a "fechada" e fica "conferida" quando o total
+ * coincide com a composição conhecida; a diferença vira pendência de conferência, sem ajuste
+ * automático. Não exige arquivo: a pessoa digita o total e a conferência no banco é dela.
+ */
+data class RegisterInvoiceTotal(
+    val invoice: YearMonth,
+    val total: Money,
+    val source: InvoiceTotalSource = InvoiceTotalSource.Person,
+) : Command
+
+/**
+ * Quitação da fatura. Só é aceita quando a fatura está conferida e o valor é igual ao total
+ * conferido: a fatura fica paga e seus itens passam a pagos, sem nova despesa. Em qualquer outro
+ * caso o pagamento é preservado pelo valor real numa pendência de pagamento divergente, a fatura
+ * não é paga e nenhuma despesa ou baixa parcial é criada.
+ */
+data class PayInvoice(
+    val invoice: YearMonth,
+    val amount: Money,
+    val date: LocalDate,
+    /** Padrão do autor quando omitida. */
+    val accountId: String? = null,
+) : Command
+
+/**
+ * Exclui um lançamento (despesa direta, compra no cartão com todas as parcelas, boleto ou renda):
+ * registro de exclusão com a mesma identidade, sem apagar operações nem originais importados. Não é
+ * estorno nem cancelamento. Compra com estorno vinculado é excluída junto com seus estornos, numa só
+ * operação. Item de fatura quitada ou com dados importados exige [confirmExtra]; sem ela, a
+ * resposta é Decisão necessária e nada muda. Ocorrência de recorrência usa [DeleteRecurrence].
+ */
+data class DeleteEntry(
+    val entityId: String,
+    val confirmExtra: Boolean = false,
+    val expectedRevision: Long? = null,
+) : Command
+
+/** Mantém identidade, ícone e vínculos; os lançamentos passam a exibir o novo nome. */
+data class RenameCategory(
+    val categoryId: String,
+    val name: String,
+    val expectedRevision: Long? = null,
+) : Command
+
+/** Só apresentação: nenhum valor muda. [orderedIds] é a nova ordem de todos os irmãos do nível. */
+data class ReorderCategories(val parentId: String?, val orderedIds: List<String>) : Command
+
+/** Escolha explícita, por mês, sobre a parte de limite de uma subcategoria que muda de categoria. */
+data class PartDecision(val month: YearMonth, val destinationPart: Money?)
+
+/**
+ * Move uma subcategoria para outra categoria principal, daqui para frente (do mês atual,
+ * inclusive): meses anteriores continuam contando os gastos na categoria de origem. Se a
+ * subcategoria tem parte do limite, a resposta é Decisão necessária com os meses e valores; a
+ * pessoa decide por mês, e a parte nunca é transferida em silêncio.
+ */
+data class MoveSubcategory(
+    val subcategoryId: String,
+    val destinationId: String,
+    val decisions: List<PartDecision>? = null,
+    val expectedRevision: Long? = null,
+) : Command
+
+data class EditAccount(
+    val accountId: String,
+    val nickname: String? = null,
+    val bank: BankRef? = null,
+    val expectedRevision: Long? = null,
+) : Command
+
+data class CategoryLimitEdit(val categoryId: String, val edit: LimitEdit)
+
+/**
+ * Define limites de [month] para as categorias editadas, numa única gravação (uma operação, uma
+ * entidade por categoria). O alcance é obrigatório: só o mês ou esse mês e os seguintes. Soma da
+ * divisão acima do limite em qualquer mês afetado é rejeitada, listando os meses, sem gravar nada.
+ */
+data class DefineLimits(
+    val month: YearMonth,
+    val scope: LimitScope?,
+    val edits: List<CategoryLimitEdit>,
+) : Command
+
+/**
+ * Corrige campos de um lançamento (despesa direta, compra no cartão, boleto ou renda): mesmo
+ * lançamento, mesma identidade, meses afetados recalculados. Só o que vem preenchido muda.
+ *
+ * Compra parcelada: descrição e categoria valem para todas as parcelas, inclusive anteriores; a data
+ * da compra muda sem mover faturas (a prévia sugere a fatura que a nova data indicaria); valor e
+ * quantidade não são editáveis (excluir e registrar de novo). Compra à vista no cartão: mudar a data
+ * reestima só a atribuição ainda estimada. Item de fatura quitada ou importado pede [confirmExtra].
+ * Não há como voltar para "a classificar" por aqui; só o desfazer.
+ */
+data class CorrectEntry(
+    val entityId: String,
+    val description: String? = null,
+    val category: Classification.Category? = null,
+    /** Data da movimentação, da compra, do vencimento (boleto) ou prevista (renda). */
+    val date: LocalDate? = null,
+    val amount: Money? = null,
+    val accountId: String? = null,
+    val spentBy: String? = null,
+    val confirmExtra: Boolean = false,
+    val expectedRevision: Long? = null,
+) : Command
+
+/** Desfaz uma operação aplicada, se nada nas entidades afetadas mudou depois dela. */
+data class Undo(val operationId: String) : Command
+
+// ---- resultados ----
+
+sealed interface CommandResult {
+    data class Applied(val receipt: Receipt) : CommandResult
+
+    /** Mesmo ID de comando já processado: nada novo é aplicado. */
+    data class AlreadyApplied(val receipt: Receipt) : CommandResult
+
+    /** Nada é gravado. */
+    data class Rejected(val errors: List<FieldError>) : CommandResult
+
+    /** Falta uma escolha que a fachada não pode presumir; nada é gravado. */
+    data class DecisionNeeded(val decision: Decision) : CommandResult
+
+    /** A entidade mudou desde a versão esperada; nada é gravado e a versão atual vem para comparação. */
+    data class StaleVersion(val entityId: String, val currentRevision: Long) : CommandResult
+}
+
+enum class ExtraReason { PaidInvoice, Imported }
+
+data class InvolvedPart(val month: YearMonth, val part: Money)
+
+sealed interface Decision {
+    /** O valor digitado é o total ou o valor de cada parcela? */
+    data class AmountMeaningRequired(val installments: Int, val amount: Money) : Decision
+
+    /** Editar ou excluir recorrência exige escolher "só esta ocorrência" ou "esta e as próximas". */
+    data object ScopeRequired : Decision
+
+    /** Ocorrências já realizadas (pagas ou importadas) no alcance: só mudam com confirmação explícita. */
+    data class RealizedOccurrences(val numbers: List<Int>) : Decision
+
+    /** Excluir item de fatura quitada ou com dados importados pede uma confirmação a mais. */
+    data class ExtraConfirmationRequired(val reasons: List<ExtraReason>) : Decision
+
+    /** Mover subcategoria com parte do limite: a pessoa decide por mês o que fazer com cada parte. */
+    data class LimitDivisionReview(val subcategoryId: String, val parts: List<InvolvedPart>) : Decision
+}
+
+sealed interface PreviewResult {
+    data class Ready(
+        val before: List<InstallmentView>,
+        val after: List<InstallmentView>,
+        val affectedMonths: Set<YearMonth>,
+        /** Recorrência: ocorrências adiante com exceção própria que a edição substitui. */
+        val replacedOccurrences: List<Int> = emptyList(),
+        /** Exclusão: estornos vinculados que saem junto com a compra. */
+        val linkedRefundIds: List<String> = emptyList(),
+        /** Limites: meses posteriores com configuração própria que a edição substitui. */
+        val replacedLimitMonths: List<YearMonth> = emptyList(),
+        /** Compra parcelada com nova data: a fatura que a data indicaria, oferecida sem ser aplicada. */
+        val suggestedInvoice: YearMonth? = null,
+    ) : PreviewResult
+
+    /** O comando seria rejeitado ou pediria uma decisão; o resultado explica o motivo. */
+    data class Blocked(val result: CommandResult) : PreviewResult
+}
+
+enum class ErrorCode {
+    Required,
+    MustBePositive,
+    UnknownReference,
+    DuplicateName,
+    NotAllowed,
+    ChangedAfter,
+    NotSupported,
+    OutOfRange,
+    ExceedsRemaining,
+    SplitExceedsLimit,
+}
+
+/** [remaining] acompanha o erro quando há um limite a informar (ex.: restante a estornar). */
+data class FieldError(
+    val field: String,
+    val code: ErrorCode,
+    val message: String,
+    val remaining: Money? = null,
+    /** Mês a que o erro se refere, quando o erro é por mês (ex.: divisão acima do limite em dezembro). */
+    val month: YearMonth? = null,
+)
+
+enum class EntityType { Category, Account, Preferences, Movement, Card, CardPurchase, Boleto, Income, Recurrence, Refund, Invoice, InvoicePayment, LimitPlan }
+
+data class EntityRef(val type: EntityType, val id: String)
+
+/** Uma entidade tocada por uma operação, com a revisão local que a operação produziu. */
+data class EntityChange(val type: EntityType, val id: String, val baseVersion: Long?, val revision: Long)
+
+data class Receipt(
+    val operationId: String,
+    val sequence: Long,
+    val commandType: String,
+    val changes: List<EntityChange>,
+    val affectedMonths: Set<YearMonth>,
+    val undoable: Boolean,
+)
+
+/** Operação local gravada junto com a alteração (S1 §5.1); S2 lê esta saída. */
+data class LocalOperation(
+    val sequence: Long,
+    val operationId: String,
+    val spaceId: String,
+    val authorId: String,
+    val origin: Origin,
+    val commandType: String,
+    val deviceTimeMillis: Long,
+    val changes: List<EntityChange>,
+    val acknowledged: Boolean,
+)
+
+// ---- consultas ----
+
+/** Falha de leitura vem identificada, nunca como zero. */
+sealed interface QueryResult<out T> {
+    data class Data<T>(val value: T) : QueryResult<T>
+    data class Failure(val cause: Throwable) : QueryResult<Nothing>
+}
+
+data class CategoryNode(
+    val id: String,
+    val parentId: String?,
+    val name: String,
+    val order: Int,
+    val iconKey: String,
+    val seedKey: String?,
+)
+
+data class MovementRow(
+    val id: String,
+    val kind: DirectPaymentKind,
+    val description: String,
+    val classification: Classification,
+    val date: LocalDate,
+    val amount: Money,
+    val accountId: String?,
+    val spentBy: String?,
+    val revision: Long,
+)
+
+data class CardInfo(val id: String, val bank: BankRef?, val nickname: String, val closingDay: Int, val dueDay: Int)
+
+/** Estado da atribuição de fatura de uma parcela (S1 §6). */
+enum class AssignmentState { Estimated, ToConfirm, Confirmed }
+
+enum class CancelState { Active, CancelRequested, Cancelled }
+
+data class InstallmentView(
+    val number: Int,
+    val amount: Money,
+    val invoiceMonth: YearMonth,
+    val assignment: AssignmentState,
+    val cancel: CancelState = CancelState.Active,
+)
+
+data class RefundView(
+    val id: String,
+    val originId: String,
+    val amount: Money,
+    val status: RefundStatus,
+    val date: LocalDate?,
+    /** Mês do orçamento em que o crédito abate; nulo enquanto solicitado. */
+    val creditMonth: YearMonth?,
+    val revision: Long,
+    val voided: Boolean,
+)
+
+data class PurchaseDetail(
+    val id: String,
+    val description: String,
+    val classification: Classification,
+    val purchaseDate: LocalDate,
+    val total: Money,
+    val isCharge: Boolean,
+    val revision: Long,
+    val voided: Boolean,
+    val installments: List<InstallmentView>,
+)
+
+data class BoletoView(
+    val id: String,
+    val description: String,
+    val classification: Classification,
+    val dueDate: LocalDate,
+    val expectedAmount: Money,
+    val paidDate: LocalDate?,
+    val paidAmount: Money?,
+    val accountId: String?,
+    /** Mês do orçamento: o do pagamento efetivo, ou o do vencimento enquanto não pago. */
+    val budgetMonth: YearMonth,
+    /** Vencido e não pago: continua no mês do vencimento, marcado como pendente. */
+    val overdue: Boolean,
+    val revision: Long,
+    val voided: Boolean,
+)
+
+data class IncomeView(
+    val id: String,
+    val description: String,
+    val expectedAmount: Money,
+    val expectedDate: LocalDate,
+    val receivedDate: LocalDate?,
+    val receivedAmount: Money?,
+    val accountId: String?,
+    val budgetMonth: YearMonth,
+    val revision: Long,
+    val voided: Boolean,
+)
+
+/** Renda do mês: recebido e a receber como partes do esperado (R$ 6.000 + R$ 500 = R$ 6.500). */
+data class IncomeSummary(val received: Money, val toReceive: Money, val items: List<IncomeView>) {
+    val expected: Money get() = received + toReceive
+}
+
+data class RecurrenceView(
+    val id: String,
+    val kind: RecurrenceKind,
+    val form: RecurrenceForm,
+    val frequency: Frequency,
+    val firstDate: LocalDate,
+    /** Ocorrências de número igual ou maior deixaram de existir; nulo enquanto a série não termina. */
+    val endsBefore: Int?,
+    val revision: Long,
+    val voided: Boolean,
+)
+
+data class OccurrenceView(
+    val recurrenceId: String,
+    val number: Int,
+    val kind: RecurrenceKind,
+    val form: RecurrenceForm,
+    /** Data prevista pela sequência original. */
+    val scheduledDate: LocalDate,
+    val description: String,
+    val categoryId: String?,
+    val expectedAmount: Money,
+    val accountId: String?,
+    val settledDate: LocalDate?,
+    val settledAmount: Money?,
+    val budgetMonth: YearMonth,
+    val paid: Boolean,
+    val assignment: AssignmentState?,
+)
+
+/** Fase exibida da fatura; "fechada" quando um total foi registrado (pessoa ou importação). */
+enum class InvoiceStatus { Open, ClosedEstimated, Closed }
+
+data class PaymentView(val id: String, val amount: Money, val date: LocalDate, val accountId: String?, val accepted: Boolean)
+
+data class InvoiceView(
+    val dueMonth: YearMonth,
+    /** Compras e parcelas (inclusive ocorrências recorrentes no cartão), sem encargos. */
+    val purchases: Money,
+    val charges: Money,
+    val credits: Money,
+    /** Composição conhecida: compras + encargos − créditos. */
+    val knownTotal: Money,
+    val checkedTotal: Money?,
+    val checkedSource: InvoiceTotalSource?,
+    /** O total registrado coincide com a composição conhecida. */
+    val conferred: Boolean,
+    /** Total registrado menos a composição, quando diverge. */
+    val totalDifference: Money?,
+    val paid: Boolean,
+    val paidDate: LocalDate?,
+    val status: InvoiceStatus,
+    val linksToConfirm: Int,
+    /** Pagamentos preservados em revisão: a fatura não foi paga por eles. */
+    val divergentPayments: List<PaymentView>,
+    val revision: Long,
+)
+
+// ---- lançamentos, detalhe, compromissos e pendências ----
+
+enum class EntryKind { DirectPayment, CardPurchase, CardInstallment, Boleto, Income, Refund, InvoicePayment, RecurrenceOccurrence }
+
+enum class PaymentMethod { Pix, Debit, Cash, Card, Boleto }
+
+/** Mês do orçamento (parcela no mês de vencimento da fatura) ou data da compra (a compra uma vez, pelo total). */
+enum class DateCriterion { BudgetMonth, PurchaseDate }
+
+enum class EntrySituation {
+    ToClassify,
+    /** Atribuição de fatura "a conferir". */
+    InvoiceLinkToConfirm,
+    /** Vencido e não pago: continua no mês original, marcado como pendente. */
+    Overdue,
+    Paid,
+    NotPaid,
+    CancelRequested,
+    Cancelled,
+    /** Pagamento de fatura preservado em revisão. */
+    DivergentPayment,
+}
+
+data class EntryFilter(
+    val from: YearMonth,
+    val to: YearMonth,
+    val criterion: DateCriterion = DateCriterion.BudgetMonth,
+    /** Categoria principal ou subcategoria. */
+    val categoryId: String? = null,
+    val methods: Set<PaymentMethod> = emptySet(),
+    val situations: Set<EntrySituation> = emptySet(),
+    /** Quem registrou ou quem gastou; filtro auxiliar, sem orçamento individual. */
+    val person: String? = null,
+    val search: String? = null,
+)
+
+data class EntryRow(
+    /** Estável para navegação: ID do lançamento; `compra#n` para parcela; `série:n` para ocorrência. */
+    val id: String,
+    val kind: EntryKind,
+    val description: String,
+    val categoryId: String?,
+    /** Valor aplicável ao critério: a parcela no orçamento, o total na compra. */
+    val amount: Money,
+    /** Data pertinente (da compra, do pagamento, do vencimento ou da devolução). */
+    val date: LocalDate,
+    val dueDate: LocalDate?,
+    val method: PaymentMethod?,
+    val installmentNumber: Int?,
+    val installmentCount: Int?,
+    val situations: Set<EntrySituation>,
+    val authorId: String?,
+)
+
+/** Somas separadas: despesas, rendas, créditos e quitações nunca viram um saldo misturado. */
+data class EntrySummary(
+    val expenses: Money,
+    val incomes: Money,
+    val credits: Money,
+    val invoicePayments: Money,
+)
+
+data class EntryPage(val rows: List<EntryRow>, val nextCursor: Int?, val total: Int, val summary: EntrySummary)
+
+/** Situação do item quanto à sincronização; fornecida por S2. Antes dele, tudo está "salvo no aparelho". */
+enum class ItemSync { SavedOnDevice, AwaitingSend, Acknowledged, Conflict }
+
+fun interface SyncStatusProvider {
+    fun statusOf(type: EntityType, id: String): ItemSync
+}
+
+data class EntryDetail(
+    val id: String,
+    val kind: EntryKind,
+    val description: String,
+    val classification: Classification,
+    val amount: Money,
+    val purchaseDate: LocalDate?,
+    val dueDate: LocalDate?,
+    val settledDate: LocalDate?,
+    val method: PaymentMethod?,
+    val accountId: String?,
+    val authorId: String?,
+    val spentBy: String?,
+    val origin: Origin?,
+    val revision: Long,
+    val voided: Boolean,
+    val sync: ItemSync,
+    val purchase: PurchaseDetail?,
+    val boleto: BoletoView?,
+    val income: IncomeView?,
+    val occurrence: OccurrenceView?,
+    val refunds: List<RefundView>,
+)
+
+enum class CommitmentKind { All, Installments, Recurrences, Bills }
+
+enum class CommitmentNature { Finite, Recurring, Bill }
+
+data class Commitment(
+    /** `compra#n`, `série:n` ou o ID do boleto. */
+    val id: String,
+    val nature: CommitmentNature,
+    val description: String,
+    val categoryId: String?,
+    /** Valor exigível no mês. */
+    val amount: Money,
+    val dueDate: LocalDate,
+    val number: Int?,
+    /** Total de parcelas; nulo em recorrência, que não tem total nem "1/∞". */
+    val count: Int?,
+    val situations: Set<EntrySituation>,
+    val method: PaymentMethod?,
+)
+
+data class MonthCommitments(
+    val month: YearMonth,
+    val items: List<Commitment>,
+    /** Soma dos conhecidos do mês; sem intenções nem estimativas variáveis. */
+    val knownTotal: Money,
+)
+
+data class ScheduleRow(
+    val number: Int,
+    val invoiceMonth: YearMonth,
+    val dueDate: LocalDate,
+    val amount: Money,
+    val situations: Set<EntrySituation>,
+)
+
+sealed interface CommitmentDetail {
+    val id: String
+
+    /** Compra parcelada: cronograma completo de 1/N a N/N, inclusive canceladas. */
+    data class Installments(
+        override val id: String,
+        val purchase: PurchaseDetail,
+        val schedule: List<ScheduleRow>,
+    ) : CommitmentDetail
+
+    /** Recorrência: frequência e próxima cobrança, sem total de parcelas. */
+    data class Recurring(
+        override val id: String,
+        val recurrence: RecurrenceView,
+        val current: OccurrenceView,
+        val next: OccurrenceView?,
+    ) : CommitmentDetail
+
+    data class Bill(override val id: String, val boleto: BoletoView) : CommitmentDetail
+}
+
+sealed interface PendingItem {
+    val month: YearMonth
+
+    /** Categoria a esclarecer: lançamento "a classificar". */
+    data class CategoryToClarify(
+        val entryId: String,
+        val description: String,
+        val amount: Money,
+        override val month: YearMonth,
+    ) : PendingItem
+
+    /** Atribuição de fatura "a conferir" (selo na compra no cartão). */
+    data class InvoiceLink(
+        val purchaseId: String,
+        val description: String,
+        val amount: Money,
+        override val month: YearMonth,
+    ) : PendingItem
+
+    /** Pagamento de fatura preservado pelo valor real, sem baixa parcial. */
+    data class DivergentInvoicePayment(
+        val paymentId: String,
+        val amount: Money,
+        val date: LocalDate,
+        override val month: YearMonth,
+    ) : PendingItem
+
+    /** Total registrado diverge da composição conhecida; nada é ajustado automaticamente. */
+    data class InvoiceTotalDifference(val difference: Money, override val month: YearMonth) : PendingItem
+}
+
+data class AccountInfo(val id: String, val bank: BankRef, val nickname: String)
+
+data class AccountsView(val accounts: List<AccountInfo>, val myDefaultAccountId: String?)
+
+/** Linha "A classificar": soma e quantidade, sem limite (S1 §7.3). */
+data class ToClassifyLine(val amount: Money, val count: Int)
+
+/** Limite vigente: valor ou "não definido", divisão e de onde vem a configuração. */
+data class CategoryLimit(
+    val categoryId: String,
+    val setting: LimitSetting,
+    /** Início da vigência que vale no mês; nulo se não há limite definido. */
+    val sinceMonth: YearMonth?,
+    /** O mês tem uma exceção própria (alteração só daquele mês). */
+    val isException: Boolean,
+    /** Meses posteriores com configuração própria (alterações futuras existentes). */
+    val laterChanges: List<YearMonth>,
+)
+
+data class CategoryBudget(
+    val categoryId: String,
+    /** Gastos da categoria principal, somando todas as subcategorias e o que não tem subcategoria. */
+    val gross: Money,
+    val credits: Money,
+    val net: Money,
+    val paid: Money,
+    /** Por subcategoria; a chave nula é "Sem subcategoria". */
+    val bySubcategory: Map<String?, Money>,
+    /** Limite, restante ou excesso, divisão e "sem distribuir" (S1 §7.5). */
+    val limit: LimitView,
+)
+
+data class IncomeTotals(val received: Money, val toReceive: Money)
+
+data class MonthBudget(
+    val month: YearMonth,
+    val committed: Money,
+    /** Soma dos limites definidos das categorias principais; a divisão não entra de novo. */
+    val totalLimits: Money,
+    /** Subconjunto do comprometido; nunca somado a ele. */
+    val paid: Money,
+    val toClassify: ToClassifyLine,
+    /** Créditos de estorno confirmados no mês, separados do bruto. */
+    val credits: Money,
+    /** Vínculos de fatura "a conferir" que ocupam o mês; o resumo avisa que há valores provisórios. */
+    val invoiceLinksToConfirm: Int,
+    val income: IncomeTotals,
+    val categories: List<CategoryBudget>,
+)
