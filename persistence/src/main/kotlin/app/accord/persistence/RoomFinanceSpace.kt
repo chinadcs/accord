@@ -1340,7 +1340,7 @@ class RoomFinanceSpace private constructor(
     override suspend fun card(): QueryResult<CardInfo> = query {
         val row = dao.card(cardId(sessions.current().spaceId)) ?: error("Cartão do espaço não foi criado")
         val bank = row.bankName?.let { if (row.bankIspb != null) BankRef.Catalog(row.bankIspb, it) else BankRef.Other(it) }
-        CardInfo(row.id, bank, row.nickname, row.closingDay, row.dueDay)
+        CardInfo(row.id, bank, row.nickname, row.closingDay, row.dueDay, configured = row.revision > 0)
     }
 
     override suspend fun purchase(id: String): QueryResult<PurchaseDetail?> = query {

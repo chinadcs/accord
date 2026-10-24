@@ -120,6 +120,7 @@ class FakeSpaceService(
 
     fun memberCount(spaceId: String): Int = spaces[spaceId]?.members?.size ?: 0
     fun spaceCount(): Int = spaces.size
+    fun accountCount(): Int = accounts.size
     fun storedEntity(spaceId: String, type: String, id: String): RemoteEntityState? =
         spaces[spaceId]?.entities?.get(EntityKey(type, id))
 
@@ -223,6 +224,11 @@ class FakeSpaceService(
         spaces[spaceId] = space
         spaceOfAccount[account.id] = spaceId
         RemoteResult.Ok(SpaceRef(spaceId, space.name))
+    }
+
+    override suspend fun currentSpace(accessToken: String): RemoteResult<SpaceRef?> = call {
+        val account = authenticate(accessToken) ?: return@call fail(RemoteFailure.SessionExpired)
+        RemoteResult.Ok(spaceOfAccount[account.id]?.let { SpaceRef(it, spaces.getValue(it).name) })
     }
 
     private fun nicknameOf(account: Account) = account.email.substringBefore('@')

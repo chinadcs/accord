@@ -196,6 +196,9 @@ interface RemoteSpaceService {
      */
     suspend fun createSpace(accessToken: String, spaceId: String, name: String): RemoteResult<SpaceRef>
 
+    /** Espaço de que a conta participa, ou nulo. Serve a quem entra num aparelho novo ou reinstalado. */
+    suspend fun currentSpace(accessToken: String): RemoteResult<SpaceRef?>
+
     /** Gera um novo código e invalida o anterior; só membro, e só com vaga livre. */
     suspend fun generateInvite(accessToken: String, spaceId: String): RemoteResult<IssuedInvite>
 

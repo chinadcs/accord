@@ -186,6 +186,15 @@ class SupabaseSpaceService(
             is RemoteResult.Ok -> spaceRef(r.value)
         }
 
+    override suspend fun currentSpace(accessToken: String): RemoteResult<SpaceRef?> =
+        when (val r = rpc("current_space", accessToken, buildJsonObject { })) {
+            is RemoteResult.Failed -> r
+            is RemoteResult.Ok -> when (val space = r.value["space"].obj()) {
+                null -> RemoteResult.Ok(null)
+                else -> spaceRef(space)
+            }
+        }
+
     override suspend fun generateInvite(accessToken: String, spaceId: String): RemoteResult<IssuedInvite> =
         when (val r = rpc("generate_invite", accessToken, buildJsonObject { put("p_space", spaceId) })) {
             is RemoteResult.Failed -> r
