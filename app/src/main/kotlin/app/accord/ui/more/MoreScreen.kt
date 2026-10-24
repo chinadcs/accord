@@ -28,6 +28,7 @@ import androidx.compose.ui.semantics.semantics
 import app.accord.R
 import app.accord.core.sync.AccountView
 import app.accord.core.sync.SessionState
+import app.accord.core.sync.SyncStatus
 import app.accord.ui.components.DecorativeIcon
 import app.accord.ui.theme.AccordSpacing
 import app.accord.ui.theme.ThemePreference
@@ -46,6 +47,7 @@ data class MoreActions(
     val onFirstSteps: () -> Unit = {},
     val onSignOut: () -> Unit = {},
     val onRenew: () -> Unit = {},
+    val onSync: () -> Unit = {},
 )
 
 @Composable
@@ -56,6 +58,7 @@ fun MoreScreen(
     actions: MoreActions,
     account: AccountView? = null,
     sessionState: SessionState = SessionState.Valid,
+    syncStatus: SyncStatus? = null,
 ) {
     Column(
         Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
@@ -78,6 +81,17 @@ fun MoreScreen(
         Section(R.string.more_group_space)
         MoreRow(R.string.more_space, Lucide.drawable.lucide_ic_users, actions.onSpace)
         MoreRow(R.string.more_accounts, Lucide.drawable.lucide_ic_landmark, actions.onAccounts)
+        if (syncStatus != null) {
+            val summary = syncStatus.summary
+            MoreRow(
+                R.string.more_sync, Lucide.drawable.lucide_ic_refresh_cw, actions.onSync,
+                supporting = when {
+                    summary.openConflicts > 0 -> stringResource(R.string.more_sync_conflicts, summary.openConflicts)
+                    summary.awaitingOperations > 0 -> stringResource(R.string.more_sync_pending, summary.awaitingOperations)
+                    else -> null
+                },
+            )
+        }
         MoreRow(R.string.more_first_steps, Lucide.drawable.lucide_ic_list_checks, actions.onFirstSteps)
 
         if (account != null) {
@@ -120,7 +134,7 @@ private fun Section(title: Int) {
 }
 
 @Composable
-private fun MoreRow(label: Int, icon: Int, onClick: () -> Unit) {
+private fun MoreRow(label: Int, icon: Int, onClick: () -> Unit, supporting: String? = null) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium,
         modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).clickable(role = Role.Button, onClick = onClick),
@@ -130,7 +144,10 @@ private fun MoreRow(label: Int, icon: Int, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
         ) {
             DecorativeIcon(icon)
-            Text(stringResource(label), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(label), style = MaterialTheme.typography.bodyLarge)
+                supporting?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            }
             DecorativeIcon(Lucide.drawable.lucide_ic_chevron_right)
         }
     }

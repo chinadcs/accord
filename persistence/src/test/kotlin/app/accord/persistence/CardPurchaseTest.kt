@@ -54,7 +54,7 @@ class CardPurchaseTest : SpaceTestBase() {
     // ---- parcelas e meses (cenário 1) ----
 
     @Test
-    fun `R$ 1200 em 6x com primeira fatura em outubro ocupa R$ 200 de outubro a março e nada em abril`() = runBlocking {
+    fun `R$ 1200 em 6x com primeira fatura em outubro ocupa R$ 200 de outubro a março e nada em abril`() = runBlocking<Unit> {
         val h = open()
         val id = h.register(
             purchase(d(2026, 9, 25), brl(1200), "eletronicos.equipamentos", 6, AmountMeaning.Total, invoice = ym(2026, 10)),
@@ -72,7 +72,7 @@ class CardPurchaseTest : SpaceTestBase() {
     }
 
     @Test
-    fun `parcelas pagas pela fatura não contam como pagas até a quitação`() = runBlocking {
+    fun `parcelas pagas pela fatura não contam como pagas até a quitação`() = runBlocking<Unit> {
         val h = open()
         h.register(purchase(d(2026, 9, 25), brl(1200), installments = 6, meaning = AmountMeaning.Total, invoice = ym(2026, 10)))
         val b = h.space.budget(ym(2026, 10)).value()
@@ -81,7 +81,7 @@ class CardPurchaseTest : SpaceTestBase() {
     }
 
     @Test
-    fun `R$ 100 em 3x vira 33,33 33,33 e 33,34`() = runBlocking {
+    fun `R$ 100 em 3x vira 33,33 33,33 e 33,34`() = runBlocking<Unit> {
         val h = open()
         val id = h.register(purchase(d(2026, 10, 5), brl(100), installments = 3, meaning = AmountMeaning.Total))
         assertEquals(listOf(3_333L, 3_333L, 3_334L), h.detail(id).installments.map { it.amount.cents })
@@ -89,7 +89,7 @@ class CardPurchaseTest : SpaceTestBase() {
     }
 
     @Test
-    fun `valor da parcela informado gera total parcela vezes quantidade`() = runBlocking {
+    fun `valor da parcela informado gera total parcela vezes quantidade`() = runBlocking<Unit> {
         val h = open()
         val id = h.register(purchase(d(2026, 10, 5), brl(200), installments = 6, meaning = AmountMeaning.PerInstallment))
         assertEquals(brl(1200), h.detail(id).total)
@@ -97,7 +97,7 @@ class CardPurchaseTest : SpaceTestBase() {
     }
 
     @Test
-    fun `parcelado sem dizer se o valor é total ou da parcela pede decisão e não grava`() = runBlocking {
+    fun `parcelado sem dizer se o valor é total ou da parcela pede decisão e não grava`() = runBlocking<Unit> {
         val h = open()
         val r = h.space.execute(h.env(), purchase(d(2026, 10, 5), brl(1200), installments = 6))
         val decision = assertIs<CommandResult.DecisionNeeded>(r).decision
@@ -106,7 +106,7 @@ class CardPurchaseTest : SpaceTestBase() {
     }
 
     @Test
-    fun `a prévia mostra o cronograma antes de salvar e não grava nada`() = runBlocking {
+    fun `a prévia mostra o cronograma antes de salvar e não grava nada`() = runBlocking<Unit> {
         val h = open()
         val p = h.space.preview(purchase(d(2026, 10, 5), brl(1200), installments = 6, meaning = AmountMeaning.Total))
         val ready = assertIs<PreviewResult.Ready>(p)
@@ -121,7 +121,7 @@ class CardPurchaseTest : SpaceTestBase() {
     // ---- estimativa e janela a conferir (cenário 2) ----
 
     @Test
-    fun `fechamento 8 vencimento 15 estima a fatura e marca só a janela do fechamento`() = runBlocking {
+    fun `fechamento 8 vencimento 15 estima a fatura e marca só a janela do fechamento`() = runBlocking<Unit> {
         val h = open()
         val cases = listOf(
             Triple(d(2026, 10, 5), ym(2026, 10), AssignmentState.Estimated),
@@ -140,7 +140,7 @@ class CardPurchaseTest : SpaceTestBase() {
     }
 
     @Test
-    fun `fatura informada pela pessoa fica confirmada sem selo`() = runBlocking {
+    fun `fatura informada pela pessoa fica confirmada sem selo`() = runBlocking<Unit> {
         val h = open()
         val id = h.register(purchase(d(2026, 10, 8), invoice = ym(2026, 10)))
         val first = h.detail(id).installments.single()
@@ -150,7 +150,7 @@ class CardPurchaseTest : SpaceTestBase() {
     }
 
     @Test
-    fun `numa parcelada o selo vale só para a primeira parcela`() = runBlocking {
+    fun `numa parcelada o selo vale só para a primeira parcela`() = runBlocking<Unit> {
         val h = open()
         val id = h.register(purchase(d(2026, 10, 8), brl(300), installments = 3, meaning = AmountMeaning.Total))
         val states = h.detail(id).installments.map { it.assignment }
@@ -160,7 +160,7 @@ class CardPurchaseTest : SpaceTestBase() {
     // ---- corrigir fatura (3, 3b) ----
 
     @Test
-    fun `corrigir compra a conferir de novembro para outubro move o valor, mantém a identidade e fecha a pendência`() = runBlocking {
+    fun `corrigir compra a conferir de novembro para outubro move o valor, mantém a identidade e fecha a pendência`() = runBlocking<Unit> {
         val h = open()
         val id = h.register(purchase(d(2026, 10, 8), brl(100)))
         assertEquals(brl(100), h.space.budget(ym(2026, 11)).value().committed)
@@ -176,7 +176,7 @@ class CardPurchaseTest : SpaceTestBase() {
     }
 
     @Test
-    fun `corrigir a fatura da 1ª parcela de outubro para novembro desloca as seis e a prévia mostra antes e depois`() = runBlocking {
+    fun `corrigir a fatura da 1ª parcela de outubro para novembro desloca as seis e a prévia mostra antes e depois`() = runBlocking<Unit> {
         val h = open()
         val id = h.register(
             purchase(d(2026, 9, 25), brl(1200), installments = 6, meaning = AmountMeaning.Total, invoice = ym(2026, 10)),
@@ -203,7 +203,7 @@ class CardPurchaseTest : SpaceTestBase() {
     }
 
     @Test
-    fun `só a primeira parcela muda de fatura — parcela do meio é rejeitada`() = runBlocking {
+    fun `só a primeira parcela muda de fatura — parcela do meio é rejeitada`() = runBlocking<Unit> {
         val h = open()
         val id = h.register(purchase(d(2026, 9, 25), brl(1200), installments = 6, meaning = AmountMeaning.Total, invoice = ym(2026, 10)))
         val r = h.space.execute(h.env(), CorrectInvoiceAssignment(id, 3, ym(2027, 1)))
@@ -212,7 +212,7 @@ class CardPurchaseTest : SpaceTestBase() {
     }
 
     @Test
-    fun `corrigir com versão antiga devolve a versão atual e não altera`() = runBlocking {
+    fun `corrigir com versão antiga devolve a versão atual e não altera`() = runBlocking<Unit> {
         val h = open()
         val id = h.register(purchase(d(2026, 10, 8)))
         val current = h.detail(id).revision
@@ -223,7 +223,7 @@ class CardPurchaseTest : SpaceTestBase() {
     }
 
     @Test
-    fun `corrigir a fatura gera uma operação com a compra e revisão seguinte`() = runBlocking {
+    fun `corrigir a fatura gera uma operação com a compra e revisão seguinte`() = runBlocking<Unit> {
         val h = open()
         val id = h.register(purchase(d(2026, 10, 8)))
         val receipt = h.space.execute(h.env(), CorrectInvoiceAssignment(id, 1, ym(2026, 10))).applied()
@@ -236,7 +236,7 @@ class CardPurchaseTest : SpaceTestBase() {
     // ---- cartão: um só, dias configuráveis (3c, 16a, 20) ----
 
     @Test
-    fun `configurar o cartão duas vezes atualiza o mesmo cartão`() = runBlocking {
+    fun `configurar o cartão duas vezes atualiza o mesmo cartão`() = runBlocking<Unit> {
         val h = open()
         val first = h.space.card().value()
         assertEquals(8, first.closingDay)
@@ -250,7 +250,7 @@ class CardPurchaseTest : SpaceTestBase() {
     }
 
     @Test
-    fun `mudar o fechamento não altera atribuições existentes mas vale para as novas`() = runBlocking {
+    fun `mudar o fechamento não altera atribuições existentes mas vale para as novas`() = runBlocking<Unit> {
         val h = open()
         val old = h.register(purchase(d(2026, 10, 22)))
         assertEquals(ym(2026, 11), h.detail(old).installments.single().invoiceMonth)
@@ -266,7 +266,7 @@ class CardPurchaseTest : SpaceTestBase() {
     }
 
     @Test
-    fun `fechamento 31 vencimento 10 usa o último dia dos meses curtos`() = runBlocking {
+    fun `fechamento 31 vencimento 10 usa o último dia dos meses curtos`() = runBlocking<Unit> {
         val h = open()
         h.space.execute(h.env(), ConfigureCard(null, "Cartão", 31, 10)).applied()
         val a29 = h.detail(h.register(purchase(d(2026, 11, 29)))).installments.single()
@@ -281,7 +281,7 @@ class CardPurchaseTest : SpaceTestBase() {
     }
 
     @Test
-    fun `dias do cartão fora de 1 a 31 são rejeitados por campo`() = runBlocking {
+    fun `dias do cartão fora de 1 a 31 são rejeitados por campo`() = runBlocking<Unit> {
         val h = open()
         val r = h.space.execute(h.env(), ConfigureCard(null, "Cartão", 0, 32))
         val errors = assertIs<CommandResult.Rejected>(r).errors.associate { it.field to it.code }
@@ -293,7 +293,7 @@ class CardPurchaseTest : SpaceTestBase() {
     // ---- encargo (9) ----
 
     @Test
-    fun `tarifa confirmada sem categoria vai para Serviços Tarifas e juros e entra uma vez`() = runBlocking {
+    fun `tarifa confirmada sem categoria vai para Serviços Tarifas e juros e entra uma vez`() = runBlocking<Unit> {
         val h = open()
         h.register(purchase(d(2026, 10, 5), brl(1000), category = "compras", invoice = ym(2026, 10)))
         h.register(
@@ -313,7 +313,7 @@ class CardPurchaseTest : SpaceTestBase() {
     // ---- a classificar (30, 31) ----
 
     @Test
-    fun `Amazon R$ 150 sem categoria entra no total de novembro numa linha própria e não altera categoria`() = runBlocking {
+    fun `Amazon R$ 150 sem categoria entra no total de novembro numa linha própria e não altera categoria`() = runBlocking<Unit> {
         val h = open()
         val receipt = h.space.execute(
             h.env(),
@@ -328,7 +328,7 @@ class CardPurchaseTest : SpaceTestBase() {
     }
 
     @Test
-    fun `classificar em Pet move o valor para Pet com total geral inalterado, mesma identidade`() = runBlocking {
+    fun `classificar em Pet move o valor para Pet com total geral inalterado, mesma identidade`() = runBlocking<Unit> {
         val h = open()
         val id = h.register(purchase(d(2026, 10, 22), brl(150), classification = Classification.ToClassify, description = "Amazon"))
         val before = h.space.budget(ym(2026, 11)).value().committed
@@ -344,7 +344,7 @@ class CardPurchaseTest : SpaceTestBase() {
     }
 
     @Test
-    fun `classificar parcelada move as seis parcelas de uma vez`() = runBlocking {
+    fun `classificar parcelada move as seis parcelas de uma vez`() = runBlocking<Unit> {
         val h = open()
         val id = h.register(
             purchase(d(2026, 10, 22), brl(1200), classification = Classification.ToClassify, installments = 6, meaning = AmountMeaning.Total),
@@ -361,7 +361,7 @@ class CardPurchaseTest : SpaceTestBase() {
     }
 
     @Test
-    fun `classificar com versão antiga devolve versão atual`() = runBlocking {
+    fun `classificar com versão antiga devolve versão atual`() = runBlocking<Unit> {
         val h = open()
         val id = h.register(purchase(d(2026, 10, 22), classification = Classification.ToClassify))
         val r = h.space.execute(h.env(), ClassifyEntry(id, Classification.Category(seed("pet")), expectedRevision = 99))
@@ -370,7 +370,7 @@ class CardPurchaseTest : SpaceTestBase() {
     }
 
     @Test
-    fun `classificar lançamento que já tem categoria é rejeitado`() = runBlocking {
+    fun `classificar lançamento que já tem categoria é rejeitado`() = runBlocking<Unit> {
         val h = open()
         val id = h.register(purchase(d(2026, 10, 22)))
         val r = h.space.execute(h.env(), ClassifyEntry(id, Classification.Category(seed("pet"))))
@@ -380,7 +380,7 @@ class CardPurchaseTest : SpaceTestBase() {
     // ---- desfazer ----
 
     @Test
-    fun `desfazer compra parcelada a classificar retira todas as parcelas dos totais`() = runBlocking {
+    fun `desfazer compra parcelada a classificar retira todas as parcelas dos totais`() = runBlocking<Unit> {
         val h = open()
         val receipt = h.space.execute(
             h.env(),
@@ -395,7 +395,7 @@ class CardPurchaseTest : SpaceTestBase() {
     }
 
     @Test
-    fun `desfazer depois de classificar é rejeitado e preserva a edição posterior`() = runBlocking {
+    fun `desfazer depois de classificar é rejeitado e preserva a edição posterior`() = runBlocking<Unit> {
         val h = open()
         val receipt = h.space.execute(h.env(), purchase(d(2026, 10, 22), classification = Classification.ToClassify)).applied()
         val id = receipt.changes.single().id
@@ -409,7 +409,7 @@ class CardPurchaseTest : SpaceTestBase() {
     // ---- validação ----
 
     @Test
-    fun `valor menor que um centavo por parcela e dados inválidos são rejeitados`() = runBlocking {
+    fun `valor menor que um centavo por parcela e dados inválidos são rejeitados`() = runBlocking<Unit> {
         val h = open()
         val tiny = h.space.execute(h.env(), purchase(d(2026, 10, 5), Money(2), installments = 3, meaning = AmountMeaning.Total))
         assertEquals("amount", assertIs<CommandResult.Rejected>(tiny).errors.single().field)
@@ -424,7 +424,7 @@ class CardPurchaseTest : SpaceTestBase() {
     }
 
     @Test
-    fun `mesmo ID de comando não duplica a compra nem as parcelas`() = runBlocking {
+    fun `mesmo ID de comando não duplica a compra nem as parcelas`() = runBlocking<Unit> {
         val h = open()
         val env = h.env()
         val first = h.space.execute(env, purchase(d(2026, 10, 5), brl(300), installments = 3, meaning = AmountMeaning.Total)).applied()
@@ -434,7 +434,7 @@ class CardPurchaseTest : SpaceTestBase() {
     }
 
     @Test
-    fun `falha na gravação não deixa compra, parcelas nem operação`() = runBlocking {
+    fun `falha na gravação não deixa compra, parcelas nem operação`() = runBlocking<Unit> {
         val h = open()
         val env = h.env()
         h.fault = { error("falha injetada") }

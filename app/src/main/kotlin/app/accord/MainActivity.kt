@@ -8,6 +8,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.accord.ui.AccordApp
 import app.accord.ui.theme.AccordTheme
@@ -34,6 +36,7 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
+            LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { container.onForeground() }
             AccordTheme(preference) {
                 AccordApp(container)
             }

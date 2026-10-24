@@ -70,7 +70,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
     // ---- divisão (cenário 13) ----
 
     @Test
-    fun `Alimentação R$ 1200 com Delivery 400 e Mercado 500 — sem distribuir 300, restante 220, restante da parte 120 e 0`() = runBlocking {
+    fun `Alimentação R$ 1200 com Delivery 400 e Mercado 500 — sem distribuir 300, restante 220, restante da parte 120 e 0`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.limit(
@@ -96,7 +96,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
     }
 
     @Test
-    fun `divisão 300 600 300 gera restantes 20 100 100`() = runBlocking {
+    fun `divisão 300 600 300 gera restantes 20 100 100`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.limit(
@@ -119,7 +119,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
     }
 
     @Test
-    fun `divisão de R$ 1300 num limite de R$ 1200 é rejeitada com diferença de R$ 100 e nada é gravado`() = runBlocking {
+    fun `divisão de R$ 1300 num limite de R$ 1200 é rejeitada com diferença de R$ 100 e nada é gravado`() = runBlocking<Unit> {
         val h = open()
         val before = h.space.operations().value().size
         val r = h.limit(
@@ -138,7 +138,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
     }
 
     @Test
-    fun `total geral soma só as categorias principais e três categorias geram uma operação com três entidades`() = runBlocking {
+    fun `total geral soma só as categorias principais e três categorias geram uma operação com três entidades`() = runBlocking<Unit> {
         val h = open()
         val r = h.space.execute(
             h.env(),
@@ -163,7 +163,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
     // ---- ausente versus zero (cenário 14) ----
 
     @Test
-    fun `sem limite com R$ 50 gastos não há excesso e limite zero mostra excesso de R$ 50`() = runBlocking {
+    fun `sem limite com R$ 50 gastos não há excesso e limite zero mostra excesso de R$ 50`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.spend("lazer", 50)
@@ -179,7 +179,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
     }
 
     @Test
-    fun `limite reduzido para R$ 900 com gasto de R$ 980 mostra excesso de R$ 80 sem mexer em outras categorias`() = runBlocking {
+    fun `limite reduzido para R$ 900 com gasto de R$ 980 mostra excesso de R$ 80 sem mexer em outras categorias`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.limit("alimentacao", total(1200)).applied()
@@ -194,7 +194,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
     // ---- vigência (cenário 15) ----
 
     @Test
-    fun `somente outubro muda só outubro e outubro e meses seguintes mantém setembro`() = runBlocking {
+    fun `somente outubro muda só outubro e outubro e meses seguintes mantém setembro`() = runBlocking<Unit> {
         val h = open()
         h.limit("alimentacao", total(1200), month = sep).applied()
         h.limit("alimentacao", total(1400), month = oct, scope = LimitScope.OnlyThisMonth).applied()
@@ -211,7 +211,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
     }
 
     @Test
-    fun `exceção futura de dezembro aparece na prévia e é substituída`() = runBlocking {
+    fun `exceção futura de dezembro aparece na prévia e é substituída`() = runBlocking<Unit> {
         val h = open()
         h.limit("alimentacao", total(1200), month = sep).applied()
         h.limit("alimentacao", total(1600), month = dec, scope = LimitScope.OnlyThisMonth).applied()
@@ -227,7 +227,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
     }
 
     @Test
-    fun `divisão que excederia o limite de dezembro rejeita listando dezembro e não grava mês nenhum`() = runBlocking {
+    fun `divisão que excederia o limite de dezembro rejeita listando dezembro e não grava mês nenhum`() = runBlocking<Unit> {
         val h = open()
         h.limit(
             "alimentacao",
@@ -254,7 +254,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
     }
 
     @Test
-    fun `sem escolher o alcance pede decisão e nada é gravado`() = runBlocking {
+    fun `sem escolher o alcance pede decisão e nada é gravado`() = runBlocking<Unit> {
         val h = open()
         val r = h.space.execute(h.env(), DefineLimits(oct, null, listOf(CategoryLimitEdit(seed("alimentacao"), total(1200)))))
         assertEquals(Decision.ScopeRequired, assertIs<CommandResult.DecisionNeeded>(r).decision)
@@ -262,7 +262,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
     }
 
     @Test
-    fun `limites informam a origem da vigência e as alterações futuras`() = runBlocking {
+    fun `limites informam a origem da vigência e as alterações futuras`() = runBlocking<Unit> {
         val h = open()
         h.limit("alimentacao", total(1200), month = sep).applied()
         h.limit("alimentacao", total(1600), month = dec, scope = LimitScope.OnlyThisMonth).applied()
@@ -275,7 +275,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
     }
 
     @Test
-    fun `categoria inexistente, subcategoria de outra categoria e edição vazia são rejeitadas`() = runBlocking {
+    fun `categoria inexistente, subcategoria de outra categoria e edição vazia são rejeitadas`() = runBlocking<Unit> {
         val h = open()
         val unknown = h.space.execute(h.env(), DefineLimits(oct, LimitScope.FromThisMonth, listOf(CategoryLimitEdit("nada", total(10)))))
         assertEquals(ErrorCode.UnknownReference, assertIs<CommandResult.Rejected>(unknown).errors.single().code)
@@ -293,7 +293,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
     // ---- renomear e reordenar ----
 
     @Test
-    fun `renomear mantém identidade, ícone e valores`() = runBlocking {
+    fun `renomear mantém identidade, ícone e valores`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.spend("alimentacao.delivery", 50)
@@ -305,7 +305,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
     }
 
     @Test
-    fun `renomear para um nome que já existe no nível é rejeitado e o próprio nome com outra caixa é aceito`() = runBlocking {
+    fun `renomear para um nome que já existe no nível é rejeitado e o próprio nome com outra caixa é aceito`() = runBlocking<Unit> {
         val h = open()
         val dup = h.space.execute(h.env(), RenameCategory(seed("alimentacao.delivery"), " MERCADO"))
         assertEquals(ErrorCode.DuplicateName, assertIs<CommandResult.Rejected>(dup).errors.single().code)
@@ -317,7 +317,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
     }
 
     @Test
-    fun `a tarifa continua em Tarifas e juros mesmo depois de a subcategoria ser renomeada`() = runBlocking {
+    fun `a tarifa continua em Tarifas e juros mesmo depois de a subcategoria ser renomeada`() = runBlocking<Unit> {
         val h = open()
         h.space.execute(h.env(), RenameCategory(seed("servicos.tarifas-e-juros"), "Encargos")).applied()
         h.space.execute(
@@ -329,7 +329,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
     }
 
     @Test
-    fun `reordenar muda só a apresentação`() = runBlocking {
+    fun `reordenar muda só a apresentação`() = runBlocking<Unit> {
         val h = open()
         val siblings = h.space.categories().value().filter { it.parentId == seed("alimentacao") }.sortedBy { it.order }
         assertEquals(listOf("Delivery", "Mercado", "Restaurantes"), siblings.map { it.name })
@@ -341,7 +341,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
     }
 
     @Test
-    fun `reordenar exige todos os irmãos e uma ordem diferente`() = runBlocking {
+    fun `reordenar exige todos os irmãos e uma ordem diferente`() = runBlocking<Unit> {
         val h = open()
         val ids = h.space.categories().value().filter { it.parentId == seed("alimentacao") }.sortedBy { it.order }.map { it.id }
         val missing = h.space.execute(h.env(), ReorderCategories(seed("alimentacao"), ids.dropLast(1)))
@@ -356,7 +356,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
         space.execute(env(), CreateCategory("Farmácia", seed(parent))).applied().changes.single().id
 
     @Test
-    fun `Farmácia movida de Saúde para Casa em outubro — setembro fica em Saúde, outubro em diante vai para Casa, mesma identidade`() = runBlocking {
+    fun `Farmácia movida de Saúde para Casa em outubro — setembro fica em Saúde, outubro em diante vai para Casa, mesma identidade`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.pharmacy("saude")
@@ -375,7 +375,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
     }
 
     @Test
-    fun `parcelas futuras de uma subcategoria movida acompanham o destino`() = runBlocking {
+    fun `parcelas futuras de uma subcategoria movida acompanham o destino`() = runBlocking<Unit> {
         val h = open()
         val id = h.pharmacy("saude")
         h.space.execute(
@@ -388,7 +388,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
     }
 
     @Test
-    fun `nome repetido no destino é bloqueado e em níveis diferentes é aceito`() = runBlocking {
+    fun `nome repetido no destino é bloqueado e em níveis diferentes é aceito`() = runBlocking<Unit> {
         val h = open()
         val inHealth = h.pharmacy("saude")
         h.pharmacy("casa") // mesmo nome em outra categoria: aceito
@@ -397,7 +397,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
     }
 
     @Test
-    fun `promover, rebaixar e mover para a mesma categoria não existem`() = runBlocking {
+    fun `promover, rebaixar e mover para a mesma categoria não existem`() = runBlocking<Unit> {
         val h = open()
         val main = h.space.execute(h.env(), MoveSubcategory(seed("saude"), seed("casa")))
         assertEquals(ErrorCode.NotAllowed, assertIs<CommandResult.Rejected>(main).errors.single().code)
@@ -408,7 +408,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
     }
 
     @Test
-    fun `mover subcategoria com parte do limite pede decisão com meses e valores e nada é transferido em silêncio`() = runBlocking {
+    fun `mover subcategoria com parte do limite pede decisão com meses e valores e nada é transferido em silêncio`() = runBlocking<Unit> {
         val h = open()
         val id = h.pharmacy("saude")
         h.limit("saude", LimitEdit(TotalChange.Set(brl(1000)), mapOf(id to brl(300)))).applied()
@@ -422,7 +422,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
     }
 
     @Test
-    fun `decisão retira a parte da origem e define a parte no destino respeitando o limite do destino`() = runBlocking {
+    fun `decisão retira a parte da origem e define a parte no destino respeitando o limite do destino`() = runBlocking<Unit> {
         val h = open()
         val id = h.pharmacy("saude")
         h.limit("saude", LimitEdit(TotalChange.Set(brl(1000)), mapOf(id to brl(300)))).applied()
@@ -440,7 +440,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
     }
 
     @Test
-    fun `decisão de não definir parte no destino deixa a subcategoria sem divisão`() = runBlocking {
+    fun `decisão de não definir parte no destino deixa a subcategoria sem divisão`() = runBlocking<Unit> {
         val h = open()
         val id = h.pharmacy("saude")
         h.limit("saude", LimitEdit(TotalChange.Set(brl(1000)), mapOf(id to brl(300)))).applied()
@@ -451,7 +451,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
     }
 
     @Test
-    fun `decisões incompletas são rejeitadas`() = runBlocking {
+    fun `decisões incompletas são rejeitadas`() = runBlocking<Unit> {
         val h = open()
         val id = h.pharmacy("saude")
         h.limit("saude", LimitEdit(TotalChange.Set(brl(1000)), mapOf(id to brl(300)))).applied()
@@ -462,7 +462,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
     // ---- contas (cenário 18) ----
 
     @Test
-    fun `trocar o banco da conta mantém o ID e os lançamentos antigos exibem o banco novo`() = runBlocking {
+    fun `trocar o banco da conta mantém o ID e os lançamentos antigos exibem o banco novo`() = runBlocking<Unit> {
         val h = open()
         val account = h.withDefaultAccount()
         h.spend("compras", 10)
@@ -475,7 +475,7 @@ class CategoriesLimitsTest : SpaceTestBase() {
     }
 
     @Test
-    fun `editar apelido de conta exige texto e respeita a versão`() = runBlocking {
+    fun `editar apelido de conta exige texto e respeita a versão`() = runBlocking<Unit> {
         val h = open()
         val account = h.withDefaultAccount()
         h.space.execute(h.env(), EditAccount(account, nickname = "Conta conjunta")).applied()

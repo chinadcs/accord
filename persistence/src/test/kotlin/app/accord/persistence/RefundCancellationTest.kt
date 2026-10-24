@@ -60,7 +60,7 @@ class RefundCancellationTest : SpaceTestBase() {
     // ---- estorno (cenário 10) ----
 
     @Test
-    fun `compra de R$ 100 por Pix em outubro com devolução em novembro — outubro fica, novembro recebe o crédito, renda inalterada`() = runBlocking {
+    fun `compra de R$ 100 por Pix em outubro com devolução em novembro — outubro fica, novembro recebe o crédito, renda inalterada`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.pix(100, d(2026, 10, 20))
@@ -79,7 +79,7 @@ class RefundCancellationTest : SpaceTestBase() {
     }
 
     @Test
-    fun `estorno parcial de R$ 40 abate R$ 40`() = runBlocking {
+    fun `estorno parcial de R$ 40 abate R$ 40`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.pix(100, d(2026, 10, 20))
@@ -91,7 +91,7 @@ class RefundCancellationTest : SpaceTestBase() {
     }
 
     @Test
-    fun `com R$ 70 já estornados um estorno de R$ 50 é rejeitado informando o restante de R$ 30 e depois R$ 30 é aceito`() = runBlocking {
+    fun `com R$ 70 já estornados um estorno de R$ 50 é rejeitado informando o restante de R$ 30 e depois R$ 30 é aceito`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.pix(100, d(2026, 10, 20))
@@ -110,7 +110,7 @@ class RefundCancellationTest : SpaceTestBase() {
     }
 
     @Test
-    fun `estorno solicitado não tem efeito nos totais mas entra na soma do limite`() = runBlocking {
+    fun `estorno solicitado não tem efeito nos totais mas entra na soma do limite`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.pix(100, d(2026, 10, 20))
@@ -125,7 +125,7 @@ class RefundCancellationTest : SpaceTestBase() {
     }
 
     @Test
-    fun `confirmar o solicitado pelo valor efetivo devolvido, sem presumir devolução integral`() = runBlocking {
+    fun `confirmar o solicitado pelo valor efetivo devolvido, sem presumir devolução integral`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.pix(100, d(2026, 10, 20))
@@ -145,7 +145,7 @@ class RefundCancellationTest : SpaceTestBase() {
     }
 
     @Test
-    fun `pago é líquido do estorno confirmado — R$ 1000 pagos com estorno de R$ 100 dão R$ 900`() = runBlocking {
+    fun `pago é líquido do estorno confirmado — R$ 1000 pagos com estorno de R$ 100 dão R$ 900`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.pix(1000, d(2026, 10, 5))
@@ -157,7 +157,7 @@ class RefundCancellationTest : SpaceTestBase() {
     }
 
     @Test
-    fun `mês só com crédito tem líquido negativo e pago negativo`() = runBlocking {
+    fun `mês só com crédito tem líquido negativo e pago negativo`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.pix(100, d(2026, 10, 5))
@@ -166,7 +166,7 @@ class RefundCancellationTest : SpaceTestBase() {
     }
 
     @Test
-    fun `estorno acima do valor ou de origem inexistente é rejeitado`() = runBlocking {
+    fun `estorno acima do valor ou de origem inexistente é rejeitado`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.pix(100, d(2026, 10, 5))
@@ -181,7 +181,7 @@ class RefundCancellationTest : SpaceTestBase() {
     }
 
     @Test
-    fun `estorno de compra parcelada vale até o total e o crédito cai na fatura informada`() = runBlocking {
+    fun `estorno de compra parcelada vale até o total e o crédito cai na fatura informada`() = runBlocking<Unit> {
         val h = open()
         val id = h.cardPurchase(1200, d(2026, 9, 25), installments = 6, invoice = ym(2026, 10))
         h.space.execute(h.env(), confirmed(id, 1200, d(2026, 11, 10), invoice = ym(2026, 11))).applied()
@@ -196,7 +196,7 @@ class RefundCancellationTest : SpaceTestBase() {
     }
 
     @Test
-    fun `crédito no cartão sem fatura informada usa a fatura estimada pela data da devolução`() = runBlocking {
+    fun `crédito no cartão sem fatura informada usa a fatura estimada pela data da devolução`() = runBlocking<Unit> {
         val h = open()
         val id = h.cardPurchase(100, d(2026, 10, 5))
         h.space.execute(h.env(), confirmed(id, 40, d(2026, 11, 20))).applied()
@@ -206,7 +206,7 @@ class RefundCancellationTest : SpaceTestBase() {
     }
 
     @Test
-    fun `estorno acompanha a categoria quando o lançamento a classificar é classificado`() = runBlocking {
+    fun `estorno acompanha a categoria quando o lançamento a classificar é classificado`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.pix(100, d(2026, 10, 5), toClassify = true)
@@ -225,7 +225,7 @@ class RefundCancellationTest : SpaceTestBase() {
     }
 
     @Test
-    fun `desfazer o estorno devolve o valor ao líquido`() = runBlocking {
+    fun `desfazer o estorno devolve o valor ao líquido`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.pix(100, d(2026, 10, 5))
@@ -243,7 +243,7 @@ class RefundCancellationTest : SpaceTestBase() {
         cardPurchase(600, d(2026, 8, 20), installments = 6, invoice = ym(2026, 9)) // set..fev, R$ 100 cada
 
     @Test
-    fun `pedido de cancelamento das parcelas 3 a 6 mantém tudo no comprometido`() = runBlocking {
+    fun `pedido de cancelamento das parcelas 3 a 6 mantém tudo no comprometido`() = runBlocking<Unit> {
         val h = open()
         val id = h.sixInstallments()
         h.space.execute(h.env(), RequestInstallmentCancellation(id, listOf(3, 4, 5, 6))).applied()
@@ -256,7 +256,7 @@ class RefundCancellationTest : SpaceTestBase() {
     }
 
     @Test
-    fun `confirmar não cobrança das 4 futuras tira só elas, mantém as 2 anteriores e não cria crédito`() = runBlocking {
+    fun `confirmar não cobrança das 4 futuras tira só elas, mantém as 2 anteriores e não cria crédito`() = runBlocking<Unit> {
         val h = open()
         val id = h.sixInstallments()
         h.space.execute(h.env(), RequestInstallmentCancellation(id, listOf(3, 4, 5, 6))).applied()
@@ -275,7 +275,7 @@ class RefundCancellationTest : SpaceTestBase() {
     }
 
     @Test
-    fun `confirmar não cobrança só de algumas parcelas deixa as outras como estão`() = runBlocking {
+    fun `confirmar não cobrança só de algumas parcelas deixa as outras como estão`() = runBlocking<Unit> {
         val h = open()
         val id = h.sixInstallments()
         h.space.execute(h.env(), RequestInstallmentCancellation(id, listOf(3, 4, 5, 6))).applied()
@@ -288,7 +288,7 @@ class RefundCancellationTest : SpaceTestBase() {
     }
 
     @Test
-    fun `só o desfazer anula o pedido e devolve as parcelas ao estado anterior`() = runBlocking {
+    fun `só o desfazer anula o pedido e devolve as parcelas ao estado anterior`() = runBlocking<Unit> {
         val h = open()
         val id = h.sixInstallments()
         val request = h.space.execute(h.env(), RequestInstallmentCancellation(id, listOf(3, 4))).applied()
@@ -298,7 +298,7 @@ class RefundCancellationTest : SpaceTestBase() {
     }
 
     @Test
-    fun `desfazer a confirmação devolve as parcelas a cancelamento solicitado`() = runBlocking {
+    fun `desfazer a confirmação devolve as parcelas a cancelamento solicitado`() = runBlocking<Unit> {
         val h = open()
         val id = h.sixInstallments()
         h.space.execute(h.env(), RequestInstallmentCancellation(id, listOf(3, 4))).applied()
@@ -310,7 +310,7 @@ class RefundCancellationTest : SpaceTestBase() {
     }
 
     @Test
-    fun `parcela inexistente, repetida ou já cancelada é rejeitada`() = runBlocking {
+    fun `parcela inexistente, repetida ou já cancelada é rejeitada`() = runBlocking<Unit> {
         val h = open()
         val id = h.sixInstallments()
         val missing = h.space.execute(h.env(), RequestInstallmentCancellation(id, listOf(7)))
@@ -323,7 +323,7 @@ class RefundCancellationTest : SpaceTestBase() {
     }
 
     @Test
-    fun `versão antiga no cancelamento devolve a atual`() = runBlocking {
+    fun `versão antiga no cancelamento devolve a atual`() = runBlocking<Unit> {
         val h = open()
         val id = h.sixInstallments()
         val r = h.space.execute(h.env(), RequestInstallmentCancellation(id, listOf(3), expectedRevision = 5))
@@ -331,7 +331,7 @@ class RefundCancellationTest : SpaceTestBase() {
     }
 
     @Test
-    fun `parcelas canceladas bloqueiam o deslocamento da fatura da primeira parcela`() = runBlocking {
+    fun `parcelas canceladas bloqueiam o deslocamento da fatura da primeira parcela`() = runBlocking<Unit> {
         val h = open()
         val id = h.sixInstallments()
         h.space.execute(h.env(), ConfirmNonCharge(id, listOf(5, 6))).applied()

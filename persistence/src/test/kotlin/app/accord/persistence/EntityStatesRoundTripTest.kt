@@ -123,7 +123,7 @@ class EntityStatesRoundTripTest : SpaceTestBase() {
     }
 
     @Test
-    fun `um aparelho que só recebe os estados chega aos mesmos totais, listas, faturas e limites`() = runBlocking {
+    fun `um aparelho que só recebe os estados chega aos mesmos totais, listas, faturas e limites`() = runBlocking<Unit> {
         val a = open("ana")
         val b = open("ana")
         scenario(a)

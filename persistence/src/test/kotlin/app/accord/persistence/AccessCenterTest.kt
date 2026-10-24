@@ -83,7 +83,7 @@ class AccessCenterTest {
     // ---- cadastro e entrada ----
 
     @Test
-    fun `cadastro devolve a sessão na hora e leva ao espaço, sem e-mail e sem guardar a senha`() = runBlocking {
+    fun `cadastro devolve a sessão na hora e leva ao espaço, sem e-mail e sem guardar a senha`() = runBlocking<Unit> {
         val phone = Phone()
         assertEquals(EntryStage.NoSpace, done(phone.access.signUp("ana@x.test", "senha-123", "senha-123")))
         assertEquals(SessionState.Valid, phone.access.status.value.session)
@@ -94,7 +94,7 @@ class AccessCenterTest {
     }
 
     @Test
-    fun `campos inválidos são apontados antes de falar com o serviço`() = runBlocking {
+    fun `campos inválidos são apontados antes de falar com o serviço`() = runBlocking<Unit> {
         val phone = Phone()
         assertEquals(AccessOutcome.Invalid(AccessField.Email, FieldProblem.Required), phone.access.signIn("  ", "x"))
         assertEquals(AccessOutcome.Invalid(AccessField.Email, FieldProblem.InvalidFormat), phone.access.signIn("sem-arroba", "x"))
@@ -104,7 +104,7 @@ class AccessCenterTest {
     }
 
     @Test
-    fun `credencial recusada não diz qual dos dois está errado e o e-mail é preservado`() = runBlocking {
+    fun `credencial recusada não diz qual dos dois está errado e o e-mail é preservado`() = runBlocking<Unit> {
         val phone = Phone()
         phone.access.signUp("ana@x.test", "senha-123", "senha-123")
         phone.access.signOut(confirmPending = true)
@@ -116,7 +116,7 @@ class AccessCenterTest {
     }
 
     @Test
-    fun `falha de rede tem mensagem distinta e preserva o e-mail`() = runBlocking {
+    fun `falha de rede tem mensagem distinta e preserva o e-mail`() = runBlocking<Unit> {
         val phone = Phone()
         service.online = false
         assertEquals(AccessOutcome.Failed(AccessFailure.NoNetwork), phone.access.signIn("ana@x.test", "senha-123"))
@@ -125,7 +125,7 @@ class AccessCenterTest {
     }
 
     @Test
-    fun `repetir o cadastro depois de uma resposta perdida leva à conta já criada`() = runBlocking {
+    fun `repetir o cadastro depois de uma resposta perdida leva à conta já criada`() = runBlocking<Unit> {
         val phone = Phone()
         service.loseNextResponse()
         assertEquals(AccessOutcome.Failed(AccessFailure.NoNetwork), phone.access.signUp("ana@x.test", "senha-123", "senha-123"))
@@ -134,13 +134,13 @@ class AccessCenterTest {
     }
 
     @Test
-    fun `senha fraca é explicada e não cria conta`() = runBlocking {
+    fun `senha fraca é explicada e não cria conta`() = runBlocking<Unit> {
         val phone = Phone()
         assertEquals(AccessOutcome.Failed(AccessFailure.WeakPassword), phone.access.signUp("ana@x.test", "123", "123"))
     }
 
     @Test
-    fun `toque repetido enquanto autentica não dispara duas tentativas`() = runBlocking {
+    fun `toque repetido enquanto autentica não dispara duas tentativas`() = runBlocking<Unit> {
         val phone = Phone()
         val results = listOf(async { phone.access.signUp("ana@x.test", "senha-123", "senha-123") }, async { phone.access.signUp("ana@x.test", "senha-123", "senha-123") })
             .map { it.await() }
@@ -153,7 +153,7 @@ class AccessCenterTest {
     // ---- espaço ----
 
     @Test
-    fun `criar espaço abre o banco com as categorias iniciais e leva aos primeiros passos`() = runBlocking {
+    fun `criar espaço abre o banco com as categorias iniciais e leva aos primeiros passos`() = runBlocking<Unit> {
         val phone = Phone()
         phone.access.signUp("ana@x.test", "senha-123", "senha-123")
         assertEquals(EntryStage.FirstSteps, done(phone.access.createSpace("Nosso orçamento")))
@@ -164,7 +164,7 @@ class AccessCenterTest {
     }
 
     @Test
-    fun `criar espaço sem rede fica pendente com o mesmo ID e a repetição recupera o mesmo espaço`() = runBlocking {
+    fun `criar espaço sem rede fica pendente com o mesmo ID e a repetição recupera o mesmo espaço`() = runBlocking<Unit> {
         val phone = Phone()
         phone.access.signUp("ana@x.test", "senha-123", "senha-123")
         service.loseNextResponse()
@@ -180,7 +180,7 @@ class AccessCenterTest {
     }
 
     @Test
-    fun `nome do espaço é obrigatório e criar duas vezes não é permitido`() = runBlocking {
+    fun `nome do espaço é obrigatório e criar duas vezes não é permitido`() = runBlocking<Unit> {
         val phone = Phone()
         phone.access.signUp("ana@x.test", "senha-123", "senha-123")
         assertEquals(AccessOutcome.Invalid(AccessField.SpaceName, FieldProblem.Required), phone.access.createSpace("   "))
@@ -191,7 +191,7 @@ class AccessCenterTest {
     // ---- convite ----
 
     @Test
-    fun `código aparece uma vez, com validade do serviço, e não volta depois de reiniciar`() = runBlocking {
+    fun `código aparece uma vez, com validade do serviço, e não volta depois de reiniciar`() = runBlocking<Unit> {
         val phone = Phone().signedUpWithSpace()
         phone.access.generateInvite()
         val invite = assertNotNull(phone.access.status.value.invite)
@@ -206,7 +206,7 @@ class AccessCenterTest {
     }
 
     @Test
-    fun `a outra pessoa entra com o código em minúsculas e com espaços, e os dois passam a ver os participantes`() = runBlocking {
+    fun `a outra pessoa entra com o código em minúsculas e com espaços, e os dois passam a ver os participantes`() = runBlocking<Unit> {
         val ana = Phone().signedUpWithSpace()
         ana.access.generateInvite()
         val code = ana.access.status.value.invite!!.code!!
@@ -225,7 +225,7 @@ class AccessCenterTest {
     }
 
     @Test
-    fun `código inválido é explicado e não cria espaço`() = runBlocking {
+    fun `código inválido é explicado e não cria espaço`() = runBlocking<Unit> {
         val bruno = Phone()
         bruno.access.signUp("bruno@x.test", "senha-123", "senha-123")
         assertEquals(AccessOutcome.Failed(AccessFailure.InvalidInvite), bruno.access.joinWithCode("ZZZZZZZZ"))
@@ -236,7 +236,7 @@ class AccessCenterTest {
     }
 
     @Test
-    fun `repetir Entrar no espaço depois de uma resposta perdida conclui a mesma associação`() = runBlocking {
+    fun `repetir Entrar no espaço depois de uma resposta perdida conclui a mesma associação`() = runBlocking<Unit> {
         val ana = Phone().signedUpWithSpace()
         ana.access.generateInvite()
         val code = ana.access.status.value.invite!!.code!!
@@ -249,7 +249,7 @@ class AccessCenterTest {
     }
 
     @Test
-    fun `quem entra num aparelho novo com conta que já tem espaço vai direto ao app`() = runBlocking {
+    fun `quem entra num aparelho novo com conta que já tem espaço vai direto ao app`() = runBlocking<Unit> {
         val ana = Phone().signedUpWithSpace()
         val newPhone = Phone()
         assertEquals(EntryStage.Ready, done(newPhone.access.signIn("ana@x.test", "senha-123")))
@@ -271,7 +271,7 @@ class AccessCenterTest {
     }
 
     @Test
-    fun `sair com operações por enviar pede decisão e preserva dados e fila para a mesma conta`() = runBlocking {
+    fun `sair com operações por enviar pede decisão e preserva dados e fila para a mesma conta`() = runBlocking<Unit> {
         val phone = Phone().signedUpWithSpace()
         phone.pix()
         val first = phone.access.signOut(confirmPending = false)
@@ -289,7 +289,7 @@ class AccessCenterTest {
     }
 
     @Test
-    fun `outra conta no mesmo aparelho não vê os dados nem envia a fila da primeira`() = runBlocking {
+    fun `outra conta no mesmo aparelho não vê os dados nem envia a fila da primeira`() = runBlocking<Unit> {
         val phone = Phone().signedUpWithSpace()
         phone.pix()
         val oldRuntime = assertNotNull(phone.access.runtime.value)
@@ -305,7 +305,7 @@ class AccessCenterTest {
     }
 
     @Test
-    fun `sessão revogada pede renovação sem apagar nada e entrar de novo com a mesma conta retoma`() = runBlocking {
+    fun `sessão revogada pede renovação sem apagar nada e entrar de novo com a mesma conta retoma`() = runBlocking<Unit> {
         val phone = Phone().signedUpWithSpace()
         phone.pix()
         service.revokeSessions("ana@x.test")
@@ -327,7 +327,7 @@ class AccessCenterTest {
     private suspend fun Phone.steps() = access.firstSteps().associate { it.id to it.status }
 
     @Test
-    fun `primeiros passos só ficam concluídos com dados persistidos, e o dos outros só depois de recebido`() = runBlocking {
+    fun `primeiros passos só ficam concluídos com dados persistidos, e o dos outros só depois de recebido`() = runBlocking<Unit> {
         val ana = Phone().signedUpWithSpace()
         ana.access.generateInvite()
         val bruno = Phone()
@@ -358,7 +358,7 @@ class AccessCenterTest {
     }
 
     @Test
-    fun `começar a registrar encerra a lista neste aparelho e isso sobrevive ao reinício`() = runBlocking {
+    fun `começar a registrar encerra a lista neste aparelho e isso sobrevive ao reinício`() = runBlocking<Unit> {
         val phone = Phone().signedUpWithSpace()
         assertEquals(EntryStage.FirstSteps, phone.access.status.value.stage)
         phone.access.dismissFirstSteps()
@@ -369,7 +369,7 @@ class AccessCenterTest {
     }
 
     @Test
-    fun `convite pendente não impede registrar`() = runBlocking {
+    fun `convite pendente não impede registrar`() = runBlocking<Unit> {
         val phone = Phone().signedUpWithSpace()
         phone.access.generateInvite()
         val result = phone.pix()
@@ -377,7 +377,7 @@ class AccessCenterTest {
     }
 
     @Test
-    fun `reiniciar restaura conta, espaço e banco sem usar a rede`() = runBlocking {
+    fun `reiniciar restaura conta, espaço e banco sem usar a rede`() = runBlocking<Unit> {
         val phone = Phone().signedUpWithSpace()
         service.online = false
         phone.restart()

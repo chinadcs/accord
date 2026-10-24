@@ -68,7 +68,7 @@ class DeleteEntryTest : SpaceTestBase() {
     // ---- cenário 26a ----
 
     @Test
-    fun `dois Pix iguais registrados e um excluído no dia seguinte — outubro perde R$ 80, o outro fica`() = runBlocking {
+    fun `dois Pix iguais registrados e um excluído no dia seguinte — outubro perde R$ 80, o outro fica`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val first = h.pix()
@@ -86,7 +86,7 @@ class DeleteEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `compra de 6 x R$ 200 excluída zera a compra em todos os seis meses`() = runBlocking {
+    fun `compra de 6 x R$ 200 excluída zera a compra em todos os seis meses`() = runBlocking<Unit> {
         val h = open()
         val id = h.card()
         h.space.execute(h.env(), DeleteEntry(id)).applied()
@@ -99,7 +99,7 @@ class DeleteEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `item de fatura quitada sem confirmação extra pede decisão e não altera nada`() = runBlocking {
+    fun `item de fatura quitada sem confirmação extra pede decisão e não altera nada`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.card(100, 1)
@@ -120,7 +120,7 @@ class DeleteEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `lançamento importado exige a confirmação extra`() = runBlocking {
+    fun `lançamento importado exige a confirmação extra`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.pix(origin = Origin.Import)
@@ -134,7 +134,7 @@ class DeleteEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `importado em fatura quitada lista os dois motivos`() = runBlocking {
+    fun `importado em fatura quitada lista os dois motivos`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.space.execute(
@@ -149,7 +149,7 @@ class DeleteEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `versão antiga devolve a atual`() = runBlocking {
+    fun `versão antiga devolve a atual`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.pix()
@@ -159,7 +159,7 @@ class DeleteEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `compra Pix de R$ 100 com estorno confirmado de R$ 40 excluída leva o crédito junto numa só operação`() = runBlocking {
+    fun `compra Pix de R$ 100 com estorno confirmado de R$ 40 excluída leva o crédito junto numa só operação`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.pix("Compra", 100)
@@ -177,7 +177,7 @@ class DeleteEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `excluir compra parcelada com estorno remove o crédito do mês da fatura`() = runBlocking {
+    fun `excluir compra parcelada com estorno remove o crédito do mês da fatura`() = runBlocking<Unit> {
         val h = open()
         val id = h.card(300, 3)
         h.space.execute(h.env(), RegisterRefund(id, brl(50), RefundStatus.Confirmed, d(2026, 11, 5), invoice = nov)).applied()
@@ -187,7 +187,7 @@ class DeleteEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `fatura conferida cuja composição deixa de coincidir volta a ter diferença`() = runBlocking {
+    fun `fatura conferida cuja composição deixa de coincidir volta a ter diferença`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val keep = h.card(1000, 1)
@@ -205,7 +205,7 @@ class DeleteEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `boleto e renda também podem ser excluídos`() = runBlocking {
+    fun `boleto e renda também podem ser excluídos`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val boleto = h.space.execute(
@@ -226,7 +226,7 @@ class DeleteEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `excluir de novo, id desconhecido e ocorrência de recorrência são rejeitados`() = runBlocking {
+    fun `excluir de novo, id desconhecido e ocorrência de recorrência são rejeitados`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.pix()
@@ -238,7 +238,7 @@ class DeleteEntryTest : SpaceTestBase() {
     }
 
     @Test
-    fun `excluir não é estorno nem cancelamento`() = runBlocking {
+    fun `excluir não é estorno nem cancelamento`() = runBlocking<Unit> {
         val h = open()
         val id = h.card(300, 3)
         h.space.execute(h.env(), DeleteEntry(id)).applied()

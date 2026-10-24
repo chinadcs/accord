@@ -37,8 +37,15 @@ fun RootScaffold(title: String, padding: PaddingValues, content: @Composable () 
 
 /** Conteúdo provisório das raízes que S1 não implementa, sempre com acesso ao registro manual. */
 @Composable
-fun ProvisionalRoot(title: String, message: String, padding: PaddingValues, onRegister: () -> Unit) {
+fun ProvisionalRoot(
+    title: String,
+    message: String,
+    padding: PaddingValues,
+    onRegister: () -> Unit,
+    extra: @Composable () -> Unit = {},
+) {
     RootScaffold(title, padding) {
+        extra()
         if (message.isNotEmpty()) Text(message, style = MaterialTheme.typography.bodyLarge)
         Button(onClick = onRegister, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
             Text(stringResource(R.string.action_register_manually))

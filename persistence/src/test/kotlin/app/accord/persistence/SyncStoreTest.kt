@@ -63,7 +63,7 @@ class SyncStoreTest : SpaceTestBase() {
     // ---- operação com estado completo ----
 
     @Test
-    fun `a operação leva o estado completo da entidade sem a revisão local`() = runBlocking {
+    fun `a operação leva o estado completo da entidade sem a revisão local`() = runBlocking<Unit> {
         val h = open()
         h.account()
         val id = h.pix()
@@ -87,7 +87,7 @@ class SyncStoreTest : SpaceTestBase() {
     }
 
     @Test
-    fun `compra parcelada leva compra e parcelas no mesmo estado`() = runBlocking {
+    fun `compra parcelada leva compra e parcelas no mesmo estado`() = runBlocking<Unit> {
         val h = open()
         h.space.execute(
             h.env(),
@@ -102,7 +102,7 @@ class SyncStoreTest : SpaceTestBase() {
     }
 
     @Test
-    fun `rascunho local nunca vira operação nem entra na fila`() = runBlocking {
+    fun `rascunho local nunca vira operação nem entra na fila`() = runBlocking<Unit> {
         val h = open()
         h.space.saveDraft(LocalDraft(source = DraftSource.Chat, fields = mapOf("description" to "Mercado"), missing = listOf("amount"))).value()
         assertTrue(store(h).nextBatch(10).isEmpty())
@@ -110,7 +110,7 @@ class SyncStoreTest : SpaceTestBase() {
     }
 
     @Test
-    fun `falha na gravação não deixa operação nem estado pela metade`() = runBlocking {
+    fun `falha na gravação não deixa operação nem estado pela metade`() = runBlocking<Unit> {
         val h = open()
         h.account()
         h.fault = { error("falha injetada") }
@@ -123,7 +123,7 @@ class SyncStoreTest : SpaceTestBase() {
     // ---- reconhecimento e encadeamento ----
 
     @Test
-    fun `reconhecer move a operação para reconhecida e o item para reconhecido`() = runBlocking {
+    fun `reconhecer move a operação para reconhecida e o item para reconhecido`() = runBlocking<Unit> {
         val h = open()
         h.account()
         val id = h.pix()
@@ -138,7 +138,7 @@ class SyncStoreTest : SpaceTestBase() {
     }
 
     @Test
-    fun `repetir o resultado de uma operação já reconhecida não muda nada`() = runBlocking {
+    fun `repetir o resultado de uma operação já reconhecida não muda nada`() = runBlocking<Unit> {
         val h = open()
         h.account()
         val s = store(h)
@@ -150,7 +150,7 @@ class SyncStoreTest : SpaceTestBase() {
     }
 
     @Test
-    fun `operação encadeada só sai depois do reconhecimento e ganha a versão base dele`() = runBlocking {
+    fun `operação encadeada só sai depois do reconhecimento e ganha a versão base dele`() = runBlocking<Unit> {
         val h = open()
         h.account()
         val id = h.pix()
@@ -171,7 +171,7 @@ class SyncStoreTest : SpaceTestBase() {
     }
 
     @Test
-    fun `falha do lote registra a causa e mantém a fila intacta e na mesma ordem`() = runBlocking {
+    fun `falha do lote registra a causa e mantém a fila intacta e na mesma ordem`() = runBlocking<Unit> {
         val h = open()
         h.account()
         h.pix()
@@ -182,7 +182,7 @@ class SyncStoreTest : SpaceTestBase() {
     }
 
     @Test
-    fun `operação recusada continua guardada com a causa e retém as dependentes`() = runBlocking {
+    fun `operação recusada continua guardada com a causa e retém as dependentes`() = runBlocking<Unit> {
         val h = open()
         val account = h.account()
         val s = store(h)
@@ -222,7 +222,7 @@ class SyncStoreTest : SpaceTestBase() {
     }
 
     @Test
-    fun `conflito guarda as duas versões completas e retém o que está encadeado`() = runBlocking {
+    fun `conflito guarda as duas versões completas e retém o que está encadeado`() = runBlocking<Unit> {
         val h = open()
         val (s, id, opId) = h.conflictScenario()
         h.space.execute(h.env(), CorrectEntry(id, description = "Depois")).applied() // encadeada ao conflito
@@ -240,7 +240,7 @@ class SyncStoreTest : SpaceTestBase() {
     }
 
     @Test
-    fun `manter a versão remota adota o estado do serviço e substitui a operação local`() = runBlocking {
+    fun `manter a versão remota adota o estado do serviço e substitui a operação local`() = runBlocking<Unit> {
         val h = open()
         val (s, id, opId) = h.conflictScenario()
         val view = assertNotNull(s.conflict(opId))
@@ -256,7 +256,7 @@ class SyncStoreTest : SpaceTestBase() {
     }
 
     @Test
-    fun `manter a versão local cria nova operação com a versão remota vista como base`() = runBlocking {
+    fun `manter a versão local cria nova operação com a versão remota vista como base`() = runBlocking<Unit> {
         val h = open()
         val (s, id, opId) = h.conflictScenario()
         val view = assertNotNull(s.conflict(opId))
@@ -272,7 +272,7 @@ class SyncStoreTest : SpaceTestBase() {
     }
 
     @Test
-    fun `revisar depois mantém as duas versões e o conflito aberto`() = runBlocking {
+    fun `revisar depois mantém as duas versões e o conflito aberto`() = runBlocking<Unit> {
         val h = open()
         val (s, _, opId) = h.conflictScenario()
         s.defer(opId)
@@ -283,7 +283,7 @@ class SyncStoreTest : SpaceTestBase() {
     }
 
     @Test
-    fun `nova edição da outra pessoa durante a revisão refaz a comparação e bloqueia a escolha`() = runBlocking {
+    fun `nova edição da outra pessoa durante a revisão refaz a comparação e bloqueia a escolha`() = runBlocking<Unit> {
         val h = open()
         val (s, id, opId) = h.conflictScenario()
         val stale = assertNotNull(s.conflict(opId)).seenRemoteVersions
@@ -306,7 +306,7 @@ class SyncStoreTest : SpaceTestBase() {
     // ---- recebimento ----
 
     @Test
-    fun `entidade sem operação aberta recebe o estado remoto sem gerar operação`() = runBlocking {
+    fun `entidade sem operação aberta recebe o estado remoto sem gerar operação`() = runBlocking<Unit> {
         val h = open()
         val s = store(h)
         val id = "mov-do-outro"
@@ -320,7 +320,7 @@ class SyncStoreTest : SpaceTestBase() {
     }
 
     @Test
-    fun `receber o eco da própria operação ou uma versão antiga não muda nada`() = runBlocking {
+    fun `receber o eco da própria operação ou uma versão antiga não muda nada`() = runBlocking<Unit> {
         val h = open()
         h.account()
         val id = h.pix()
@@ -334,7 +334,7 @@ class SyncStoreTest : SpaceTestBase() {
     }
 
     @Test
-    fun `alteração remota para entidade com operação pendente vira conflito e a operação não sai`() = runBlocking {
+    fun `alteração remota para entidade com operação pendente vira conflito e a operação não sai`() = runBlocking<Unit> {
         val h = open()
         h.account()
         val id = h.pix()
@@ -353,7 +353,7 @@ class SyncStoreTest : SpaceTestBase() {
     }
 
     @Test
-    fun `chegada de alteração faz a próxima edição com a versão antiga voltar como desatualizada`() = runBlocking {
+    fun `chegada de alteração faz a próxima edição com a versão antiga voltar como desatualizada`() = runBlocking<Unit> {
         val h = open()
         h.account()
         val id = h.pix()
@@ -368,7 +368,7 @@ class SyncStoreTest : SpaceTestBase() {
     }
 
     @Test
-    fun `ciclo completo registra a última sincronização concluída`() = runBlocking {
+    fun `ciclo completo registra a última sincronização concluída`() = runBlocking<Unit> {
         val h = open()
         val s = store(h)
         assertNull(s.summary().lastSyncMillis)

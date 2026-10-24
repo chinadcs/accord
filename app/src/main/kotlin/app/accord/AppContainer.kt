@@ -13,8 +13,13 @@ import app.accord.access.SecureAccessStore
 import app.accord.core.sync.AccessStore
 import app.accord.core.sync.RemoteSpaceService
 import app.accord.persistence.AccessCenter
+import app.accord.persistence.SyncController
+import app.accord.sync.SyncScheduler
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.merge
 import app.accord.remote.SupabaseSpaceService
 import app.accord.remote.UnconfiguredSpaceService
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -61,14 +66,47 @@ class AppContainer(
         currentMonth = { clock.currentMonth() },
     )
 
+    /** Estado, "Sincronizar agora", conflitos e problemas do espaço aberto (tela 26 e indicadores). */
+    val sync = SyncController(access, appScope)
+
+    /** Envio em segundo plano quando houver conexão, com espera crescente entre tentativas. */
+    val scheduler = SyncScheduler(context)
+
     /** Quem registra é a conta da sessão; as telas só existem com conta e espaço. */
     override val personId: String get() = access.status.value.account?.accountId.orEmpty()
+
+    private val ready = CompletableDeferred<Unit>()
+
+    /** O estado salvo no aparelho já foi lido (a conta e o espaço, se houver, estão abertos). */
+    suspend fun awaitReady() = ready.await()
 
     init {
         appScope.launch {
             access.restore()
-            // Com um espaço aberto, um ciclo de envio e recebimento; a agenda em segundo plano vem com a tela 26.
-            access.runtime.collectLatest { runtime -> runtime?.engine?.syncNow() }
+            ready.complete(Unit)
+            // Com um espaço aberto: um ciclo agora, a agenda do recebimento ocasional e o envio quando houver conexão.
+            access.runtime.collectLatest { runtime ->
+                if (runtime != null) {
+                    scheduler.schedulePeriodic()
+                    runtime.engine.syncNow()
+                    scheduler.enqueue()
+                }
+            }
+        }
+        // Todo registro salvo (e todo desfazer) entra na fila: atualiza os indicadores e agenda o envio.
+        appScope.launch {
+            merge(feedback.events.map { }, feedback.undone).collect {
+                sync.refresh()
+                scheduler.enqueue()
+            }
+        }
+    }
+
+    /** Ao voltar ao primeiro plano: um ciclo e a leitura dos indicadores. */
+    fun onForeground() {
+        appScope.launch {
+            sync.refresh()
+            sync.syncNow()
         }
     }
 

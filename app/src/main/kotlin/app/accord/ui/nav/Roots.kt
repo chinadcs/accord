@@ -27,6 +27,10 @@ const val ROUTE_ACCESS = "access"
 const val ROUTE_SPACE = "space"
 const val ROUTE_FIRST_STEPS = "first_steps"
 
+/** Sincronização (tela 26) e o modo conflito da tela 19: `conflict/{operationId}`. */
+const val ROUTE_SYNC = "sync"
+const val ROUTE_CONFLICT = "conflict"
+
 /** Registro manual: sempre disponível, sem depender do modelo nem da rede (tela 09). */
 const val ROUTE_REGISTER = "register"
 const val ARG_REGISTER_KIND = "kind"

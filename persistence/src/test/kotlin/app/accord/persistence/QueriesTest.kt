@@ -95,7 +95,7 @@ class QueriesTest : SpaceTestBase() {
     // ---- Lançamentos (tela 07) ----
 
     @Test
-    fun `filtro de outubro no orçamento mostra R$ 200 exigíveis da compra de R$ 1200 em 6x, com a parcela identificada`() = runBlocking {
+    fun `filtro de outubro no orçamento mostra R$ 200 exigíveis da compra de R$ 1200 em 6x, com a parcela identificada`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.card("Equipamento", 1200, 6)
@@ -113,7 +113,7 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `critério data da compra mostra a compra uma única vez pelo total e sem as parcelas`() = runBlocking {
+    fun `critério data da compra mostra a compra uma única vez pelo total e sem as parcelas`() = runBlocking<Unit> {
         val h = open()
         h.card("Equipamento", 1200, 6)
         val sepPage = h.space.entries(filter(sep, sep, DateCriterion.PurchaseDate)).value()
@@ -126,7 +126,7 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `filtro Eletrônicos não mostra o Mercado e ao limpar os dois aparecem`() = runBlocking {
+    fun `filtro Eletrônicos não mostra o Mercado e ao limpar os dois aparecem`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.card("Monitor", 800, category = "eletronicos.equipamentos")
@@ -140,7 +140,7 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `duas compras legítimas de mesmo valor e data permanecem como duas linhas`() = runBlocking {
+    fun `duas compras legítimas de mesmo valor e data permanecem como duas linhas`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.pix("mercado 80", 80)
@@ -149,7 +149,7 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `busca ignora maiúsculas e acentos`() = runBlocking {
+    fun `busca ignora maiúsculas e acentos`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.pix("Padaria Pão Quente", 12)
@@ -159,7 +159,7 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `filtro por forma de pagamento`() = runBlocking {
+    fun `filtro por forma de pagamento`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.pix("No Pix", 10)
@@ -173,7 +173,7 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `filtro por situação a classificar, a conferir e vencido`() = runBlocking {
+    fun `filtro por situação a classificar, a conferir e vencido`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.card("Amazon", 150, toClassify = true)
@@ -195,7 +195,7 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `filtro por pessoa considera quem registrou`() = runBlocking {
+    fun `filtro por pessoa considera quem registrou`() = runBlocking<Unit> {
         val db = newDatabase()
         val ana = open("ana", db)
         val bia = open("bia", db)
@@ -208,7 +208,7 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `paginação estável não duplica nem perde linhas`() = runBlocking {
+    fun `paginação estável não duplica nem perde linhas`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         repeat(5) { h.pix("Item $it", 10 + it, date = d(2026, 10, 1 + it)) }
@@ -223,7 +223,7 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `resumo separa despesas, rendas, créditos e quitações`() = runBlocking {
+    fun `resumo separa despesas, rendas, créditos e quitações`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val spent = h.pix("Compra", 100)
@@ -247,7 +247,7 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `lançamentos desfeitos ou excluídos não aparecem`() = runBlocking {
+    fun `lançamentos desfeitos ou excluídos não aparecem`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.pix("Some", 10)
@@ -257,7 +257,7 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `boleto pago aparece no mês do pagamento e recorrências entram na lista`() = runBlocking {
+    fun `boleto pago aparece no mês do pagamento e recorrências entram na lista`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val boleto = h.space.execute(
@@ -280,7 +280,7 @@ class QueriesTest : SpaceTestBase() {
     // ---- Compromissos (telas 10 e 11) ----
 
     @Test
-    fun `novembro mostra a parcela 2 de 6 e março a 6 de 6 sem sétima em abril`() = runBlocking {
+    fun `novembro mostra a parcela 2 de 6 e março a 6 de 6 sem sétima em abril`() = runBlocking<Unit> {
         val h = open()
         h.card("Equipamento", 1200, 6)
         val novItem = h.space.commitments(nov).value().items.single()
@@ -295,7 +295,7 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `total de conhecidos soma parcelas, recorrências e contas previstas sem rendas nem intenções`() = runBlocking {
+    fun `total de conhecidos soma parcelas, recorrências e contas previstas sem rendas nem intenções`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.card("Equipamento", 1200, 6)
@@ -318,7 +318,7 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `filtros de compromissos`() = runBlocking {
+    fun `filtros de compromissos`() = runBlocking<Unit> {
         val h = open()
         h.card("Equipamento", 1200, 6)
         h.space.execute(
@@ -337,7 +337,7 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `boleto vencido continua no mês original marcado como vencido`() = runBlocking {
+    fun `boleto vencido continua no mês original marcado como vencido`() = runBlocking<Unit> {
         val h = open()
         h.space.execute(
             h.env(),
@@ -350,7 +350,7 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `parcelas com cancelamento solicitado continuam e as canceladas saem, com a situação visível`() = runBlocking {
+    fun `parcelas com cancelamento solicitado continuam e as canceladas saem, com a situação visível`() = runBlocking<Unit> {
         val h = open()
         val id = h.card("Equipamento", 600, 6, invoice = sep)
         h.space.execute(h.env(), RequestInstallmentCancellation(id, listOf(3, 4))).applied()
@@ -364,7 +364,7 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `detalhe do compromisso parcelado traz o cronograma de 1 a 6 com canceladas`() = runBlocking {
+    fun `detalhe do compromisso parcelado traz o cronograma de 1 a 6 com canceladas`() = runBlocking<Unit> {
         val h = open()
         val id = h.card("Equipamento", 1200, 6)
         h.space.execute(h.env(), ConfirmNonCharge(id, listOf(5, 6))).applied()
@@ -376,7 +376,7 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `detalhe de recorrência mostra frequência e próxima cobrança sem total`() = runBlocking {
+    fun `detalhe de recorrência mostra frequência e próxima cobrança sem total`() = runBlocking<Unit> {
         val h = open()
         val id = h.space.execute(
             h.env(),
@@ -390,7 +390,7 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `detalhe de recorrência encerrada não tem próxima`() = runBlocking {
+    fun `detalhe de recorrência encerrada não tem próxima`() = runBlocking<Unit> {
         val h = open()
         val id = h.space.execute(
             h.env(),
@@ -403,7 +403,7 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `detalhe do boleto como compromisso e id desconhecido`() = runBlocking {
+    fun `detalhe do boleto como compromisso e id desconhecido`() = runBlocking<Unit> {
         val h = open()
         val id = h.space.execute(
             h.env(),
@@ -416,7 +416,7 @@ class QueriesTest : SpaceTestBase() {
     // ---- Detalhe do lançamento (tela 08) ----
 
     @Test
-    fun `detalhe de Pix traz autor, origem, conta, estornos e situação de persistência`() = runBlocking {
+    fun `detalhe de Pix traz autor, origem, conta, estornos e situação de persistência`() = runBlocking<Unit> {
         val h = open()
         val account = h.withDefaultAccount()
         val id = h.pix("Mercado", 100)
@@ -435,7 +435,7 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `detalhe de parcela traz a compra com total e parcelas em posições distintas`() = runBlocking {
+    fun `detalhe de parcela traz a compra com total e parcelas em posições distintas`() = runBlocking<Unit> {
         val h = open()
         val id = h.card("Equipamento", 1200, 6)
         val detail = assertNotNull(h.space.entry("$id#3").value())
@@ -448,7 +448,7 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `detalhe do boleto mostra vencimento, pagamento e mês usado`() = runBlocking {
+    fun `detalhe do boleto mostra vencimento, pagamento e mês usado`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.space.execute(
@@ -465,7 +465,7 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `detalhe de ocorrência de recorrência e lançamento desconhecido`() = runBlocking {
+    fun `detalhe de ocorrência de recorrência e lançamento desconhecido`() = runBlocking<Unit> {
         val h = open()
         val id = h.space.execute(
             h.env(),
@@ -478,7 +478,7 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `detalhe de lançamento excluído mantém a identidade marcada como excluída`() = runBlocking {
+    fun `detalhe de lançamento excluído mantém a identidade marcada como excluída`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.pix("Some", 10)
@@ -489,7 +489,7 @@ class QueriesTest : SpaceTestBase() {
     // ---- Pendências (tela 18) ----
 
     @Test
-    fun `pendências derivam do estado — a classificar, a conferir, pagamento divergente e diferença de total`() = runBlocking {
+    fun `pendências derivam do estado — a classificar, a conferir, pagamento divergente e diferença de total`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         h.card("Amazon", 150, toClassify = true, invoice = nov)
@@ -511,7 +511,7 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `classificar fecha a pendência de categoria`() = runBlocking {
+    fun `classificar fecha a pendência de categoria`() = runBlocking<Unit> {
         val h = open()
         val id = h.card("Amazon", 150, toClassify = true)
         assertEquals(1, h.space.pendings().value().size)
@@ -520,7 +520,7 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `corrigir o vínculo da compra a conferir fecha a pendência`() = runBlocking {
+    fun `corrigir o vínculo da compra a conferir fecha a pendência`() = runBlocking<Unit> {
         val h = open()
         val id = h.space.execute(
             h.env(),
