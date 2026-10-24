@@ -82,6 +82,9 @@ class FakeSpaceService(
     // ---- injeção de falhas e observação (só para testes e desenvolvimento) ----
 
     @Volatile var online: Boolean = true
+
+    /** Versão do protocolo que o serviço aceita; mudar simula um serviço mais novo que o aplicativo. */
+    @Volatile var supportedProtocolVersion: Int = PROTOCOL_VERSION
     @Volatile var serviceState: FakeServiceState = FakeServiceState.Healthy
 
     private val queuedFailures = ArrayDeque<RemoteFailure>()
@@ -307,7 +310,7 @@ class FakeSpaceService(
         OperationResult.Rejected(op.operationId, reason, detail)
 
     private fun applyOperation(account: Account, space: Space, op: OperationEnvelope): OperationResult {
-        if (op.protocolVersion != PROTOCOL_VERSION) return reject(op, RejectReason.ProtocolUnsupported)
+        if (op.protocolVersion != supportedProtocolVersion) return reject(op, RejectReason.ProtocolUnsupported)
         if (op.spaceId != space.id) return reject(op, RejectReason.ForeignSpace, "espaço da operação difere do espaço do envio")
         applied[op.operationId]?.let { previous ->
             return if (previous.spaceId == op.spaceId && previous.changes == op.changes) {
