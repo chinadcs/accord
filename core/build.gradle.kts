@@ -18,6 +18,11 @@ java {
 }
 
 dependencies {
+    // Só a árvore JSON: a saída do modelo é lida com formato estrito, campo a campo (S3 §5, etapa 1).
+    implementation(libs.serialization.json)
+    api(libs.coroutines.core)
+
+    testImplementation(libs.coroutines.test)
     testImplementation(libs.kotlin.test.junit5)
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)
