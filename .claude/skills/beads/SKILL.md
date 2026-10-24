@@ -8,8 +8,8 @@ description: Gerenciar tarefas, dependências e conhecimento persistente do Acco
 
 Ler [AGENTS.md](../../../AGENTS.md), [ARCHITECTURE.md](../../../ARCHITECTURE.md), o
 [plano](../../../docs/plano-desenvolvimento.md) e a
-[spec relevante](../../../docs/specs/README.md). Decisões posteriores prevalecem sobre
-propostas anteriores. Não presumir aplicativo, serviço ou testes já implementados.
+[spec relevante](../../../docs/specs/design/README.md). Decisões posteriores prevalecem sobre
+propostas anteriores. Inspecionar código, serviço local e testes; não inferir implantação hospedada.
 
 ## Fluxo local
 
@@ -28,6 +28,8 @@ Criar tarefa antes de alterar código/configuração. Fechar apenas quando o ace
 registrar follow-ups reais e dependências com IDs. Não usar bd edit, que abre editor interativo.
 Usar bd remember para aprendizado durável e bd memories para recuperar conhecimento; não usar
 MEMORY.md, memória privada de runtime ou listas Markdown como tracker.
+Decisões estruturais seguem o [guia de ADRs](../../../docs/adr/README.md); memórias Beads
+guardam resumo/link para a justificativa, e questões ainda abertas continuam nas tarefas.
 
 Antes de encerrar, fechar concluídas, executar checks proporcionais, conferir git status e
 relatar arquivos, validação e pendências. Perfil conservador/local: nenhum commit, pull, push

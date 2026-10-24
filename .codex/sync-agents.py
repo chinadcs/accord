@@ -75,7 +75,7 @@ def expected_files():
             "Read AGENTS.md, ARCHITECTURE.md and .claude/agents-roster.md from the repository root. "
             f"Then read {source.relative_to(ROOT).as_posix()} and follow its Markdown body "
             "as this role's instructions. Resolve its links relative to that source file. "
-            "The product sources are docs/plano-desenvolvimento.md and docs/specs/README.md, "
+            "The product sources are docs/plano-desenvolvimento.md and docs/specs/design/README.md, "
             "plus the affected screen specifications. Distinguish planned, implemented and measured work. "
             "Its YAML model and tools fields configure Claude only; use this adapter's model "
             "and inherit session effort, permissions and available tools. Read SKILL.md files directly; "
