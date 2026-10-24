@@ -93,6 +93,7 @@ interface SyncDao {
     )
     suspend fun resolveBase(operationId: String, type: String, entityId: String, base: Long?)
     @Query("SELECT COUNT(*) FROM operation WHERE syncState IN (:states)") suspend fun countIn(states: List<String>): Int
+    @Query("SELECT * FROM operation ORDER BY sequence DESC LIMIT :limit") suspend fun recentOperations(limit: Int): List<OperationRow>
 
     /** Operações ainda abertas que alteram a entidade, da mais antiga para a mais nova. */
     @Query(

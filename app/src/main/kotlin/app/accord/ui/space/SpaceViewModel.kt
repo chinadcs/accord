@@ -40,6 +40,15 @@ class SpaceViewModel(private val access: AccessCenter) : ViewModel() {
     /** Conta, espaço, participantes e convite vêm da fachada de acesso. */
     val accessState: StateFlow<AccessState> get() = access.status
 
+    init {
+        // Conta que já participa de um espaço no serviço (aparelho novo, reinstalação) o encontra aqui,
+        // em vez de a pessoa precisar criar outro; sem rede, nada muda e as duas ações seguem disponíveis.
+        viewModelScope.launch {
+            val state = access.status.value
+            if (state.space == null && state.pendingSpaceName == null) access.discoverSpace()
+        }
+    }
+
     fun selectTab(tab: SpaceTab) = _ui.update { it.copy(tab = tab, message = null) }
     fun onName(value: String) = _ui.update { it.copy(name = value, nameError = null, message = null) }
     fun onCode(value: String) = _ui.update { it.copy(code = value, codeError = null, message = null) }

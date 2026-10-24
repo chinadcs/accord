@@ -52,4 +52,46 @@ class RepositoryConfigurationTest {
             )
         }
     }
+
+    private val textExtensions = setOf("kt", "kts", "xml", "toml", "sql", "md", "json", "properties", "yml", "yaml", "py", "ps1", "sh", "txt")
+    private val skippedDirectories = setOf("build", ".git", ".gradle", ".beads", ".idea", "node_modules", ".temp", ".branches")
+
+    private fun versionedTextFiles(): Sequence<File> = root.walkTopDown()
+        .onEnter { it.name !in skippedDirectories }
+        .filter { it.isFile && it.extension in textExtensions && it.name != "local.properties" }
+
+    @Test
+    fun `nenhuma chave secreta do serviço está no código nem na configuração versionada`() {
+        val secretKey = Regex("sb_secret_[A-Za-z0-9_-]{8,}")
+        val jwt = Regex("eyJ[A-Za-z0-9_-]{8,}[.]([A-Za-z0-9_-]{8,})[.][A-Za-z0-9_-]{8,}")
+        val offenders = versionedTextFiles().flatMap { file ->
+            val text = file.readText()
+            buildList {
+                if (secretKey.containsMatchIn(text)) add("${file.relativeTo(root)}: chave sb_secret_")
+                jwt.findAll(text).forEach { m ->
+                    val payload = runCatching { String(java.util.Base64.getUrlDecoder().decode(m.groupValues[1].padEnd((m.groupValues[1].length + 3) / 4 * 4, '='))) }.getOrDefault("")
+                    if ("service_role" in payload) add("${file.relativeTo(root)}: JWT com papel service_role")
+                }
+            }.asSequence()
+        }.toList()
+        assertTrue(offenders.isEmpty(), "chave administrativa no repositório: $offenders")
+    }
+
+    @Test
+    fun `o código de produção não registra log nem imprime dados`() {
+        val sources = listOf("app/src/main", "persistence/src/main", "remote/src/main", "core/src/main")
+        val offenders = sources.flatMap { dir ->
+            File(root, dir).walkTopDown().filter { it.isFile && it.extension == "kt" }.filter { file ->
+                Regex("""\bLog[.][a-z][(]|android[.]util[.]Log|\bprintln[(]|\bprint[(]|printStackTrace""").containsMatchIn(file.readText())
+            }.map { it.relativeTo(root).path }.toList()
+        }
+        assertTrue(offenders.isEmpty(), "log ou saída padrão no código de produção: $offenders")
+    }
+
+    @Test
+    fun `a chave pública é a única credencial do serviço que o aplicativo conhece`() {
+        val build = File(root, "app/build.gradle.kts").readText()
+        assertTrue("SUPABASE_PUBLISHABLE_KEY" in build && "SUPABASE_URL" in build)
+        assertFalse(Regex("SERVICE_ROLE|SECRET_KEY|serviceRole|secretKey", RegexOption.IGNORE_CASE).containsMatchIn(build), "o build do app não deve citar chave secreta")
+    }
 }
