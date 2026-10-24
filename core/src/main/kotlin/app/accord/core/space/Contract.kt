@@ -802,10 +802,20 @@ data class EntrySummary(
 data class EntryPage(val rows: List<EntryRow>, val nextCursor: Int?, val total: Int, val summary: EntrySummary)
 
 /** Situação do item quanto à sincronização; fornecida por S2. Antes dele, tudo está "salvo no aparelho". */
-enum class ItemSync { SavedOnDevice, AwaitingSend, Acknowledged, Conflict }
+enum class ItemSync {
+    SavedOnDevice,
+
+    /** Há operação ainda não reconhecida pelo serviço (pendente, em envio ou retida). */
+    AwaitingSend,
+    Acknowledged,
+    Conflict,
+
+    /** O serviço recusou a operação; ela continua guardada com a causa. */
+    Failed,
+}
 
 fun interface SyncStatusProvider {
-    fun statusOf(type: EntityType, id: String): ItemSync
+    suspend fun statusOf(type: EntityType, id: String): ItemSync
 }
 
 data class EntryDetail(

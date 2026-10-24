@@ -430,7 +430,7 @@ class QueriesTest : SpaceTestBase() {
         assertEquals(account, detail.accountId)
         assertEquals(app.accord.core.space.Origin.Manual, detail.origin)
         assertEquals(1, detail.refunds.size)
-        assertEquals(ItemSync.SavedOnDevice, detail.sync) // antes do S2, nada é apresentado como sincronizado
+        assertEquals(ItemSync.AwaitingSend, detail.sync) // salvo no aparelho, com operação ainda não reconhecida
         assertFalse(detail.voided)
     }
 

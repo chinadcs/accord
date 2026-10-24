@@ -389,6 +389,7 @@ abstract class SpaceServiceContract {
         assertEquals(2L, current.version)
         assertEquals("""{"v":"68 restaurantes"}""", current.state)
         assertEquals(couple.partner!!.accountId, current.authorId)
+        assertTrue(late.unchanged.isEmpty())
         assertEquals("""{"v":"68 restaurantes"}""", ok(service.pull(couple.creator.accessToken, couple.spaceId, 0, 100)).changes.single().state)
     }
 
@@ -410,8 +411,24 @@ abstract class SpaceServiceContract {
         push(couple.creator, couple.spaceId, op(couple.spaceId, change(b)))
         val result = push(couple.partner!!, couple.spaceId, op(couple.spaceId, change(a), change(b))).single()
         assertIs<OperationResult.Conflict>(result)
+        assertEquals(listOf(b), result.current.map { it.id })
+        assertTrue(result.unchanged.isEmpty(), "a entidade nova ainda não existe no serviço")
         val stored = ok(service.pull(couple.creator.accessToken, couple.spaceId, 0, 100)).changes
         assertEquals(listOf(b), stored.map { it.id }, "a primeira alteração não pode ter ficado aplicada")
+    }
+
+    @Test
+    fun `conflito devolve também as outras entidades da operação que seguem na versão base`() = test {
+        val couple = newCouple()
+        val a = UUID.randomUUID().toString()
+        val b = UUID.randomUUID().toString()
+        push(couple.creator, couple.spaceId, op(couple.spaceId, change(a), change(b)))
+        push(couple.partner!!, couple.spaceId, op(couple.spaceId, change(a, base = 1, state = """{"x":2}""")))
+        val result = push(couple.creator, couple.spaceId, op(couple.spaceId, change(a, base = 1), change(b, base = 1))).single()
+        assertIs<OperationResult.Conflict>(result)
+        assertEquals(listOf(a), result.current.map { it.id })
+        assertEquals(listOf(b), result.unchanged.map { it.id })
+        assertEquals(1L, result.unchanged.single().version)
     }
 
     @Test

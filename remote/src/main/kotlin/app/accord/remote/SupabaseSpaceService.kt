@@ -271,7 +271,11 @@ class SupabaseSpaceService(
                 cursor = o.long("cursor") ?: 0,
                 repeated = (o["repeated"] as? JsonPrimitive)?.booleanOrNull ?: false,
             )
-            "conflict" -> OperationResult.Conflict(id, (o["current"] as? JsonArray).orEmpty().mapNotNull { it.obj() }.map(::entityState))
+            "conflict" -> OperationResult.Conflict(
+                id,
+                (o["current"] as? JsonArray).orEmpty().mapNotNull { it.obj() }.map(::entityState),
+                (o["unchanged"] as? JsonArray).orEmpty().mapNotNull { it.obj() }.map(::entityState),
+            )
             else -> OperationResult.Rejected(
                 id,
                 runCatching { RejectReason.valueOf(o.str("reason").orEmpty()) }.getOrDefault(RejectReason.InvalidEnvelope),

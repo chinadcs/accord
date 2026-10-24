@@ -145,6 +145,7 @@ class RoomFinanceSpace private constructor(
     private val beforeCommit: () -> Unit,
 ) : FinanceSpace {
     private val dao = db.dao()
+    private val syncDao = db.syncDao()
     private val refundPlanner = RefundPlanner(dao) { cycleOf(sessions.current().spaceId) }
     private val cancellationPlanner = CancellationPlanner(dao)
     private val deletePlanner = DeletePlanner(dao)
@@ -212,8 +213,28 @@ class RoomFinanceSpace private constructor(
                 when (val planned = plan(session, envelope.origin, command)) {
                     is Planned.Stop -> planned.result
                     is Planned.Go -> {
-                        // A versão base é a última reconhecida pelo serviço; vazia se nunca foi reconhecida.
-                        val changes = planned.commit().map { it.copy(baseVersion = dao.serviceVersion(it.type.name, it.id)) }
+                        val committed = planned.commit()
+                        // Estado completo de cada entidade depois do comando: é o que a operação leva ao serviço.
+                        // A versão base é a última reconhecida; fica em aberto (encadeada) quando outra operação
+                        // ainda não reconhecida altera a mesma entidade, e é fixada quando ela for reconhecida.
+                        val changeRows = committed.map { change ->
+                            val snapshot = checkNotNull(EntityStates.read(dao, change.type, change.id)) {
+                                "Entidade ${change.type} ${change.id} sumiu depois do comando"
+                            }
+                            val chained = syncDao.openOperationsOn(change.type.name, change.id).isNotEmpty()
+                            OperationChangeRow(
+                                operationId = envelope.commandId.value,
+                                entityType = change.type.name,
+                                entityId = change.id,
+                                baseVersion = if (chained) null else dao.serviceVersion(change.type.name, change.id),
+                                revision = change.revision,
+                                state = snapshot.state,
+                                tombstone = snapshot.tombstone,
+                                refs = EntityStates.encodeReferences(snapshot.references),
+                                chained = chained,
+                            )
+                        }
+                        val changes = changeRows.map { EntityChange(EntityType.valueOf(it.entityType), it.entityId, it.baseVersion, it.revision) }
                         val row = OperationRow(
                             operationId = envelope.commandId.value,
                             spaceId = session.spaceId,
@@ -227,9 +248,7 @@ class RoomFinanceSpace private constructor(
                             detail = planned.detail,
                         )
                         val sequence = dao.insertOperation(row)
-                        dao.insertChanges(
-                            changes.map { OperationChangeRow(row.operationId, it.type.name, it.id, it.baseVersion, it.revision) },
-                        )
+                        dao.insertChanges(changeRows)
                         envelope.draftId?.let { dao.deleteDraft(it) }
                         beforeCommit()
                         CommandResult.Applied(receiptOf(row.copy(sequence = sequence), changes))
@@ -1097,7 +1116,7 @@ class RoomFinanceSpace private constructor(
 
     private suspend fun entryDetail(id: String): EntryDetail? {
         val card = cycleOf(sessions.current().spaceId)
-        fun sync(type: EntityType, entityId: String) = syncStatus.statusOf(type, entityId)
+        suspend fun sync(type: EntityType, entityId: String) = syncStatus.statusOf(type, entityId)
 
         if ('#' in id) {
             val purchaseId = id.substringBefore('#')
@@ -1671,8 +1690,8 @@ class RoomFinanceSpace private constructor(
             clock: BudgetClock,
             sessions: SessionProvider,
             nowMillis: () -> Long = System::currentTimeMillis,
-            // Antes do S2, tudo está "salvo no aparelho" e nada é apresentado como sincronizado.
-            syncStatus: SyncStatusProvider = SyncStatusProvider { _, _ -> ItemSync.SavedOnDevice },
+            // Sem operação nem reconhecimento, o item continua "salvo neste aparelho".
+            syncStatus: SyncStatusProvider = RoomSyncStatus(database.syncDao()),
             beforeCommit: () -> Unit = {},
         ): RoomFinanceSpace {
             val space = RoomFinanceSpace(database, clock, sessions, nowMillis, syncStatus, beforeCommit)

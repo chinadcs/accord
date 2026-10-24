@@ -83,8 +83,16 @@ sealed interface OperationResult {
         val repeated: Boolean,
     ) : OperationResult
 
-    /** A versão base difere da atual. Nada foi aplicado; [current] é o estado atual de cada entidade divergente. */
-    data class Conflict(override val operationId: String, val current: List<RemoteEntityState>) : OperationResult
+    /**
+     * A versão base difere da atual. Nada foi aplicado. [current] é o estado atual de cada entidade
+     * divergente; [unchanged] é o das outras entidades da operação que já existem no serviço e
+     * seguem na versão base, para quem escolher a versão remota voltar todas ao estado do serviço.
+     */
+    data class Conflict(
+        override val operationId: String,
+        val current: List<RemoteEntityState>,
+        val unchanged: List<RemoteEntityState> = emptyList(),
+    ) : OperationResult
 
     data class Rejected(override val operationId: String, val reason: RejectReason, val detail: String? = null) :
         OperationResult

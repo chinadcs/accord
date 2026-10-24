@@ -105,8 +105,9 @@
     <string name="origin_import">importação</string>
     <string name="sync_saved_on_device">salvo no aparelho</string>
     <string name="sync_awaiting">aguardando envio</string>
-    <string name="sync_acknowledged">sincronizado</string>
+    <string name="sync_acknowledged">reconhecido pelo serviço</string>
     <string name="sync_conflict">em conflito</string>
+    <string name="sync_failed">não enviado, veja Sincronização</string>
 
     <!-- Excluir -->
     <string name="delete_title">Excluir este lançamento?</string>

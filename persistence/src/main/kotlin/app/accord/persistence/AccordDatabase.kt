@@ -1,5 +1,7 @@
 package app.accord.persistence
 
+import androidx.room.AutoMigration
+import androidx.room.ColumnInfo
 import androidx.room.Dao
 import androidx.room.Database
 import androidx.room.Entity
@@ -10,12 +12,17 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.RoomDatabase
 import androidx.room.Upsert
+import androidx.sqlite.SQLiteConnection
+import androidx.sqlite.execSQL
+import androidx.room.migration.AutoMigrationSpec
+import kotlinx.serialization.Serializable
 
 /**
  * Tabelas locais da fachada (S1 §6). Cada entidade raiz tem `revision` local; a versão base
  * reconhecida pelo serviço entra com S2. Datas são dias da época; dinheiro, centavos.
  */
 @Entity(tableName = "category", indices = [Index("parentId")])
+@Serializable
 data class CategoryRow(
     @PrimaryKey val id: String,
     val parentId: String?,
@@ -28,6 +35,7 @@ data class CategoryRow(
 )
 
 @Entity(tableName = "account")
+@Serializable
 data class AccountRow(
     @PrimaryKey val id: String,
     /** ISPB do catálogo; nulo para "Outro banco". */
@@ -39,6 +47,7 @@ data class AccountRow(
 )
 
 @Entity(tableName = "preferences")
+@Serializable
 data class PreferencesRow(
     @PrimaryKey val id: String,
     val personId: String,
@@ -47,6 +56,7 @@ data class PreferencesRow(
 )
 
 @Entity(tableName = "movement", indices = [Index("epochDay")])
+@Serializable
 data class MovementEntity(
     @PrimaryKey val id: String,
     val kind: String,
@@ -81,6 +91,11 @@ data class OperationRow(
     val acknowledged: Boolean,
     /** Dado extra para desfazer, como `occurrence=2`. */
     val detail: String? = null,
+    /** [OpState]; `acknowledged` é verdadeiro só em ACKNOWLEDGED. */
+    @ColumnInfo(defaultValue = "'PENDING'") val syncState: String = OpState.PENDING,
+    @ColumnInfo(defaultValue = "0") val attempts: Int = 0,
+    /** Última causa categorizada de falha ou recusa; sem dados financeiros. */
+    val lastFailure: String? = null,
 )
 
 @Entity(tableName = "operation_change", primaryKeys = ["operationId", "entityType", "entityId"])
@@ -90,10 +105,21 @@ data class OperationChangeRow(
     val entityId: String,
     val baseVersion: Long?,
     val revision: Long,
+    /** Estado completo da entidade depois da operação (JSON), o que o serviço recebe. */
+    @ColumnInfo(defaultValue = "''") val state: String = "",
+    @ColumnInfo(defaultValue = "0") val tombstone: Boolean = false,
+    /** Entidades citadas pelo estado, `Tipo/id` separadas por quebra de linha. */
+    @ColumnInfo(defaultValue = "''") val refs: String = "",
+    /**
+     * Há operação anterior aberta sobre a mesma entidade: a versão base só é conhecida quando ela
+     * for reconhecida (S2 "Atomicidade local, ordem e encadeamento").
+     */
+    @ColumnInfo(defaultValue = "0") val chained: Boolean = false,
 )
 
 /** Cartão único do espaço; identidade determinística, criado com os dias padrão 8 e 15. */
 @Entity(tableName = "card")
+@Serializable
 data class CardRow(
     @PrimaryKey val id: String,
     val bankIspb: String?,
@@ -106,6 +132,7 @@ data class CardRow(
 
 /** Compra no cartão (entidade raiz); as parcelas derivam descrição e classificação dela. */
 @Entity(tableName = "card_purchase")
+@Serializable
 data class CardPurchaseRow(
     @PrimaryKey val id: String,
     val description: String,
@@ -126,6 +153,7 @@ data class CardPurchaseRow(
     primaryKeys = ["purchaseId", "number"],
     indices = [Index("invoiceMonth")],
 )
+@Serializable
 data class InstallmentRow(
     val purchaseId: String,
     val number: Int,
@@ -139,6 +167,7 @@ data class InstallmentRow(
 )
 
 @Entity(tableName = "boleto", indices = [Index("dueEpochDay"), Index("paidEpochDay")])
+@Serializable
 data class BoletoRow(
     @PrimaryKey val id: String,
     val description: String,
@@ -156,6 +185,7 @@ data class BoletoRow(
 )
 
 @Entity(tableName = "income", indices = [Index("expectedEpochDay"), Index("receivedEpochDay")])
+@Serializable
 data class IncomeRow(
     @PrimaryKey val id: String,
     val description: String,
@@ -171,6 +201,7 @@ data class IncomeRow(
 )
 
 @Entity(tableName = "recurrence")
+@Serializable
 data class RecurrenceRow(
     @PrimaryKey val id: String,
     /** [app.accord.core.space.RecurrenceKind] por nome. */
@@ -190,6 +221,7 @@ data class RecurrenceRow(
 
 /** Modelo vigente a partir de uma ocorrência (S1 §7.6). */
 @Entity(tableName = "recurrence_segment", primaryKeys = ["recurrenceId", "fromNumber"])
+@Serializable
 data class RecurrenceSegmentRow(
     val recurrenceId: String,
     val fromNumber: Int,
@@ -201,6 +233,7 @@ data class RecurrenceSegmentRow(
 
 /** Exceção de uma ocorrência: excluída ou com campos próprios (nulo = não alterado). */
 @Entity(tableName = "recurrence_override", primaryKeys = ["recurrenceId", "number"])
+@Serializable
 data class RecurrenceOverrideRow(
     val recurrenceId: String,
     val number: Int,
@@ -213,6 +246,7 @@ data class RecurrenceOverrideRow(
 
 /** Pagamento (ou recebimento) efetivo de uma ocorrência; o previsto continua no modelo da série. */
 @Entity(tableName = "recurrence_settlement", primaryKeys = ["recurrenceId", "number"], indices = [Index("epochDay")])
+@Serializable
 data class RecurrenceSettlementRow(
     val recurrenceId: String,
     val number: Int,
@@ -223,6 +257,7 @@ data class RecurrenceSettlementRow(
 
 /** Estorno vinculado a uma origem; o crédito deriva a categoria da origem, não a guarda. */
 @Entity(tableName = "refund", indices = [Index("originId"), Index("creditMonth")])
+@Serializable
 data class RefundRow(
     @PrimaryKey val id: String,
     /** CARD_PURCHASE, MOVEMENT ou BOLETO. */
@@ -243,6 +278,7 @@ data class RefundRow(
 
 /** Fatura pelo mês de vencimento; identidade determinística por espaço + mês. */
 @Entity(tableName = "invoice", indices = [Index(value = ["dueMonth"], unique = true)])
+@Serializable
 data class InvoiceRow(
     @PrimaryKey val id: String,
     val dueMonth: String,
@@ -255,6 +291,7 @@ data class InvoiceRow(
 
 /** Pagamento de fatura: aceito (quitação integral conferida) ou preservado em revisão. */
 @Entity(tableName = "invoice_payment", indices = [Index("dueMonth")])
+@Serializable
 data class InvoicePaymentRow(
     @PrimaryKey val id: String,
     val dueMonth: String,
@@ -272,6 +309,7 @@ data class InvoiceParts(val purchasesCents: Long, val chargesCents: Long)
 
 /** Plano de limites de uma categoria principal (entidade raiz); identidade determinística. */
 @Entity(tableName = "limit_plan")
+@Serializable
 data class LimitPlanRow(
     @PrimaryKey val id: String,
     val categoryId: String,
@@ -280,6 +318,7 @@ data class LimitPlanRow(
 
 /** Vigência "a partir de um mês" (`From`) ou exceção de um só mês (`Only`). */
 @Entity(tableName = "limit_entry", primaryKeys = ["categoryId", "month", "scope"])
+@Serializable
 data class LimitEntryRow(
     val categoryId: String,
     val month: String,
@@ -292,6 +331,7 @@ data class LimitEntryRow(
 
 /** A partir de [fromMonth], a subcategoria passa a ter [parentId]; antes, vale a categoria anterior. */
 @Entity(tableName = "category_move", primaryKeys = ["subcategoryId", "fromMonth"])
+@Serializable
 data class CategoryMoveRow(
     val subcategoryId: String,
     val fromMonth: String,
@@ -469,6 +509,13 @@ interface SpaceDao {
     @Query("SELECT * FROM category_move") suspend fun categoryMoves(): List<CategoryMoveRow>
     @Upsert suspend fun upsertCategoryMove(row: CategoryMoveRow)
 
+    // leitura por identidade para o estado completo da sincronização
+    @Query("SELECT * FROM category_move WHERE subcategoryId = :id ORDER BY fromMonth") suspend fun categoryMovesOf(id: String): List<CategoryMoveRow>
+    @Query("SELECT * FROM invoice WHERE id = :id") suspend fun invoiceById(id: String): InvoiceRow?
+    @Query("SELECT * FROM limit_plan WHERE id = :id") suspend fun limitPlanById(id: String): LimitPlanRow?
+    @Query("DELETE FROM limit_plan WHERE id = :id") suspend fun deleteLimitPlanRow(id: String)
+    @Upsert suspend fun upsertSettlements(rows: List<RecurrenceSettlementRow>)
+
     // contas
     @Upsert suspend fun upsertAccount(row: AccountRow)
 
@@ -481,7 +528,7 @@ interface SpaceDao {
     @Upsert suspend fun upsertSync(rows: List<EntitySyncRow>)
     @Query("SELECT serviceVersion FROM entity_sync WHERE entityType = :type AND entityId = :id")
     suspend fun serviceVersion(type: String, id: String): Long?
-    @Query("UPDATE operation SET acknowledged = 1 WHERE operationId = :id") suspend fun markAcknowledged(id: String)
+    @Query("UPDATE operation SET acknowledged = 1, syncState = 'ACKNOWLEDGED' WHERE operationId = :id") suspend fun markAcknowledged(id: String)
 
     // consultas de lista, compromissos e pendências
     @Query(
@@ -527,10 +574,20 @@ interface SpaceDao {
         CardRow::class, CardPurchaseRow::class, InstallmentRow::class, BoletoRow::class, IncomeRow::class,
         EntitySyncRow::class, DraftRow::class, RefundRow::class, LimitPlanRow::class, LimitEntryRow::class, CategoryMoveRow::class, InvoiceRow::class, InvoicePaymentRow::class, RecurrenceRow::class, RecurrenceSegmentRow::class, RecurrenceOverrideRow::class, RecurrenceSettlementRow::class,
         OperationRow::class, OperationChangeRow::class,
+        SyncStateRow::class, ConflictRow::class, ConflictEntityRow::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
+    autoMigrations = [AutoMigration(from = 1, to = 2, spec = Migration1To2::class)],
 )
 abstract class AccordDatabase : RoomDatabase() {
     abstract fun dao(): SpaceDao
+    abstract fun syncDao(): SyncDao
+}
+
+/** S2: operações já reconhecidas na versão 1 passam ao estado ACKNOWLEDGED. */
+class Migration1To2 : AutoMigrationSpec {
+    override fun onPostMigrate(connection: SQLiteConnection) {
+        connection.execSQL("UPDATE operation SET syncState = 'ACKNOWLEDGED' WHERE acknowledged = 1")
+    }
 }

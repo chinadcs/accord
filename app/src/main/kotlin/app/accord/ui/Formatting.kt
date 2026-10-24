@@ -85,5 +85,6 @@ fun ItemSync.label(): String = stringResource(
         ItemSync.AwaitingSend -> R.string.sync_awaiting
         ItemSync.Acknowledged -> R.string.sync_acknowledged
         ItemSync.Conflict -> R.string.sync_conflict
+        ItemSync.Failed -> R.string.sync_failed
     },
 )

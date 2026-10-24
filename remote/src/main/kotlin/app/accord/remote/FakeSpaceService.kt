@@ -340,7 +340,10 @@ class FakeSpaceService(
                 base != null && current != null && current.version != base -> divergent += current
             }
         }
-        if (divergent.isNotEmpty()) return OperationResult.Conflict(op.operationId, divergent)
+        if (divergent.isNotEmpty()) {
+            val unchanged = op.changes.mapNotNull { space.entities[EntityKey(it.type, it.id)] }.filter { it !in divergent }
+            return OperationResult.Conflict(op.operationId, divergent, unchanged)
+        }
 
         val now = clock()
         val versions = op.changes.map { change ->
