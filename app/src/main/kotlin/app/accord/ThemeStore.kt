@@ -2,6 +2,7 @@ package app.accord
 
 import android.content.Context
 import app.accord.ui.theme.ThemePreference
+import app.accord.ui.theme.CornerStyle
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,6 +16,15 @@ class ThemeStore(context: Context) {
 
     private val _preference = MutableStateFlow(read())
     val preference: StateFlow<ThemePreference> = _preference.asStateFlow()
+    private val _corners = MutableStateFlow(
+        runCatching { CornerStyle.valueOf(prefs.getString(KEY_CORNERS, null).orEmpty()) }.getOrDefault(CornerStyle.Rounded),
+    )
+    val corners: StateFlow<CornerStyle> = _corners.asStateFlow()
+
+    fun setCorners(value: CornerStyle) {
+        prefs.edit().putString(KEY_CORNERS, value.name).apply()
+        _corners.value = value
+    }
 
     private fun read(): ThemePreference =
         runCatching { ThemePreference.valueOf(prefs.getString(KEY, null) ?: "") }.getOrDefault(ThemePreference.System)
@@ -27,5 +37,6 @@ class ThemeStore(context: Context) {
     private companion object {
         const val FILE = "accord_local_preferences"
         const val KEY = "theme"
+        const val KEY_CORNERS = "corners"
     }
 }

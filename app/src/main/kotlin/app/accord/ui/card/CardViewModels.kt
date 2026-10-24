@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import app.accord.FeedbackEvent
 import app.accord.R
 import app.accord.SpaceProvider
+import app.accord.ui.banks.displayName
 import app.accord.core.Money
 import app.accord.core.MoneyParse
 import app.accord.core.space.BankRef
@@ -49,7 +50,9 @@ data class CardForm(
     val dueText: String,
 ) {
     companion object {
-        fun of(card: CardInfo) = CardForm(card.nickname, card.bank, card.closingDay.toString(), card.dueDay.toString())
+        fun of(card: CardInfo) = if (card.configured) {
+            CardForm(card.nickname, card.bank, card.closingDay.toString(), card.dueDay.toString())
+        } else CardForm("", card.bank, "", "")
     }
 }
 
@@ -88,6 +91,7 @@ class CardViewModel(
             val card = (space.card() as? QueryResult.Data)?.value
             val invoices = (space.invoices() as? QueryResult.Data)?.value
             _content.value = if (card == null || invoices == null) CardContent.Failed else CardContent.Ready(CardData(card, invoices))
+            if (card != null && !card.configured && _edit.value == null) startEdit()
         }
     }
 
@@ -108,8 +112,9 @@ class CardViewModel(
         if (state.saving) return
         val closing = state.form.closingText.trim().toIntOrNull()
         val due = state.form.dueText.trim().toIntOrNull()
+        val nickname = state.form.nickname.trim().ifEmpty { state.form.bank?.displayName().orEmpty() }
         val errors = buildMap {
-            if (state.form.nickname.isBlank()) put(CardField.Nickname, "Informe um apelido para o cartão.")
+            if (nickname.isBlank()) put(CardField.Nickname, "Escolha o banco ou informe um apelido para o cartão.")
             if (closing == null || closing !in 1..31) put(CardField.Closing, "O dia de fechamento vai de 1 a 31.")
             if (due == null || due !in 1..31) put(CardField.Due, "O dia de vencimento vai de 1 a 31.")
         }
@@ -119,7 +124,7 @@ class CardViewModel(
         }
         _edit.update { it?.copy(saving = true, errors = emptyMap(), message = null) }
         viewModelScope.launch {
-            val command = ConfigureCard(state.form.bank, state.form.nickname.trim(), closing, due)
+            val command = ConfigureCard(state.form.bank, nickname, closing, due)
             when (val result = provider.space().execute(Envelope(commandId), command)) {
                 is CommandResult.Applied -> saved(result.receipt.operationId, result.receipt.undoable)
                 is CommandResult.AlreadyApplied -> saved(result.receipt.operationId, result.receipt.undoable)

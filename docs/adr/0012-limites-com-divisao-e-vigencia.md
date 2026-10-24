@@ -20,6 +20,10 @@ não editadas. Excesso não aumenta nem redistribui limites. Mover subcategoria 
 frente; se houver divisão, revisar distribuições envolvidas antes de confirmar, sem transferência
 silenciosa.
 
+O [ADR 0026](0026-configuracao-inicial-e-conta-unica.md) detalha a configuração pelos primeiros
+passos: vigência explícita do mês atual em diante, com limites opcionais. A escolha de alcance
+por edição permanece na gestão posterior.
+
 ## Consequências
 
 Há vigência e histórico de classificação; não basta sobrescrever um único limite atual.

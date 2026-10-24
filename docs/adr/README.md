@@ -131,6 +131,7 @@ observada em 24/10/2026. Os estados abaixo são de decisão, não de conclusão 
 | [0023](0023-servico-rpc-rls-e-adaptador-http.md) | Serviço RPC/RLS e adaptador HTTP | proposed |
 | [0024](0024-protocolo-por-agregados-e-cursor.md) | Protocolo por agregados e cursor | proposed |
 | [0025](0025-projecoes-financeiras-derivadas.md) | Projeções financeiras derivadas | proposed |
+| [0026](0026-configuracao-inicial-e-conta-unica.md) | Vigência inicial de limites e padrão de conta única | accepted |
 
 Questões ainda sem decisão, como modelo/motor, leitores bancários, acesso local, retenção de
 idempotência e validação financeira no serviço, permanecem nos Beads/specs S2–S4. Suas tarefas

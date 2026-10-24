@@ -39,6 +39,8 @@ import app.accord.R
 import app.accord.core.label
 import app.accord.core.space.CategoryNode
 import app.accord.ui.components.RefreshOnResume
+import app.accord.ui.components.DecorativeIcon
+import app.accord.ui.components.lucideRes
 import app.accord.ui.theme.AccordSpacing
 import com.composables.icons.lucide.R as Lucide
 
@@ -129,7 +131,8 @@ private fun MainRow(
 ) {
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                DecorativeIcon(lucideRes(main.node.iconKey))
                 Text(main.node.name, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
                 if (reordering) ReorderButtons(main.node, onMove)
             }
@@ -143,7 +146,8 @@ private fun MainRow(
             }
             if (expanded) {
                 main.children.forEach { sub ->
-                    Row(Modifier.padding(start = AccordSpacing.s4), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.padding(start = AccordSpacing.s4), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                        DecorativeIcon(lucideRes(sub.iconKey))
                         Text(sub.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                         if (reordering) ReorderButtons(sub, onMove)
                     }

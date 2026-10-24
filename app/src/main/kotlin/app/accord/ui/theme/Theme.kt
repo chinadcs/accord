@@ -18,6 +18,8 @@ import androidx.compose.ui.unit.dp
 /** Preferência de tema deste aparelho; não é dado financeiro e não sincroniza (tela 22). */
 enum class ThemePreference { System, Light, Dark }
 
+enum class CornerStyle { Rounded, Straight }
+
 /** Espaçamento em múltiplos de 4/8 dp (tokens §5). */
 @Immutable
 object AccordSpacing {
@@ -45,6 +47,7 @@ data class AccordMotion(val reduced: Boolean) {
     val short get() = if (reduced) 0 else 100
     val medium get() = if (reduced) 0 else 200
     val long get() = if (reduced) 0 else 300
+    val navigation get() = if (reduced) 0 else 120
 }
 
 private val LocalAccordTypography = staticCompositionLocalOf<AccordTypography> { error("AccordTheme ausente") }
@@ -56,10 +59,16 @@ object Accord {
     val motion: AccordMotion @Composable @ReadOnlyComposable get() = LocalAccordMotion.current
 }
 
-private val AccordShapes = Shapes(
+private val RoundedShapes = Shapes(
     small = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
     medium = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
     large = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+)
+
+private val StraightShapes = Shapes(
+    small = androidx.compose.foundation.shape.RoundedCornerShape(0.dp),
+    medium = androidx.compose.foundation.shape.RoundedCornerShape(4.dp),
+    large = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
 )
 
 private const val TABULAR_FIGURES = "tnum"
@@ -80,6 +89,7 @@ private fun rememberReducedMotion(): Boolean {
 @Composable
 fun AccordTheme(
     preference: ThemePreference = ThemePreference.System,
+    cornerStyle: CornerStyle = CornerStyle.Rounded,
     content: @Composable () -> Unit,
 ) {
     val dark = when (preference) {
@@ -100,7 +110,7 @@ fun AccordTheme(
         MaterialTheme(
             colorScheme = if (dark) DarkColorScheme else LightColorScheme,
             typography = typography,
-            shapes = AccordShapes,
+            shapes = if (cornerStyle == CornerStyle.Rounded) RoundedShapes else StraightShapes,
             content = content,
         )
     }

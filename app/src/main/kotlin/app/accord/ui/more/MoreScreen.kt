@@ -10,11 +10,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,7 +21,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
-import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.ui.semantics.semantics
 import app.accord.R
 import app.accord.core.sync.AccountView
@@ -31,7 +28,6 @@ import app.accord.core.sync.SessionState
 import app.accord.core.sync.SyncStatus
 import app.accord.ui.components.DecorativeIcon
 import app.accord.ui.theme.AccordSpacing
-import app.accord.ui.theme.ThemePreference
 import com.composables.icons.lucide.R as Lucide
 
 /** Destinos que a aba Mais abre nesta fase; o que ainda não existe não aparece como botão vazio. */
@@ -44,7 +40,7 @@ data class MoreActions(
     val onCommitments: () -> Unit,
     val onRegister: () -> Unit = {},
     val onSpace: () -> Unit = {},
-    val onFirstSteps: () -> Unit = {},
+    val onAppearance: () -> Unit = {},
     val onSignOut: () -> Unit = {},
     val onRenew: () -> Unit = {},
     val onSync: () -> Unit = {},
@@ -53,8 +49,6 @@ data class MoreActions(
 @Composable
 fun MoreScreen(
     padding: PaddingValues,
-    theme: ThemePreference,
-    onTheme: (ThemePreference) -> Unit,
     actions: MoreActions,
     account: AccountView? = null,
     sessionState: SessionState = SessionState.Valid,
@@ -92,7 +86,6 @@ fun MoreScreen(
                 },
             )
         }
-        MoreRow(R.string.more_first_steps, Lucide.drawable.lucide_ic_list_checks, actions.onFirstSteps)
 
         if (account != null) {
             Section(R.string.more_group_account)
@@ -104,24 +97,7 @@ fun MoreScreen(
         }
 
         Section(R.string.more_group_device)
-        Text(stringResource(R.string.more_theme), style = MaterialTheme.typography.titleSmall)
-        Column(Modifier.selectableGroup()) {
-            listOf(
-                ThemePreference.System to R.string.more_theme_system,
-                ThemePreference.Light to R.string.more_theme_light,
-                ThemePreference.Dark to R.string.more_theme_dark,
-            ).forEach { (value, label) ->
-                Row(
-                    Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)
-                        .selectable(selected = theme == value, role = Role.RadioButton) { onTheme(value) },
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    RadioButton(selected = theme == value, onClick = null)
-                    Text(stringResource(label), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = AccordSpacing.s2))
-                }
-            }
-        }
-        Text(stringResource(R.string.more_theme_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        MoreRow(R.string.appearance_title, Lucide.drawable.lucide_ic_palette, actions.onAppearance)
     }
 }
 

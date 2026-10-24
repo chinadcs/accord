@@ -30,6 +30,7 @@ import app.accord.core.space.CreateCategory
 import app.accord.core.space.DefineLimits
 import app.accord.core.space.Envelope
 import app.accord.ui.theme.ThemePreference
+import app.accord.ui.theme.CornerStyle
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
@@ -79,6 +80,7 @@ class MoreFlowTest {
     fun close() {
         scenario?.close()
         (ApplicationProvider.getApplicationContext<AccordApplication>()).container.theme.set(ThemePreference.System)
+        (ApplicationProvider.getApplicationContext<AccordApplication>()).container.theme.setCorners(CornerStyle.Rounded)
     }
 
     private fun waitForText(text: String) {
@@ -121,9 +123,16 @@ class MoreFlowTest {
         // recursos de fases seguintes não aparecem como botão vazio; a Sincronização já existe (S2)
         assert(compose.onAllNodesWithText("Sincronização", substring = true).fetchSemanticsNodes().isNotEmpty())
         assert(compose.onAllNodesWithText("Modelo no aparelho", substring = true).fetchSemanticsNodes().isEmpty())
+        tap("Aparência")
+        waitForText("Estilo dos cantos")
         tap("Escuro")
         val container = (ApplicationProvider.getApplicationContext<AccordApplication>()).container
         compose.waitUntil(5_000) { container.theme.preference.value == ThemePreference.Dark }
+        tap("Discretos")
+        compose.waitUntil(5_000) { container.theme.corners.value == CornerStyle.Straight }
+        val restored = ThemeStore(ApplicationProvider.getApplicationContext())
+        org.junit.Assert.assertEquals(ThemePreference.Dark, restored.preference.value)
+        org.junit.Assert.assertEquals(CornerStyle.Straight, restored.corners.value)
     }
 
     @Test
@@ -132,24 +141,27 @@ class MoreFlowTest {
         waitForText("Adicionar conta")
         tap("Adicionar conta")
         waitForText("Nova conta")
-        // sem banco nem apelido, o formulário aponta os dois campos
+        // O banco é necessário; o apelido pode ficar em branco.
         tap("Salvar conta")
         waitForText("Escolha o banco")
-        waitForText("Informe um apelido")
 
         tap("Selecionar banco")
         waitForText("Escolher banco")
         compose.onNode(hasText("Outro banco (informar", substring = true) and hasClickAction()).performClick()
         compose.onNodeWithText("Nome do banco").performTextInput("Banco $tag")
         dialogButton("Usar este nome")
-        compose.onNodeWithText("Apelido da conta").performTextInput("Conta $tag")
+        compose.onNodeWithText("Apelido da conta (opcional)").performTextInput("Conta $tag")
         tap("Salvar conta")
         waitForText("Conta adicionada.")
         scrollTo("Conta $tag")
 
-        // definir como padrão e corrigir o apelido, mantendo a mesma conta
-        compose.onAllNodes(hasText("Definir como minha conta padrão") and hasClickAction()).onLast().performSemanticsAction(SemanticsActions.OnClick)
-        waitForText("Esta é a sua conta padrão.")
+        // Com uma conta o padrão já está definido; com várias a pessoa escolhe.
+        val container = (ApplicationProvider.getApplicationContext<AccordApplication>()).container
+        val count = runBlocking { (container.space().accounts() as app.accord.core.space.QueryResult.Data).value.accounts.size }
+        if (count > 1) {
+            compose.onAllNodes(hasText("Definir como minha conta padrão") and hasClickAction()).onLast().performSemanticsAction(SemanticsActions.OnClick)
+            waitForText("Esta é a sua conta padrão.")
+        } else waitForText("Minha conta padrão")
         scrollTo("Conta $tag")
     }
 

@@ -45,6 +45,7 @@ data class LimitsUiState(
     val askDiscard: Boolean = false,
     /** Trocar o mês com valores digitados os perderia; a tela pede para salvar ou descartar antes. */
     val monthBlocked: Boolean = false,
+    val initialSetup: Boolean = false,
 ) {
     val rows: List<LimitRow> get() = (content as? LimitsContent.Ready)?.rows.orEmpty()
 
@@ -63,8 +64,16 @@ class LimitsViewModel(
     private val provider: SpaceProvider,
     private val saved: SavedStateHandle,
 ) : ViewModel() {
+    private val initialSetup = saved.get<Boolean>(ARG_INITIAL_SETUP) == true
     private val _state = MutableStateFlow(
-        LimitsUiState(month = saved.get<String>(KEY_MONTH)?.let(YearMonth::parse) ?: saved.get<String>(ARG_MONTH)?.let(YearMonth::parse) ?: provider.clock.currentMonth()),
+        LimitsUiState(
+            month = if (initialSetup) provider.clock.currentMonth() else {
+                saved.get<String>(KEY_MONTH)?.let(YearMonth::parse)
+                    ?: saved.get<String>(ARG_MONTH)?.let(YearMonth::parse)
+                    ?: provider.clock.currentMonth()
+            },
+            initialSetup = initialSetup,
+        ),
     )
     val state: StateFlow<LimitsUiState> = _state.asStateFlow()
 
@@ -83,6 +92,7 @@ class LimitsViewModel(
     fun nextMonth() = moveTo(_state.value.month.plusMonths(1))
 
     private fun moveTo(month: YearMonth) {
+        if (initialSetup) return
         if (isDirty) {
             _state.update { it.copy(monthBlocked = true) }
             return
@@ -120,7 +130,7 @@ class LimitsViewModel(
                 )
             }
             commandId = CommandId(UUID.randomUUID().toString())
-            _state.update { it.copy(content = LimitsContent.Ready(rows), draft = LimitsDraft.of(rows)) }
+            _state.update { it.copy(content = LimitsContent.Ready(rows), draft = LimitsDraft.of(rows).let { draft -> if (initialSetup) draft.copy(scope = LimitScope.FromThisMonth) else draft }) }
         }
     }
 
@@ -138,6 +148,7 @@ class LimitsViewModel(
     }
 
     fun setScope(scope: LimitScope) {
+        if (initialSetup) return
         _state.update { it.copy(draft = it.draft.copy(scope = scope), scopeMissing = false, serverErrors = emptyList()) }
         schedulePreview()
     }
@@ -159,6 +170,10 @@ class LimitsViewModel(
     fun save() {
         val s = _state.value
         if (s.saving || s.content !is LimitsContent.Ready) return
+        if (initialSetup && !isDirty) {
+            _exit.value = true
+            return
+        }
         when (val built = s.draft.build(s.rows, s.month)) {
             is LimitsDraft.Built.Invalid -> _state.update {
                 it.copy(errors = built.errors, scopeMissing = built.scopeMissing, nothingChanged = built.nothingChanged, serverErrors = emptyList())
@@ -200,6 +215,7 @@ class LimitsViewModel(
 
     companion object {
         const val ARG_MONTH = "month"
+        const val ARG_INITIAL_SETUP = "initialSetup"
         private const val KEY_MONTH = "limitsMonth"
         private const val PREVIEW_DEBOUNCE_MS = 250L
     }

@@ -93,8 +93,12 @@ fun LimitsScreen(
                 }
                 Text(stringResource(R.string.limits_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
             }
-            Text(stringResource(R.string.limits_reference, state.month.label()), style = MaterialTheme.typography.bodyLarge)
-            MonthSelector(state.month, onPrevious, onNext)
+            if (state.initialSetup) {
+                Text(stringResource(R.string.limits_setup_note), style = MaterialTheme.typography.bodyLarge)
+            } else {
+                Text(stringResource(R.string.limits_reference, state.month.label()), style = MaterialTheme.typography.bodyLarge)
+                MonthSelector(state.month, onPrevious, onNext)
+            }
             if (state.monthBlocked) Text(stringResource(R.string.limits_month_blocked), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
             when (state.content) {
                 LimitsContent.Loading -> Text(stringResource(R.string.state_loading), style = MaterialTheme.typography.bodyLarge)
@@ -109,7 +113,8 @@ fun LimitsScreen(
                         end = { Text(state.totalOfCategories().format(), style = Accord.typography.amountRow) },
                     )
                     Text(stringResource(R.string.limits_total_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    ScopeChoice(state, onScope)
+                    if (state.initialSetup) Text(stringResource(R.string.limits_setup_scope), style = MaterialTheme.typography.bodyLarge)
+                    else ScopeChoice(state, onScope)
                     Summary(state)
                     state.serverErrors.forEach { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
                 }
@@ -121,6 +126,11 @@ fun LimitsScreen(
                     if (state.nothingChanged) Text(stringResource(R.string.limits_nothing_changed), style = MaterialTheme.typography.bodyMedium)
                     Button(onClick = onSave, enabled = !state.saving, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
                         Text(stringResource(if (state.saving) R.string.edit_saving else R.string.limits_save))
+                    }
+                    if (state.initialSetup) {
+                        TextButton(onClick = onBack, enabled = !state.saving, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+                            Text(stringResource(R.string.limits_setup_later))
+                        }
                     }
                 }
             }

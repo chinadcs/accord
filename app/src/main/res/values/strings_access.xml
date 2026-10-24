@@ -31,15 +31,15 @@
     <string name="access_msg_unknown">Não foi possível concluir. Nada foi alterado neste aparelho.</string>
     <string name="access_msg_cancelled">Entrada cancelada. Nada foi alterado.</string>
     <string name="access_create_title">Criar acesso</string>
-    <string name="access_create_note">Um acesso para entrar no espaço do casal. Nenhum e-mail de confirmação é enviado.</string>
+    <string name="access_create_note">Um acesso para entrar no espaço da casa. Nenhum e-mail de confirmação é enviado.</string>
     <string name="access_help_title">Ajuda para acessar</string>
     <string name="access_help_body_1">No piloto, a recuperação de senha é assistida pelo responsável, fora do aplicativo.</string>
     <string name="access_help_body_2">Nenhum e-mail ou link é enviado. Não compartilhe sua senha no Chat.</string>
     <string name="access_help_ok">Entendi</string>
     <string name="access_loading">Abrindo o aplicativo…</string>
 
-    <!-- Espaço do casal (tela 02) -->
-    <string name="space_title">Espaço do casal</string>
+    <!-- Espaço da casa (tela 02) -->
+    <string name="space_title">Espaço da casa</string>
     <string name="space_intro">Crie o espaço do orçamento ou entre no espaço que a outra pessoa já criou.</string>
     <string name="space_tab_create">Criar espaço</string>
     <string name="space_tab_join">Entrar com código</string>
@@ -112,7 +112,7 @@
     <string name="steps_accounts_done">Seu padrão: %1$s.</string>
     <string name="steps_accounts_action">Gerenciar contas</string>
     <string name="steps_limits">Limites e divisão</string>
-    <string name="steps_limits_pending">Sem limites, o orçamento só mostra gastos.</string>
+    <string name="steps_limits_pending">Opcional. Você pode definir agora ou depois, em Mais.</string>
     <string name="steps_limits_done">%1$s por mês.</string>
     <string name="steps_limits_action_pending">Definir limites</string>
     <string name="steps_limits_action_done">Editar</string>
@@ -125,13 +125,13 @@
     <string name="steps_model_unavailable">Chega em uma etapa futura. Sem ele, use o registro manual.</string>
     <string name="steps_start">Começar a registrar</string>
     <string name="steps_register_manually">Registrar manualmente</string>
-    <string name="steps_note_received">Itens que dependem do outro aparelho mostram só o que já chegou aqui.</string>
+    <string name="steps_note_received">Todos os itens são opcionais. Você pode ajustar depois em Mais. Dados do outro aparelho mostram só o que já chegou aqui.</string>
     <string name="steps_item_open">%1$s, %2$s. %3$s</string>
 
     <!-- Conta, sair e renovação (Mais) -->
     <string name="more_group_account">Conta</string>
     <string name="more_signed_as">Conectado como %1$s</string>
-    <string name="more_space">Espaço do casal</string>
+    <string name="more_space">Espaço da casa</string>
     <string name="more_first_steps">Primeiros passos</string>
     <string name="more_sign_out">Sair</string>
     <string name="more_renew_access">Entrar de novo</string>

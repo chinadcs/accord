@@ -12,6 +12,7 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.printToLog
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -84,6 +85,7 @@ class AccessFlowTest {
     }
 
     private fun tap(text: String) {
+        waitForText(text)
         scrollTo(text)
         compose.onAllNodes(hasText(text, substring = true) and hasClickAction()).onFirst().performClick()
     }
@@ -101,6 +103,83 @@ class AccessFlowTest {
     }
 
     @Test
+    fun primeirosPassosTemCartaoVazioApelidosOpcionaisELimitesOpcionais() {
+        runBlocking {
+            container.access.signUp(email, "senha-1234", "senha-1234")
+        }
+        waitForText("Espaço da casa")
+        runBlocking { container.access.createSpace("Casa") }
+        waitForText("Você: conectado")
+        tap("Continuar para primeiros passos")
+        waitForText("Vamos começar")
+        tap("Configurar")
+        waitForText("Dia de fechamento")
+        listOf("Dia de fechamento", "Dia de vencimento").forEach { label ->
+            assertEquals("", compose.onNodeWithText(label).fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.EditableText].text)
+        }
+        assertTrue(compose.onAllNodesWithText("Faturas").fetchSemanticsNodes().isEmpty())
+        tap("Selecionar banco")
+        compose.onNode(hasText("Outro banco (informar", substring = true) and hasClickAction()).performClick()
+        type("Nome do banco", "Banco Casa")
+        dialogButton("Usar este nome")
+        type("Dia de fechamento", "10")
+        type("Dia de vencimento", "20")
+        tap("Salvar cartão")
+        waitForText("Cartão salvo no aparelho.")
+        runBlocking {
+            val card = (container.space().card() as app.accord.core.space.QueryResult.Data).value
+            assertEquals("Banco Casa", card.nickname)
+            assertEquals(10, card.closingDay)
+            assertEquals(20, card.dueDay)
+        }
+        scenario!!.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        waitForText("Vamos começar")
+        tap("Gerenciar contas")
+        waitForText("Adicionar conta")
+        tap("Adicionar conta")
+        tap("Selecionar banco")
+        compose.onNode(hasText("Outro banco (informar", substring = true) and hasClickAction()).performClick()
+        type("Nome do banco", "Banco Casa")
+        dialogButton("Usar este nome")
+        tap("Salvar conta")
+        waitForText("Minha conta padrão")
+        runBlocking {
+            val accounts = (container.space().accounts() as app.accord.core.space.QueryResult.Data).value
+            assertEquals("Banco Casa", accounts.accounts.single().nickname)
+            assertEquals(accounts.accounts.single().id, accounts.myDefaultAccountId)
+        }
+        scenario!!.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        waitForText("Vamos começar")
+        tap("Definir limites")
+        waitForText("Vale a partir deste mês e nos próximos.")
+        assertTrue(compose.onAllNodesWithText("Somente", substring = true).fetchSemanticsNodes().isEmpty())
+        compose.onNodeWithText("Definir depois").performClick()
+        waitForText("Vamos começar")
+        tap("Definir limites")
+        waitForText("Total das categorias")
+        scrollTo("Limite de Alimentação (R$)")
+        compose.onNodeWithText("Limite de Alimentação (R$)").performTextReplacement("500,00")
+        compose.onNodeWithText("Salvar limites").performClick()
+        waitForText("Vamos começar")
+        runBlocking {
+            val space = container.space()
+            val food = (space.categories() as app.accord.core.space.QueryResult.Data).value.single { it.name == "Alimentação" && it.parentId == null }.id
+            val month = container.clock.currentMonth()
+            for (offset in 0L..2L) {
+                val limits = (space.limits(month.plusMonths(offset)) as app.accord.core.space.QueryResult.Data).value
+                assertEquals(app.accord.core.Money(50_000), limits.single { it.categoryId == food }.setting.total)
+            }
+            val previous = (space.limits(month.minusMonths(1)) as app.accord.core.space.QueryResult.Data).value
+            assertTrue(previous.none { it.setting.total != null })
+        }
+        tap("Começar a registrar")
+        waitForText("Orçamento")
+        compose.onNodeWithText("Mais").performClick()
+        waitForText("Categorias e subcategorias")
+        assertTrue(compose.onAllNodesWithText("Primeiros passos").fetchSemanticsNodes().isEmpty())
+    }
+
+    @Test
     fun cadastroEspacoConviteEPrimeirosPassosAteOChat() {
         waitForText("Controle financeiro do casal")
         tap("Criar acesso")
@@ -110,7 +189,7 @@ class AccessFlowTest {
         type("Confirmar senha", "senha-1234")
         tapLast("Criar acesso")
 
-        waitForText("Espaço do casal")
+        waitForText("Espaço da casa")
         waitForText("Nome do espaço")
         type("Nome do espaço", "Nosso orçamento")
         tapLast("Criar espaço")

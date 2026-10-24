@@ -408,7 +408,7 @@ class RoomFinanceSpace private constructor(
             if (c.accountId != null) errors += FieldError("accountId", ErrorCode.NotAllowed, "Dinheiro não tem conta.")
         } else {
             val chosen = c.accountId
-                ?: dao.preferences(DeterministicIds.preferences(session.spaceId, session.personId))?.defaultAccountId
+                ?: effectiveDefaultAccount(session)
             when {
                 chosen == null ->
                     errors += FieldError("accountId", ErrorCode.Required, "Escolha a conta; você ainda não definiu uma conta padrão.")
@@ -583,10 +583,15 @@ class RoomFinanceSpace private constructor(
 
     // ---- boleto e renda ----
 
+    /** Uma única conta já é o padrão; com várias, respeita a escolha individual persistida. */
+    private suspend fun effectiveDefaultAccount(session: Session): String? =
+        dao.preferences(DeterministicIds.preferences(session.spaceId, session.personId))?.defaultAccountId
+            ?: dao.accounts().singleOrNull()?.id
+
     /** Conta de um pagamento ou recebimento: a informada ou a padrão do autor; obrigatória. */
     private suspend fun resolveRequiredAccount(session: Session, given: String?, errors: MutableList<FieldError>): String? {
         val chosen = given
-            ?: dao.preferences(DeterministicIds.preferences(session.spaceId, session.personId))?.defaultAccountId
+            ?: effectiveDefaultAccount(session)
         return when {
             chosen == null -> {
                 errors += FieldError("accountId", ErrorCode.Required, "Escolha a conta; você ainda não definiu uma conta padrão.")
@@ -1331,7 +1336,7 @@ class RoomFinanceSpace private constructor(
 
     override suspend fun accounts(): QueryResult<AccountsView> = query {
         val session = sessions.current()
-        val defaultId = dao.preferences(DeterministicIds.preferences(session.spaceId, session.personId))?.defaultAccountId
+        val defaultId = effectiveDefaultAccount(session)
         AccountsView(
             accounts = dao.accounts().map {
                 val bank = if (it.bankIspb != null) BankRef.Catalog(it.bankIspb, it.bankName) else BankRef.Other(it.bankName)

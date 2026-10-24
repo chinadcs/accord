@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import app.accord.FeedbackEvent
 import app.accord.R
 import app.accord.SpaceProvider
+import app.accord.ui.banks.displayName
 import app.accord.core.space.AccountsView
 import app.accord.core.space.AddAccount
 import app.accord.core.space.BankRef
@@ -100,9 +101,9 @@ class AccountsViewModel(
         val f = _form.value ?: return
         if (f.working) return
         val bank = f.bank
-        val nickname = f.nickname.trim()
-        if (bank == null || nickname.isEmpty()) {
-            _form.update { it?.copy(bankError = bank == null, nicknameError = nickname.isEmpty()) }
+        val nickname = f.nickname.trim().ifEmpty { bank?.displayName().orEmpty() }
+        if (bank == null) {
+            _form.update { it?.copy(bankError = true) }
             return
         }
         _form.update { it?.copy(working = true, message = null) }

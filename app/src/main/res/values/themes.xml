@@ -2,6 +2,8 @@
 <resources>
     <!-- A janela segue o tema do sistema e usa o fundo dos tokens, para não piscar entre claro e escuro. -->
     <style name="Theme.Accord" parent="@android:style/Theme.DeviceDefault.DayNight">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
         <item name="android:windowBackground">@color/accord_background</item>
         <item name="android:windowLightStatusBar">false</item>
     </style>

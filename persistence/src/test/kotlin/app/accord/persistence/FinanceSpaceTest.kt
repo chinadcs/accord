@@ -375,6 +375,24 @@ class FinanceSpaceTest : SpaceTestBase() {
     // ---- contas (18) ----
 
     @Test
+    fun `conta única é padrão para os dois e preenche Pix sem criar preferências`() = runBlocking<Unit> {
+        val db = newDatabase()
+        val ana = open("ana", db)
+        val bia = open("bia", db)
+        val id = ana.space.execute(ana.env(), AddAccount(BankRef.Other("Banco Casa"), "Banco Casa")).applied().changes.single().id
+        assertEquals(id, ana.space.accounts().value().myDefaultAccountId)
+        assertEquals(id, bia.space.accounts().value().myDefaultAccountId)
+        ana.space.execute(ana.env(), pix()).applied()
+        val entry = ana.space.movements(ym(2026, 10)).value().single()
+        assertEquals(id, ana.space.entry(entry.id).value()?.accountId)
+        ana.space.execute(ana.env(), AddAccount(BankRef.Other("Outro"), "Segunda")).applied()
+        assertNull(ana.space.accounts().value().myDefaultAccountId)
+        ana.space.execute(ana.env(), SetMyDefaultAccount(id)).applied()
+        assertEquals(id, ana.space.accounts().value().myDefaultAccountId)
+        assertNull(bia.space.accounts().value().myDefaultAccountId)
+    }
+
+    @Test
     fun `duas contas do mesmo banco com apelidos diferentes e conta padrão só da pessoa`() = runBlocking<Unit> {
         val db = newDatabase()
         val ana = open("ana", db)

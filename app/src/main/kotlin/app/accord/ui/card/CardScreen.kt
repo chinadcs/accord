@@ -59,6 +59,7 @@ fun CardRoute(
     onBack: () -> Unit,
     onOpenInvoice: (YearMonth) -> Unit,
     onToConfirm: () -> Unit,
+    initialSetup: Boolean = false,
 ) {
     val content by viewModel.content.collectAsStateWithLifecycle()
     val edit by viewModel.edit.collectAsStateWithLifecycle()
@@ -66,6 +67,7 @@ fun CardRoute(
     CardScreen(
         content, edit, padding, onBack, onRetry = { viewModel.load() }, onOpenInvoice = onOpenInvoice, onToConfirm = onToConfirm,
         onStartEdit = viewModel::startEdit, onCancelEdit = viewModel::cancelEdit, onChange = viewModel::change, onSave = viewModel::save,
+        initialSetup = initialSetup,
     )
 }
 
@@ -82,6 +84,7 @@ fun CardScreen(
     onCancelEdit: () -> Unit,
     onChange: ((CardForm) -> CardForm) -> Unit,
     onSave: () -> Unit,
+    initialSetup: Boolean = false,
 ) {
     Column(
         Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
@@ -91,7 +94,7 @@ fun CardScreen(
             IconButton(onClick = onBack, modifier = Modifier.size(AccordSpacing.touchMin)) {
                 Icon(painterResource(Lucide.drawable.lucide_ic_arrow_left), contentDescription = stringResource(R.string.action_back))
             }
-            Text(stringResource(R.string.card_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+            Text(stringResource(if (initialSetup) R.string.card_setup_title else R.string.card_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
         }
         when (content) {
             CardContent.Loading -> Text(stringResource(R.string.state_loading), style = MaterialTheme.typography.bodyLarge)
@@ -100,13 +103,23 @@ fun CardScreen(
                 OutlinedButton(onClick = onRetry, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.action_retry)) }
             }
             is CardContent.Ready -> {
-                if (edit != null) CardEditor(edit, onChange, onSave, onCancelEdit) else CardSummary(content.data, onStartEdit)
-                if (content.data.linksToConfirm > 0) ToConfirmRow(content.data.linksToConfirm, onToConfirm)
-                Text(stringResource(R.string.card_invoices), style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
-                if (content.data.invoices.isEmpty()) {
-                    Text(stringResource(R.string.card_no_invoices), style = MaterialTheme.typography.bodyLarge)
+                if (edit != null) {
+                    CardEditor(edit, onChange, onSave, onCancelEdit, initialSetup)
+                } else if (content.data.card.configured) {
+                    CardSummary(content.data, onStartEdit)
                 } else {
-                    content.data.invoices.forEach { InvoiceRow(it) { onOpenInvoice(it.dueMonth) } }
+                    OutlinedButton(onClick = onStartEdit, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                        Text(stringResource(R.string.steps_card_action_pending))
+                    }
+                }
+                if (!initialSetup && content.data.card.configured) {
+                    if (content.data.linksToConfirm > 0) ToConfirmRow(content.data.linksToConfirm, onToConfirm)
+                    Text(stringResource(R.string.card_invoices), style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
+                    if (content.data.invoices.isEmpty()) {
+                        Text(stringResource(R.string.card_no_invoices), style = MaterialTheme.typography.bodyLarge)
+                    } else {
+                        content.data.invoices.forEach { InvoiceRow(it) { onOpenInvoice(it.dueMonth) } }
+                    }
                 }
             }
         }
@@ -137,7 +150,7 @@ private fun CardSummary(data: CardData, onStartEdit: () -> Unit) {
 }
 
 @Composable
-private fun CardEditor(edit: CardEditState, onChange: ((CardForm) -> CardForm) -> Unit, onSave: () -> Unit, onCancel: () -> Unit) {
+private fun CardEditor(edit: CardEditState, onChange: ((CardForm) -> CardForm) -> Unit, onSave: () -> Unit, onCancel: () -> Unit, initialSetup: Boolean) {
     var pickingBank by remember { mutableStateOf(false) }
     val form = edit.form
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
@@ -160,13 +173,14 @@ private fun CardEditor(edit: CardEditState, onChange: ((CardForm) -> CardForm) -
                 }
             }
             Field(stringResource(R.string.card_nickname), form.nickname, edit.errors[CardField.Nickname], KeyboardType.Text) { v -> onChange { it.copy(nickname = v) } }
+            Text(stringResource(R.string.nickname_optional_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Field(stringResource(R.string.card_closing_day), form.closingText, edit.errors[CardField.Closing], KeyboardType.Number) { v ->
                 onChange { it.copy(closingText = v.filter(Char::isDigit).take(2)) }
             }
             Field(stringResource(R.string.card_due_day), form.dueText, edit.errors[CardField.Due], KeyboardType.Number) { v ->
                 onChange { it.copy(dueText = v.filter(Char::isDigit).take(2)) }
             }
-            Text(stringResource(R.string.card_edit_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(if (initialSetup) R.string.card_setup_note else R.string.card_edit_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             edit.message?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
             Row(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
                 OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f).heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.edit_cancel)) }

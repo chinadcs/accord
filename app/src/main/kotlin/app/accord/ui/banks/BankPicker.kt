@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -29,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
@@ -44,7 +46,7 @@ import com.composables.icons.lucide.R as Lucide
  * tintura. Sem logo (ou "Outro banco"), mostra o símbolo genérico; o nome fica ao lado, no texto.
  */
 @Composable
-fun BankLogo(bank: BankRef?, modifier: Modifier = Modifier, size: Dp = 32.dp) {
+fun BankLogo(bank: BankRef?, modifier: Modifier = Modifier, size: Dp = 40.dp) {
     val context = LocalContext.current
     val ispb = (bank as? BankRef.Catalog)?.ispb
     val bitmap = remember(ispb) {
@@ -55,7 +57,7 @@ fun BankLogo(bank: BankRef?, modifier: Modifier = Modifier, size: Dp = 32.dp) {
     Surface(color = androidx.compose.ui.graphics.Color.White, shape = RoundedCornerShape(8.dp), modifier = modifier.size(size)) {
         Box(Modifier.size(size).padding(3.dp), contentAlignment = Alignment.Center) {
             if (bitmap != null) {
-                Image(bitmap, contentDescription = null)
+                Image(bitmap, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
             } else {
                 DecorativeIcon(Lucide.drawable.lucide_ic_landmark, tint = androidx.compose.ui.graphics.Color(0xFF444444))
             }

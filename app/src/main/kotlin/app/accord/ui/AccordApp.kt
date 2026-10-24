@@ -1,6 +1,9 @@
 package app.accord.ui
 
 import android.net.Uri
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -137,13 +140,15 @@ import app.accord.ui.more.AccountsRoute
 import app.accord.ui.more.AccountsViewModel
 import app.accord.ui.more.MoreActions
 import app.accord.ui.more.MoreScreen
+import app.accord.ui.more.AppearanceScreen
+import app.accord.ui.theme.Accord
 import app.accord.ui.register.RegisterRoute
 import app.accord.ui.register.RegisterViewModel
 import java.time.YearMonth
 
 /**
  * Raiz do aplicativo: o estágio de entrada decide a tela. Sem conta, Acesso (01); com conta e sem
- * espaço, Espaço do casal (02); com espaço novo, Primeiros passos (03); depois, o aplicativo.
+ * espaço, Espaço da casa (02); com espaço novo, Primeiros passos (03); depois, o aplicativo.
  */
 @Composable
 fun AccordApp(container: AppContainer) {
@@ -209,8 +214,9 @@ private fun MainApp(container: AppContainer, startRoute: String) {
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
     // O aviso da ação anterior não cobre o botão Salvar do formulário que abre em seguida.
-    val inForm = destination?.route == ROUTE_REGISTER
-    LaunchedEffect(inForm) { if (inForm) snackbar.currentSnackbarData?.dismiss() }
+    val formRoute = destination?.route?.substringBefore('?')?.substringBefore('/')
+    val inForm = formRoute in setOf(ROUTE_REGISTER, ROUTE_EDIT, ROUTE_CARD, ROUTE_ACCOUNTS, ROUTE_CATEGORIES, ROUTE_LIMITS, ROUTE_FIRST_STEPS)
+    LaunchedEffect(destination?.route) { if (inForm) snackbar.currentSnackbarData?.dismiss() }
     LaunchedEffect(container) {
         container.feedback.events.collect { event ->
             launch {
@@ -270,7 +276,14 @@ private fun MainApp(container: AppContainer, startRoute: String) {
             LocalSyncStatus provides syncStatus,
             LocalOpenSync provides { navController.navigate(ROUTE_SYNC) },
         ) {
-        NavHost(navController, startDestination = startRoute) {
+        val transitionMs = Accord.motion.navigation
+        NavHost(
+            navController, startDestination = startRoute,
+            enterTransition = { fadeIn(tween(transitionMs)) },
+            exitTransition = { fadeOut(tween(transitionMs)) },
+            popEnterTransition = { fadeIn(tween(transitionMs)) },
+            popExitTransition = { fadeOut(tween(transitionMs)) },
+        ) {
             val register = { navController.navigate(ROUTE_REGISTER) }
             val openEntry = { id: String -> navController.navigate("$ROUTE_ENTRY/${Uri.encode(id)}") }
 
@@ -340,11 +353,10 @@ private fun MainApp(container: AppContainer, startRoute: String) {
             }
             navigation(startDestination = Root.More.start, route = Root.More.graph) {
                 composable(Root.More.start) {
-                    val theme by container.theme.preference.collectAsStateWithLifecycle()
                     val scope = rememberCoroutineScope()
                     var signOutPending by remember { mutableStateOf<Int?>(null) }
                     MoreScreen(
-                        padding, theme, onTheme = container.theme::set,
+                        padding,
                         actions = MoreActions(
                             onCategories = { navController.navigate(ROUTE_CATEGORIES) },
                             onAccounts = { navController.navigate(ROUTE_ACCOUNTS) },
@@ -354,7 +366,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             onCommitments = { navController.navigate(ROUTE_COMMITMENTS) },
                             onRegister = register,
                             onSpace = { navController.navigate(ROUTE_SPACE) },
-                            onFirstSteps = { navController.navigate(ROUTE_FIRST_STEPS) },
+                            onAppearance = { navController.navigate("appearance") },
                             onSignOut = {
                                 // Sempre uma decisão explícita, com o número de operações por enviar à vista.
                                 scope.launch {
@@ -487,9 +499,9 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     viewModel, padding,
                     StepActions(
                         onCategories = { navController.navigate(ROUTE_CATEGORIES) },
-                        onCard = { navController.navigate(ROUTE_CARD) },
+                        onCard = { navController.navigate("$ROUTE_CARD?initialSetup=true") },
                         onAccounts = { navController.navigate(ROUTE_ACCOUNTS) },
-                        onLimits = { navController.navigate(ROUTE_LIMITS) },
+                        onLimits = { navController.navigate("$ROUTE_LIMITS?initialSetup=true") },
                         onSpace = { navController.navigate(ROUTE_SPACE) },
                         onStart = { viewModel.start(goToChat) },
                         onRegisterManually = { viewModel.start { navController.navigate(ROUTE_REGISTER) { popUpTo(ROUTE_FIRST_STEPS) { inclusive = true } } } },
@@ -510,15 +522,18 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 AccountsRoute(viewModel, padding, onBack = { navController.popBackStack() })
             }
             composable(
-                "$ROUTE_LIMITS?$ARG_MONTH={$ARG_MONTH}",
-                arguments = listOf(navArgument(ARG_MONTH) { type = NavType.StringType; nullable = true; defaultValue = null }),
+                "$ROUTE_LIMITS?$ARG_MONTH={$ARG_MONTH}&initialSetup={initialSetup}",
+                arguments = listOf(
+                    navArgument(ARG_MONTH) { type = NavType.StringType; nullable = true; defaultValue = null },
+                    navArgument("initialSetup") { type = NavType.BoolType; defaultValue = false },
+                ),
             ) {
                 val viewModel: LimitsViewModel = viewModel(
                     factory = viewModelFactory { initializer { LimitsViewModel(container, createSavedStateHandle()) } },
                 )
                 LimitsRoute(viewModel, padding, onExit = { navController.popBackStack() })
             }
-            composable(ROUTE_CARD) {
+            composable("$ROUTE_CARD?initialSetup={initialSetup}", arguments = listOf(navArgument("initialSetup") { type = NavType.BoolType; defaultValue = false })) { cardEntry ->
                 val viewModel: CardViewModel = viewModel(
                     factory = viewModelFactory { initializer { CardViewModel(container, createSavedStateHandle()) } },
                 )
@@ -526,7 +541,13 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     viewModel, padding, onBack = { navController.popBackStack() },
                     onOpenInvoice = { month -> navController.navigate("$ROUTE_INVOICE/$month") },
                     onToConfirm = { navController.openFilteredEntries(container.clock.currentMonth(), null, EntrySituation.InvoiceLinkToConfirm) },
+                    initialSetup = cardEntry.arguments?.getBoolean("initialSetup") == true,
                 )
+            }
+            composable("appearance") {
+                val theme by container.theme.preference.collectAsStateWithLifecycle()
+                val corners by container.theme.corners.collectAsStateWithLifecycle()
+                AppearanceScreen(padding, theme, corners, container.theme::set, container.theme::setCorners, onBack = { navController.popBackStack() })
             }
             composable(
                 "$ROUTE_INVOICE/{${InvoiceViewModel.ARG_MONTH}}",

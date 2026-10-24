@@ -170,6 +170,7 @@ private fun AccountEditor(form: AccountForm, onChange: (BankRef?, String?) -> Un
                 supportingText = if (form.nicknameError) ({ Text(stringResource(R.string.accounts_nickname_required)) }) else null,
                 modifier = Modifier.fillMaxWidth(),
             )
+            Text(stringResource(R.string.nickname_optional_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             form.message?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
             Row(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
                 OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f).heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.edit_cancel)) }

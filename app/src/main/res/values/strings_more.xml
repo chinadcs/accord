@@ -19,7 +19,7 @@
 
     <!-- Contas -->
     <string name="accounts_title">Contas</string>
-    <string name="accounts_note">As contas são do casal. “Minha conta padrão” é só sua e preenche os registros novos; você sempre pode trocar na hora. Não pedimos agência, número, senha nem saldo.</string>
+    <string name="accounts_note">As contas são da casa. “Minha conta padrão” é só sua e preenche os registros novos; você sempre pode trocar na hora. Não pedimos agência, número, senha nem saldo.</string>
     <string name="accounts_empty">Nenhuma conta cadastrada ainda.</string>
     <string name="accounts_add">Adicionar conta</string>
     <string name="accounts_add_title">Nova conta</string>
@@ -27,11 +27,18 @@
     <string name="accounts_edit">Editar conta</string>
     <string name="accounts_set_default">Definir como minha conta padrão</string>
     <string name="accounts_my_default">Minha conta padrão</string>
-    <string name="accounts_nickname">Apelido da conta</string>
+    <string name="accounts_nickname">Apelido da conta (opcional)</string>
     <string name="accounts_nickname_required">Informe um apelido para a conta.</string>
     <string name="accounts_bank_required">Escolha o banco ou use “Outro banco”.</string>
     <string name="accounts_save">Salvar conta</string>
     <string name="feedback_account_added">Conta adicionada.</string>
     <string name="feedback_account_saved">Conta atualizada.</string>
     <string name="feedback_default_account">Esta é a sua conta padrão.</string>
+    <string name="nickname_optional_note">Se deixar em branco, usamos o nome do banco.</string>
+    <string name="appearance_title">Aparência</string>
+    <string name="appearance_corners">Estilo dos cantos</string>
+    <string name="appearance_rounded">Arredondados</string>
+    <string name="appearance_straight">Discretos</string>
+    <string name="appearance_preview">Prévia da aparência</string>
+    <string name="appearance_preview_note">As alterações aparecem na hora em todo o aplicativo.</string>
 </resources>

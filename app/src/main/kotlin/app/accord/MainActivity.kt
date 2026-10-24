@@ -22,6 +22,7 @@ class MainActivity : ComponentActivity() {
         val container = (application as AccordApplication).container
         setContent {
             val preference by container.theme.preference.collectAsStateWithLifecycle()
+            val corners by container.theme.corners.collectAsStateWithLifecycle()
             // Tema escolhido no aparelho vale também para os ícones das barras do sistema.
             LaunchedEffect(preference) {
                 when (preference) {
@@ -37,7 +38,7 @@ class MainActivity : ComponentActivity() {
                 }
             }
             LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { container.onForeground() }
-            AccordTheme(preference) {
+            AccordTheme(preference, corners) {
                 AccordApp(container)
             }
         }

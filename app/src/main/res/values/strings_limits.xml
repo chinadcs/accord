@@ -32,4 +32,7 @@
     <string name="feedback_limits_only_month">Limite atualizado somente em %1$s.</string>
     <string name="feedback_limits_from_month">Limite atualizado a partir de %1$s.</string>
     <string name="limits_month_blocked">Salve ou descarte as alterações antes de trocar o mês.</string>
+    <string name="limits_setup_note">Defina os limites que vão valer daqui para frente. É opcional: deixe em branco as categorias que preferir.</string>
+    <string name="limits_setup_scope">Vale a partir deste mês e nos próximos.</string>
+    <string name="limits_setup_later">Definir depois</string>
 </resources>

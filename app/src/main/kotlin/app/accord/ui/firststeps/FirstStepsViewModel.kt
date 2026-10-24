@@ -89,7 +89,7 @@ class FirstStepsViewModel(private val provider: SpaceProvider, private val acces
         }
     }
 
-    /** "Começar a registrar": encerra a lista neste aparelho; ela continua acessível em Mais. */
+    /** "Começar a registrar": encerra a lista; os ajustes continuam nos destinos próprios de Mais. */
     fun start(then: () -> Unit) {
         viewModelScope.launch {
             access.dismissFirstSteps()

@@ -175,7 +175,7 @@ class AccessUiTest {
     @Test
     fun semEspacoOferecerCriarOuEntrarComUmaAcaoPorModo() {
         showSpace()
-        compose.onNodeWithText("Espaço do casal").assertIsDisplayed()
+        compose.onNodeWithText("Espaço da casa").assertIsDisplayed()
         // "Criar espaço" é a aba e também a única ação principal do modo.
         assertEquals(2, compose.onAllNodesWithText("Criar espaço").fetchSemanticsNodes().size)
         compose.onNodeWithText("Entrar com código").assertIsDisplayed()
