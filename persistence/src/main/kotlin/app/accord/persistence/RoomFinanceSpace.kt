@@ -38,6 +38,7 @@ import app.accord.core.space.CommandResult
 import app.accord.core.space.ConfigureCard
 import app.accord.core.space.ConfirmNonCharge
 import app.accord.core.space.ConfirmRefund
+import app.accord.core.space.ChangePaymentMethod
 import app.accord.core.space.CorrectEntry
 import app.accord.core.space.CorrectInvoiceAssignment
 import app.accord.core.space.CreateCategory
@@ -152,6 +153,7 @@ class RoomFinanceSpace private constructor(
     private val cancellationPlanner = CancellationPlanner(dao)
     private val deletePlanner = DeletePlanner(dao)
     private val correctionPlanner = CorrectionPlanner(dao) { cycleOf(sessions.current().spaceId) }
+    private val paymentMethodPlanner = PaymentMethodPlanner(dao) { effectiveDefaultAccount(it) }
     private val limitsPlanner = LimitsPlanner(dao) { tree() }
     private val entryQueries = EntryQueries(
         dao,
@@ -194,6 +196,7 @@ class RoomFinanceSpace private constructor(
         is PayInvoice -> invoicePlanner.planPay(session, origin, command)
         is DeleteEntry -> deletePlanner.plan(command)
         is CorrectEntry -> correctionPlanner.plan(command)
+        is ChangePaymentMethod -> paymentMethodPlanner.plan(session, command)
         is DefineLimits -> limitsPlanner.planDefine(session, command)
         is RenameCategory -> categoryPlanner.planRename(command)
         is ReorderCategories -> categoryPlanner.planReorder(command)
@@ -999,6 +1002,9 @@ class RoomFinanceSpace private constructor(
                 val type = EntityType.valueOf(ch.entityType)
                 if (op.commandType == "CorrectEntry") {
                     return@map EntityChange(type, ch.entityId, null, correctionPlanner.restore(type, ch.entityId, op.detail!!))
+                }
+                if (op.commandType == "ChangePaymentMethod") {
+                    return@map EntityChange(type, ch.entityId, null, paymentMethodPlanner.restore(type, ch.entityId, op.detail!!))
                 }
                 val revision = when (type) {
                     EntityType.Movement -> {
