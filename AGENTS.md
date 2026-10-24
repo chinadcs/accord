@@ -6,25 +6,30 @@ e instruções da sessão prevalecem sobre orientações locais.
 
 ## Produto e estado real
 
-**Accord** é um aplicativo Android de controle financeiro do casal, planejado em português
-brasileiro. A base atual contém documentação, Beads e configurações de assistentes. Ainda não
-existem aplicativo, esquema de banco, protocolo de sincronização ou testes de produto.
+**Accord** é um aplicativo Android de controle financeiro do casal, em português brasileiro.
+A base contém documentação, Beads, aplicativo Compose, motor financeiro, persistência Room,
+protocolo/adaptador remoto, migrações Supabase e testes. S1 está entregue no Beads, com pendências
+de validação; S2 está entregue no Beads, com validação nos aparelhos (`accord-chf`) e decisões
+abertas (`accord-smv`) pendentes. Código e ambiente local não comprovam implantação hospedada,
+validação nos dois celulares ou aprovação de propostas de implementação.
 Não apresentar requisitos, wireframes, fornecedor escolhido ou metas como funcionalidades
 implementadas, configurações executadas ou resultados medidos.
 
 Confirmados: **Kotlin e Jetpack Compose**, **SLM no aparelho**, **Supabase Auth e PostgreSQL
-hospedados no plano Free**, com **banco e fila locais**. Biblioteca de persistência, módulos,
-SDKs, esquema e mecanismo de sincronização ainda precisam de desenho/implementação. Não
-introduzir outra plataforma ou backend por herança de configurações de outro projeto.
+hospedados no plano Free**, com **banco e fila locais**. **Room com BundledSQLiteDriver** foi
+confirmado em 24/10/2026. Módulos, adaptador, esquema e protocolo concretos já têm implementação;
+seu aceite e pendências estão diferenciados nos ADRs. Modelo/motor de inferência e leitores
+bancários continuam abertos. Não introduzir outra plataforma ou backend por herança de outro projeto.
 
 ## Ler antes de alterar
 
 | Documento | Autoridade e uso |
 | --- | --- |
 | [Plano de desenvolvimento](docs/plano-desenvolvimento.md) | Requisitos, etapas e aceite; decisões posteriores §§14 e 16 prevalecem sobre propostas anteriores |
-| [Índice das telas](docs/specs/README.md) | Navegação, regras comuns, prioridades, direção visual e pendências |
-| [Specs 01–38](docs/specs/README.md#4-índice-dos-arquivos) | Tela afetada, estados, recuperação, acessibilidade, aceite e dependências |
+| [Índice das telas](docs/specs/design/README.md) | Navegação, regras comuns, prioridades, direção visual e pendências |
+| [Specs 01–38](docs/specs/design/README.md#4-índice-dos-arquivos) | Tela afetada, estados, recuperação, acessibilidade, aceite e dependências |
 | [Arquitetura](ARCHITECTURE.md) | Mapa atual, responsabilidades planejadas, invariantes e escolhas abertas |
+| [ADRs](docs/adr/README.md) | Decisões estruturais, motivos, autoridade e histórico; consultar os relacionados à mudança |
 | [Catálogo de agentes](.claude/agents-roster.md) | Responsabilidades dos papéis locais e adaptação entre runtimes |
 
 IDs 01–38 identificam telas: 28 P0, cinco P1 e cinco P2. Não usar numeração de specs de outro
@@ -33,6 +38,15 @@ mudança afetar continuidade. O `plan.md` original citado nas fontes é externo;
 trabalho está em `docs/`. Preservar decisões confirmadas, identificar propostas como propostas
 e não resolver pendências por suposição. Quando faltar informação decisiva, avançar no que é
 independente e esclarecer uma decisão por vez com o usuário, conforme plano §14.
+
+## Registro contínuo de decisões
+
+Ao propor ou alterar tecnologia estrutural, contratos, persistência, sincronização, autorização,
+privacidade ou regras financeiras que moldam dados, consultar os ADRs relacionados e aplicar
+[adr-writing](.agents/skills/adr-writing/SKILL.md). Registrar a decisão relevante na mesma entrega,
+conforme o [guia](docs/adr/README.md), e conferir o registro na revisão/encerramento. Aceite segue
+a autoridade da decisão; código existente não aprova proposta. Beads mantém tarefas e memórias
+curtas com links; ADRs preservam justificativas. O papel `adr-writer` não autoriza delegação.
 
 ## Invariantes do produto
 
@@ -126,21 +140,31 @@ as escolhas de plataforma, navegação, ícones ou acessibilidade.
 ## Trabalho, comandos e validação
 
 Inspecionar árvore real antes de sugerir comandos. Existem o wrapper Gradle (9.8.2) e os módulos
-`:core` (Kotlin JVM, motor financeiro e contrato da fachada, S1), `:persistence` (Room, fachada
-local) e `:app` (Android, Compose; minSdk 29, compileSdk 37). Ainda não há Supabase local nem gates
-`just`. Não executar comandos de outro projeto como disponíveis. O `java` do PATH desta máquina é
+`:core` (Kotlin JVM, motor financeiro e contratos), `:persistence` (Room, fachada e sync local),
+`:remote` (fake e adaptador HTTP) e `:app` (Android, Compose; minSdk 29, compileSdk 37).
+Há configuração/migrações/testes Supabase locais em `supabase/` (ver seu README); isso não prova
+serviço em execução ou projeto hospedado. Não há gates `just`. Não executar comandos de outro
+projeto como disponíveis. O `java` do PATH desta máquina é
 o 1.8; Gradle exige JDK 17+ (verificado com o JBR 21 do Android Studio):
 
 ```powershell
 $env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
 $env:ANDROID_HOME = "C:\Users\SEU_USUARIO\AppData\Local\Android\Sdk"
-.\gradlew.bat :core:test :persistence:test      # JVM, sem aparelho
+.\gradlew.bat :core:test :persistence:test :remote:test # JVM, sem aparelho
 .\gradlew.bat :app:assembleDebug                # APK de debug
 .\gradlew.bat :app:connectedDebugAndroidTest    # exige emulador ou aparelho conectado
+supabase start; supabase test db                # Supabase LOCAL (Docker; portas 5532x), pgTAP; ver supabase/README.md
+.\scripts\run-debug.ps1                         # instala o debug e abre o app (-Fresh, -Shot, -Dump, -TestClass, -Serial)
 ```
 
-O emulador local é o AVD `4.65_720p_Galaxy_Nexus_API_33`; ele não substitui a validação no
-Galaxy S20 FE e no S23 FE.
+`gradle.properties` ativa cache de build, execução paralela e cache de configuração. O emulador
+preferido é o AVD `Accord_Rapido_API_33` (Android 33 Google APIs x86_64, 3 GB de RAM, 6 núcleos,
+GPU `host`, 1080×2400 a 420 dpi como o S20 FE); o `4.65_720p_Galaxy_Nexus_API_33` (720×1280)
+continua disponível. Com os dois abertos, informar o serial (`-Serial` ou `ANDROID_SERIAL`). No
+AVD rápido as animações do sistema estão em 0 (`adb shell settings put global
+window_animation_scale 0`, idem `transition_animation_scale` e `animator_duration_scale`); ele não
+serve para validar movimento nem substitui a validação no Galaxy S20 FE e no S23 FE. Não há
+`cmdline-tools` instalado (sem `avdmanager`); os AVDs foram criados copiando `config.ini`.
 
 Para docs/configuração, verificar UTF-8, links locais, frontmatter, JSON/TOML, coerência entre
 papéis e existência de skills. Após editar nome/descrição/lista de skills de agente ou metadados
@@ -154,10 +178,17 @@ git diff --check
 git status --short
 ```
 
-Gerador usa Python 3 com PyYAML, sem depender de ambiente de app inexistente. Não sobrescreve
+Gerador usa Python 3 com PyYAML, sem depender do build Android. Não sobrescreve
 adaptações manuais nem remove obsoletos automaticamente; revisar renomes/remoções. Hooks Beads
 em `.claude/settings.json` e `.codex/hooks.json` continuam; não presumir recarga de agentes
 numa sessão aberta. Não alterar permissões, sandbox ou modelos por decisão de produto.
+
+Testes: `fun x() = runBlocking { ... }` cujo último comando devolve valor é ignorado em silêncio
+pelo JUnit; usar `runBlocking<Unit>` e conferir a contagem de `@Test` contra `build/test-results`.
+Nos testes instrumentados, rodar uma classe por vez
+(`-Pandroid.testInstrumentationRunnerArguments.class=app.accord.X`; lista com vírgula só executa a primeira).
+A suíte de contrato do serviço (`:remote:test`) roda contra o fake sempre e contra o Supabase local
+quando `supabase start` está ativo (`ACCORD_REQUIRE_SUPABASE=1` transforma a ausência em falha).
 
 Na implementação, testar dinheiro/datas com exemplos independentes, autorização no serviço,
 reenvio após resposta perdida, conflitos, importação/retomada e alertas coordenados. Validar UI

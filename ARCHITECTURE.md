@@ -1,18 +1,22 @@
 # Arquitetura do Accord
 
-Revisão: 23/10/2026. Arquitetura planejada para o aplicativo de controle financeiro do casal.
-O repositório contém documentação e configurações de assistentes; ainda não contém aplicativo
-Android, esquema Supabase, protocolo de sincronização ou testes de produto implementados.
-Diagramas e responsabilidades abaixo não comprovam funcionamento.
+Revisão: 24/10/2026. O repositório contém aplicativo Android/Compose, motor Kotlin, persistência
+Room, protocolo/fake/adaptador remoto, migrações Supabase e testes. S1 está fechado em
+`accord-9tl`, com pendências em `accord-abv`; S2 está entregue em `accord-rsw` (testes JVM,
+Supabase local e emulador), com validação nos aparelhos em `accord-chf` e decisões abertas em
+`accord-smv`. A existência desses arquivos não comprova implantação hospedada, validação nos dois
+celulares ou aceite das propostas de implementação.
 
 ## Fontes e autoridade
 
 - [AGENTS.md](AGENTS.md): regras de trabalho dos assistentes.
 - [Plano de desenvolvimento](docs/plano-desenvolvimento.md): requisitos, etapas e aceite.
   Decisões posteriores das seções 14 e 16 prevalecem sobre propostas anteriores.
-- [Índice das telas](docs/specs/README.md): navegação, prioridades e regras comuns de UX.
-- [Especificações 01–38](docs/specs/README.md#4-índice-dos-arquivos): estados, recuperação,
+- [Índice das telas](docs/specs/design/README.md): navegação, prioridades e regras comuns de UX.
+- [Especificações 01–38](docs/specs/design/README.md#4-índice-dos-arquivos): estados, recuperação,
   acessibilidade, aceite e dependências de cada tela. IDs identificam telas, não versões de API.
+- [ADRs](docs/adr/README.md): decisões, motivos e histórico; status de decisão é separado da
+  situação de implementação. ADRs propostos não alteram requisitos aprovados.
 
 A documentação de produto é a referência; esta arquitetura a resume. Propostas de implementação
 não transformam escolhas abertas em requisitos aprovados. Divergências sem solução nessas fontes
@@ -22,15 +26,15 @@ exigem registrar a questão no Beads e esclarecer a decisão afetada.
 
 | Tema | Confirmado | Ainda depende de implementação ou validação |
 | --- | --- | --- |
-| Aplicativo | Android nativo, Kotlin e Jetpack Compose | Módulos, versões e ferramentas de build/teste |
+| Aplicativo | Android nativo, Kotlin e Jetpack Compose | Módulos/build existem; desenho concreto da fachada proposto no ADR 0022 e validação nos aparelhos pendente |
 | Aparelhos | Galaxy S20 FE como referência mínima e Galaxy S23 FE; S20 FE com 6 GB de RAM total informados | Variantes, Android, espaço livre, RAM do S23 FE e consumo real |
 | Inferência | SLM no aparelho, sem fallback automático para IA remota | Modelo, motor, quantização e qualidade em português |
 | Distribuição | Download separado no primeiro uso, até 2 GB decimais por celular | Hospedagem, tamanho efetivo, retomada e espaço instalado |
 | Desempenho | Meta de até 5 s do envio ao resultado visível de frase curta, com modelo carregado | Medições nos dois celulares; carga inicial, RAM, bateria e aquecimento |
-| Compartilhamento | Supabase hospedado no plano Free, Auth e PostgreSQL | Projeto, configuração, esquema, migrações, permissões e protocolo |
-| Dados locais | Banco e fila persistidos; Chat apenas no aparelho de origem | Biblioteca de banco, migrações locais e política detalhada de acesso local |
+| Compartilhamento | Supabase hospedado no plano Free, Auth e PostgreSQL | Esquema, RPC, RLS e protocolo locais existem; propostas nos ADRs 0023/0024; hospedagem e validações finais não comprovadas aqui |
+| Dados locais | Banco/fila persistidos; Room com BundledSQLiteDriver; Chat local | Room implementado (ADR 0016); política detalhada de acesso local e Chat de S3 pendentes |
 | Importação | OFX estruturado e PDF bancário com texto selecionável, processados localmente | Bibliotecas e compatibilidade com fatura/extrato Itaú em BRL |
-| Interface | Lucide e catálogo/logotipos de logos-bancos-br incluídos localmente, na última versão estável fixada; [tokens](docs/design-tokens.md) e [ícones](docs/icones-categorias.md) decididos | Incorporação dos ativos e revisão visual nos temas e aparelhos |
+| Interface | Lucide e catálogo/logotipos locais de logos-bancos-br, versão estável fixada; [tokens](docs/design-tokens.md) e [ícones](docs/icones-categorias.md) decididos | Ativos incorporados; revisão visual nos temas e aparelhos pendente |
 
 Qwen3-0.6B quantizado, llama.cpp/GGUF e LiteRT-LM são candidatos do plano §13.3, sem aprovação
 por benchmark. Formato de um candidato não implica compatibilidade com outro motor. Download
@@ -42,32 +46,40 @@ A meta de 5 s exclui download, carga inicial e sincronização e não impõe can
 ```text
 accord/
   AGENTS.md, CLAUDE.md       regras compartilhadas; CLAUDE.md importa AGENTS.md
-  ARCHITECTURE.md            arquitetura planejada
+  ARCHITECTURE.md            mapa atual, decisões e responsabilidades planejadas
   core/                      módulo Kotlin JVM sem Android: motor financeiro, contrato da fachada (S1)
-  persistence/               Room (JVM, banco em memória nos testes): fachada local, operações (S1.6)
+  persistence/               Room: fachada local, operações, sessão e motor de sincronização
+  remote/                    fake e adaptador Supabase HTTP (JVM)
+  supabase/                  configuração local, migrações e testes pgTAP; sem prova de implantação hospedada
   app/                       Android: tema com os tokens, navegação das 5 raízes, telas Compose (S1.8);
                              telas implementadas: Orçamento, categoria, Lançamentos, detalhe, registro e
                              edição, ações vinculadas (pagar, receber, estorno, cancelar parcelas),
                              Compromissos, Cartão e faturas, Rendas, Mais, Contas, Categorias, Limites.
-                             Chat, Revisar e telas de importação, modelo e sincronização seguem provisórios.
+                             S2: Acesso, Espaço, Primeiros passos, Sincronização e Escolher versão (conflito),
+                             indicadores e envio em segundo plano (WorkManager); Chat segue provisório e
+                             Revisar só lista os conflitos de edição.
                              Assets locais: catálogo de bancos e logos (assets/banks, logos-bancos-br)
   gradle/libs.versions.toml  versões fixadas; wrapper Gradle 9.8.2 (gradlew)
   docs/
     plano-desenvolvimento.md requisitos, decisões e critérios de aceite
-    specs/                  índice e telas 01–38
+    specs/                  specs de desenvolvimento S1–S7
+      design/               índice e telas 01–38
+    adr/                    decisões, propostas, guia e template
   .beads/                   tarefas e conhecimento persistente via bd
   .claude/                  agentes, skills e hooks
   .agents/                  entradas de descoberta de skills para Codex
   .codex/                   adaptadores de agentes, configuração e hooks
 ```
 
-Existem os módulos `:core`, `:persistence` e `:app` (comandos em AGENTS.md); ainda não há
-esquema Supabase. Persistência local: Room (decisão de 24/10/2026). Ao criá-los, documentar os caminhos e comandos que realmente existirem. Esta revisão não escolhe
-biblioteca de persistência, injeção de dependência, API própria ou SDK adicional.
+Existem `:core`, `:persistence`, `:remote` e `:app` (comandos em AGENTS.md). Detalhes implementados
+da fachada, RPC e protocolo permanecem propostas nos ADRs 0022–0024. Projeções financeiras
+assumidas em S1 estão no ADR 0025. Esta revisão documenta o estado; não aprova essas propostas
+nem escolhe framework de DI, modelo/motor ou leitor bancário.
 
 ## Responsabilidades e fluxo local
 
-As responsabilidades do plano §13.1 não obrigam um módulo Gradle por linha. Manter regras
+O fluxo abaixo é conceitual e inclui S3/S4 ainda planejados. As responsabilidades do plano
+§13.1 não obrigam um módulo Gradle por linha. Manter regras
 financeiras testáveis sem inferência, rede ou componentes de interface.
 
 | Responsabilidade | Papel |
@@ -108,7 +120,7 @@ incompleta não é apresentada como modelo pronto. Atualizar modelo não reinter
 
 ## Modelo financeiro e invariantes
 
-Vocabulêrio do plano §§3–5 e do índice das telas; estes conceitos não são tabelas existentes.
+Vocabulário do plano §§3–5 e do índice das telas; não é descrição exaustiva do esquema implementado.
 
 | Conceito | Regra que precisa permanecer verdadeira |
 | --- | --- |
@@ -148,8 +160,8 @@ Vocabulêrio do plano §§3–5 e do índice das telas; estes conceitos não sã
 
 ## Autenticação, autorização e sincronização
 
-Fontes: telas [01](docs/specs/01-acesso.md), [02](docs/specs/02-espaco-do-casal.md) e
-[26](docs/specs/26-sincronizacao.md). Supabase Auth usa e-mail/senha. Piloto sem envio de
+Fontes: telas [01](docs/specs/design/01-acesso.md), [02](docs/specs/design/02-espaco-do-casal.md) e
+[26](docs/specs/design/26-sincronizacao.md). Supabase Auth usa e-mail/senha. Piloto sem envio de
 confirmação, recuperação, OTP, magic link ou convite por e-mail. Planejar Confirm Email
 desativado, sem SMTP. E-mail identifica login sem comprovar posse; ajuda orienta atendimento
 manual fora do app, em ambiente confiável.
@@ -157,8 +169,9 @@ manual fora do app, em ambiente confiável.
 A segunda conta entra por código de convite gerado no aplicativo. Autorização do espaço e
 validação/consumo do convite ocorrem no serviço/banco; alterar referência no cliente não concede
 acesso. Ambos têm os mesmos direitos no espaço, sem hierarquia administrativa no produto.
-Credenciais administrativas nunca entram no aplicativo. Permissões ainda precisam de testes
-com contas associadas e não associadas, incluindo tentativas de acesso direto ao serviço.
+Credenciais administrativas nunca entram no aplicativo. Há testes de permissão locais para
+associados e não associados; execução histórica está no Beads, sem reexecução nesta revisão.
+Isso não comprova permissões de um projeto hospedado.
 
 Banco e fila preservam trabalho offline conforme autorização local, cuja política detalhada
 continua aberta. Sincronização exige sessão válida, identidade estável por operação,
@@ -178,8 +191,8 @@ reverificadas quando uma decisão depender delas; este texto registra a escolha 
 
 ## Importação e rastreabilidade
 
-Fluxo: [selecionar](docs/specs/15-importar-arquivo.md) →
-[revisar](docs/specs/16-revisar-importacao.md) → [resultado](docs/specs/17-resultado-importacao.md).
+Fluxo: [selecionar](docs/specs/design/15-importar-arquivo.md) →
+[revisar](docs/specs/design/16-revisar-importacao.md) → [resultado](docs/specs/design/17-resultado-importacao.md).
 OFX usa parser estruturado local; PDF usa extração local de texto dos movimentos. SLM pode ajudar
 classificação sem substituir extração/conferência. OCR e PDF digitalizado/imagem ficam fora do P0.
 
@@ -200,7 +213,8 @@ Previsões explicam conhecidos e novos variáveis sem projetar novamente parcela
 incluídas; dados incompletos reduzem confiança. No máximo um evento de alerta por categoria
 principal por semana, destinado aos dois, respeitando preferências/permissões dos aparelhos.
 Janela em America/Sao_Paulo: segunda 00h até segunda seguinte 00h, fim exclusivo. Renovar não
-agenda envio; editar limite/recalcular não renova cota. Coordenação entre aparelhos é pendente.
+agenda envio; editar limite/recalcular não renova cota. Notificar offline primeiro foi confirmado;
+coordenação concreta entre aparelhos continua pendente de implementação em S5 (ADR 0020).
 
 São 28 telas P0, cinco P1 e cinco P2. P0 entrega registrar, acompanhar, importar, conferir e
 retomar. P1 acrescenta revisão semanal, atividade, assinaturas e comparações; P2, intenções,
