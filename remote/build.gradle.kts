@@ -21,6 +21,8 @@ java {
 dependencies {
     api(project(":core"))
     api(libs.coroutines.core)
+    implementation(libs.serialization.json)
+    implementation(libs.okhttp)
 
     testImplementation(libs.kotlin.test.junit5)
     testImplementation(libs.junit.jupiter)

@@ -110,7 +110,7 @@ abstract class SpaceServiceContract {
         val session = signUp()
         assertTrue(session.accessToken.isNotBlank() && session.refreshToken.isNotBlank())
         // A sessão vale: o serviço só diz que ela não participa do espaço citado.
-        assertEquals(RemoteFailure.NotMember, failure(service.participants(session.accessToken, "qualquer")))
+        assertEquals(RemoteFailure.NotMember, failure(service.participants(session.accessToken, UUID.randomUUID().toString())))
     }
 
     @Test
@@ -368,8 +368,9 @@ abstract class SpaceServiceContract {
     fun `mesmo ID com conteúdo diferente é recusado como divergente`() = test {
         val couple = newCouple()
         val entity = change()
-        push(couple.creator, couple.spaceId, op(couple.spaceId, entity, id = "op-fixa"))
-        val altered = push(couple.creator, couple.spaceId, op(couple.spaceId, entity.copy(state = """{"valor":8000}"""), id = "op-fixa")).single()
+        val fixed = "op-fixa-${UUID.randomUUID()}"
+        push(couple.creator, couple.spaceId, op(couple.spaceId, entity, id = fixed))
+        val altered = push(couple.creator, couple.spaceId, op(couple.spaceId, entity.copy(state = """{"valor":8000}"""), id = fixed)).single()
         assertIs<OperationResult.Rejected>(altered)
         assertEquals(RejectReason.DivergentOperation, altered.reason)
         val stored = ok(service.pull(couple.creator.accessToken, couple.spaceId, 0, 100)).changes.single()

@@ -18,6 +18,9 @@ grant usage on schema accord_private to authenticated;
 alter default privileges in schema public revoke all on tables from anon, authenticated;
 alter default privileges in schema public revoke all on sequences from anon, authenticated;
 alter default privileges in schema public revoke execute on functions from public, anon, authenticated;
+-- O responsável do piloto (chave de serviço, fora do aplicativo) administra todas as tabelas.
+alter default privileges in schema public grant all on tables to service_role;
+alter default privileges in schema public grant all on sequences to service_role;
 
 create table public.spaces (
   id uuid primary key,
@@ -561,6 +564,9 @@ begin
   return jsonb_build_object('changes', v_rows, 'nextCursor', coalesce(v_last, p_after), 'hasMore', v_count > v_limit);
 end;
 $$;
+
+grant all on all tables in schema public to service_role;
+grant all on all sequences in schema public to service_role;
 
 -- Apenas contas autenticadas executam as funções expostas; anon não executa nenhuma.
 revoke all on function public.create_space(uuid, text) from public, anon;
