@@ -5,3 +5,10 @@
 .beads-credential-key
 .beads/proxieddb/
 *.gate.lock*
+
+# Gradle / Android
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
