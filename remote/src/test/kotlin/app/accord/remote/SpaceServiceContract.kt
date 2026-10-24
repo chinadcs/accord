@@ -1,0 +1,541 @@
+package app.accord.remote
+
+import app.accord.core.sync.AuthSession
+import app.accord.core.sync.EntityChangeEnvelope
+import app.accord.core.sync.EntityKey
+import app.accord.core.sync.InviteCode
+import app.accord.core.sync.OperationEnvelope
+import app.accord.core.sync.OperationResult
+import app.accord.core.sync.PROTOCOL_VERSION
+import app.accord.core.sync.RejectReason
+import app.accord.core.sync.RemoteFailure
+import app.accord.core.sync.RemoteResult
+import app.accord.core.sync.RemoteSpaceService
+import app.accord.core.sync.SpaceRef
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
+import java.util.UUID
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertIs
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
+
+/** O que a suíte precisa de um alvo além da porta: voltar o tempo do serviço sem mexer nas sessões. */
+interface ContractTarget {
+    val service: RemoteSpaceService
+
+    /** Recua a geração dos convites do espaço, como se o tempo tivesse passado no serviço. */
+    fun backdateInvites(spaceId: String, millis: Long)
+}
+
+/**
+ * Suíte de contrato do Serviço remoto do espaço (S2 "Decisões de teste"). Os mesmos cenários rodam
+ * contra o fake e, quando disponível, contra o Supabase local, para provar que o fake reproduz o
+ * serviço. Verifica comportamento observável pela porta, nunca detalhes internos.
+ */
+abstract class SpaceServiceContract {
+    abstract fun newTarget(): ContractTarget
+
+    protected lateinit var target: ContractTarget
+    private val service get() = target.service
+
+    private fun email() = "contrato-${UUID.randomUUID()}@exemplo.test"
+    private val password = "senha-de-teste-1"
+
+    protected fun <T> test(block: suspend () -> T) {
+        target = newTarget()
+        runBlocking(Dispatchers.Default) { block() }
+    }
+
+    private suspend fun signUp(): AuthSession = ok(service.signUp(email(), password))
+
+    private fun <T> ok(result: RemoteResult<T>): T {
+        assertIs<RemoteResult.Ok<T>>(result, "esperava sucesso, veio $result")
+        return result.value
+    }
+
+    private fun failure(result: RemoteResult<*>): RemoteFailure {
+        assertIs<RemoteResult.Failed>(result, "esperava falha, veio $result")
+        return result.failure
+    }
+
+    /** Um espaço com [creator] e, se pedido, [partner] já associado por convite. */
+    private inner class Couple(val creator: AuthSession, val spaceId: String, var partner: AuthSession? = null)
+
+    private suspend fun newSpace(): Couple {
+        val creator = signUp()
+        val id = UUID.randomUUID().toString()
+        ok(service.createSpace(creator.accessToken, id, "Casa"))
+        return Couple(creator, id)
+    }
+
+    private suspend fun newCouple(): Couple {
+        val couple = newSpace()
+        val code = ok(service.generateInvite(couple.creator.accessToken, couple.spaceId)).code
+        val partner = signUp()
+        ok(service.joinWithCode(partner.accessToken, code))
+        couple.partner = partner
+        return couple
+    }
+
+    private var counter = 0
+
+    private fun op(
+        spaceId: String,
+        vararg changes: EntityChangeEnvelope,
+        id: String = "op-${UUID.randomUUID()}",
+        protocol: Int = PROTOCOL_VERSION,
+    ) = OperationEnvelope(id, spaceId, protocol, "instalacao-1", 1_000L + counter++, changes.toList())
+
+    private fun change(
+        id: String = UUID.randomUUID().toString(),
+        base: Long? = null,
+        state: String = """{"valor":6800}""",
+        type: String = "Movement",
+        tombstone: Boolean = false,
+        references: List<EntityKey> = emptyList(),
+    ) = EntityChangeEnvelope(type, id, base, state, tombstone, references)
+
+    private suspend fun push(session: AuthSession, spaceId: String, vararg ops: OperationEnvelope): List<OperationResult> =
+        ok(service.push(session.accessToken, spaceId, ops.toList()))
+
+    // ---- conta ----
+
+    @Test
+    fun `cadastro devolve a sessão na hora, sem etapa de confirmação`() = test {
+        val session = signUp()
+        assertTrue(session.accessToken.isNotBlank() && session.refreshToken.isNotBlank())
+        // A sessão vale: o serviço só diz que ela não participa do espaço citado.
+        assertEquals(RemoteFailure.NotMember, failure(service.participants(session.accessToken, "qualquer")))
+    }
+
+    @Test
+    fun `cadastro repetido do mesmo e-mail é recusado e a entrada com a senha funciona`() = test {
+        val mail = email()
+        val first = ok(service.signUp(mail, password))
+        assertEquals(RemoteFailure.EmailAlreadyRegistered, failure(service.signUp(mail, password)))
+        val again = ok(service.signIn(mail, password))
+        assertEquals(first.accountId, again.accountId)
+    }
+
+    @Test
+    fun `entrada com credencial recusada não diz qual dos dois está errado`() = test {
+        val mail = email()
+        ok(service.signUp(mail, password))
+        val wrongPassword = failure(service.signIn(mail, "outra-senha-2"))
+        val unknownEmail = failure(service.signIn(email(), password))
+        assertEquals(RemoteFailure.InvalidCredentials, wrongPassword)
+        assertEquals(wrongPassword, unknownEmail)
+    }
+
+    @Test
+    fun `senha curta é recusada`() = test {
+        assertEquals(RemoteFailure.WeakPassword, failure(service.signUp(email(), "123")))
+    }
+
+    @Test
+    fun `token inválido é sessão expirada`() = test {
+        assertEquals(RemoteFailure.SessionExpired, failure(service.participants("lixo", "x")))
+        assertEquals(RemoteFailure.SessionExpired, failure(service.refresh("lixo")))
+    }
+
+    @Test
+    fun `renovar entrega nova sessão da mesma conta`() = test {
+        val session = signUp()
+        val renewed = ok(service.refresh(session.refreshToken))
+        assertEquals(session.accountId, renewed.accountId)
+        assertNotEquals(session.accessToken, renewed.accessToken)
+    }
+
+    @Test
+    fun `depois de sair a sessão não renova mais`() = test {
+        val session = signUp()
+        ok(service.signOut(session.accessToken))
+        assertEquals(RemoteFailure.SessionExpired, failure(service.refresh(session.refreshToken)))
+    }
+
+    // ---- espaço ----
+
+    @Test
+    fun `criar espaço associa o criador e repetir devolve o mesmo espaço`() = test {
+        val creator = signUp()
+        val id = UUID.randomUUID().toString()
+        val first = ok(service.createSpace(creator.accessToken, id, "Casa"))
+        val second = ok(service.createSpace(creator.accessToken, id, "Casa"))
+        assertEquals(SpaceRef(id, "Casa"), first)
+        assertEquals(first, second)
+        assertEquals(1, ok(service.participants(creator.accessToken, id)).items.size)
+    }
+
+    @Test
+    fun `quem já participa de um espaço recebe esse espaço em vez de criar outro`() = test {
+        val creator = signUp()
+        val first = UUID.randomUUID().toString()
+        ok(service.createSpace(creator.accessToken, first, "Casa"))
+        val other = ok(service.createSpace(creator.accessToken, UUID.randomUUID().toString(), "Outra"))
+        assertEquals(first, other.spaceId)
+        assertTrue(other.adoptedExisting)
+    }
+
+    @Test
+    fun `ID de espaço de outra pessoa não pode ser tomado`() = test {
+        val owner = newSpace()
+        val stranger = signUp()
+        assertEquals(RemoteFailure.NotMember, failure(service.createSpace(stranger.accessToken, owner.spaceId, "Minha")))
+    }
+
+    @Test
+    fun `quem não participa não vê participantes do espaço`() = test {
+        val owner = newSpace()
+        val stranger = signUp()
+        assertEquals(RemoteFailure.NotMember, failure(service.participants(stranger.accessToken, owner.spaceId)))
+    }
+
+    // ---- convite ----
+
+    @Test
+    fun `código tem 8 caracteres do alfabeto e vale 3 dias`() = test {
+        val couple = newSpace()
+        val invite = ok(service.generateInvite(couple.creator.accessToken, couple.spaceId))
+        assertEquals(8, invite.code.length)
+        assertTrue(invite.code.all { it in InviteCode.ALPHABET })
+        assertEquals(InviteCode.VALIDITY_MILLIS, invite.validUntilMillis - invite.generatedAtMillis)
+        assertEquals(InviteCode.normalize(invite.code), invite.code)
+    }
+
+    @Test
+    fun `quem não participa não gera código`() = test {
+        val owner = newSpace()
+        val stranger = signUp()
+        assertEquals(RemoteFailure.NotMember, failure(service.generateInvite(stranger.accessToken, owner.spaceId)))
+    }
+
+    @Test
+    fun `código associa a segunda pessoa e repetir devolve sucesso sem nova associação`() = test {
+        val couple = newSpace()
+        val code = ok(service.generateInvite(couple.creator.accessToken, couple.spaceId)).code
+        val partner = signUp()
+        val joined = ok(service.joinWithCode(partner.accessToken, code))
+        val again = ok(service.joinWithCode(partner.accessToken, code))
+        assertEquals(couple.spaceId, joined.spaceId)
+        assertEquals(joined, again)
+        assertEquals(2, ok(service.participants(couple.creator.accessToken, couple.spaceId)).items.size)
+    }
+
+    @Test
+    fun `código usado não serve para outra pessoa`() = test {
+        val couple = newSpace()
+        val code = ok(service.generateInvite(couple.creator.accessToken, couple.spaceId)).code
+        ok(service.joinWithCode(signUp().accessToken, code))
+        val third = signUp()
+        assertEquals(RemoteFailure.InvalidInvite, failure(service.joinWithCode(third.accessToken, code)))
+        assertEquals(2, ok(service.participants(couple.creator.accessToken, couple.spaceId)).items.size)
+    }
+
+    @Test
+    fun `com as duas pessoas no espaço não se gera código e nenhum código associa a terceira`() = test {
+        val couple = newCouple()
+        assertEquals(RemoteFailure.SpaceFull, failure(service.generateInvite(couple.creator.accessToken, couple.spaceId)))
+        assertEquals(RemoteFailure.SpaceFull, failure(service.generateInvite(couple.partner!!.accessToken, couple.spaceId)))
+        val third = signUp()
+        assertEquals(RemoteFailure.InvalidInvite, failure(service.joinWithCode(third.accessToken, "ABCDEFGH")))
+    }
+
+    @Test
+    fun `dentro do prazo o código é aceito e depois do prazo é recusado`() = test {
+        val inTime = newSpace()
+        val validCode = ok(service.generateInvite(inTime.creator.accessToken, inTime.spaceId)).code
+        target.backdateInvites(inTime.spaceId, InviteCode.VALIDITY_MILLIS - 60_000)
+        ok(service.joinWithCode(signUp().accessToken, validCode))
+
+        val late = newSpace()
+        val lateCode = ok(service.generateInvite(late.creator.accessToken, late.spaceId)).code
+        target.backdateInvites(late.spaceId, InviteCode.VALIDITY_MILLIS + 60_000)
+        assertEquals(RemoteFailure.InvalidInvite, failure(service.joinWithCode(signUp().accessToken, lateCode)))
+    }
+
+    @Test
+    fun `convite expirado aparece como expirado e sem o código`() = test {
+        val couple = newSpace()
+        assertEquals(null, ok(service.activeInvite(couple.creator.accessToken, couple.spaceId)))
+        val invite = ok(service.generateInvite(couple.creator.accessToken, couple.spaceId))
+        val status = ok(service.activeInvite(couple.creator.accessToken, couple.spaceId))!!
+        assertEquals(invite.validUntilMillis, status.validUntilMillis)
+        assertFalse(status.expired)
+        target.backdateInvites(couple.spaceId, InviteCode.VALIDITY_MILLIS + 60_000)
+        assertTrue(ok(service.activeInvite(couple.creator.accessToken, couple.spaceId))!!.expired)
+    }
+
+    @Test
+    fun `gerar outro código invalida o anterior`() = test {
+        val couple = newSpace()
+        val first = ok(service.generateInvite(couple.creator.accessToken, couple.spaceId)).code
+        val second = ok(service.generateInvite(couple.creator.accessToken, couple.spaceId)).code
+        assertNotEquals(first, second)
+        assertEquals(RemoteFailure.InvalidInvite, failure(service.joinWithCode(signUp().accessToken, first)))
+        ok(service.joinWithCode(signUp().accessToken, second))
+    }
+
+    @Test
+    fun `código em minúsculas e com espaços é aceito`() = test {
+        val couple = newSpace()
+        val code = ok(service.generateInvite(couple.creator.accessToken, couple.spaceId)).code
+        val typed = " " + code.take(4).lowercase() + " " + code.drop(4).lowercase() + " "
+        assertEquals(couple.spaceId, ok(service.joinWithCode(signUp().accessToken, typed)).spaceId)
+    }
+
+    @Test
+    fun `código inválido não cria espaço`() = test {
+        val person = signUp()
+        assertEquals(RemoteFailure.InvalidInvite, failure(service.joinWithCode(person.accessToken, "ZZZZZZZZ")))
+        val created = ok(service.createSpace(person.accessToken, UUID.randomUUID().toString(), "Casa"))
+        assertFalse(created.adoptedExisting)
+    }
+
+    @Test
+    fun `quem já participa de outro espaço é recusado com explicação`() = test {
+        val first = newSpace()
+        val second = newSpace()
+        val code = ok(service.generateInvite(first.creator.accessToken, first.spaceId)).code
+        assertEquals(RemoteFailure.AlreadyInAnotherSpace, failure(service.joinWithCode(second.creator.accessToken, code)))
+        assertEquals(1, ok(service.participants(first.creator.accessToken, first.spaceId)).items.size)
+    }
+
+    @Test
+    fun `tentativas falhas repetidas são bloqueadas, mesmo com o código certo`() = test {
+        val couple = newSpace()
+        val code = ok(service.generateInvite(couple.creator.accessToken, couple.spaceId)).code
+        val guesser = signUp()
+        repeat(InviteCode.MAX_FAILED_ATTEMPTS) {
+            assertEquals(RemoteFailure.InvalidInvite, failure(service.joinWithCode(guesser.accessToken, "ZZZZZZZ$it")))
+        }
+        assertIs<RemoteFailure.RateLimited>(failure(service.joinWithCode(guesser.accessToken, code)))
+        assertEquals(1, ok(service.participants(couple.creator.accessToken, couple.spaceId)).items.size)
+    }
+
+    @Test
+    fun `dois consumos simultâneos do mesmo código deixam exatamente uma pessoa associada`() = test {
+        repeat(10) {
+            val couple = newSpace()
+            val code = ok(service.generateInvite(couple.creator.accessToken, couple.spaceId)).code
+            val one = signUp()
+            val two = signUp()
+            val results = listOf(one, two).map { person ->
+                kotlinx.coroutines.CoroutineScope(Dispatchers.Default).async { service.joinWithCode(person.accessToken, code) }
+            }.awaitAll()
+            assertEquals(1, results.count { it is RemoteResult.Ok }, "resultados: $results")
+            assertEquals(1, results.count { it is RemoteResult.Failed && it.failure == RemoteFailure.InvalidInvite })
+            assertEquals(2, ok(service.participants(couple.creator.accessToken, couple.spaceId)).items.size)
+        }
+    }
+
+    // ---- envio e recebimento ----
+
+    @Test
+    fun `operação nova é aplicada com versão 1 e aparece no recebimento`() = test {
+        val couple = newCouple()
+        val entity = change()
+        val result = push(couple.creator, couple.spaceId, op(couple.spaceId, entity)).single()
+        assertIs<OperationResult.Applied>(result)
+        assertEquals(1L, result.versions.single().version)
+        assertFalse(result.repeated)
+        val page = ok(service.pull(couple.partner!!.accessToken, couple.spaceId, 0, 100))
+        val received = page.changes.single()
+        assertEquals(entity.id, received.id)
+        assertEquals(entity.state, received.state)
+        assertEquals(1L, received.version)
+        assertEquals(couple.creator.accountId, received.authorId)
+        assertEquals(received.cursor, page.nextCursor)
+    }
+
+    @Test
+    fun `reenvio da mesma operação devolve o mesmo resultado e não aplica de novo`() = test {
+        val couple = newCouple()
+        val operation = op(couple.spaceId, change())
+        val first = push(couple.creator, couple.spaceId, operation).single() as OperationResult.Applied
+        val second = push(couple.creator, couple.spaceId, operation).single() as OperationResult.Applied
+        assertTrue(second.repeated)
+        assertEquals(first.versions, second.versions)
+        assertEquals(first.cursor, second.cursor)
+        assertEquals(1, ok(service.pull(couple.partner!!.accessToken, couple.spaceId, 0, 100)).changes.size)
+    }
+
+    @Test
+    fun `mesmo ID com conteúdo diferente é recusado como divergente`() = test {
+        val couple = newCouple()
+        val entity = change()
+        push(couple.creator, couple.spaceId, op(couple.spaceId, entity, id = "op-fixa"))
+        val altered = push(couple.creator, couple.spaceId, op(couple.spaceId, entity.copy(state = """{"valor":8000}"""), id = "op-fixa")).single()
+        assertIs<OperationResult.Rejected>(altered)
+        assertEquals(RejectReason.DivergentOperation, altered.reason)
+        val stored = ok(service.pull(couple.creator.accessToken, couple.spaceId, 0, 100)).changes.single()
+        assertEquals(entity.state, stored.state)
+    }
+
+    @Test
+    fun `versão base diferente da atual vira conflito e nada é aplicado`() = test {
+        val couple = newCouple()
+        val id = UUID.randomUUID().toString()
+        push(couple.creator, couple.spaceId, op(couple.spaceId, change(id, state = """{"v":"68 delivery"}""")))
+        push(couple.partner!!, couple.spaceId, op(couple.spaceId, change(id, base = 1, state = """{"v":"68 restaurantes"}""")))
+        val late = push(couple.creator, couple.spaceId, op(couple.spaceId, change(id, base = 1, state = """{"v":"80 delivery"}"""))).single()
+        assertIs<OperationResult.Conflict>(late)
+        val current = late.current.single()
+        assertEquals(2L, current.version)
+        assertEquals("""{"v":"68 restaurantes"}""", current.state)
+        assertEquals(couple.partner!!.accountId, current.authorId)
+        assertEquals("""{"v":"68 restaurantes"}""", ok(service.pull(couple.creator.accessToken, couple.spaceId, 0, 100)).changes.single().state)
+    }
+
+    @Test
+    fun `criação concorrente da mesma identidade colide em vez de duplicar`() = test {
+        val couple = newCouple()
+        val id = UUID.randomUUID().toString()
+        push(couple.creator, couple.spaceId, op(couple.spaceId, change(id)))
+        val result = push(couple.partner!!, couple.spaceId, op(couple.spaceId, change(id))).single()
+        assertIs<OperationResult.Conflict>(result)
+        assertEquals(1, ok(service.pull(couple.creator.accessToken, couple.spaceId, 0, 100)).changes.size)
+    }
+
+    @Test
+    fun `operação com várias alterações é aplicada inteira ou nenhuma`() = test {
+        val couple = newCouple()
+        val a = UUID.randomUUID().toString()
+        val b = UUID.randomUUID().toString()
+        push(couple.creator, couple.spaceId, op(couple.spaceId, change(b)))
+        val result = push(couple.partner!!, couple.spaceId, op(couple.spaceId, change(a), change(b))).single()
+        assertIs<OperationResult.Conflict>(result)
+        val stored = ok(service.pull(couple.creator.accessToken, couple.spaceId, 0, 100)).changes
+        assertEquals(listOf(b), stored.map { it.id }, "a primeira alteração não pode ter ficado aplicada")
+    }
+
+    @Test
+    fun `edições em entidades diferentes são aplicadas sem conflito`() = test {
+        val couple = newCouple()
+        val a = UUID.randomUUID().toString()
+        val b = UUID.randomUUID().toString()
+        push(couple.creator, couple.spaceId, op(couple.spaceId, change(a)), op(couple.spaceId, change(b)))
+        val resultA = push(couple.creator, couple.spaceId, op(couple.spaceId, change(a, base = 1, state = """{"x":1}"""))).single()
+        val resultB = push(couple.partner!!, couple.spaceId, op(couple.spaceId, change(b, base = 1, state = """{"x":2}"""))).single()
+        assertIs<OperationResult.Applied>(resultA)
+        assertIs<OperationResult.Applied>(resultB)
+    }
+
+    @Test
+    fun `quem não participa não envia nem recebe`() = test {
+        val couple = newCouple()
+        val stranger = signUp()
+        assertEquals(RemoteFailure.NotMember, failure(service.push(stranger.accessToken, couple.spaceId, listOf(op(couple.spaceId, change())))))
+        assertEquals(RemoteFailure.NotMember, failure(service.pull(stranger.accessToken, couple.spaceId, 0, 10)))
+    }
+
+    @Test
+    fun `entidade de outro espaço não pode ser alterada nem citada`() = test {
+        val one = newSpace()
+        val two = newSpace()
+        val entity = change()
+        push(one.creator, one.spaceId, op(one.spaceId, entity))
+        val take = push(two.creator, two.spaceId, op(two.spaceId, entity.copy(baseVersion = 1))).single()
+        assertIs<OperationResult.Rejected>(take)
+        assertEquals(RejectReason.ForeignSpace, take.reason)
+        val cite = push(two.creator, two.spaceId, op(two.spaceId, change(references = listOf(EntityKey("Movement", entity.id))))).single()
+        assertIs<OperationResult.Rejected>(cite)
+        assertEquals(RejectReason.ForeignSpace, cite.reason)
+        assertTrue(ok(service.pull(two.creator.accessToken, two.spaceId, 0, 10)).changes.isEmpty())
+    }
+
+    @Test
+    fun `operação para outro espaço no envelope é recusada`() = test {
+        val one = newSpace()
+        val two = newSpace()
+        val result = push(one.creator, one.spaceId, op(two.spaceId, change())).single()
+        assertIs<OperationResult.Rejected>(result)
+        assertEquals(RejectReason.ForeignSpace, result.reason)
+    }
+
+    @Test
+    fun `tipo que não é sincronizável é recusado`() = test {
+        val couple = newCouple()
+        val result = push(couple.creator, couple.spaceId, op(couple.spaceId, change(type = "ChatMessage"))).single()
+        assertIs<OperationResult.Rejected>(result)
+        assertEquals(RejectReason.TypeNotAllowed, result.reason)
+    }
+
+    @Test
+    fun `protocolo não suportado é recusado e o resto do lote segue`() = test {
+        val couple = newCouple()
+        val results = push(
+            couple.creator, couple.spaceId,
+            op(couple.spaceId, change(), protocol = PROTOCOL_VERSION + 1),
+            op(couple.spaceId, change()),
+        )
+        assertEquals(RejectReason.ProtocolUnsupported, (results[0] as OperationResult.Rejected).reason)
+        assertIs<OperationResult.Applied>(results[1])
+    }
+
+    @Test
+    fun `operação vazia e entidade repetida são carga inválida`() = test {
+        val couple = newCouple()
+        val repeated = change()
+        val results = push(couple.creator, couple.spaceId, op(couple.spaceId), op(couple.spaceId, repeated, repeated))
+        results.forEach {
+            assertIs<OperationResult.Rejected>(it)
+            assertEquals(RejectReason.InvalidEnvelope, it.reason)
+        }
+    }
+
+    @Test
+    fun `recebimento é incremental e paginado sem perder alterações`() = test {
+        val couple = newCouple()
+        val ids = List(5) { UUID.randomUUID().toString() }
+        ids.forEach { push(couple.creator, couple.spaceId, op(couple.spaceId, change(it))) }
+        val first = ok(service.pull(couple.partner!!.accessToken, couple.spaceId, 0, 2))
+        assertEquals(2, first.changes.size)
+        assertTrue(first.hasMore)
+        val second = ok(service.pull(couple.partner!!.accessToken, couple.spaceId, first.nextCursor, 100))
+        assertFalse(second.hasMore)
+        assertEquals(ids.toSet(), (first.changes + second.changes).map { it.id }.toSet())
+        assertTrue(second.nextCursor > first.nextCursor)
+        val empty = ok(service.pull(couple.partner!!.accessToken, couple.spaceId, second.nextCursor, 100))
+        assertTrue(empty.changes.isEmpty())
+        assertEquals(second.nextCursor, empty.nextCursor)
+    }
+
+    @Test
+    fun `alteração aparece com a versão mais recente e o autor vem da sessão`() = test {
+        val couple = newCouple()
+        val id = UUID.randomUUID().toString()
+        push(couple.creator, couple.spaceId, op(couple.spaceId, change(id)))
+        push(couple.partner!!, couple.spaceId, op(couple.spaceId, change(id, base = 1, state = """{"valor":9000}""")))
+        val changes = ok(service.pull(couple.creator.accessToken, couple.spaceId, 0, 100)).changes
+        val latest = changes.single()
+        assertEquals(2L, latest.version)
+        assertEquals(couple.partner!!.accountId, latest.authorId)
+    }
+
+    @Test
+    fun `registro de exclusão chega à outra pessoa com a mesma identidade`() = test {
+        val couple = newCouple()
+        val id = UUID.randomUUID().toString()
+        push(couple.creator, couple.spaceId, op(couple.spaceId, change(id)))
+        push(couple.creator, couple.spaceId, op(couple.spaceId, change(id, base = 1, state = """{"voided":true}""", tombstone = true)))
+        val received = ok(service.pull(couple.partner!!.accessToken, couple.spaceId, 0, 100)).changes.single()
+        assertEquals(id, received.id)
+        assertTrue(received.tombstone)
+    }
+
+    @Test
+    fun `os dois têm exatamente os mesmos direitos sobre os dados`() = test {
+        val couple = newCouple()
+        val id = UUID.randomUUID().toString()
+        push(couple.partner!!, couple.spaceId, op(couple.spaceId, change(id)))
+        val edit = push(couple.creator, couple.spaceId, op(couple.spaceId, change(id, base = 1, state = """{"valor":1}"""))).single()
+        assertIs<OperationResult.Applied>(edit)
+        val back = push(couple.partner!!, couple.spaceId, op(couple.spaceId, change(id, base = 2, state = """{"valor":2}"""))).single()
+        assertIs<OperationResult.Applied>(back)
+    }
+}
