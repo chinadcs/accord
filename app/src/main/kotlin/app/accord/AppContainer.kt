@@ -10,6 +10,16 @@ import app.accord.core.space.FinanceSpace
 import app.accord.core.space.Undo
 import app.accord.access.AndroidSpaceRuntimeFactory
 import app.accord.access.SecureAccessStore
+import app.accord.core.chat.ChatCoordinator
+import app.accord.core.model.DistributionSource
+import app.accord.core.model.ModelEngine
+import app.accord.model.ModelCenter
+import app.accord.model.UnconfiguredDistributionSource
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import app.accord.core.sync.AccessStore
 import app.accord.core.sync.RemoteSpaceService
 import app.accord.persistence.AccessCenter
@@ -38,6 +48,9 @@ interface SpaceProvider {
 
     /** Desfaz uma operação; só funciona se nada nas entidades afetadas mudou depois dela. */
     suspend fun undo(operationId: String): UndoOutcome
+
+    /** O registro manual aberto a partir de uma mensagem do Chat foi salvo: a mensagem deixa de oferecer "Tentar de novo". */
+    suspend fun onManualSaved(chatMessageId: String) {}
 }
 
 /**
@@ -49,6 +62,8 @@ class AppContainer(
     private val context: Context,
     accessStore: AccessStore = SecureAccessStore(context),
     val remote: RemoteSpaceService = defaultRemote(),
+    modelSource: DistributionSource = UnconfiguredDistributionSource,
+    modelEngine: ModelEngine? = null,
 ) : SpaceProvider {
     override val clock: BudgetClock = BudgetClock.system()
     override val feedback = FeedbackBus()
@@ -57,6 +72,17 @@ class AppContainer(
     val theme = ThemeStore(context)
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    /**
+     * Modelo deste aparelho. Sem hospedagem escolhida nem motor integrado, o Chat guarda a mensagem e
+     * oferece o registro manual; os testes de instrumentação trocam a fonte por uma fake.
+     */
+    val models = ModelCenter(context, appScope, modelSource, modelEngine)
+
+    private val chatState = MutableStateFlow<ChatCoordinator?>(null)
+
+    /** Conversa do espaço aberto; nula onde não há espaço. O histórico mora no banco do par, só neste aparelho. */
+    val chat: StateFlow<ChatCoordinator?> = chatState.asStateFlow()
 
     /** Conta, sessão, espaço, convite e primeiros passos (tela 01, 02 e 03). */
     val access = AccessCenter(
@@ -93,9 +119,30 @@ class AppContainer(
                 }
             }
         }
+        // Uma conversa por espaço aberto, com escopo próprio: trocar de conta ou sair encerra a fila da anterior.
+        appScope.launch {
+            var scope: CoroutineScope? = null
+            access.runtime.collect { runtime ->
+                scope?.cancel()
+                scope = null
+                chatState.value = null
+                val store = runtime?.chatStore ?: return@collect
+                val chatScope = CoroutineScope(SupervisorJob(appScope.coroutineContext[Job]) + Dispatchers.Default).also { scope = it }
+                val coordinator = ChatCoordinator(
+                    space = runtime.space,
+                    store = store,
+                    interpreters = models.runtime.source,
+                    clock = clock,
+                    scope = chatScope,
+                    onFinanceChanged = feedback::notifyChanged,
+                )
+                coordinator.recover()
+                chatState.value = coordinator
+            }
+        }
         // Todo registro salvo (e todo desfazer) entra na fila: atualiza os indicadores e agenda o envio.
         appScope.launch {
-            merge(feedback.events.map { }, feedback.undone).collect {
+            merge(feedback.events.map { }, feedback.undone, feedback.changed).collect {
                 sync.refresh()
                 scheduler.enqueue()
             }
@@ -112,6 +159,10 @@ class AppContainer(
 
     /** Espera a fachada do espaço da conta atual; só é chamada por telas que existem com espaço aberto. */
     override suspend fun space(): FinanceSpace = access.runtime.filterNotNull().first().space
+
+    override suspend fun onManualSaved(chatMessageId: String) {
+        chat.value?.resolveManually(chatMessageId)
+    }
 
     override suspend fun undo(operationId: String): UndoOutcome =
         when (val result = space().execute(Envelope(CommandId(UUID.randomUUID().toString())), Undo(operationId))) {

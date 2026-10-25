@@ -41,7 +41,13 @@ import java.time.YearMonth
 import java.util.UUID
 
 /** Tudo o que o aparelho abre para um (conta, espaço): fachada financeira, fila e motor de sincronização. */
-class SpaceRuntime(val space: FinanceSpace, val syncStore: SyncStore, val engine: SyncEngine)
+class SpaceRuntime(
+    val space: FinanceSpace,
+    val syncStore: SyncStore,
+    val engine: SyncEngine,
+    /** Histórico do Chat deste aparelho, no mesmo banco e fora da fila de sincronização (S3). */
+    val chatStore: app.accord.core.chat.ChatStore? = null,
+)
 
 /**
  * Abre o banco do par (conta, espaço). Cada par tem o próprio banco: duas contas no mesmo aparelho

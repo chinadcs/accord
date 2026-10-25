@@ -121,7 +121,13 @@ import app.accord.ui.nav.ARG_MONTH
 import app.accord.ui.nav.ROUTE_ACCOUNTS
 import app.accord.ui.nav.ROUTE_CATEGORIES
 import app.accord.ui.nav.ROUTE_LIMITS
+import app.accord.ui.nav.ARG_REGISTER_CHAT
+import app.accord.ui.nav.ARG_REGISTER_FORM
 import app.accord.ui.nav.ARG_REGISTER_KIND
+import app.accord.ui.nav.ROUTE_MODEL
+import app.accord.ui.chat.ChatActions
+import app.accord.ui.chat.ChatRoute
+import app.accord.ui.chat.ChatViewModel
 import app.accord.ui.nav.ROUTE_CARD
 import app.accord.ui.nav.ROUTE_COMMITMENT
 import app.accord.ui.nav.ROUTE_COMMITMENTS
@@ -289,7 +295,21 @@ private fun MainApp(container: AppContainer, startRoute: String) {
 
             navigation(startDestination = Root.Chat.start, route = Root.Chat.graph) {
                 composable(Root.Chat.start) {
-                    ProvisionalRoot(stringResource(R.string.chat_title), stringResource(R.string.chat_placeholder), padding, register, extra = { SyncIndicator() })
+                    val viewModel: ChatViewModel = viewModel(
+                        factory = viewModelFactory { initializer { ChatViewModel(container, createSavedStateHandle()) } },
+                    )
+                    ChatRoute(
+                        viewModel, padding, container.clock.today(),
+                        ChatActions(
+                            onOpenModel = { navController.navigate(ROUTE_MODEL) },
+                            onOpenEntry = openEntry,
+                            onEditEntry = { id -> navController.navigate("$ROUTE_EDIT/${Uri.encode(id)}") },
+                            onManual = { route -> navController.navigate(route) },
+                            onOpenBudget = { navController.openRoot(Root.Budget) },
+                            onOpenEntries = { navController.openRoot(Root.Entries) },
+                            onOpenCard = { navController.navigate(ROUTE_CARD) },
+                        ),
+                    )
                 }
             }
             navigation(startDestination = Root.Budget.start, route = Root.Budget.graph) {
@@ -573,9 +593,19 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     onAdd = { navController.navigate("$ROUTE_REGISTER?$ARG_REGISTER_KIND=income") },
                 )
             }
+            composable(ROUTE_MODEL) {
+                ProvisionalRoot(
+                    stringResource(R.string.model_title), stringResource(R.string.model_provisional), padding, register,
+                    extra = { TextButton(onClick = { navController.popBackStack() }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.action_back)) } },
+                )
+            }
             composable(
-                "$ROUTE_REGISTER?$ARG_REGISTER_KIND={$ARG_REGISTER_KIND}",
-                arguments = listOf(navArgument(ARG_REGISTER_KIND) { type = NavType.StringType; nullable = true; defaultValue = null }),
+                "$ROUTE_REGISTER?$ARG_REGISTER_KIND={$ARG_REGISTER_KIND}&$ARG_REGISTER_FORM={$ARG_REGISTER_FORM}&$ARG_REGISTER_CHAT={$ARG_REGISTER_CHAT}",
+                arguments = listOf(
+                    navArgument(ARG_REGISTER_KIND) { type = NavType.StringType; nullable = true; defaultValue = null },
+                    navArgument(ARG_REGISTER_FORM) { type = NavType.StringType; nullable = true; defaultValue = null },
+                    navArgument(ARG_REGISTER_CHAT) { type = NavType.StringType; nullable = true; defaultValue = null },
+                ),
             ) {
                 val viewModel: RegisterViewModel = viewModel(
                     factory = viewModelFactory { initializer { RegisterViewModel(container, createSavedStateHandle()) } },

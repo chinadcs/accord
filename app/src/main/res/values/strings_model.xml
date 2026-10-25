@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Modelo no aparelho (tela 25) -->
+    <string name="model_title">Modelo no aparelho</string>
+    <string name="model_provisional">A tela do modelo chega em seguida. O registro manual continua disponível.</string>
+</resources>

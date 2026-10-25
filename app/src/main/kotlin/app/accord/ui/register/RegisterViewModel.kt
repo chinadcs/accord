@@ -243,6 +243,8 @@ class RegisterViewModel(
     }
 
     private fun finish(operationId: String, undoable: Boolean) {
+        // Aberto a partir de uma mensagem do Chat: ela deixa de oferecer "Tentar de novo".
+        saved.get<String>(KEY_CHAT_MESSAGE)?.let { messageId -> viewModelScope.launch { provider.onManualSaved(messageId) } }
         draftId = null
         saved.remove<String>(KEY_DRAFT)
         provider.feedback.post(FeedbackEvent(R.string.feedback_saved, undoOperationId = operationId.takeIf { undoable }))
@@ -306,6 +308,7 @@ class RegisterViewModel(
         const val KEY_FORM = "form"
         const val KEY_COMMAND = "commandId"
         const val KEY_DRAFT = "draftId"
+        const val KEY_CHAT_MESSAGE = "chatMessage"
         const val PREVIEW_DEBOUNCE_MS = 250L
     }
 }

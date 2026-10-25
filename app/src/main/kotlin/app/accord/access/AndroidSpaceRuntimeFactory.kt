@@ -9,6 +9,7 @@ import app.accord.core.sync.RemoteSpaceService
 import app.accord.core.sync.SyncAccess
 import app.accord.persistence.AccordDatabase
 import app.accord.persistence.AccordDatabase_Impl
+import app.accord.persistence.RoomChatStore
 import app.accord.persistence.RoomFinanceSpace
 import app.accord.persistence.SpaceRuntime
 import app.accord.persistence.SpaceRuntimeFactory
@@ -37,7 +38,7 @@ class AndroidSpaceRuntimeFactory(
         }
         val space = RoomFinanceSpace.open(database, clock, { Session(spaceId, accountId) })
         val store = SyncStore(database)
-        return SpaceRuntime(space, store, SyncEngine(store, remote, access))
+        return SpaceRuntime(space, store, SyncEngine(store, remote, access), RoomChatStore(database))
     }
 
     override fun close(accountId: String, spaceId: String) {

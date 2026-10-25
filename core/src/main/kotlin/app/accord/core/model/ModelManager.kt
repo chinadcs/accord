@@ -126,12 +126,12 @@ class ModelManager(
     private suspend fun recover() = withContext(io) {
         Files.createDirectories(versions)
         // Troca interrompida: o que ficou em ".installing" não foi ativado e nunca vira Pronto.
-        Files.list(versions).use { list -> list.filter { it.fileName.toString().endsWith(INSTALLING) }.toList() }
+        children(versions).filter { it.fileName.toString().endsWith(INSTALLING) }
             .forEach { deleteRecursively(it) }
         val active = readActive()
         mutable.update { it.copy(active = active) }
         // Versões que não são a ativa são restos de uma atualização interrompida.
-        Files.list(versions).use { list -> list.toList() }
+        children(versions)
             .filter { it.fileName.toString() != active?.version }
             .forEach { deleteRecursively(it) }
     }
@@ -139,7 +139,7 @@ class ModelManager(
     private fun readActive(): ActiveModel? {
         if (!Files.exists(stateFile)) return null
         val state = try {
-            Json.decodeFromString(ActiveState.serializer(), Files.readString(stateFile))
+            Json.decodeFromString(ActiveState.serializer(), readText(stateFile))
         } catch (_: Exception) {
             return null
         }
@@ -190,7 +190,7 @@ class ModelManager(
         val manifest = catalog
         // Temporário de outra versão que não a do catálogo atual não serve mais para retomar.
         if (manifest != null && Files.isDirectory(tmp)) {
-            Files.list(tmp).use { list -> list.toList() }
+            children(tmp)
                 .filter { it.fileName.toString() != manifest.version || active?.version == manifest.version }
                 .forEach { deleteRecursively(it) }
         }
@@ -216,7 +216,7 @@ class ModelManager(
         val metaFile = dir.resolve(META)
         if (!Files.exists(metaFile)) return null
         val meta = try {
-            Json.decodeFromString(PartialMeta.serializer(), Files.readString(metaFile))
+            Json.decodeFromString(PartialMeta.serializer(), readText(metaFile))
         } catch (_: Exception) {
             deleteRecursively(tmp)
             return null
@@ -332,7 +332,7 @@ class ModelManager(
     private class VerificationFailed(val file: String) : Exception(file)
 
     private fun readMeta(manifest: ModelManifest): PartialMeta? = try {
-        Json.decodeFromString(PartialMeta.serializer(), Files.readString(tmp.resolve(manifest.version).resolve(META)))
+        Json.decodeFromString(PartialMeta.serializer(), readText(tmp.resolve(manifest.version).resolve(META)))
     } catch (_: Exception) {
         null
     }
@@ -500,8 +500,16 @@ class ModelManager(
 
     private fun writeAtomically(target: Path, text: String) {
         val staging = target.resolveSibling(target.fileName.toString() + ".new")
-        Files.writeString(staging, text)
+        Files.write(staging, text.toByteArray(Charsets.UTF_8))
         moveAtomically(staging, target)
+    }
+
+    // Só APIs de java.nio.file presentes desde o Android 8: Stream.toList e Files.readString exigem versões mais novas.
+    private fun readText(path: Path) = String(Files.readAllBytes(path), Charsets.UTF_8)
+
+    private fun children(dir: Path): List<Path> {
+        if (!Files.isDirectory(dir)) return emptyList()
+        return Files.newDirectoryStream(dir).use { stream -> stream.toList() }
     }
 
     private fun deleteRecursively(path: Path) {
