@@ -11,7 +11,6 @@
 
     <!-- Conteúdo provisório das raízes que S1 não implementa -->
     <string name="chat_title">Chat</string>
-    <string name="chat_placeholder">O Chat chega em uma próxima etapa. Enquanto isso, registre pelo formulário.</string>
     <string name="review_title">Revisar</string>
     <string name="review_placeholder">A revisão e a importação chegam em uma próxima etapa.</string>
     <string name="action_register_manually">Registrar manualmente</string>

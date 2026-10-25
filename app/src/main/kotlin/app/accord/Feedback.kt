@@ -32,6 +32,15 @@ class FeedbackBus {
     fun notifyUndone() {
         _undone.tryEmit(Unit)
     }
+
+    private val _changed = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** Algo financeiro foi gravado fora de uma tela (o Chat): indicadores e envio em segundo plano atualizam. */
+    val changed: SharedFlow<Unit> = _changed.asSharedFlow()
+
+    fun notifyChanged() {
+        _changed.tryEmit(Unit)
+    }
 }
 
 enum class UndoOutcome { Done, ChangedAfter, Failed }

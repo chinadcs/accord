@@ -31,9 +31,17 @@ const val ROUTE_FIRST_STEPS = "first_steps"
 const val ROUTE_SYNC = "sync"
 const val ROUTE_CONFLICT = "conflict"
 
-/** Registro manual: sempre disponível, sem depender do modelo nem da rede (tela 09). */
+/**
+ * Registro manual: sempre disponível, sem depender do modelo nem da rede (tela 09). Aberto pelo Chat, leva o
+ * formulário já preenchido com o que foi entendido (`form`, ainda sem salvar) e a mensagem de origem.
+ */
 const val ROUTE_REGISTER = "register"
 const val ARG_REGISTER_KIND = "kind"
+const val ARG_REGISTER_FORM = "form"
+const val ARG_REGISTER_CHAT = "chatMessage"
+
+/** Modelo no aparelho (tela 25), aberto pelo indicador do Chat e pelos Primeiros passos. */
+const val ROUTE_MODEL = "model"
 
 /** Compromissos futuros, com mês opcional: `commitments?month=2026-11`. */
 const val ROUTE_COMMITMENTS = "commitments"

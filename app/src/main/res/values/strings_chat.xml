@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Chat (tela 04) -->
+    <string name="chat_composer_hint">Digite seu registro…</string>
+    <string name="chat_composer_label">Mensagem do Chat</string>
+    <string name="chat_send">Enviar</string>
+    <string name="chat_empty_title">Registre escrevendo uma frase curta</string>
+    <string name="chat_empty_body">O celular interpreta a frase e o aplicativo confere tudo antes de salvar. Toque em um exemplo para começar:</string>
+    <string name="chat_example_expense">delivery 68 no cartão</string>
+    <string name="chat_example_pix">mercado 35 no pix</string>
+    <string name="chat_example_income">salário 6.000</string>
+    <string name="chat_you">Você</string>
+    <string name="chat_you_said">Você: %s</string>
+    <string name="chat_working">Interpretando…</string>
+    <string name="chat_waiting">Aguardando a vez…</string>
+    <string name="chat_applying">Salvando…</string>
+    <string name="chat_cancel">Cancelar</string>
+    <string name="chat_manual">Registrar manualmente</string>
+    <string name="chat_listing_note">Sua mensagem fica guardada. Nada foi salvo no orçamento.</string>
+    <string name="chat_open_pending">Ver pendências</string>
+
+    <!-- Modelo no cabeçalho -->
+    <string name="chat_model_not_installed">Modelo não instalado</string>
+    <string name="chat_model_downloading">Baixando o modelo</string>
+    <string name="chat_model_downloading_percent">Baixando o modelo: %d%%</string>
+    <string name="chat_model_working">Instalando o modelo</string>
+    <string name="chat_model_installed">Modelo pronto</string>
+    <string name="chat_model_no_engine">Modelo instalado · sem motor para interpretar</string>
+    <string name="chat_model_problem">Problema no modelo</string>
+    <string name="chat_model_open">Abrir Modelo no aparelho</string>
+
+    <!-- Recibo -->
+    <string name="receipt_expense">Registrado: %s</string>
+    <string name="receipt_income">Renda registrada: %s</string>
+    <string name="receipt_income_expected">Renda prevista: %1$s para %2$s</string>
+    <string name="receipt_category_payment">%1$s · %2$s</string>
+    <string name="receipt_to_classify">A classificar</string>
+    <string name="receipt_payment_card">Cartão</string>
+    <string name="receipt_payment_pix">Pix</string>
+    <string name="receipt_payment_debit">Débito</string>
+    <string name="receipt_payment_cash">Dinheiro</string>
+    <string name="receipt_account">%1$s · %2$s</string>
+    <string name="receipt_invoice">Fatura estimada: %s</string>
+    <string name="receipt_budget_month">Orçamento de %s</string>
+    <string name="receipt_date">Data: %s</string>
+    <string name="receipt_installments">%1$d× %2$s (total %3$s)</string>
+    <string name="receipt_installments_rounded">%1$d× %2$s, última %3$s (total %4$s)</string>
+    <string name="receipt_scope">Aplicado às %d parcelas desta compra.</string>
+    <string name="receipt_to_confirm">a conferir</string>
+    <string name="receipt_changed_later">Alterado depois</string>
+    <string name="receipt_undone">Desfeito</string>
+    <string name="receipt_saved">Salvo no aparelho</string>
+    <string name="receipt_action_view">Ver lançamento</string>
+    <string name="receipt_action_edit">Editar</string>
+    <string name="receipt_action_undo">Desfazer</string>
+    <string name="receipt_announce">Registrado %1$s. %2$s</string>
+
+    <!-- Perguntas -->
+    <string name="question_not_saved">Não salvo no orçamento</string>
+    <string name="question_category">%1$s: qual categoria?</string>
+    <string name="question_category_plain">Qual categoria?</string>
+    <string name="question_amount">Quanto foi %s?</string>
+    <string name="question_amount_plain">Qual é o valor?</string>
+    <string name="question_amount_ambiguous">Não deu para ter certeza do valor. Digite como 39,90.</string>
+    <string name="question_amount_invalid">O valor precisa ser maior que zero. Digite como 39,90.</string>
+    <string name="question_amount_field">Valor</string>
+    <string name="question_amount_answer">Responder</string>
+    <string name="question_amount_error">Não consegui ler esse valor. Use o formato 39,90.</string>
+    <string name="question_role">%1$s: R$ digitado é o total ou o de cada parcela?</string>
+    <string name="question_role_plain">O valor digitado é o total ou o de cada parcela?</string>
+    <string name="question_date_future">Esse gasto já aconteceu? Escolha a data em que foi feito ou use o registro manual.</string>
+    <string name="question_date_invalid">Não entendi a data. Escolha uma ou use o registro manual.</string>
+    <string name="question_date">Em que dia foi?</string>
+    <string name="question_payment">%s: onde foi pago?</string>
+    <string name="question_payment_plain">Onde foi pago?</string>
+    <string name="question_account">Em qual conta?</string>
+    <string name="question_account_invalid">Não encontrei essa conta. Em qual conta?</string>
+    <string name="question_target">Qual registro você quer corrigir?</string>
+    <string name="question_discard">Descartar pergunta</string>
+    <string name="question_option_other">Outra categoria</string>
+
+    <!-- Respostas padrão do app -->
+    <string name="reply_intent">Ideias de compra não entram como gasto. Se foi uma compra que você fez, use o registro manual.</string>
+    <string name="reply_query">No Chat eu ainda não respondo consultas com números. Veja o Orçamento ou a lista de Lançamentos.</string>
+    <string name="reply_recurrence">Recorrências ainda não são registradas pelo Chat. Use o registro manual, que já leva o que entendi.</string>
+    <string name="reply_boleto">Boletos ainda não são registrados pelo Chat. Use o registro manual, que já leva o que entendi.</string>
+    <string name="reply_refund">Estornos ainda não são registrados pelo Chat. Abra o lançamento original ou use o registro manual.</string>
+    <string name="reply_invoice_payment">A quitação da fatura é feita na tela do cartão, depois de conferir o total cobrado.</string>
+    <string name="reply_cancellation">O cancelamento de parcelas é pedido no lançamento. Abra a lista de Lançamentos.</string>
+    <string name="reply_undo_text">Não desfaço por texto. Use o botão Desfazer do último registro, se ele ainda aparecer; depois, use Excluir ou Editar no lançamento.</string>
+    <string name="reply_no_recent_receipt">Só corrijo o que acabou de ser registrado aqui. Para outro lançamento, abra a lista de Lançamentos.</string>
+    <string name="reply_open_edit">Valor, datas e forma de pagamento de compra parcelada mudam na tela de edição.</string>
+    <string name="reply_action_budget">Orçamento</string>
+    <string name="reply_action_entries">Lançamentos</string>
+    <string name="reply_action_card">Cartão e faturas</string>
+    <string name="reply_action_edit">Abrir edição</string>
+
+    <!-- Recusas, falhas e modelo ausente -->
+    <string name="refuse_unclear">Não consegui entender com segurança. Nada foi salvo e sua mensagem foi mantida.</string>
+    <string name="refuse_reference">Não encontrei isso entre as suas categorias, contas ou registros. Nada foi salvo.</string>
+    <string name="refuse_no_card">Não há cartão configurado para este registro. Nada foi salvo.</string>
+    <string name="refuse_no_accounts">Não há conta cadastrada para este registro. Cadastre uma conta ou use o registro manual. Nada foi salvo.</string>
+    <string name="refuse_installments_card">Parcelamento só vale no cartão. Escolha o cartão ou use o registro manual. Nada foi salvo.</string>
+    <string name="refuse_rejected">Não foi possível salvar este registro. Nada foi salvo.</string>
+    <string name="refuse_rejected_reason">Não foi possível salvar: %s</string>
+    <string name="failed_engine">Não consegui interpretar agora. Sua mensagem foi mantida.</string>
+    <string name="failed_memory">O celular ficou sem memória para interpretar. Sua mensagem foi mantida.</string>
+    <string name="failed_internal">Algo deu errado ao interpretar. Sua mensagem foi mantida.</string>
+    <string name="interrupted">A interpretação foi interrompida. Sua mensagem foi mantida; nada foi salvo.</string>
+    <string name="canceled">Interpretação cancelada. Sua mensagem foi mantida; nada foi salvo.</string>
+    <string name="no_model">O modelo ainda não está no aparelho. Sua mensagem foi guardada e nada foi salvo.</string>
+    <string name="no_model_engine">Há um modelo instalado, mas ainda não há motor para interpretá-lo neste aparelho. Sua mensagem foi guardada.</string>
+    <string name="resolved_manually">Registrado pelo formulário.</string>
+    <string name="notice_action_download">Baixar modelo</string>
+    <string name="notice_action_interpret_now">Interpretar agora</string>
+    <string name="notice_action_retry">Tentar de novo</string>
+</resources>

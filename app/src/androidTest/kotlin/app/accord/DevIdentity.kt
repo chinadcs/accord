@@ -25,7 +25,7 @@ object DevIdentity {
 
     /** Contêiner pronto: o estado salvo já foi lido e o banco aberto antes de qualquer tela. */
     fun container(context: Context): AppContainer =
-        AppContainer(context, InMemoryAccessStore(snapshot()), UnconfiguredSpaceService).also {
+        AppContainer(context, InMemoryAccessStore(snapshot()), UnconfiguredSpaceService, TestModel.source, TestModel.engine).also {
             runBlocking { it.access.restore() }
         }
 }
