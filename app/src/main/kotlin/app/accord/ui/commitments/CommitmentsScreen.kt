@@ -12,28 +12,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
+import app.accord.ui.components.AccordButton as Button
 import androidx.compose.material3.FilterChip
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.accord.ui.components.DetailHeader
 import app.accord.R
 import app.accord.core.space.Commitment
 import app.accord.core.space.CommitmentKind
@@ -86,12 +81,7 @@ fun CommitmentsScreen(
         verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
     ) {
         item {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                IconButton(onClick = onBack, modifier = Modifier.size(AccordSpacing.touchMin)) {
-                    Icon(painterResource(Lucide.drawable.lucide_ic_arrow_left), contentDescription = stringResource(R.string.action_back))
-                }
-                Text(stringResource(R.string.commitments_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
-            }
+            DetailHeader(stringResource(R.string.commitments_title), onBack)
         }
         item { MonthSelector(state.month, onPrevious, onNext) }
         item {

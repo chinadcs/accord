@@ -12,8 +12,11 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 
 /** Preferência de tema deste aparelho; não é dado financeiro e não sincroniza (tela 22). */
 enum class ThemePreference { System, Light, Dark }
@@ -60,18 +63,77 @@ object Accord {
 }
 
 private val RoundedShapes = Shapes(
+    extraSmall = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
     small = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
-    medium = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
-    large = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+    medium = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+    large = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+    extraLarge = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
 )
 
 private val StraightShapes = Shapes(
+    extraSmall = androidx.compose.foundation.shape.RoundedCornerShape(0.dp),
     small = androidx.compose.foundation.shape.RoundedCornerShape(0.dp),
     medium = androidx.compose.foundation.shape.RoundedCornerShape(4.dp),
     large = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
+    extraLarge = androidx.compose.foundation.shape.RoundedCornerShape(8.dp),
 )
 
 private const val TABULAR_FIGURES = "tnum"
+
+/** A hierarquia do produto usa a fonte configurada no Android, sem baixar outra família. */
+private val AccordMaterialTypography = Typography().let { base ->
+    base.copy(
+        titleLarge = base.titleLarge.copy(
+            fontFamily = FontFamily.Default,
+            fontSize = 24.sp,
+            lineHeight = 30.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = (-0.4f).sp,
+        ),
+        titleMedium = base.titleMedium.copy(
+            fontFamily = FontFamily.Default,
+            fontSize = 18.sp,
+            lineHeight = 25.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = (-0.2f).sp,
+        ),
+        titleSmall = base.titleSmall.copy(
+            fontFamily = FontFamily.Default,
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            fontWeight = FontWeight.SemiBold,
+        ),
+        headlineSmall = base.headlineSmall.copy(
+            fontFamily = FontFamily.Default,
+            fontSize = 32.sp,
+            lineHeight = 38.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = (-0.6f).sp,
+        ),
+        bodyLarge = base.bodyLarge.copy(
+            fontFamily = FontFamily.Default,
+            fontSize = 16.sp,
+            lineHeight = 24.sp,
+        ),
+        bodyMedium = base.bodyMedium.copy(
+            fontFamily = FontFamily.Default,
+            fontSize = 14.sp,
+            lineHeight = 21.sp,
+        ),
+        labelLarge = base.labelLarge.copy(
+            fontFamily = FontFamily.Default,
+            fontSize = 14.sp,
+            lineHeight = 20.sp,
+            fontWeight = FontWeight.SemiBold,
+        ),
+        labelSmall = base.labelSmall.copy(
+            fontFamily = FontFamily.Default,
+            fontSize = 12.sp,
+            lineHeight = 16.sp,
+            fontWeight = FontWeight.Medium,
+        ),
+    )
+}
 
 @Composable
 private fun rememberReducedMotion(): Boolean {
@@ -97,9 +159,9 @@ fun AccordTheme(
         ThemePreference.Light -> false
         ThemePreference.Dark -> true
     }
-    val typography = Typography()
+    val typography = AccordMaterialTypography
     val accordTypography = AccordTypography(
-        amountRow = typography.bodyLarge.copy(fontFeatureSettings = TABULAR_FIGURES),
+        amountRow = typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold, fontFeatureSettings = TABULAR_FIGURES),
         amountHero = typography.headlineSmall.copy(fontFeatureSettings = TABULAR_FIGURES),
     )
     CompositionLocalProvider(

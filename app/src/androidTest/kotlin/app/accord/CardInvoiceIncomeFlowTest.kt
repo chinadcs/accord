@@ -63,6 +63,8 @@ class CardInvoiceIncomeFlowTest {
     @Before
     fun seed() = runBlocking {
         val space = ApplicationProvider.getApplicationContext<AccordApplication>().container.space()
+        // Cada teste prepara o cartão; o produto novo começa sem cartão configurado.
+        space.execute(Envelope(CommandId("s1e-config-$tag")), ConfigureCard(null, "Cartão", 8, 15))
         val account = (space.execute(Envelope(CommandId("s1e-account")), AddAccount(BankRef.Other("Banco"), "Conta")) as? CommandResult.Applied)
             ?.receipt?.changes?.single()?.id
         if (account != null) space.execute(Envelope(CommandId("s1e-default")), SetMyDefaultAccount(account))
@@ -109,6 +111,13 @@ class CardInvoiceIncomeFlowTest {
 
     private fun waitForText(text: String) =
         compose.waitUntil(8_000) { compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty() }
+
+    private fun waitForCardDays(closing: Int, due: Int) {
+        compose.waitUntil(8_000) {
+            compose.onAllNodes(hasText("Dia de fechamento") and hasText(closing.toString())).fetchSemanticsNodes().isNotEmpty() &&
+                compose.onAllNodes(hasText("Dia de vencimento") and hasText(due.toString())).fetchSemanticsNodes().isNotEmpty()
+        }
+    }
 
     private fun waitGone(text: String) =
         compose.waitUntil(8_000) { compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isEmpty() }
@@ -166,7 +175,7 @@ class CardInvoiceIncomeFlowTest {
     @Test
     fun cartaoValidaOsDiasEGuardaBancoDoCatalogoLocal() {
         fromBudget("Cartão e faturas")
-        waitForText("Fechamento: dia 8")
+        waitForCardDays(8, 15)
         tap("Editar cartão")
         waitForText("Dia de fechamento")
         compose.onNodeWithText("Dia de fechamento").performTextReplacement("40")
@@ -183,14 +192,14 @@ class CardInvoiceIncomeFlowTest {
         compose.onAllNodes(hasText("Itaú") and hasClickAction()).onFirst().performSemanticsAction(SemanticsActions.OnClick)
         waitGone("Escolher banco")
         tap("Salvar cartão")
-        waitForText("Fechamento: dia 9 · Vencimento: dia 16")
+        waitForCardDays(9, 16)
         waitForText("Itaú")
     }
 
     @Test
     fun outroBancoPermiteInformarONome() {
         fromBudget("Cartão e faturas")
-        waitForText("Fechamento: dia")
+        waitForText("Dia de fechamento")
         tap("Editar cartão")
         waitForText("Dia de fechamento")
         tap("Selecionar banco")

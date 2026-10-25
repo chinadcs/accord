@@ -8,18 +8,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import app.accord.ui.components.AccordButton as Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -43,6 +44,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.accord.R
+import app.accord.ui.components.AccordWordmark
 import app.accord.ui.components.MessageBanner
 import app.accord.ui.theme.AccordSpacing
 import com.composables.icons.lucide.R as Lucide
@@ -87,9 +89,10 @@ fun AccessScreen(
     onBack: (() -> Unit)? = null,
 ) {
     Column(
-        Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
-        verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
+        Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
+        verticalArrangement = Arrangement.spacedBy(AccordSpacing.s4),
     ) {
+        AccordWordmark()
         when (ui.panel) {
             AccessPanel.None -> LoginForm(ui, onEmail, onPassword, onToggleShow, onSignIn, onCancel, onOpenCreate, onOpenHelp, onBack)
             AccessPanel.Create -> CreatePanel(ui, onCreateEmail, onCreatePassword, onCreateConfirmation, onToggleShowPasswords, onSignUp, onCancel, onClosePanel)
@@ -127,9 +130,13 @@ private fun LoginForm(
             }
         }
         Text(
-            stringResource(if (ui.renewal) R.string.access_renew_title else R.string.access_title),
-            style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).semantics { heading() },
+            stringResource(if (ui.renewal) R.string.access_renew_title else R.string.access_sign_in_heading),
+            style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f).semantics { heading() },
         )
+    }
+    if (!ui.renewal) {
+        Text(stringResource(R.string.access_title), style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
     if (ui.renewal) {
         Text(stringResource(R.string.access_renew_note), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -197,7 +204,7 @@ private fun CreatePanel(
             else -> Unit
         }
     }
-    Text(stringResource(R.string.access_create_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+    Text(stringResource(R.string.access_create_title), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { heading() })
     Text(stringResource(R.string.access_create_note), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     OutlinedTextField(
         value = form.email, onValueChange = onEmail, singleLine = true, enabled = !ui.working,
@@ -229,7 +236,7 @@ private fun CreatePanel(
 
 @Composable
 private fun HelpPanel(onClose: () -> Unit) {
-    Text(stringResource(R.string.access_help_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+    Text(stringResource(R.string.access_help_title), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { heading() })
     Text(stringResource(R.string.access_help_body_1), style = MaterialTheme.typography.bodyLarge)
     Text(stringResource(R.string.access_help_body_2), style = MaterialTheme.typography.bodyLarge)
     Button(onClick = onClose, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {

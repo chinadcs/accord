@@ -4,7 +4,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -24,7 +23,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import app.accord.ui.components.AccordButton as Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -32,7 +31,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.SegmentedButton
@@ -57,12 +56,12 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.accord.ui.components.DetailHeader
 import app.accord.R
 import app.accord.core.Frequency
 import app.accord.core.label
@@ -128,16 +127,7 @@ fun RegisterScreen(
             Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
             verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                IconButton(onClick = onBack, modifier = Modifier.size(AccordSpacing.touchMin)) {
-                    Icon(painterResource(Lucide.drawable.lucide_ic_arrow_left), contentDescription = stringResource(R.string.action_back))
-                }
-                Text(
-                    stringResource(R.string.register_title),
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.semantics { heading() },
-                )
-            }
+            DetailHeader(stringResource(R.string.register_title), onBack)
 
             if (state.loadFailed) {
                 Text(stringResource(R.string.register_load_failed), color = MaterialTheme.colorScheme.error)
@@ -182,6 +172,7 @@ fun RegisterScreen(
                 label = stringResource(R.string.register_amount), hint = stringResource(R.string.register_amount_hint),
                 error = state.errors[FormField.Amount], keyboard = KeyboardType.Decimal,
                 focus = focus.getValue(FormField.Amount), bring = bring.getValue(FormField.Amount),
+                emphasized = true,
             )
 
             val dateLabel = when {
@@ -338,6 +329,7 @@ internal fun FormTextField(
     bring: BringIntoViewRequester,
     hint: String? = null,
     keyboard: KeyboardType = KeyboardType.Text,
+    emphasized: Boolean = false,
 ) {
     val message = errorText(error)
     OutlinedTextField(
@@ -349,6 +341,7 @@ internal fun FormTextField(
         supportingText = message?.let { { Text(it) } },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = keyboard),
+        textStyle = if (emphasized) Accord.typography.amountHero else MaterialTheme.typography.bodyLarge,
         modifier = Modifier.fillMaxWidth().bringIntoViewRequester(bring).focusRequester(focus),
     )
 }

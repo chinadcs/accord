@@ -9,15 +9,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import app.accord.ui.components.AccordButton as Button
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -28,7 +26,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
@@ -37,6 +34,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.accord.ui.components.DetailHeader
 import app.accord.R
 import app.accord.core.label
 import app.accord.core.space.InvoiceStatus
@@ -90,12 +88,7 @@ fun CardScreen(
         Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
         verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-            IconButton(onClick = onBack, modifier = Modifier.size(AccordSpacing.touchMin)) {
-                Icon(painterResource(Lucide.drawable.lucide_ic_arrow_left), contentDescription = stringResource(R.string.action_back))
-            }
-            Text(stringResource(if (initialSetup) R.string.card_setup_title else R.string.card_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
-        }
+        DetailHeader(stringResource(if (initialSetup) R.string.card_setup_title else R.string.card_title), onBack)
         when (content) {
             CardContent.Loading -> Text(stringResource(R.string.state_loading), style = MaterialTheme.typography.bodyLarge)
             CardContent.Failed -> {
@@ -118,7 +111,15 @@ fun CardScreen(
                     if (content.data.invoices.isEmpty()) {
                         Text(stringResource(R.string.card_no_invoices), style = MaterialTheme.typography.bodyLarge)
                     } else {
-                        content.data.invoices.forEach { InvoiceRow(it) { onOpenInvoice(it.dueMonth) } }
+                        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+                            Column {
+                                content.data.invoices.forEachIndexed { index, invoice ->
+                                    if (index > 0) HorizontalDivider(modifier = Modifier.padding(horizontal = AccordSpacing.s4),
+                                        color = MaterialTheme.colorScheme.outlineVariant)
+                                    InvoiceRow(invoice) { onOpenInvoice(invoice.dueMonth) }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -129,23 +130,36 @@ fun CardScreen(
 @Composable
 private fun CardSummary(data: CardData, onStartEdit: () -> Unit) {
     val card = data.card
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
-        Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+    Surface(color = Accord.colors.financeSurface, contentColor = Accord.colors.onFinanceSurface, shape = MaterialTheme.shapes.large) {
+        Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s4)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
                 BankLogo(card.bank)
-                Column(Modifier.weight(1f)) {
-                    Text(card.nickname, style = MaterialTheme.typography.titleMedium)
+                Column(Modifier.weight(1f).semantics(mergeDescendants = true) { }) {
+                    Text(card.nickname, style = MaterialTheme.typography.titleLarge, color = Accord.colors.onFinanceSurface)
                     Text(
                         card.bank?.displayName() ?: stringResource(R.string.card_bank_none),
-                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium, color = Accord.colors.onFinanceSurface,
                     )
                 }
             }
-            Text(stringResource(R.string.card_days, card.closingDay, card.dueDay), style = MaterialTheme.typography.bodyLarge)
-            OutlinedButton(onClick = onStartEdit, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
-                Text(stringResource(R.string.card_edit))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
+                Column(Modifier.weight(1f).semantics(mergeDescendants = true) { }) {
+                    Text(stringResource(R.string.card_closing_day), style = MaterialTheme.typography.labelMedium,
+                        color = Accord.colors.onFinanceSurface)
+                    Text(card.closingDay.toString(), style = MaterialTheme.typography.headlineSmall,
+                        color = Accord.colors.onFinanceSurface)
+                }
+                Column(Modifier.weight(1f).semantics(mergeDescendants = true) { }) {
+                    Text(stringResource(R.string.card_due_day), style = MaterialTheme.typography.labelMedium,
+                        color = Accord.colors.onFinanceSurface)
+                    Text(card.dueDay.toString(), style = MaterialTheme.typography.headlineSmall,
+                        color = Accord.colors.onFinanceSurface)
+                }
             }
         }
+    }
+    OutlinedButton(onClick = onStartEdit, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+        Text(stringResource(R.string.card_edit))
     }
 }
 
@@ -224,17 +238,16 @@ private fun ToConfirmRow(count: Int, onClick: () -> Unit) {
 @Composable
 private fun InvoiceRow(invoice: InvoiceView, onClick: () -> Unit) {
     val total = invoice.checkedTotal ?: invoice.knownTotal
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).clickable(role = Role.Button, onClick = onClick),
+    Column(
+        Modifier.fillMaxWidth().heightIn(min = 64.dp).clickable(role = Role.Button, onClick = onClick).padding(AccordSpacing.s4),
+        verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
     ) {
-        Column(Modifier.padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
             AdaptiveRow(
                 start = { Text(invoice.dueMonth.label(), style = MaterialTheme.typography.titleSmall) },
                 end = { Text(total.format(), style = Accord.typography.amountRow, textAlign = TextAlign.End) },
             )
-            Text(invoiceStatusLine(invoice), style = MaterialTheme.typography.bodyMedium)
-        }
+            Text(invoiceStatusLine(invoice), style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

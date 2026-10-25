@@ -12,18 +12,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import app.accord.ui.components.AccordButton as Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -37,13 +34,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.accord.ui.components.DetailHeader
 import app.accord.R
 import app.accord.core.RecurrenceScope
 import app.accord.core.label
@@ -58,7 +53,6 @@ import app.accord.ui.register.PickerField
 import app.accord.ui.register.accountLabel
 import app.accord.ui.theme.Accord
 import app.accord.ui.theme.AccordSpacing
-import com.composables.icons.lucide.R as Lucide
 import kotlinx.coroutines.launch
 
 @Composable
@@ -107,16 +101,7 @@ fun EditEntryScreen(
             Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
             verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                IconButton(onClick = onBack, modifier = Modifier.size(AccordSpacing.touchMin)) {
-                    Icon(painterResource(Lucide.drawable.lucide_ic_arrow_left), contentDescription = stringResource(R.string.action_back))
-                }
-                Text(
-                    stringResource(R.string.register_edit_title),
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.semantics { heading() },
-                )
-            }
+            DetailHeader(stringResource(R.string.register_edit_title), onBack)
 
             when (state.content) {
                 EditContent.Loading -> Text(stringResource(R.string.state_loading), style = MaterialTheme.typography.bodyLarge)

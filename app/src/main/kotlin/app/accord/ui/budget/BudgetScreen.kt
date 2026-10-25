@@ -2,6 +2,7 @@ package app.accord.ui.budget
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -9,22 +10,25 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
+import app.accord.ui.components.AccordButton as Button
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -94,11 +98,6 @@ fun BudgetScreen(
             Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
                 ScreenTitle(stringResource(R.string.tab_budget))
                 MonthSelector(state.month, onPrevious, onNext)
-                Text(
-                    stringResource(R.string.budget_criteria),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
                 // "Salvo no aparelho" até haver sincronização concluída; depois, a data, nunca um selo de "em dia".
                 SyncIndicator()
             }
@@ -149,9 +148,11 @@ private fun LazyListScope.budgetContent(
 ) {
     if (data.isEmpty) {
         item { EmptyMonth(onRegister) }
+        item { BudgetCriteria() }
         return
     }
     item { SummaryCard(data) }
+    item { BudgetCriteria() }
     item { IncomeBlock(data) }
     if (data.budget.toClassify.count > 0) item { ToClassifyRow(data) { onClassify(data.month) } }
     item {
@@ -171,6 +172,16 @@ private fun LazyListScope.budgetContent(
         )
     }
     item { MonthLinks({ onOpenCommitments(data.month) }, { onOpenIncomes(data.month) }, onOpenCard) }
+}
+
+@Composable
+private fun BudgetCriteria() {
+    Text(
+        stringResource(R.string.budget_criteria),
+        style = MaterialTheme.typography.bodyMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = AccordSpacing.s1),
+    )
 }
 
 @Composable
@@ -209,19 +220,62 @@ private fun LabelledAmount(label: String, amount: String, note: String? = null) 
 @Composable
 private fun SummaryCard(data: BudgetData) {
     val budget = data.budget
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
-        Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-            LabelledAmount(stringResource(R.string.summary_committed), budget.committed.format())
-            LabelledAmount(
-                stringResource(R.string.summary_limits),
-                if (data.hasLimits) budget.totalLimits.format() else stringResource(R.string.summary_no_limits),
-            )
-            // "Pago" é parte do comprometido, nunca uma parcela a somar de novo.
-            LabelledAmount(stringResource(R.string.summary_paid), budget.paid.format(), stringResource(R.string.summary_paid_note))
+    val stackedMetrics = LocalDensity.current.fontScale >= 1.3f
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+        Surface(color = Accord.colors.financeSurface, shape = MaterialTheme.shapes.large) {
+            Column(Modifier.fillMaxWidth().padding(AccordSpacing.s5), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                Text(
+                    stringResource(R.string.summary_committed),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Accord.colors.onFinanceSurface,
+                )
+                Text(
+                    budget.committed.format(),
+                    style = Accord.typography.amountHero,
+                    color = Accord.colors.onFinanceSurface,
+                )
+            }
+        }
+        if (stackedMetrics) {
+            Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                SummaryMetric(stringResource(R.string.summary_limits), if (data.hasLimits) budget.totalLimits.format() else stringResource(R.string.summary_no_limits))
+                SummaryMetric(stringResource(R.string.summary_paid), budget.paid.format(), stringResource(R.string.summary_paid_note))
+            }
+        } else {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                SummaryMetric(
+                    stringResource(R.string.summary_limits),
+                    if (data.hasLimits) budget.totalLimits.format() else stringResource(R.string.summary_no_limits),
+                    modifier = Modifier.weight(1f),
+                )
+                // "Pago" é parte do comprometido, nunca uma parcela a somar de novo.
+                SummaryMetric(
+                    stringResource(R.string.summary_paid),
+                    budget.paid.format(),
+                    stringResource(R.string.summary_paid_note),
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+        Column(Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s1), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             if (budget.credits.cents != 0L) {
                 LabelledAmount(stringResource(R.string.summary_credits), budget.credits.format())
             }
             if (budget.invoiceLinksToConfirm > 0) LinksToConfirm(budget.invoiceLinksToConfirm)
+        }
+    }
+}
+
+@Composable
+private fun SummaryMetric(label: String, amount: String, note: String? = null, modifier: Modifier = Modifier) {
+    Surface(modifier = modifier, color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+        Column(
+            Modifier.fillMaxWidth().heightIn(min = 96.dp).padding(AccordSpacing.s3),
+            verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
+        ) {
+            Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(amount, style = Accord.typography.amountRow, color = MaterialTheme.colorScheme.onSurface)
+            note?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     }
 }
@@ -254,8 +308,9 @@ private fun LinksToConfirm(count: Int) {
 @Composable
 private fun IncomeBlock(data: BudgetData) {
     val income = data.budget.income
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
-        Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s1), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             // Renda recebida e a receber ficam em linhas distintas; prevista não é saldo disponível.
             LabelledAmount(stringResource(R.string.income_received), income.received.format())
             LabelledAmount(stringResource(R.string.income_to_receive), income.toReceive.format())
@@ -310,59 +365,86 @@ private fun CategoryRow(category: CategoryBudget, name: String, iconKey: String,
     val percent = percentLabel(limit)
     val description = listOfNotNull(name, amounts, status, barLabel, percent?.let { "$it%" }, breakdown, netCredit).joinToString(". ")
 
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = RoundedCornerShape(12.dp),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClickLabel = stringResource(R.string.category_open, name), onClick = onClick)
-            .semantics(mergeDescendants = true) { contentDescription = description },
-    ) {
+    Column(Modifier.fillMaxWidth()) {
         Column(
-            Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).padding(AccordSpacing.s4),
+            Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)
+                .clickable(onClickLabel = stringResource(R.string.category_open, name), onClick = onClick)
+                .semantics(mergeDescendants = true) { contentDescription = description }
+                .padding(horizontal = AccordSpacing.s1, vertical = AccordSpacing.s3),
             verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
         ) {
             Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
-                DecorativeIcon(lucideRes(iconKey))
-                // O nome ocupa a largura toda; os valores descem para a linha de baixo e nunca o espremem.
+                Surface(color = MaterialTheme.colorScheme.surfaceContainer, shape = MaterialTheme.shapes.small) {
+                    Box(Modifier.size(AccordSpacing.touchMin), contentAlignment = Alignment.Center) {
+                        DecorativeIcon(lucideRes(iconKey), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
-                    Text(name, style = MaterialTheme.typography.titleMedium)
-                    Text(amounts, style = Accord.typography.amountRow)
+                    if (LocalDensity.current.fontScale >= 1.3f) {
+                        Text(name, style = MaterialTheme.typography.titleMedium)
+                        Text(money(category.net), style = Accord.typography.amountRow)
+                    } else {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                            Text(name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                            Text(money(category.net), style = Accord.typography.amountRow, textAlign = TextAlign.End)
+                        }
+                    }
+                    limit.total?.let {
+                        Text(
+                            stringResource(R.string.category_limit_value, money(it)),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
             // Sem limite definido não há barra: o texto "Limite não definido" é o estado.
             if (state != BarState.NoLimit) BudgetBar(barFill(limit), state, excessMarker(limit, category.net))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
-                when (state) {
-                    BarState.Attention -> DecorativeIcon(Lucide.drawable.lucide_ic_triangle_alert, tint = Accord.colors.attention)
-                    BarState.Excess -> DecorativeIcon(Lucide.drawable.lucide_ic_circle_alert, tint = MaterialTheme.colorScheme.error)
-                    else -> Unit
-                }
-                Text(
-                    status,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = when (state) {
-                        BarState.Excess -> MaterialTheme.colorScheme.error
-                        BarState.Attention -> Accord.colors.attention
-                        else -> MaterialTheme.colorScheme.onSurfaceVariant
-                    },
-                    modifier = Modifier.weight(1f),
-                )
-                percent?.let { Text("$it%", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            }
+            AdaptiveRow(
+                start = {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+                        when (state) {
+                            BarState.Attention -> DecorativeIcon(Lucide.drawable.lucide_ic_triangle_alert, tint = Accord.colors.attention)
+                            BarState.Excess -> DecorativeIcon(Lucide.drawable.lucide_ic_circle_alert, tint = MaterialTheme.colorScheme.error)
+                            else -> Unit
+                        }
+                        Text(status, style = MaterialTheme.typography.bodyMedium, color = when (state) {
+                            BarState.Excess -> MaterialTheme.colorScheme.error
+                            BarState.Attention -> Accord.colors.attention
+                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                        })
+                    }
+                },
+                end = { percent?.let { Text("$it%", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) } },
+            )
             breakdown?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             netCredit?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Accord.colors.success) }
         }
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
 }
 
 /** Caminhos do mês para o que já ocupa os próximos meses, as rendas e o cartão; cada um volta ao Orçamento. */
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun MonthLinks(onCommitments: () -> Unit, onIncomes: () -> Unit, onCard: () -> Unit) {
-    androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-        OutlinedButton(onClick = onCommitments, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.budget_link_commitments)) }
-        OutlinedButton(onClick = onIncomes, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.budget_link_incomes)) }
-        OutlinedButton(onClick = onCard, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.budget_link_card)) }
+    Column {
+        MonthLink(stringResource(R.string.budget_link_commitments), Lucide.drawable.lucide_ic_calendar, onCommitments)
+        MonthLink(stringResource(R.string.budget_link_incomes), Lucide.drawable.lucide_ic_wallet, onIncomes)
+        MonthLink(stringResource(R.string.budget_link_card), Lucide.drawable.lucide_ic_credit_card, onCard)
+    }
+}
+
+@Composable
+private fun MonthLink(label: String, icon: Int, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)
+            .clickable(role = Role.Button, onClickLabel = label, onClick = onClick)
+            .padding(horizontal = AccordSpacing.s1, vertical = AccordSpacing.s2),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
+    ) {
+        DecorativeIcon(icon, tint = MaterialTheme.colorScheme.primary)
+        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        DecorativeIcon(Lucide.drawable.lucide_ic_chevron_right)
     }
 }

@@ -18,15 +18,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import app.accord.ui.components.AccordButton as Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.material3.OutlinedButton
+import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
@@ -52,6 +53,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.accord.R
+import app.accord.ui.vendors.EntryIdentityIcon
 import app.accord.core.Money
 import app.accord.core.label
 import app.accord.core.space.CategoryNode
@@ -66,6 +68,7 @@ import app.accord.ui.components.AdaptiveRow
 import app.accord.ui.components.DecorativeIcon
 import app.accord.ui.components.RefreshOnResume
 import app.accord.ui.components.ScreenTitle
+import app.accord.ui.components.lucideRes
 import app.accord.core.label
 import app.accord.ui.label
 import app.accord.ui.shortLabel
@@ -146,6 +149,7 @@ fun EntriesScreen(
                 onValueChange = { searchText = it; onSearch(it) },
                 label = { Text(stringResource(R.string.entries_search_label)) },
                 singleLine = true,
+                leadingIcon = { DecorativeIcon(Lucide.drawable.lucide_ic_search) },
                 trailingIcon = {
                     if (searchText.isNotEmpty()) {
                         IconButton(onClick = { searchText = ""; onSearch("") }) {
@@ -197,10 +201,11 @@ fun EntriesScreen(
 
 private const val LOAD_MORE_DISTANCE = 4
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FilterBar(filter: EntriesFilterState, onOpenFilters: () -> Unit, onToggleCriterion: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+    Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+        FlowRow(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2), horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             OutlinedButton(onClick = onOpenFilters, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
                 DecorativeIcon(Lucide.drawable.lucide_ic_list_filter)
                 Text(
@@ -208,29 +213,41 @@ private fun FilterBar(filter: EntriesFilterState, onOpenFilters: () -> Unit, onT
                     modifier = Modifier.padding(start = AccordSpacing.s1),
                 )
             }
-            Text(
-                if (filter.from == filter.to) filter.from.label() else stringResource(R.string.entries_period, filter.from.label(), filter.to.label()),
-                style = MaterialTheme.typography.bodyMedium,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            val budget = filter.criterion == DateCriterion.BudgetMonth
-            Column(Modifier.weight(1f)) {
-                Text(
-                    stringResource(if (budget) R.string.entries_criterion_budget else R.string.entries_criterion_purchase),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-                Text(
-                    stringResource(if (budget) R.string.entries_criterion_budget_hint else R.string.entries_criterion_purchase_hint),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            TextButton(onClick = onToggleCriterion, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                Text(stringResource(R.string.entries_criterion_change))
+            Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.small) {
+                Row(
+                    Modifier.heightIn(min = AccordSpacing.touchMin).padding(horizontal = AccordSpacing.s3),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+                ) {
+                    DecorativeIcon(Lucide.drawable.lucide_ic_calendar, modifier = Modifier.size(20.dp))
+                    Text(
+                        if (filter.from == filter.to) filter.from.label() else stringResource(R.string.entries_period, filter.from.label(), filter.to.label()),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
             }
         }
+        AdaptiveRow(
+            start = {
+                val budget = filter.criterion == DateCriterion.BudgetMonth
+                Column {
+                    Text(
+                        stringResource(if (budget) R.string.entries_criterion_budget else R.string.entries_criterion_purchase),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    Text(
+                        stringResource(if (budget) R.string.entries_criterion_budget_hint else R.string.entries_criterion_purchase_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            },
+            end = {
+                TextButton(onClick = onToggleCriterion, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                    Text(stringResource(R.string.entries_criterion_change))
+                }
+            },
+        )
     }
 }
 
@@ -284,8 +301,9 @@ private fun EmptyState(filtered: Boolean, onClear: () -> Unit, onNew: () -> Unit
 @Composable
 private fun SummaryBlock(summary: EntrySummary, total: Int) {
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
-        Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
-            Text(pluralStringResource(R.plurals.entries_total, total, total), style = MaterialTheme.typography.titleMedium)
+        Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+            Text(pluralStringResource(R.plurals.entries_total, total, total), style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
             fun Money.nonZero() = cents != 0L
             if (summary.expenses.nonZero()) SummaryLine(stringResource(R.string.summary_expenses), summary.expenses)
             if (summary.incomes.nonZero()) SummaryLine(stringResource(R.string.summary_incomes), summary.incomes)
@@ -319,6 +337,11 @@ private fun EntryRow.visibleSituations(): List<EntrySituation> {
 @Composable
 private fun EntryItem(row: EntryRow, categories: Map<String, CategoryNode>, onOpen: (String) -> Unit) {
     val path = categoryPath(categories, row.categoryId)
+    val icon = when (row.kind) {
+        EntryKind.InvoicePayment -> Lucide.drawable.lucide_ic_credit_card
+        EntryKind.Income -> lucideRes("banknote-arrow-down")
+        else -> lucideRes(categories[row.categoryId]?.iconKey ?: "tag")
+    }
     val situations = row.visibleSituations()
     val installment = if (row.installmentNumber != null && row.installmentCount != null) {
         stringResource(R.string.detail_installment_of, row.installmentNumber!!, row.installmentCount!!)
@@ -333,21 +356,31 @@ private fun EntryItem(row: EntryRow, categories: Map<String, CategoryNode>, onOp
     val description = (listOf(row.description, row.amount.format(), subtitle) + situationLabels).joinToString(". ")
 
     Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surface,
         onClick = { onOpen(row.id) },
         modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = description },
     ) {
-        Column(
-            Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).padding(AccordSpacing.s4),
-            verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
-        ) {
-            AdaptiveRow(
-                start = { Text(row.description, style = MaterialTheme.typography.titleMedium) },
-                end = { Text(row.amount.format(), style = Accord.typography.amountRow, textAlign = TextAlign.End) },
-            )
-            Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (situations.isNotEmpty()) SituationTags(situations)
+        Column(Modifier.fillMaxWidth()) {
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).padding(vertical = AccordSpacing.s3),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
+            ) {
+                EntryIdentityIcon(
+                    description = row.description,
+                    fallbackIcon = icon,
+                    allowVendor = row.kind != EntryKind.Income && row.kind != EntryKind.InvoicePayment,
+                )
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+                    AdaptiveRow(
+                        start = { Text(row.description, style = MaterialTheme.typography.titleMedium) },
+                        end = { Text(row.amount.format(), style = Accord.typography.amountRow, textAlign = TextAlign.End) },
+                    )
+                    Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (situations.isNotEmpty()) SituationTags(situations)
+                }
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         }
     }
 }

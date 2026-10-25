@@ -14,28 +14,25 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
+import app.accord.ui.components.AccordButton as Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.accord.ui.components.DetailHeader
 import app.accord.R
 import app.accord.core.model.Blocker
 import app.accord.core.model.FailureCause
@@ -44,7 +41,6 @@ import app.accord.core.model.ModelInstall
 import app.accord.core.model.ModelManifest
 import app.accord.ui.theme.Accord
 import app.accord.ui.theme.AccordSpacing
-import com.composables.icons.lucide.R as Lucide
 
 class ModelActions(
     val onBack: () -> Unit,
@@ -89,12 +85,7 @@ fun ModelScreen(
         Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
         verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = actions.onBack, modifier = Modifier.size(AccordSpacing.touchMin)) {
-                Icon(painterResource(Lucide.drawable.lucide_ic_chevron_left), contentDescription = stringResource(R.string.action_back))
-            }
-            Text(stringResource(R.string.model_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
-        }
+        DetailHeader(stringResource(R.string.model_title), actions.onBack)
         Text(stringResource(R.string.model_explain), style = MaterialTheme.typography.bodyLarge)
         status.active?.let { Text(stringResource(R.string.model_in_use, it.version), style = MaterialTheme.typography.bodyMedium) }
 

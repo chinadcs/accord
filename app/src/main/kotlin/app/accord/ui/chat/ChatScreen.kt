@@ -1,6 +1,7 @@
 package app.accord.ui.chat
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,10 +20,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
+import app.accord.ui.components.AccordButton as Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -37,6 +38,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
@@ -48,12 +50,14 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.accord.R
+import app.accord.ui.vendors.VendorCatalog
+import app.accord.ui.vendors.VendorLogo
+import app.accord.ui.components.AccordMark
 import app.accord.core.Money
 import app.accord.core.chat.ChatMessage
 import app.accord.core.chat.ChatPayment
 import app.accord.core.chat.ChatQuestion
 import app.accord.core.chat.ChatQuestionRecord
-import app.accord.core.chat.ChatReceiptRecord
 import app.accord.core.chat.MessageState
 import app.accord.core.chat.Nature
 import app.accord.core.chat.QuestionField
@@ -151,11 +155,12 @@ fun ChatScreen(
 
 @Composable
 private fun ChatHeader(badge: ModelBadge, onOpenModel: () -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier.fillMaxWidth()) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+            AccordMark()
             Text(stringResource(R.string.chat_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
-            ModelBadgeButton(badge, onOpenModel)
         }
+        ModelBadgeButton(badge, onOpenModel)
         SyncIndicator()
     }
 }
@@ -173,26 +178,37 @@ private fun ModelBadgeButton(badge: ModelBadge, onClick: () -> Unit) {
     val description = stringResource(R.string.chat_model_open)
     TextButton(
         onClick = onClick,
-        modifier = Modifier.heightIn(min = AccordSpacing.touchMin).semantics { contentDescription = "$text. $description" },
+        modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).semantics { contentDescription = "$text. $description" },
     ) {
-        DecorativeIcon(
-            if (badge == ModelBadge.Installed) Lucide.drawable.lucide_ic_circle_check else Lucide.drawable.lucide_ic_cpu,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(text, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = AccordSpacing.s1))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            DecorativeIcon(
+                if (badge == ModelBadge.Installed) Lucide.drawable.lucide_ic_circle_check else Lucide.drawable.lucide_ic_cpu,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(text, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = AccordSpacing.s1).weight(1f))
+        }
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun EmptyChat(onExample: (String) -> Unit, modifier: Modifier = Modifier) {
-    Column(modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
-        Text(stringResource(R.string.chat_empty_title), style = MaterialTheme.typography.titleMedium)
-        Text(stringResource(R.string.chat_empty_body), style = MaterialTheme.typography.bodyLarge)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+    Column(modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s5)) {
+        Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+            Text(stringResource(R.string.chat_welcome_title), style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.chat_welcome_body), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+            Text(stringResource(R.string.chat_examples_heading), style = MaterialTheme.typography.titleMedium)
             listOf(R.string.chat_example_expense, R.string.chat_example_pix, R.string.chat_example_income).forEach { res ->
                 val example = stringResource(res)
-                OutlinedButton(onClick = { onExample(example) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(example) }
+                Surface(onClick = { onExample(example) }, color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.small) {
+                    Row(Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).padding(horizontal = AccordSpacing.s3, vertical = AccordSpacing.s2),
+                        horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalAlignment = Alignment.CenterVertically) {
+                        Text(example, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        DecorativeIcon(Lucide.drawable.lucide_ic_chevron_right, tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
             }
         }
     }
@@ -200,24 +216,39 @@ private fun EmptyChat(onExample: (String) -> Unit, modifier: Modifier = Modifier
 
 @Composable
 private fun Composer(text: String, onChange: (String) -> Unit, onSend: () -> Unit, onManual: () -> Unit) {
-    Surface(color = MaterialTheme.colorScheme.surface, tonalElevation = 2.dp) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+    val largeText = LocalDensity.current.fontScale >= 1.3f
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, tonalElevation = AccordSpacing.s1) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2),
+            verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+        ) {
+            val input: @Composable (Modifier) -> Unit = { modifier ->
                 OutlinedTextField(
                     value = text,
                     onValueChange = onChange,
-                    modifier = Modifier.weight(1f).heightIn(min = AccordSpacing.touchMin),
+                    modifier = modifier.heightIn(min = AccordSpacing.touchMin),
                     label = { Text(stringResource(R.string.chat_composer_label)) },
                     placeholder = { Text(stringResource(R.string.chat_composer_hint)) },
                     maxLines = 4,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences, imeAction = ImeAction.Send),
                     keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSend = { onSend() }),
                 )
-                Button(onClick = onSend, enabled = text.isNotBlank(), modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+            }
+            val send: @Composable (Modifier) -> Unit = { modifier ->
+                Button(onClick = onSend, enabled = text.isNotBlank(), modifier = modifier.heightIn(min = AccordSpacing.touchMin)) {
                     Text(stringResource(R.string.chat_send))
                 }
             }
-            TextButton(onClick = onManual, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+            if (largeText) {
+                input(Modifier.fillMaxWidth())
+                send(Modifier.fillMaxWidth())
+            } else {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                    input(Modifier.weight(1f))
+                    send(Modifier)
+                }
+            }
+            TextButton(onClick = onManual, modifier = Modifier.heightIn(min = AccordSpacing.touchMin).align(if (largeText) Alignment.CenterHorizontally else Alignment.Start)) {
                 Text(stringResource(R.string.chat_manual))
             }
         }
@@ -250,10 +281,11 @@ private fun ChatItemView(
 @Composable
 private fun UserBubble(text: String) {
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.CenterEnd) {
-        Surface(color = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer, shape = MaterialTheme.shapes.medium) {
+        val spoken = stringResource(R.string.chat_user_message, text)
+        Surface(color = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            shape = MaterialTheme.shapes.medium, modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = spoken }) {
             Text(
                 text, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(AccordSpacing.s3),
-                // O TalkBack lê quem falou antes do texto.
             )
         }
     }
@@ -317,13 +349,27 @@ private fun ReceiptCard(
     val receipt = item.receipt
     val summary = receipt.summary
     val active = receipt.state == ReceiptState.Active
+    val vendor = remember(summary.description, summary.nature) {
+        if (summary.nature == Nature.Expense) VendorCatalog.matchExplicitDescription(summary.description) else null
+    }
     // Atualização anunciada de forma educada: o foco continua no campo de mensagem.
     CardSurface(Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
-        Column(Modifier.padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+        Column(Modifier.padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+            vendor?.let {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
+                    VendorLogo(it)
+                    Text(summary.description, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                }
+            }
             ReceiptLines(summary, today)
             if (receipt.state == ReceiptState.ChangedLater) StateTag(stringResource(R.string.receipt_changed_later), Lucide.drawable.lucide_ic_pencil)
             if (receipt.state == ReceiptState.Undone) StateTag(stringResource(R.string.receipt_undone), Lucide.drawable.lucide_ic_undo_2)
-            Text(stringResource(R.string.receipt_saved), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (receipt.state != ReceiptState.Undone) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+                    DecorativeIcon(Lucide.drawable.lucide_ic_circle_check, modifier = Modifier.size(16.dp), tint = Accord.colors.success)
+                    Text(stringResource(R.string.receipt_saved), style = MaterialTheme.typography.bodySmall, color = Accord.colors.success)
+                }
+            }
             if (item.question != null) {
                 CategoryChoices(item.question, summary, onAnswer)
             }
@@ -348,6 +394,7 @@ private fun ReceiptCard(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ReceiptLines(summary: ReceiptSummary, today: LocalDate) {
     val total = Money(summary.totalCents).format()
@@ -357,21 +404,21 @@ private fun ReceiptLines(summary: ReceiptSummary, today: LocalDate) {
         summary.nature == Nature.Income -> stringResource(R.string.receipt_income, total)
         else -> stringResource(R.string.receipt_expense, total)
     }
-    Text(title, style = MaterialTheme.typography.titleMedium)
+    Text(title, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
 
     val payment = paymentText(summary)
     if (summary.nature == Nature.Expense) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-            if (summary.toClassify) {
+        if (summary.toClassify) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
                 StateTag(stringResource(R.string.receipt_to_classify), Lucide.drawable.lucide_ic_tag)
                 if (payment != null) Text(payment, style = MaterialTheme.typography.bodyMedium)
-            } else {
-                val category = listOfNotNull(summary.parentName, summary.categoryName).joinToString(" > ")
-                Text(
-                    if (payment != null) stringResource(R.string.receipt_category_payment, category, payment) else category,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
             }
+        } else {
+            val category = listOfNotNull(summary.parentName, summary.categoryName).joinToString(" > ")
+            Text(
+                if (payment != null) stringResource(R.string.receipt_category_payment, category, payment) else category,
+                style = MaterialTheme.typography.bodyMedium,
+            )
         }
     } else if (payment != null) {
         Text(payment, style = MaterialTheme.typography.bodyMedium)
@@ -391,7 +438,7 @@ private fun ReceiptLines(summary: ReceiptSummary, today: LocalDate) {
         )
     }
     summary.invoiceMonth?.let { month ->
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+        Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
             Text(stringResource(R.string.receipt_invoice, YearMonth.parse(month).label()), style = MaterialTheme.typography.bodyMedium)
             if (summary.invoiceToConfirm) StateTag(stringResource(R.string.receipt_to_confirm), Lucide.drawable.lucide_ic_triangle_alert)
         }
@@ -496,22 +543,36 @@ private fun QuestionCard(
 private fun AmountAnswer(question: ChatQuestionRecord, onAnswerAmount: (ChatQuestionRecord, String, () -> Unit) -> Unit) {
     var value by rememberSaveable(question.id) { mutableStateOf("") }
     var invalid by remember(question.id) { mutableStateOf(false) }
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+    val largeText = LocalDensity.current.fontScale >= 1.3f
+    val field: @Composable (Modifier) -> Unit = { modifier ->
         OutlinedTextField(
             value = value,
             onValueChange = { value = it; invalid = false },
-            modifier = Modifier.weight(1f),
+            modifier = modifier,
             label = { Text(stringResource(R.string.question_amount_field)) },
             isError = invalid,
             supportingText = if (invalid) ({ Text(stringResource(R.string.question_amount_error)) }) else null,
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Decimal),
         )
+    }
+    val answer: @Composable (Modifier) -> Unit = { modifier ->
         Button(
             onClick = { onAnswerAmount(question, value) { invalid = true } },
             enabled = value.isNotBlank(),
-            modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
+            modifier = modifier.heightIn(min = AccordSpacing.touchMin),
         ) { Text(stringResource(R.string.question_amount_answer)) }
+    }
+    if (largeText) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+            field(Modifier.fillMaxWidth())
+            answer(Modifier.fillMaxWidth())
+        }
+    } else {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+            field(Modifier.weight(1f))
+            answer(Modifier)
+        }
     }
 }
 

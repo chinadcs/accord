@@ -11,11 +11,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import app.accord.ui.components.AccordButton as Button
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -60,7 +61,7 @@ fun FirstStepsRoute(viewModel: FirstStepsViewModel, padding: PaddingValues, acti
 fun FirstStepsScreen(content: StepsContent, padding: PaddingValues, actions: StepActions) {
     Column(
         Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
-        verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
+        verticalArrangement = Arrangement.spacedBy(AccordSpacing.s4),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             actions.onBack?.let { back ->
@@ -68,11 +69,21 @@ fun FirstStepsScreen(content: StepsContent, padding: PaddingValues, actions: Ste
                     Icon(painterResource(Lucide.drawable.lucide_ic_arrow_left), contentDescription = stringResource(R.string.action_back))
                 }
             }
-            Text(stringResource(R.string.steps_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).semantics { heading() })
+            Text(stringResource(R.string.steps_title), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f).semantics { heading() })
         }
+        Text(stringResource(R.string.steps_intro), style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
         when (content) {
             StepsContent.Loading -> Text(stringResource(R.string.state_loading), style = MaterialTheme.typography.bodyLarge)
-            is StepsContent.Ready -> content.rows.forEach { row -> StepItem(row, actions) }
+            is StepsContent.Ready -> Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+                Column {
+                    content.rows.forEachIndexed { index, row ->
+                        if (index > 0) HorizontalDivider(modifier = Modifier.padding(horizontal = AccordSpacing.s4),
+                            color = MaterialTheme.colorScheme.outlineVariant)
+                        StepItem(row, actions)
+                    }
+                }
+            }
         }
         Text(stringResource(R.string.steps_note_received), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Button(onClick = actions.onStart, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
@@ -97,30 +108,29 @@ private fun StepItem(row: StepRow, actions: StepActions) {
     val detail = stringResource(row.detail.res, *row.detail.args.toTypedArray())
     // O item inteiro é lido de uma vez, na ordem visual: nome, situação e ajuda.
     val spoken = stringResource(R.string.steps_item_open, title, status, detail)
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
-        Column(Modifier.fillMaxWidth().padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-            Row(
-                verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
-                modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = spoken },
-            ) {
-                DecorativeIcon(
-                    when (row.status) {
-                        StepStatus.Done -> Lucide.drawable.lucide_ic_circle_check
-                        StepStatus.Pending -> Lucide.drawable.lucide_ic_circle
-                        StepStatus.Unavailable -> Lucide.drawable.lucide_ic_circle_minus
-                    },
-                    tint = if (row.status == StepStatus.Done) Accord.colors.success else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-                Column(Modifier.weight(1f)) {
-                    Text(title, style = MaterialTheme.typography.titleSmall)
-                    Text(status, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(detail, style = MaterialTheme.typography.bodyMedium)
-                }
+    Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+        Row(
+            verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
+            modifier = Modifier.semantics(mergeDescendants = true) { contentDescription = spoken },
+        ) {
+            DecorativeIcon(
+                when (row.status) {
+                    StepStatus.Done -> Lucide.drawable.lucide_ic_circle_check
+                    StepStatus.Pending -> Lucide.drawable.lucide_ic_circle
+                    StepStatus.Unavailable -> Lucide.drawable.lucide_ic_circle_minus
+                },
+                tint = if (row.status == StepStatus.Done) Accord.colors.success else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleMedium)
+                Text(status, style = MaterialTheme.typography.labelMedium,
+                    color = if (row.status == StepStatus.Done) Accord.colors.success else MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(detail, style = MaterialTheme.typography.bodyMedium)
             }
-            row.action?.let { action ->
-                OutlinedButton(onClick = { actions.open(row.id) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                    Text(stringResource(action))
-                }
+        }
+        row.action?.let { action ->
+            OutlinedButton(onClick = { actions.open(row.id) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                Text(stringResource(action))
             }
         }
     }

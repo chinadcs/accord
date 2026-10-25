@@ -2,7 +2,7 @@
 <resources>
     <!-- Rendas (tela 28) -->
     <string name="incomes_title">Rendas</string>
-    <string name="incomes_add">Adicionar</string>
+    <string name="incomes_add">Adicionar renda</string>
     <string name="incomes_received_and_pending">Recebido %1$s · A receber %2$s</string>
     <string name="incomes_expected">Total esperado</string>
     <string name="incomes_not_balance">Renda prevista não é saldo disponível confirmado.</string>

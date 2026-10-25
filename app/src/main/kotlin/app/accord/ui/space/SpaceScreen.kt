@@ -11,18 +11,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import app.accord.ui.components.AccordButton as Button
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
@@ -125,8 +126,8 @@ fun SpaceScreen(
     onBack: (() -> Unit)?,
 ) {
     Column(
-        Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
-        verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
+        Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
+        verticalArrangement = Arrangement.spacedBy(AccordSpacing.s4),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             if (onBack != null) {
@@ -134,7 +135,7 @@ fun SpaceScreen(
                     Icon(painterResource(Lucide.drawable.lucide_ic_arrow_left), contentDescription = stringResource(R.string.action_back))
                 }
             }
-            Text(stringResource(R.string.space_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).semantics { heading() })
+            Text(stringResource(R.string.space_title), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f).semantics { heading() })
         }
         if (access.space == null) {
             NoSpaceContent(ui, access, onTab, onName, onCode, onCreate, onJoin)
@@ -213,19 +214,22 @@ private fun ManageContent(
     onContinue: () -> Unit,
 ) {
     val space = checkNotNull(access.space)
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.medium) {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-            Text(stringResource(R.string.space_section_space), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(space.name, style = MaterialTheme.typography.titleMedium)
-            Text(stringResource(R.string.space_section_participants), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.space_section_space), style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onPrimaryContainer)
+            Text(space.name, style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer)
+            Text(stringResource(R.string.space_section_participants), style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onPrimaryContainer)
             val bothIn = (access.participants?.items?.size ?: 0) >= InviteCode.MAX_MEMBERS
             Text(
                 stringResource(R.string.space_you_connected) + " · " + stringResource(if (bothIn) R.string.space_other_connected else R.string.space_other_waiting),
-                style = MaterialTheme.typography.bodyLarge,
+                style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
             Text(
                 access.participants?.let { stringResource(R.string.space_last_check, serviceTimeLabel(it.checkedAtMillis)) } ?: stringResource(R.string.space_never_checked),
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer,
             )
             OutlinedButton(onClick = onRefresh, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
                 Text(stringResource(R.string.space_check_participants))
@@ -245,50 +249,52 @@ private fun ManageContent(
 private fun InviteBlock(ui: SpaceUi, access: AccessState, onGenerate: () -> Unit, onCopy: (String) -> Unit) {
     val invite: InviteView? = access.invite
     val full = (access.participants?.items?.size ?: 0) >= InviteCode.MAX_MEMBERS
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
-        Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-            Text(stringResource(R.string.space_invite_title), style = MaterialTheme.typography.titleSmall, modifier = Modifier.semantics { heading() })
-            if (full) {
-                // Com as duas pessoas no espaço, gerar código deixa de ser oferecido.
-                Text(stringResource(R.string.space_invite_full), style = MaterialTheme.typography.bodyMedium)
-                return@Column
-            }
-            Text(stringResource(R.string.space_invite_note), style = MaterialTheme.typography.bodyMedium)
-            val code = invite?.code
-            if (code != null) {
-                // O TalkBack lê o código caractere a caractere, não como uma palavra.
-                val spoken = stringResource(R.string.space_code_content_description, code.toList().joinToString(", "))
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
+        Text(stringResource(R.string.space_invite_title), style = MaterialTheme.typography.titleSmall, modifier = Modifier.semantics { heading() })
+        if (full) {
+            // Com as duas pessoas no espaço, gerar código deixa de ser oferecido.
+            Text(stringResource(R.string.space_invite_full), style = MaterialTheme.typography.bodyMedium)
+            return@Column
+        }
+        Text(stringResource(R.string.space_invite_note), style = MaterialTheme.typography.bodyMedium)
+        val code = invite?.code
+        if (code != null) {
+            // O TalkBack lê o código caractere a caractere, não como uma palavra.
+            val spoken = stringResource(R.string.space_code_content_description, code.toList().joinToString(", "))
+            Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.small) {
                 Text(
-                    InviteCode.grouped(code), style = MaterialTheme.typography.headlineMedium, fontFamily = FontFamily.Monospace, textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().semantics { contentDescription = spoken },
-                )
-                Text(stringResource(R.string.space_invite_shown_once), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                OutlinedButton(onClick = { onCopy(code) }, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
-                    Icon(painterResource(Lucide.drawable.lucide_ic_copy), contentDescription = null, modifier = Modifier.size(20.dp))
-                    Text(stringResource(R.string.space_invite_copy), modifier = Modifier.padding(start = AccordSpacing.s2))
-                }
-            }
-            if (invite != null) {
-                Text(
-                    when {
-                        invite.expired -> stringResource(R.string.space_invite_expired)
-                        code != null -> stringResource(R.string.space_invite_valid_until, serviceTimeLabel(invite.validUntilMillis))
-                        else -> stringResource(R.string.space_invite_pending_hidden, serviceTimeLabel(invite.validUntilMillis))
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
+                    InviteCode.grouped(code), style = MaterialTheme.typography.headlineMedium,
+                    fontFamily = FontFamily.Monospace, textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth().padding(AccordSpacing.s4).semantics { contentDescription = spoken },
                 )
             }
-            Button(onClick = onGenerate, enabled = !ui.working, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
-                Text(
-                    stringResource(
-                        when {
-                            ui.working || access.busy == AccessAction.GeneratingInvite -> R.string.space_invite_generating
-                            invite != null -> R.string.space_invite_generate_again
-                            else -> R.string.space_invite_generate
-                        },
-                    ),
-                )
+            Text(stringResource(R.string.space_invite_shown_once), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            OutlinedButton(onClick = { onCopy(code) }, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+                Icon(painterResource(Lucide.drawable.lucide_ic_copy), contentDescription = null, modifier = Modifier.size(20.dp))
+                Text(stringResource(R.string.space_invite_copy), modifier = Modifier.padding(start = AccordSpacing.s2))
             }
         }
+        if (invite != null) {
+            Text(
+                when {
+                    invite.expired -> stringResource(R.string.space_invite_expired)
+                    code != null -> stringResource(R.string.space_invite_valid_until, serviceTimeLabel(invite.validUntilMillis))
+                    else -> stringResource(R.string.space_invite_pending_hidden, serviceTimeLabel(invite.validUntilMillis))
+                },
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+        Button(onClick = onGenerate, enabled = !ui.working, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+            Text(
+                stringResource(
+                    when {
+                        ui.working || access.busy == AccessAction.GeneratingInvite -> R.string.space_invite_generating
+                        invite != null -> R.string.space_invite_generate_again
+                        else -> R.string.space_invite_generate
+                    },
+                ),
+            )
+            }
     }
 }

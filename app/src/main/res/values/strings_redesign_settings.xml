@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="access_brand">Accord</string>
+    <string name="access_sign_in_heading">Entrar no espaço</string>
+    <string name="steps_intro">Comece pelo que faz sentido hoje. Os ajustes continuam disponíveis depois.</string>
+    <string name="more_intro">Ajustes do orçamento, do espaço e deste aparelho.</string>
+    <string name="appearance_intro">Escolha a leitura que funciona melhor para você neste aparelho.</string>
+</resources>

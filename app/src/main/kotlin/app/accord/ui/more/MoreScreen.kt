@@ -9,9 +9,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
+import app.accord.ui.components.AccordButton as Button
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -28,6 +30,7 @@ import app.accord.core.sync.SessionState
 import app.accord.core.sync.SyncStatus
 import app.accord.ui.components.DecorativeIcon
 import app.accord.ui.theme.AccordSpacing
+import androidx.compose.ui.unit.dp
 import com.composables.icons.lucide.R as Lucide
 
 /** Destinos que a aba Mais abre nesta fase; o que ainda não existe não aparece como botão vazio. */
@@ -60,81 +63,94 @@ fun MoreScreen(
 ) {
     Column(
         Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
-        verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
+        verticalArrangement = Arrangement.spacedBy(AccordSpacing.s4),
     ) {
-        Text(stringResource(R.string.more_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+        Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+            Text(stringResource(R.string.more_title), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { heading() })
+            Text(stringResource(R.string.more_intro), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
 
         // O registro manual continua a um toque de qualquer raiz, sem depender de modelo nem de rede.
         Button(onClick = actions.onRegister, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
             Text(stringResource(R.string.action_register_manually))
         }
 
-        Section(R.string.more_group_budget)
-        MoreRow(R.string.more_categories, Lucide.drawable.lucide_ic_tag, actions.onCategories)
-        MoreRow(R.string.more_limits, Lucide.drawable.lucide_ic_gauge, actions.onLimits)
-        MoreRow(R.string.more_card, Lucide.drawable.lucide_ic_credit_card, actions.onCard)
-        MoreRow(R.string.more_incomes, Lucide.drawable.lucide_ic_wallet, actions.onIncomes)
-        MoreRow(R.string.more_commitments, Lucide.drawable.lucide_ic_calendar, actions.onCommitments)
+        Section(R.string.more_group_budget) {
+            MoreRow(R.string.more_categories, Lucide.drawable.lucide_ic_tag, actions.onCategories)
+            MoreRow(R.string.more_limits, Lucide.drawable.lucide_ic_gauge, actions.onLimits)
+            MoreRow(R.string.more_card, Lucide.drawable.lucide_ic_credit_card, actions.onCard)
+            MoreRow(R.string.more_incomes, Lucide.drawable.lucide_ic_wallet, actions.onIncomes)
+            MoreRow(R.string.more_commitments, Lucide.drawable.lucide_ic_calendar, actions.onCommitments)
+        }
 
-        Section(R.string.more_group_space)
-        MoreRow(R.string.more_space, Lucide.drawable.lucide_ic_users, actions.onSpace)
-        MoreRow(R.string.more_accounts, Lucide.drawable.lucide_ic_landmark, actions.onAccounts)
-        if (syncStatus != null) {
-            val summary = syncStatus.summary
-            MoreRow(
-                R.string.more_sync, Lucide.drawable.lucide_ic_refresh_cw, actions.onSync,
-                supporting = when {
-                    summary.openConflicts > 0 -> stringResource(R.string.more_sync_conflicts, summary.openConflicts)
-                    summary.awaitingOperations > 0 -> stringResource(R.string.more_sync_pending, summary.awaitingOperations)
-                    else -> null
-                },
-            )
+        Section(R.string.more_group_space) {
+            MoreRow(R.string.more_space, Lucide.drawable.lucide_ic_users, actions.onSpace)
+            MoreRow(R.string.more_accounts, Lucide.drawable.lucide_ic_landmark, actions.onAccounts)
+            if (syncStatus != null) {
+                val summary = syncStatus.summary
+                MoreRow(
+                    R.string.more_sync, Lucide.drawable.lucide_ic_refresh_cw, actions.onSync,
+                    supporting = when {
+                        summary.openConflicts > 0 -> stringResource(R.string.more_sync_conflicts, summary.openConflicts)
+                        summary.awaitingOperations > 0 -> stringResource(R.string.more_sync_pending, summary.awaitingOperations)
+                        else -> null
+                    },
+                )
+            }
         }
 
         if (account != null) {
-            Section(R.string.more_group_account)
-            Text(stringResource(R.string.more_signed_as, account.email), style = MaterialTheme.typography.bodyMedium)
-            if (sessionState == SessionState.NeedsRenewal) {
-                MoreRow(R.string.more_renew_access, Lucide.drawable.lucide_ic_log_in, actions.onRenew)
+            Section(R.string.more_group_account) {
+                Text(stringResource(R.string.more_signed_as, account.email), style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s3))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                if (sessionState == SessionState.NeedsRenewal) {
+                    MoreRow(R.string.more_renew_access, Lucide.drawable.lucide_ic_log_in, actions.onRenew)
+                }
+                MoreRow(R.string.more_sign_out, Lucide.drawable.lucide_ic_log_out, actions.onSignOut)
             }
-            MoreRow(R.string.more_sign_out, Lucide.drawable.lucide_ic_log_out, actions.onSignOut)
         }
 
-        Section(R.string.more_group_chat)
-        MoreRow(R.string.more_chat_model, Lucide.drawable.lucide_ic_cpu, actions.onChatModel)
-        MoreRow(R.string.more_chat_export, Lucide.drawable.lucide_ic_download, actions.onChatExport)
-        MoreRow(R.string.more_chat_import, Lucide.drawable.lucide_ic_upload, actions.onChatImport)
-        MoreRow(R.string.more_chat_clear, Lucide.drawable.lucide_ic_trash_2, actions.onChatClear)
+        Section(R.string.more_group_chat) {
+            MoreRow(R.string.more_chat_model, Lucide.drawable.lucide_ic_cpu, actions.onChatModel)
+            MoreRow(R.string.more_chat_export, Lucide.drawable.lucide_ic_download, actions.onChatExport)
+            MoreRow(R.string.more_chat_import, Lucide.drawable.lucide_ic_upload, actions.onChatImport)
+            MoreRow(R.string.more_chat_clear, Lucide.drawable.lucide_ic_trash_2, actions.onChatClear)
+        }
 
-        Section(R.string.more_group_device)
-        MoreRow(R.string.appearance_title, Lucide.drawable.lucide_ic_palette, actions.onAppearance)
+        Section(R.string.more_group_device) {
+            MoreRow(R.string.appearance_title, Lucide.drawable.lucide_ic_palette, actions.onAppearance)
+        }
     }
 }
 
 @Composable
-private fun Section(title: Int) {
-    Text(
-        stringResource(title), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(top = AccordSpacing.s2).semantics { heading() },
-    )
+private fun Section(title: Int, content: @Composable () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+        Text(
+            stringResource(title), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = AccordSpacing.s1).semantics { heading() },
+        )
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+            Column { content() }
+        }
+    }
 }
 
 @Composable
 private fun MoreRow(label: Int, icon: Int, onClick: () -> Unit, supporting: String? = null) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).clickable(role = Role.Button, onClick = onClick),
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 60.dp).clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
     ) {
-        Row(
-            Modifier.padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s3),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
-        ) {
-            DecorativeIcon(icon)
-            Column(Modifier.weight(1f)) {
-                Text(stringResource(label), style = MaterialTheme.typography.bodyLarge)
-                supporting?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            }
-            DecorativeIcon(Lucide.drawable.lucide_ic_chevron_right)
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.small) {
+            DecorativeIcon(icon, modifier = Modifier.padding(AccordSpacing.s2), tint = MaterialTheme.colorScheme.primary)
         }
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(label), style = MaterialTheme.typography.bodyLarge)
+            supporting?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        }
+        DecorativeIcon(Lucide.drawable.lucide_ic_chevron_right, modifier = Modifier.size(20.dp))
     }
 }

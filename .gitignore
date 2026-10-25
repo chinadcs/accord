@@ -12,3 +12,6 @@ build/
 local.properties
 *.iml
 .idea/
+
+# Referências visuais baixadas só para inspeção local; fontes ficam documentadas por links.
+/scratchpad/dribbble-references/

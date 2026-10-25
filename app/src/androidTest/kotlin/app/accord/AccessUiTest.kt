@@ -141,7 +141,7 @@ class AccessUiTest {
     fun criarAcessoAbreOPainelComConfirmacaoESemPromessaDeEmail() {
         showAccess()
         compose.onNodeWithText("Criar acesso").performClick()
-        compose.onNodeWithText("Um acesso para entrar no espaço do casal. Nenhum e-mail de confirmação é enviado.").assertIsDisplayed()
+        compose.onNodeWithText("Um acesso para entrar no espaço da casa. Nenhum e-mail de confirmação é enviado.").assertIsDisplayed()
         compose.onNodeWithText("Confirmar senha").assertIsDisplayed()
     }
 

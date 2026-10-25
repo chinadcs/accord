@@ -12,26 +12,27 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import app.accord.ui.components.AccordButton as Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import app.accord.ui.components.DetailHeader
 import app.accord.R
+import app.accord.ui.vendors.VendorCatalog
+import app.accord.ui.vendors.VendorLogo
 import app.accord.core.label
 import app.accord.core.space.EntryDetail
 import app.accord.core.space.EntryKind
@@ -96,16 +97,7 @@ fun EntryDetailScreen(
         Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
         verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-            IconButton(onClick = onBack, modifier = Modifier.size(AccordSpacing.touchMin)) {
-                Icon(painterResource(Lucide.drawable.lucide_ic_arrow_left), contentDescription = stringResource(R.string.action_back))
-            }
-            Text(
-                stringResource(R.string.detail_title),
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.semantics { heading() },
-            )
-        }
+        DetailHeader(stringResource(R.string.detail_title), onBack)
         when (content) {
             DetailContent.Loading -> Text(stringResource(R.string.state_loading), style = MaterialTheme.typography.bodyLarge)
             DetailContent.Failed -> {
@@ -137,10 +129,20 @@ private fun ReadyDetail(
     onOpenCommitment: (String) -> Unit,
 ) {
     val d = data.detail
-    AdaptiveRow(
-        start = { Text(d.description, style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() }) },
-        end = { Text(d.amount.format(), style = Accord.typography.amountHero, textAlign = TextAlign.End) },
-    )
+    val vendor = remember(d.description, d.kind) {
+        if (d.kind != EntryKind.Income && d.kind != EntryKind.InvoicePayment) VendorCatalog.matchExplicitDescription(d.description) else null
+    }
+    Surface(color = Accord.colors.financeSurface, contentColor = Accord.colors.onFinanceSurface, shape = MaterialTheme.shapes.large) {
+        Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
+                vendor?.let { VendorLogo(it) }
+                Text(d.description, style = MaterialTheme.typography.titleLarge,
+                    color = Accord.colors.onFinanceSurface, modifier = Modifier.weight(1f).semantics { heading() })
+            }
+            Text(d.amount.format(), style = Accord.typography.amountHero,
+                color = Accord.colors.onFinanceSurface)
+        }
+    }
     if (d.voided) {
         Surface(color = MaterialTheme.colorScheme.errorContainer, shape = MaterialTheme.shapes.small) {
             Row(Modifier.fillMaxWidth().padding(AccordSpacing.s3), horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
@@ -149,29 +151,34 @@ private fun ReadyDetail(
             }
         }
     }
-    DatesAndAmounts(d)
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+        Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+            DatesAndAmounts(d)
 
-    val path = categoryPath(data.categories, (d.classification as? app.accord.core.space.Classification.Category)?.id)
-    Text(path ?: stringResource(R.string.detail_category_unset), style = MaterialTheme.typography.bodyLarge)
-    d.method?.let { Text(it.label(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-    d.accountId?.let { id ->
-        data.accounts[id]?.let { account ->
-            val bank = when (val b = account.bank) {
-                is app.accord.core.space.BankRef.Catalog -> b.name
-                is app.accord.core.space.BankRef.Other -> b.name
+            val path = categoryPath(data.categories, (d.classification as? app.accord.core.space.Classification.Category)?.id)
+            Text(path ?: stringResource(R.string.detail_category_unset), style = MaterialTheme.typography.bodyLarge)
+            d.method?.let { Text(it.label(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            d.accountId?.let { id ->
+                data.accounts[id]?.let { account ->
+                    val bank = when (val b = account.bank) {
+                        is app.accord.core.space.BankRef.Catalog -> b.name
+                        is app.accord.core.space.BankRef.Other -> b.name
+                    }
+                    Text(stringResource(R.string.detail_account, "$bank · ${account.nickname}"), style = MaterialTheme.typography.bodyMedium)
+                }
             }
-            Text(stringResource(R.string.detail_account, "$bank · ${account.nickname}"), style = MaterialTheme.typography.bodyMedium)
+
+            val who = if (d.authorId == data.currentPersonId) stringResource(R.string.who_you) else stringResource(R.string.who_other)
+            d.origin?.let { Text(stringResource(R.string.detail_registered_by, who, it.label()), style = MaterialTheme.typography.bodyMedium) }
+            d.spentBy?.let {
+                val spender = if (it == data.currentPersonId) stringResource(R.string.who_you) else stringResource(R.string.who_other)
+                Text(stringResource(R.string.detail_spent_by, spender), style = MaterialTheme.typography.bodyMedium)
+            }
+            // Antes da sincronização (S2), o item está "salvo no aparelho" e nunca "sincronizado".
+            Text(stringResource(R.string.detail_status, d.sync.label()), style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
-
-    val who = if (d.authorId == data.currentPersonId) stringResource(R.string.who_you) else stringResource(R.string.who_other)
-    d.origin?.let { Text(stringResource(R.string.detail_registered_by, who, it.label()), style = MaterialTheme.typography.bodyMedium) }
-    d.spentBy?.let {
-        val spender = if (it == data.currentPersonId) stringResource(R.string.who_you) else stringResource(R.string.who_other)
-        Text(stringResource(R.string.detail_spent_by, spender), style = MaterialTheme.typography.bodyMedium)
-    }
-    // Antes da sincronização (S2), o item está "salvo no aparelho" e nunca "sincronizado".
-    Text(stringResource(R.string.detail_status, d.sync.label()), style = MaterialTheme.typography.bodyMedium)
 
     d.purchase?.installments?.let { schedule ->
         val flags = schedule.flatMap { i ->

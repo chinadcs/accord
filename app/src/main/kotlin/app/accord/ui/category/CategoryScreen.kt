@@ -8,31 +8,26 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import app.accord.ui.components.AccordButton as Button
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.accord.R
+import app.accord.ui.components.DetailHeader
 import app.accord.core.Money
 import app.accord.core.space.CategoryBudget
-import app.accord.ui.budget.BarState
 import app.accord.ui.budget.barFill
 import app.accord.ui.budget.barState
 import app.accord.ui.budget.excessMarker
@@ -44,7 +39,6 @@ import app.accord.ui.components.lucideRes
 import app.accord.core.label
 import app.accord.ui.theme.Accord
 import app.accord.ui.theme.AccordSpacing
-import com.composables.icons.lucide.R as Lucide
 
 @Composable
 fun CategoryRoute(
@@ -77,17 +71,11 @@ fun CategoryScreen(
         verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
     ) {
         item {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                IconButton(onClick = onBack, modifier = Modifier.size(AccordSpacing.touchMin)) {
-                    Icon(painterResource(Lucide.drawable.lucide_ic_arrow_left), contentDescription = stringResource(R.string.action_back))
-                }
-                Text(
-                    (state as? CategoryContent.Ready)?.value?.node?.name.orEmpty(),
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.weight(1f).semantics { heading() },
-                )
-                Text(month.label(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+            DetailHeader(
+                title = (state as? CategoryContent.Ready)?.value?.node?.name.orEmpty(),
+                onBack = onBack,
+                subtitle = month.label(),
+            )
         }
         when (state) {
             CategoryContent.Loading -> item { Text(stringResource(R.string.state_loading)) }

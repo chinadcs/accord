@@ -4,11 +4,12 @@ import android.net.Uri
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
@@ -64,6 +65,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.intl.LocaleList
+import androidx.compose.ui.text.style.Hyphens
+import androidx.compose.ui.text.style.LineBreak
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.res.pluralStringResource
 import app.accord.core.sync.EntryStage
 import app.accord.core.sync.SessionState
@@ -81,7 +89,6 @@ import app.accord.ui.sync.LocalOpenSync
 import app.accord.ui.sync.LocalSyncStatus
 import app.accord.ui.sync.ReviewConflicts
 import app.accord.ui.sync.ReviewViewModel
-import app.accord.ui.sync.SyncIndicator
 import app.accord.ui.sync.SyncRoute
 import app.accord.ui.sync.SyncViewModel
 import app.accord.ui.components.RefreshOnResume
@@ -274,14 +281,39 @@ private fun MainApp(container: AppContainer, startRoute: String) {
         },
         bottomBar = {
             if (onRoot) {
-                NavigationBar {
-                    Root.entries.forEach { root ->
-                        NavigationBarItem(
-                            selected = destination?.hierarchy?.any { it.route == root.graph } == true,
-                            onClick = { navController.openRoot(root) },
-                            icon = { Icon(painterResource(root.icon), contentDescription = null) },
-                            label = { Text(stringResource(root.label), style = MaterialTheme.typography.labelSmall) },
-                        )
+                val density = LocalDensity.current
+                val labelStyle = MaterialTheme.typography.labelSmall.copy(
+                    localeList = LocaleList("pt-BR"),
+                    lineBreak = LineBreak.Paragraph,
+                    hyphens = Hyphens.Auto,
+                )
+                val labelHeight = with(density) { (labelStyle.lineHeight * 2).toDp() }
+                Column {
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    NavigationBar(
+                        modifier = Modifier.heightIn(min = if (density.fontScale >= 1.3f) 108.dp else 96.dp),
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                        tonalElevation = 0.dp,
+                    ) {
+                        Root.entries.forEach { root ->
+                            NavigationBarItem(
+                                selected = destination?.hierarchy?.any { it.route == root.graph } == true,
+                                onClick = { navController.openRoot(root) },
+                                icon = { Icon(painterResource(root.icon), contentDescription = null) },
+                                label = {
+                                    Box(Modifier.heightIn(min = labelHeight), contentAlignment = Alignment.Center) {
+                                        Text(stringResource(root.label), style = labelStyle, textAlign = TextAlign.Center)
+                                    }
+                                },
+                                colors = NavigationBarItemDefaults.colors(
+                                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                                ),
+                            )
+                        }
                     }
                 }
             }

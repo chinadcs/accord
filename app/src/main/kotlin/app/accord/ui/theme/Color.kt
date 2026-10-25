@@ -8,36 +8,36 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 /**
- * Primitivos de cor (docs/design-tokens.md §1). O número é o tom (luminosidade L*). Telas e
+ * Primitivos de cor (docs/design-tokens.md §1). O número identifica a etapa da escala. Telas e
  * componentes usam só os papéis semânticos de [AccordColors] e do `ColorScheme`.
  */
 private object Primitive {
     val neutral100 = Color(0xFFFFFFFF)
-    val neutral98 = Color(0xFFFAF9F7)
-    val neutral96 = Color(0xFFF5F3F0)
-    val neutral94 = Color(0xFFF0EDEA)
-    val neutral92 = Color(0xFFEAE7E3)
-    val neutral90 = Color(0xFFE4E1DC)
-    val neutral83 = Color(0xFFD3CFCA)
-    val neutral78 = Color(0xFFC4BFB9)
-    val neutral57 = Color(0xFF8F8984)
-    val neutral49 = Color(0xFF7A746F)
-    val neutral35 = Color(0xFF57524E)
-    val neutral28 = Color(0xFF45413E)
-    val neutral21 = Color(0xFF363331)
-    val neutral18 = Color(0xFF2E2B29)
-    val neutral12 = Color(0xFF211F1E)
-    val neutral9 = Color(0xFF1C1A19)
-    val neutral6 = Color(0xFF141312)
-    val neutral4 = Color(0xFF0F0E0D)
+    val neutral98 = Color(0xFFF8FAF9)
+    val neutral96 = Color(0xFFF2F6F4)
+    val neutral94 = Color(0xFFECF2EF)
+    val neutral92 = Color(0xFFE5ECE8)
+    val neutral90 = Color(0xFFDDE6E1)
+    val neutral83 = Color(0xFFC9D6CF)
+    val neutral78 = Color(0xFFB7C8BE)
+    val neutral57 = Color(0xFF75877D)
+    val neutral49 = Color(0xFF68796F)
+    val neutral35 = Color(0xFF46574E)
+    val neutral28 = Color(0xFF38483F)
+    val neutral21 = Color(0xFF2C3932)
+    val neutral18 = Color(0xFF263229)
+    val neutral12 = Color(0xFF1B2620)
+    val neutral9 = Color(0xFF16211A)
+    val neutral6 = Color(0xFF111B15)
+    val neutral4 = Color(0xFF0C150F)
 
     val green91 = Color(0xFFD2EDDE)
     val green83 = Color(0xFFA6DBBE)
-    val green73 = Color(0xFF6FC497)
-    val green40 = Color(0xFF146C45)
-    val green35 = Color(0xFF135F3D)
+    val green73 = Color(0xFF79CBA4)
+    val green40 = Color(0xFF176C4D)
+    val green35 = Color(0xFF115B40)
     val green28 = Color(0xFF104B31)
-    val green20 = Color(0xFF0C3824)
+    val green20 = Color(0xFF0B3628)
 
     val amber94 = Color(0xFFFDEBC4)
     val amber80 = Color(0xFFF5BC4E)
@@ -58,6 +58,8 @@ private object Primitive {
 /** Papéis sem equivalente no Material 3 (§2.2): atenção, sucesso e dado neutro. */
 @Immutable
 data class AccordColors(
+    val financeSurface: Color,
+    val onFinanceSurface: Color,
     val attention: Color,
     val onAttention: Color,
     val attentionContainer: Color,
@@ -117,6 +119,7 @@ internal val DarkColorScheme: ColorScheme = with(Primitive) {
 
 internal val LightAccordColors: AccordColors = with(Primitive) {
     AccordColors(
+        financeSurface = green20, onFinanceSurface = green91,
         attention = amber38, onAttention = neutral100,
         attentionContainer = amber94, onAttentionContainer = amber19, attentionFill = amber49,
         success = green35, onSuccess = neutral100,
@@ -127,6 +130,7 @@ internal val LightAccordColors: AccordColors = with(Primitive) {
 
 internal val DarkAccordColors: AccordColors = with(Primitive) {
     AccordColors(
+        financeSurface = green20, onFinanceSurface = green91,
         attention = amber80, onAttention = amber19,
         attentionContainer = amber28, onAttentionContainer = amber94, attentionFill = amber71,
         success = green83, onSuccess = green20,
