@@ -10,7 +10,9 @@ e instruções da sessão prevalecem sobre orientações locais.
 A base contém documentação, Beads, aplicativo Compose, motor financeiro, persistência Room,
 protocolo/adaptador remoto, migrações Supabase e testes. S1 está entregue no Beads, com pendências
 de validação; S2 está entregue no Beads, com validação nos aparelhos (`accord-chf`) e decisões
-abertas (`accord-smv`) pendentes. Código e ambiente local não comprovam implantação hospedada,
+abertas (`accord-smv`) pendentes; S3 tem Chat, validador, histórico local e gerenciador do modelo
+implementados contra interpretador e fonte fake, sem motor, modelo, hospedagem nem medição nos
+aparelhos (Etapa 0 e Fases B/C pendentes no Beads). Código e ambiente local não comprovam implantação hospedada,
 validação nos dois celulares ou aprovação de propostas de implementação.
 Não apresentar requisitos, wireframes, fornecedor escolhido ou metas como funcionalidades
 implementadas, configurações executadas ou resultados medidos.

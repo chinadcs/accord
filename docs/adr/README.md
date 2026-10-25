@@ -55,8 +55,8 @@ do status. Não atribuir ao autor da documentação a aprovação de uma decisã
 Decisões já aprovadas podem ser recuperadas diretamente como `accepted`, após conferir a fonte.
 Agentes registram escolhas técnicas dentro da autorização vigente; decisões reservadas ao usuário
 aguardam sua resposta. Implementação existente, tarefa fechada e ausência de objeção não aprovam
-uma proposta. Aceitar este fluxo não aceita automaticamente os ADRs 0022–0025. A revisão de
-aceite dessas quatro propostas está na tarefa Beads `accord-awb`.
+uma proposta. Aceitar este fluxo não aceita automaticamente os ADRs 0022–0025 nem 0027–0029. A revisão de
+aceite dessas propostas está na tarefa Beads `accord-awb`.
 
 Propostas podem evoluir antes do aceite. Para mudar uma decisão aceita, criar outro ADR e ligar
 os dois; no antigo, atualizar status e referência ao substituto, preservando decisão e motivos.
@@ -132,6 +132,9 @@ observada em 24/10/2026. Os estados abaixo são de decisão, não de conclusão 
 | [0024](0024-protocolo-por-agregados-e-cursor.md) | Protocolo por agregados e cursor | proposed |
 | [0025](0025-projecoes-financeiras-derivadas.md) | Projeções financeiras derivadas | proposed |
 | [0026](0026-configuracao-inicial-e-conta-unica.md) | Vigência inicial de limites e padrão de conta única | accepted |
+| [0027](0027-contrato-estrito-da-proposta-e-historico-local-do-chat.md) | Contrato estrito da proposta do Chat e histórico local | proposed |
+| [0028](0028-distribuicao-verificada-e-ciclo-de-vida-do-modelo.md) | Distribuição verificada e ciclo de vida do modelo | proposed |
+| [0029](0029-troca-de-forma-de-pagamento-como-comando.md) | Troca da forma de pagamento como comando | proposed |
 
 Questões ainda sem decisão, como modelo/motor, leitores bancários, acesso local, retenção de
 idempotência e validação financeira no serviço, permanecem nos Beads/specs S2–S4. Suas tarefas

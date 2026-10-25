@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.printToLog
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
@@ -122,7 +123,8 @@ class MoreFlowTest {
         waitForText("Categorias e subcategorias")
         // recursos de fases seguintes não aparecem como botão vazio; a Sincronização já existe (S2)
         assert(compose.onAllNodesWithText("Sincronização", substring = true).fetchSemanticsNodes().isNotEmpty())
-        assert(compose.onAllNodesWithText("Modelo no aparelho", substring = true).fetchSemanticsNodes().isEmpty())
+        // Chat e Modelo no aparelho existem desde o S3.
+        assert(compose.onAllNodesWithText("Modelo no aparelho", substring = true).fetchSemanticsNodes().isNotEmpty())
         tap("Aparência")
         waitForText("Estilo dos cantos")
         tap("Escuro")

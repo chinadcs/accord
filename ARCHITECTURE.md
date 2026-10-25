@@ -47,8 +47,11 @@ A meta de 5 s exclui download, carga inicial e sincronização e não impõe can
 accord/
   AGENTS.md, CLAUDE.md       regras compartilhadas; CLAUDE.md importa AGENTS.md
   ARCHITECTURE.md            mapa atual, decisões e responsabilidades planejadas
-  core/                      módulo Kotlin JVM sem Android: motor financeiro, contrato da fachada (S1)
-  persistence/               Room: fachada local, operações, sessão e motor de sincronização
+  core/                      módulo Kotlin JVM sem Android: motor financeiro, contrato da fachada (S1);
+                             core.chat (proposta, validador, coordenador, bateria fictícia) e
+                             core.model (manifesto, instalação verificada, execução) do S3
+  persistence/               Room: fachada local, operações, sessão e motor de sincronização; histórico
+                             do Chat (tabelas chat_*, só no aparelho)
   remote/                    fake e adaptador Supabase HTTP (JVM)
   supabase/                  configuração local, migrações e testes pgTAP; sem prova de implantação hospedada
   app/                       Android: tema com os tokens, navegação das 5 raízes, telas Compose (S1.8);
@@ -56,7 +59,10 @@ accord/
                              edição, ações vinculadas (pagar, receber, estorno, cancelar parcelas),
                              Compromissos, Cartão e faturas, Rendas, Mais, Contas, Categorias, Limites.
                              S2: Acesso, Espaço, Primeiros passos, Sincronização e Escolher versão (conflito),
-                             indicadores e envio em segundo plano (WorkManager); Chat segue provisório e
+                             indicadores e envio em segundo plano (WorkManager).
+                             S3: Chat (04) com recibo, perguntas, falhas e registro manual com o que foi
+                             entendido; Modelo no aparelho (25); histórico do Chat em Mais (limpar, exportar,
+                             importar). Sem motor integrado o Chat guarda a mensagem ("sem modelo").
                              Revisar só lista os conflitos de edição.
                              Assets locais: catálogo de bancos e logos (assets/banks, logos-bancos-br)
   gradle/libs.versions.toml  versões fixadas; wrapper Gradle 9.8.2 (gradlew)
@@ -73,8 +79,11 @@ accord/
 
 Existem `:core`, `:persistence`, `:remote` e `:app` (comandos em AGENTS.md). Detalhes implementados
 da fachada, RPC e protocolo permanecem propostas nos ADRs 0022–0024. Projeções financeiras
-assumidas em S1 estão no ADR 0025. Esta revisão documenta o estado; não aprova essas propostas
-nem escolhe framework de DI, modelo/motor ou leitor bancário.
+assumidas em S1 estão no ADR 0025. O contrato do Chat e o histórico local (0027), a distribuição e o
+ciclo de vida do modelo (0028) e a troca de forma de pagamento (0029) são propostas implementadas no S3.
+Esta revisão documenta o estado; não aprova essas propostas nem escolhe framework de DI, modelo/motor,
+hospedagem dos pesos ou leitor bancário. Nenhuma medição de modelo foi feita nos aparelhos (Etapa 0)
+e o download real, o motor e o download em segundo plano pelo sistema não existem.
 
 ## Responsabilidades e fluxo local
 
