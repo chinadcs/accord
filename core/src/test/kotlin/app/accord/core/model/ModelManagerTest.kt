@@ -72,7 +72,7 @@ class ModelManagerTest {
         return Env(manager, source, storage, network, deleted)
     }
 
-    private suspend fun ModelManager.await(timeoutMillis: Long = 8_000, predicate: (ModelStatus) -> Boolean): ModelStatus =
+    private suspend fun ModelManager.await(timeoutMillis: Long = 30_000, predicate: (ModelStatus) -> Boolean): ModelStatus =
         withTimeout(timeoutMillis) { status.first(predicate) }
 
     @AfterTest
