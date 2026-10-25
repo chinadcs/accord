@@ -2,5 +2,95 @@
 <resources>
     <!-- Modelo no aparelho (tela 25) -->
     <string name="model_title">Modelo no aparelho</string>
-    <string name="model_provisional">A tela do modelo chega em seguida. O registro manual continua disponível.</string>
+    <string name="model_explain">As mensagens do Chat são interpretadas no celular, sem enviar a conversa para a internet. Cada aparelho tem a sua própria cópia do modelo.</string>
+    <string name="model_checking">Consultando o catálogo do modelo…</string>
+    <string name="model_in_use">Em uso: versão %s</string>
+    <string name="model_status_none">Situação: não instalado</string>
+    <string name="model_status_ready">Situação: pronto</string>
+    <string name="model_version">Versão: %s</string>
+    <string name="model_download_size">Download: %1$s · limite: %2$s</string>
+    <string name="model_install_space">Espaço necessário para instalar: %s</string>
+    <string name="model_limit_value">2 GB</string>
+    <string name="model_action_download">Baixar modelo</string>
+    <string name="model_action_update">Atualizar modelo</string>
+    <string name="model_action_cancel">Cancelar download</string>
+    <string name="model_action_retry">Tentar novamente</string>
+    <string name="model_action_resume">Continuar download</string>
+    <string name="model_action_restart">Recomeçar download</string>
+    <string name="model_action_back_to_chat">Voltar ao Chat</string>
+    <string name="model_action_remove">Remover modelo</string>
+    <string name="model_action_remove_install">Remover a versão atual e instalar a nova</string>
+
+    <string name="model_no_catalog_title">O catálogo do modelo não está disponível agora.</string>
+    <string name="model_no_catalog_body">Sem o tamanho real, o download não começa. Você pode tentar de novo ou registrar manualmente, que continua funcionando.</string>
+    <string name="model_no_catalog_unconfigured">Ainda não há uma hospedagem escolhida para o modelo. Até lá, o Chat guarda suas mensagens e o registro manual segue disponível.</string>
+    <string name="model_over_limit">O catálogo informa um modelo maior que o limite de 2 GB. Ele não pode ser instalado.</string>
+    <string name="model_invalid_manifest">O catálogo veio com dados inválidos e foi recusado.</string>
+    <string name="model_update_available">Há uma versão nova do modelo. A versão atual continua em uso até a nova ser verificada, e os lançamentos já salvos não mudam.</string>
+    <string name="model_space_short">Faltam %s de espaço livre para instalar.</string>
+    <string name="model_space_short_manual">O registro manual continua disponível.</string>
+    <string name="model_space_remove_note">Para instalar a nova versão você pode remover a atual. O Chat fica sem modelo até a nova estar pronta; os lançamentos e o histórico não mudam.</string>
+    <string name="model_waiting_wifi">Aguardando uma rede Wi-Fi para baixar.</string>
+    <string name="model_download_now">Baixar agora</string>
+    <string name="model_downloading">Baixando: %1$s de %2$s</string>
+    <string name="model_downloading_percent">Baixando: %1$s de %2$s (%3$d%%)</string>
+    <string name="model_downloading_note">Você pode sair desta tela e usar o registro manual. O download continua e a tela mostra o estado real quando você voltar.</string>
+    <string name="model_progress_description">Progresso do download</string>
+    <string name="model_paused_title">Download pausado: a conexão passou para dados móveis.</string>
+    <string name="model_paused_body">Já foram recebidos %1$s de %2$s. Baixe agora pelos dados móveis ou espere o Wi-Fi.</string>
+    <string name="model_wait_wifi">Esperar o Wi-Fi</string>
+    <string name="model_interrupted_title">O download foi interrompido em %1$s de %2$s.</string>
+    <string name="model_interrupted_resumable">Dá para continuar de onde parou.</string>
+    <string name="model_interrupted_restart">A hospedagem não permite continuar de onde parou. Será preciso recomeçar o download.</string>
+    <string name="model_verifying">Verificando os arquivos…</string>
+    <string name="model_installing">Instalando…</string>
+    <string name="model_ready_body">O modelo foi verificado e instalado. Depois de instalado, a interpretação pode funcionar sem internet.</string>
+    <string name="model_ready_no_engine">Os arquivos estão instalados, mas este aplicativo ainda não tem um motor para interpretá-los. O Chat continua guardando as mensagens e o registro manual segue disponível.</string>
+    <string name="model_failed_corrupted">Um arquivo não passou na verificação e foi descartado. O modelo não foi instalado.</string>
+    <string name="model_failed_storage">Não foi possível gravar os arquivos no aparelho. Confira o espaço livre e tente de novo.</string>
+    <string name="model_failed_install">A instalação não foi concluída. Nada foi ativado.</string>
+
+    <string name="model_metered_title">Você está em dados móveis</string>
+    <string name="model_metered_body">O download tem %s. Baixar agora usa seu plano de dados; você também pode esperar uma rede Wi-Fi.</string>
+    <string name="model_remove_title">Remover o modelo?</string>
+    <string name="model_remove_body">Isso libera %s. Os lançamentos e o histórico do Chat não mudam. Depois, o Chat oferece baixar de novo ou o registro manual.</string>
+    <string name="model_remove_confirm">Remover</string>
+    <string name="model_remove_install_title">Remover a versão atual?</string>
+    <string name="model_remove_install_body">O Chat fica sem modelo até a nova versão estar pronta. Se o download falhar, você poderá tentar de novo. Lançamentos e histórico não mudam.</string>
+    <string name="model_dialog_cancel">Não remover</string>
+
+    <string name="model_stage_checking">Etapa: consultando o catálogo</string>
+    <string name="model_stage_none">Etapa: aguardando sua escolha</string>
+    <string name="model_stage_waiting">Etapa: aguardando Wi-Fi</string>
+    <string name="model_stage_downloading">Etapa: baixando</string>
+    <string name="model_stage_paused">Etapa: pausado</string>
+    <string name="model_stage_interrupted">Etapa: interrompido</string>
+    <string name="model_stage_verifying">Etapa: verificando</string>
+    <string name="model_stage_installing">Etapa: instalando</string>
+    <string name="model_stage_ready">Etapa: pronto</string>
+    <string name="model_stage_failed">Etapa: não concluído</string>
+
+    <!-- Histórico do Chat em Mais -->
+    <string name="more_group_chat">Chat neste aparelho</string>
+    <string name="more_chat_model">Modelo no aparelho</string>
+    <string name="more_chat_export">Exportar histórico do Chat</string>
+    <string name="more_chat_import">Importar histórico do Chat</string>
+    <string name="more_chat_clear">Limpar histórico do Chat</string>
+    <string name="chat_export_title">Exportar o histórico do Chat?</string>
+    <string name="chat_export_body">O arquivo guarda suas conversas, sem senha nem criptografia. Qualquer pessoa com acesso a ele consegue ler as mensagens. Ele não leva senhas, tokens nem lançamentos.</string>
+    <string name="chat_export_confirm">Exportar</string>
+    <string name="chat_clear_title">Limpar o histórico do Chat?</string>
+    <string name="chat_clear_body">Apaga mensagens, recibos, perguntas e rascunhos deste aparelho. Nenhum lançamento muda; o que está \"a classificar\" continua assim e aparece em Revisar.</string>
+    <string name="chat_clear_confirm">Limpar</string>
+    <string name="chat_dialog_cancel">Cancelar</string>
+    <string name="chat_exported">Histórico exportado.</string>
+    <string name="chat_export_failed">Não foi possível gravar o arquivo.</string>
+    <plurals name="chat_imported">
+        <item quantity="one">%d mensagem importada. Os lançamentos não mudaram.</item>
+        <item quantity="other">%d mensagens importadas. Os lançamentos não mudaram.</item>
+    </plurals>
+    <string name="chat_imported_none">Nenhuma mensagem nova: tudo neste arquivo já está aqui.</string>
+    <string name="chat_import_unreadable">Esse arquivo não é um histórico do Chat que este aplicativo entenda.</string>
+    <string name="chat_import_other_owner">Esse histórico é de outra conta ou de outro espaço e não foi importado.</string>
+    <string name="chat_cleared">Histórico do Chat limpo. Os lançamentos não mudaram.</string>
 </resources>

@@ -790,6 +790,29 @@ class ChatCoordinatorTest : ChatTestBase() {
     }
 
     @Test
+    fun `arquivo de transferencia so entra na mesma conta e espaco e recusa o que nao entende`() = runBlocking<Unit> {
+        val e = env()
+        e.deliveryRegister()
+        e.say("delivery 68 no cartão")
+        val text = e.store.exportText("ana|space-1")
+        assertTrue("senha" !in text.lowercase() && "token" !in text.lowercase())
+        assertTrue("delivery 68 no cartão" in text)
+
+        val other = env(person = "bruno")
+        assertEquals(app.accord.core.chat.ChatImportResult.OtherOwner, other.store.importText(text, "bruno|space-1"))
+        assertTrue(other.store.snapshot().messages.isEmpty())
+        assertEquals(app.accord.core.chat.ChatImportResult.Unreadable, other.store.importText("não é json", "ana|space-1"))
+        assertEquals(app.accord.core.chat.ChatImportResult.Unreadable, other.store.importText(text.replace("accord-chat-history", "outro"), "ana|space-1"))
+
+        val same = env()
+        assertEquals(app.accord.core.chat.ChatImportResult.Imported(1), same.store.importText(text, "ana|space-1"))
+        assertEquals(app.accord.core.chat.ChatImportResult.Imported(0), same.store.importText(text, "ana|space-1"))
+        assertEquals(1, same.store.snapshot().receipts.size)
+        // Importar não altera lançamentos: o outro banco continua sem nenhum.
+        assertTrue(same.entries(nov).isEmpty())
+    }
+
+    @Test
     fun `limpar historico nao altera lancamentos e a classificar continua`() = runBlocking<Unit> {
         val e = env()
         e.fake.on("Amazon 150 no cartão", Proposal.Clarify(QuestionField.Category, emptyList(), reg("Amazon", "150", payment = ChatPayment.Card)))

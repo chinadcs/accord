@@ -125,6 +125,15 @@ import app.accord.ui.nav.ARG_REGISTER_CHAT
 import app.accord.ui.nav.ARG_REGISTER_FORM
 import app.accord.ui.nav.ARG_REGISTER_KIND
 import app.accord.ui.nav.ROUTE_MODEL
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import app.accord.FeedbackEvent
+import app.accord.core.chat.ChatImportResult
+import app.accord.ui.model.ModelActions
+import app.accord.ui.model.ModelRoute
+import app.accord.ui.model.ModelViewModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import app.accord.ui.chat.ChatActions
 import app.accord.ui.chat.ChatRoute
 import app.accord.ui.chat.ChatViewModel
@@ -375,6 +384,31 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 composable(Root.More.start) {
                     val scope = rememberCoroutineScope()
                     var signOutPending by remember { mutableStateOf<Int?>(null) }
+                    var chatDialog by remember { mutableStateOf<ChatHistoryDialog?>(null) }
+                    val resolver = LocalContext.current.contentResolver
+                    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+                        if (uri != null) scope.launch {
+                            val text = container.exportChat()
+                            val saved = text != null && runCatching {
+                                withContext(Dispatchers.IO) { resolver.openOutputStream(uri, "wt")?.use { it.write(text.toByteArray(Charsets.UTF_8)) } ?: error("sem saída") }
+                            }.isSuccess
+                            container.feedback.post(FeedbackEvent(if (saved) R.string.chat_exported else R.string.chat_export_failed))
+                        }
+                    }
+                    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+                        if (uri != null) scope.launch {
+                            val text = runCatching { withContext(Dispatchers.IO) { resolver.openInputStream(uri)?.use { String(it.readBytes(), Charsets.UTF_8) } } }.getOrNull()
+                            val result = text?.let { container.importChat(it) } ?: ChatImportResult.Unreadable
+                            container.feedback.post(
+                                when (result) {
+                                    is ChatImportResult.Imported ->
+                                        if (result.messages == 0) FeedbackEvent(R.string.chat_imported_none) else FeedbackEvent(R.string.chat_imported_count, listOf(result.messages))
+                                    ChatImportResult.OtherOwner -> FeedbackEvent(R.string.chat_import_other_owner)
+                                    ChatImportResult.Unreadable -> FeedbackEvent(R.string.chat_import_unreadable)
+                                },
+                            )
+                        }
+                    }
                     MoreScreen(
                         padding,
                         actions = MoreActions(
@@ -396,11 +430,31 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             },
                             onRenew = { navController.navigate(ROUTE_ACCESS) },
                             onSync = { navController.navigate(ROUTE_SYNC) },
+                            onChatModel = { navController.navigate(ROUTE_MODEL) },
+                            onChatExport = { chatDialog = ChatHistoryDialog.Export },
+                            onChatImport = { importLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) },
+                            onChatClear = { chatDialog = ChatHistoryDialog.Clear },
                         ),
                         account = access.account,
                         sessionState = access.session,
                         syncStatus = syncStatus,
                     )
+                    chatDialog?.let { dialog ->
+                        ChatHistoryDialogView(
+                            dialog,
+                            onConfirm = {
+                                chatDialog = null
+                                when (dialog) {
+                                    ChatHistoryDialog.Export -> exportLauncher.launch("historico-do-chat.json")
+                                    ChatHistoryDialog.Clear -> scope.launch {
+                                        container.clearChat()
+                                        container.feedback.post(FeedbackEvent(R.string.chat_cleared))
+                                    }
+                                }
+                            },
+                            onDismiss = { chatDialog = null },
+                        )
+                    }
                     signOutPending?.let { pending ->
                         SignOutDialog(
                             pending,
@@ -594,9 +648,14 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 )
             }
             composable(ROUTE_MODEL) {
-                ProvisionalRoot(
-                    stringResource(R.string.model_title), stringResource(R.string.model_provisional), padding, register,
-                    extra = { TextButton(onClick = { navController.popBackStack() }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.action_back)) } },
+                val viewModel: ModelViewModel = viewModel(factory = viewModelFactory { initializer { ModelViewModel(container) } })
+                ModelRoute(
+                    viewModel, padding,
+                    ModelActions(
+                        onBack = { navController.popBackStack() },
+                        onBackToChat = { navController.openRoot(Root.Chat) },
+                        onManual = register,
+                    ),
                 )
             }
             composable(
@@ -652,6 +711,24 @@ private fun RenewalBanner(onRenew: () -> Unit) {
             TextButton(onClick = onRenew, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.more_renew_access)) }
         }
     }
+}
+
+private enum class ChatHistoryDialog { Export, Clear }
+
+@Composable
+private fun ChatHistoryDialogView(dialog: ChatHistoryDialog, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    val export = dialog == ChatHistoryDialog.Export
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(if (export) R.string.chat_export_title else R.string.chat_clear_title)) },
+        text = { Text(stringResource(if (export) R.string.chat_export_body else R.string.chat_clear_body)) },
+        confirmButton = {
+            TextButton(onClick = onConfirm, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                Text(stringResource(if (export) R.string.chat_export_confirm else R.string.chat_clear_confirm))
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.chat_dialog_cancel)) } },
+    )
 }
 
 @Composable
