@@ -179,4 +179,23 @@ interface ChatStore {
 
     /** Mescla o arquivo pelo ID: o que já existe não se duplica. Devolve quantas mensagens entraram. */
     suspend fun import(archive: ChatArchive): Int
+
+    /**
+     * Arquivo de transferência entre aparelhos (S3 §12): JSON legível, sem senha nem criptografia no P0, de
+     * quem é [owner] (conta e espaço). Nunca carrega credenciais, tokens ou lançamentos.
+     */
+    suspend fun exportText(owner: String): String
+
+    /** Só aceita arquivo da mesma conta e espaço; nada é alterado se o arquivo for recusado. */
+    suspend fun importText(text: String, owner: String): ChatImportResult
+}
+
+sealed interface ChatImportResult {
+    data class Imported(val messages: Int) : ChatImportResult
+
+    /** Não é um arquivo do Chat, é de uma versão que este aplicativo não entende ou está corrompido. */
+    data object Unreadable : ChatImportResult
+
+    /** O arquivo é de outra conta ou de outro espaço. */
+    data object OtherOwner : ChatImportResult
 }

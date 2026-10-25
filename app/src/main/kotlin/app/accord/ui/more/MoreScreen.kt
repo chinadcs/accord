@@ -44,6 +44,10 @@ data class MoreActions(
     val onSignOut: () -> Unit = {},
     val onRenew: () -> Unit = {},
     val onSync: () -> Unit = {},
+    val onChatModel: () -> Unit = {},
+    val onChatExport: () -> Unit = {},
+    val onChatImport: () -> Unit = {},
+    val onChatClear: () -> Unit = {},
 )
 
 @Composable
@@ -95,6 +99,12 @@ fun MoreScreen(
             }
             MoreRow(R.string.more_sign_out, Lucide.drawable.lucide_ic_log_out, actions.onSignOut)
         }
+
+        Section(R.string.more_group_chat)
+        MoreRow(R.string.more_chat_model, Lucide.drawable.lucide_ic_cpu, actions.onChatModel)
+        MoreRow(R.string.more_chat_export, Lucide.drawable.lucide_ic_download, actions.onChatExport)
+        MoreRow(R.string.more_chat_import, Lucide.drawable.lucide_ic_upload, actions.onChatImport)
+        MoreRow(R.string.more_chat_clear, Lucide.drawable.lucide_ic_trash_2, actions.onChatClear)
 
         Section(R.string.more_group_device)
         MoreRow(R.string.appearance_title, Lucide.drawable.lucide_ic_palette, actions.onAppearance)

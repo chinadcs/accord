@@ -114,4 +114,5 @@
     <string name="notice_action_download">Baixar modelo</string>
     <string name="notice_action_interpret_now">Interpretar agora</string>
     <string name="notice_action_retry">Tentar de novo</string>
+    <string name="chat_imported_count">%d mensagens importadas. Os lançamentos não mudaram.</string>
 </resources>

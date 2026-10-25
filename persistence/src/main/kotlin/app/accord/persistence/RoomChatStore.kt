@@ -4,6 +4,7 @@ import androidx.room.immediateTransaction
 import androidx.room.useWriterConnection
 import app.accord.core.chat.ChatArchive
 import app.accord.core.chat.ChatAttempt
+import app.accord.core.chat.ChatImportResult
 import app.accord.core.chat.ChatMessage
 import app.accord.core.chat.ChatQuestion
 import app.accord.core.chat.ChatQuestionRecord
@@ -23,6 +24,7 @@ import app.accord.core.chat.RefuseReason
 import app.accord.core.chat.StandardReply
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
@@ -95,6 +97,38 @@ class RoomChatStore(private val db: AccordDatabase) : ChatStore {
         return added
     }
 
+    @Serializable
+    private data class ArchiveFile(
+        val format: String,
+        val version: Int,
+        val owner: String,
+        val messages: List<ChatMessageRow>,
+        val attempts: List<ChatAttemptRow>,
+        val questions: List<ChatQuestionRow>,
+        val receipts: List<ChatReceiptRow>,
+    )
+
+    override suspend fun exportText(owner: String): String = Json.encodeToString(
+        ArchiveFile.serializer(),
+        ArchiveFile(FORMAT, VERSION, owner, dao.messages(), dao.attempts(), dao.questions(), dao.receipts()),
+    )
+
+    override suspend fun importText(text: String, owner: String): ChatImportResult {
+        val file = try {
+            Json.decodeFromString(ArchiveFile.serializer(), text)
+        } catch (_: Exception) {
+            return ChatImportResult.Unreadable
+        }
+        if (file.format != FORMAT || file.version != VERSION) return ChatImportResult.Unreadable
+        if (file.owner != owner) return ChatImportResult.OtherOwner
+        val archive = try {
+            ChatArchive(file.messages.map(::toMessage), file.questions.mapNotNull(::toQuestion), file.receipts.map(::toReceipt))
+        } catch (_: Exception) {
+            return ChatImportResult.Unreadable
+        }
+        return ChatImportResult.Imported(import(archive))
+    }
+
     // ---- mapeamentos ----
 
     private val fieldsSerializer = MapSerializer(String.serializer(), String.serializer())
@@ -157,6 +191,8 @@ class RoomChatStore(private val db: AccordDatabase) : ChatStore {
     )
 
     private companion object {
+        const val FORMAT = "accord-chat-history"
+        const val VERSION = 1
         val IN_FLIGHT = setOf(MessageState.Sent, MessageState.Interpreting, MessageState.Applying)
     }
 }

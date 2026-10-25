@@ -54,6 +54,9 @@ class ModelCenter(
 
     val runtime: ModelRuntime = ModelRuntime({ manager.status.value.active }, engine, scope)
 
+    /** A rede atual é tarifada: o download fora do Wi-Fi pergunta antes (decisão de 23/10/2026). */
+    fun isMetered(): Boolean = connectivity.isActiveNetworkMetered
+
     /** Há um motor capaz de carregar o modelo instalado. Instalar os arquivos sozinho não basta. */
     val engineAvailable: Boolean get() = engine != null
 

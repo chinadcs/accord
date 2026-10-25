@@ -11,6 +11,7 @@ import app.accord.core.space.Undo
 import app.accord.access.AndroidSpaceRuntimeFactory
 import app.accord.access.SecureAccessStore
 import app.accord.core.chat.ChatCoordinator
+import app.accord.core.chat.ChatImportResult
 import app.accord.core.model.DistributionSource
 import app.accord.core.model.ModelEngine
 import app.accord.model.ModelCenter
@@ -159,6 +160,32 @@ class AppContainer(
 
     /** Espera a fachada do espaço da conta atual; só é chamada por telas que existem com espaço aberto. */
     override suspend fun space(): FinanceSpace = access.runtime.filterNotNull().first().space
+
+    /** Conta e espaço a que o histórico do Chat deste aparelho pertence; o arquivo de transferência só entra no mesmo par. */
+    private fun chatOwner(): String? {
+        val state = access.status.value
+        val account = state.account ?: return null
+        val space = state.space ?: return null
+        return "${account.accountId}|${space.spaceId}"
+    }
+
+    private val chatStore get() = access.runtime.value?.chatStore
+
+    /** Texto do arquivo de histórico (S3 §12): conversas em claro, sem senhas, tokens nem lançamentos. */
+    suspend fun exportChat(): String? {
+        val owner = chatOwner() ?: return null
+        return chatStore?.exportText(owner)
+    }
+
+    suspend fun importChat(text: String): ChatImportResult {
+        val owner = chatOwner() ?: return ChatImportResult.Unreadable
+        return chatStore?.importText(text, owner) ?: ChatImportResult.Unreadable
+    }
+
+    /** Apaga só o histórico deste aparelho; lançamentos e a fila de sincronização não mudam. */
+    suspend fun clearChat() {
+        chatStore?.clear()
+    }
 
     override suspend fun onManualSaved(chatMessageId: String) {
         chat.value?.resolveManually(chatMessageId)
