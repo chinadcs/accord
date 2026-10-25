@@ -351,7 +351,7 @@ class ModelManager(
             val part = dir.resolve(file.name + PART)
             var have = if (Files.exists(part)) Files.size(part) else 0L
             if (have > file.bytes) {
-                Files.delete(part)
+                retrying { Files.delete(part) }
                 have = 0
             }
             if (have == file.bytes) continue
@@ -375,7 +375,7 @@ class ModelManager(
             if (opened.startOffset != have) {
                 // A hospedagem não aceitou o intervalo: recomeça este arquivo do zero.
                 have = opened.startOffset
-                if (have == 0L) Files.deleteIfExists(part)
+                if (have == 0L) retrying { Files.deleteIfExists(part) }
             }
             meta = PartialMeta(manifest.version, opened.validator, opened.acceptsRanges)
             writeMeta(manifest, meta)
@@ -490,11 +490,27 @@ class ModelManager(
         return digest.digest().joinToString("") { "%02x".format(it) }
     }
 
-    private fun moveAtomically(from: Path, to: Path) {
+    private fun moveAtomically(from: Path, to: Path) = retrying {
         try {
             Files.move(from, to, StandardCopyOption.ATOMIC_MOVE)
         } catch (_: AtomicMoveNotSupportedException) {
             Files.move(from, to, StandardCopyOption.REPLACE_EXISTING)
+        }
+    }
+
+    /**
+     * Antivírus e indexadores seguram arquivos recém-criados por instantes (sobretudo no Windows): uma troca ou
+     * remoção recusada por arquivo em uso é repetida algumas vezes antes de virar falha de armazenamento.
+     */
+    private fun <T> retrying(block: () -> T): T {
+        var attempt = 0
+        while (true) {
+            try {
+                return block()
+            } catch (e: java.nio.file.FileSystemException) {
+                if (e is java.nio.file.NoSuchFileException || e is java.nio.file.FileAlreadyExistsException || ++attempt >= ATTEMPTS) throw e
+                Thread.sleep(RETRY_MILLIS * attempt)
+            }
         }
     }
 
@@ -514,11 +530,13 @@ class ModelManager(
 
     private fun deleteRecursively(path: Path) {
         if (!Files.exists(path)) return
-        Files.walk(path).use { stream -> stream.sorted(Comparator.reverseOrder()).forEach { Files.deleteIfExists(it) } }
+        Files.walk(path).use { stream -> stream.sorted(Comparator.reverseOrder()).forEach { target -> retrying { Files.deleteIfExists(target) } } }
     }
 
     private companion object {
         const val CHUNK = 64 * 1024
+        const val ATTEMPTS = 6
+        const val RETRY_MILLIS = 25L
         const val PART = ".part"
         const val META = "meta.json"
         const val INSTALLING = ".installing"

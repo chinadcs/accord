@@ -73,7 +73,11 @@ class ModelManagerTest {
     }
 
     private suspend fun ModelManager.await(timeoutMillis: Long = 30_000, predicate: (ModelStatus) -> Boolean): ModelStatus =
-        withTimeout(timeoutMillis) { status.first(predicate) }
+        try {
+            withTimeout(timeoutMillis) { status.first(predicate) }
+        } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+            throw AssertionError("Estado ao esgotar o tempo: ${status.value.install}", e)
+        }
 
     @AfterTest
     fun cleanup() {
