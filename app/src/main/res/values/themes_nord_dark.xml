@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--https://www.nordtheme.com/docs/colors-and-palettes-->
+<resources>
+  <color name="nord_dark_primary">#88C0D0</color>
+  <color name="nord_dark_on_primary">#2E3440</color>
+  <color name="nord_dark_primary_container">#88C0D0</color>
+  <color name="nord_dark_on_primary_container">#2E3440</color>
+  <color name="nord_dark_inverse_primary">#397E91</color>
+  <color name="nord_dark_secondary">#81A1C1</color>
+  <color name="nord_dark_on_secondary">#2E3440</color>
+  <color name="nord_dark_secondary_container">#506275</color>
+  <color name="nord_dark_on_secondary_container">#88C0D0</color>
+  <color name="nord_dark_tertiary">#5E81AC</color>
+  <color name="nord_dark_on_tertiary">#000000</color>
+  <color name="nord_dark_tertiary_container">#5E81AC</color>
+  <color name="nord_dark_on_tertiary_container">#000000</color>
+  <color name="nord_dark_background">#2E3440</color>
+  <color name="nord_dark_on_background">#ECEFF4</color>
+  <color name="nord_dark_surface">#2E3440</color>
+  <color name="nord_dark_on_surface">#ECEFF4</color>
+  <color name="nord_dark_surface_variant">#414C5C</color>
+  <color name="nord_dark_on_surface_variant">#ECEFF4</color>
+  <color name="nord_dark_surface_tint">#88C0D0</color>
+  <color name="nord_dark_inverse_surface">#D8DEE9</color>
+  <color name="nord_dark_inverse_on_surface">#2E3440</color>
+  <color name="nord_dark_outline">#6d717b</color>
+  <color name="nord_dark_outline_variant">#90939a</color>
+  <color name="nord_dark_on_error">#2E3440</color>
+  <color name="nord_dark_error_container">#BF616A</color>
+  <color name="nord_dark_on_error_container">#000000</color>
+  <color name="nord_dark_surface_container_lowest">#373F4D</color>
+  <color name="nord_dark_surface_container_low">#3E4756</color>
+  <color name="nord_dark_surface_container">#414C5C</color>
+  <color name="nord_dark_surface_container_high">#4E5766</color>
+  <color name="nord_dark_surface_container_highest">#505968</color>
+</resources>

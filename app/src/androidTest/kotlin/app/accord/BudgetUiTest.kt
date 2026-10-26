@@ -95,7 +95,8 @@ class BudgetUiTest {
     fun categoriaDentroDoLimiteMostraValorLimiteERestante() {
         show(ready(budget(listOf(category("food", 980, limit = 1200)))))
         compose.onNodeWithText("Faltam ${brl(220).format()}").assertIsDisplayed()
-        compose.onNodeWithText("${brl(980).format()} / ${brl(1200).format()}").assertIsDisplayed()
+        compose.onNodeWithText(brl(980).format()).assertIsDisplayed()
+        compose.onNodeWithText("Limite ${brl(1200).format()}").assertIsDisplayed()
     }
 
     @Test
@@ -109,7 +110,8 @@ class BudgetUiTest {
     fun excessoApareceComTextoEIconeSemAumentarOLimite() {
         show(ready(budget(listOf(category("food", 980, limit = 900)))))
         compose.onNodeWithText("Passou ${brl(80).format()}").assertIsDisplayed()
-        compose.onNodeWithText("${brl(980).format()} / ${brl(900).format()}").assertIsDisplayed()
+        compose.onNodeWithText(brl(980).format()).assertIsDisplayed()
+        compose.onNodeWithText("Limite ${brl(900).format()}").assertIsDisplayed()
     }
 
     @Test

@@ -159,4 +159,20 @@ class ChatItemsTest {
         assertEquals("a1", income.accountId)
         assertEquals(ExpenseForm.Pix, ChatPrefill.toForm(PartialEntry(payment = ChatPayment.Pix), LocalDate.of(2026, 10, 22)).form)
     }
+
+    @Test
+    fun `recibo a classificar leva a opcao sugerida pelo modelo`() {
+        val options = listOf(
+            app.accord.core.chat.QuestionOption("c1", "Mercado", app.accord.core.chat.OptionValue.Category("alimentacao.mercado")),
+            app.accord.core.chat.QuestionOption("c2", "Pet", app.accord.core.chat.OptionValue.Category("pet")),
+        )
+        val withHint = ChatMessage("a", "texto a", 10, MessageState.ToClassify, categoryHints = listOf("pet"))
+        val q = question("q", "a", QuestionLink.Entry("e-r1")).copy(options = options)
+        val items = buildChatItems(ChatSnapshot(listOf(withHint), listOf(q), listOf(receipt("r1", "a", 11))))
+        assertEquals("c2", (items.filterIsInstance<ChatItem.Receipt>().single()).suggestedRef)
+
+        val noHint = withHint.copy(categoryHints = emptyList())
+        val items2 = buildChatItems(ChatSnapshot(listOf(noHint), listOf(q), listOf(receipt("r1", "a", 11))))
+        assertNull((items2.filterIsInstance<ChatItem.Receipt>().single()).suggestedRef)
+    }
 }

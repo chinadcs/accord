@@ -5,6 +5,7 @@
     <string name="more_group_budget">Orçamento</string>
     <string name="more_group_space">Espaço</string>
     <string name="more_group_device">Neste aparelho</string>
+    <string name="more_group_entries">Lançamentos</string>
     <string name="more_categories">Categorias e subcategorias</string>
     <string name="more_limits">Limites do orçamento</string>
     <string name="more_card">Cartão e faturas</string>
@@ -36,9 +37,18 @@
     <string name="feedback_default_account">Esta é a sua conta padrão.</string>
     <string name="nickname_optional_note">Se deixar em branco, usamos o nome do banco.</string>
     <string name="appearance_title">Aparência</string>
+    <string name="appearance_palette">Paleta de cores</string>
     <string name="appearance_corners">Estilo dos cantos</string>
     <string name="appearance_rounded">Arredondados</string>
     <string name="appearance_straight">Discretos</string>
     <string name="appearance_preview">Prévia da aparência</string>
     <string name="appearance_preview_note">As alterações aparecem na hora em todo o aplicativo.</string>
+    <!-- Nomes das paletas: marcas próprias, mantidas como no original. -->
+    <string name="palette_accord">Accord</string>
+    <string name="palette_catppuccin">Catppuccin</string>
+    <string name="palette_midnight_dusk">Midnight Dusk</string>
+    <string name="palette_nord">Nord</string>
+    <string name="palette_tako">Tako</string>
+    <string name="palette_tidal_wave">Tidal Wave</string>
+    <string name="palette_tokyo_night">Tokyo Night</string>
 </resources>

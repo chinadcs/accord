@@ -71,7 +71,7 @@ class EditFlowTest {
         space.execute(
             Envelope(CommandId("e-card-$tag")),
             RegisterCardPurchase(
-                gear, Classification.Category(category("eletronicos.equipamentos")), month.minusMonths(1).atDay(25), Money(120_000),
+                gear, Classification.Category(category("eletronicos.equipamentos")), month.atDay(1), Money(120_000),
                 AmountMeaning.Total, 6, invoice = month,
             ),
         )

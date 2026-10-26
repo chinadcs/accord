@@ -8,8 +8,11 @@ import app.accord.core.Money
  * Não calcula fatura, mês ou parcelas e não repete regras de domínio: isso é da fachada S1.
  */
 object ChatValidator {
+    const val VERSION = 4
     private const val MAX_DESCRIPTION = 40
     private const val MAX_DESCRIPTION_WORDS = 6
+    private val numericText = Regex("\\d")
+    private val correctionCue = Regex("\\b(?:corrige|corrigir|corrija|correcao|ajusta|ajustar|ajuste|troca|trocar|troque|muda|mudar|mude|altera|alterar|altere|retifica|retificar|retifique)\\b|\\b(?:na verdade|valor certo|valor correto|o correto e|o certo e|o correto era|o certo era|errei)\\b|\\b(?:a data|o valor|a categoria|o pagamento) (?:certa?|correta?|era|foi)\\b|^(?:foi|era)\\b")
 
     /** Pedidos que o Chat resolve sem consultar o modelo ("desfaz", "apaga esse"). */
     fun prefilter(text: String): ChatDecision? =
@@ -160,6 +163,10 @@ object ChatValidator {
 
     private fun correct(text: String, p: Proposal.Correct, context: ChatContext): ChatDecision {
         if (context.receipts.isEmpty()) return ChatDecision.Reply(StandardReply.NoRecentReceipt)
+        // Ter um recibo recente não autoriza converter uma nova despesa numérica em edição dele.
+        if (numericText.containsMatchIn(text) && !correctionCue.containsMatchIn(ChatText.fold(text))) {
+            return ChatDecision.Refuse(RefuseReason.Uninterpretable)
+        }
         val field = p.field ?: return ChatDecision.Refuse(RefuseReason.Uninterpretable)
         val change = when (field) {
             CorrectionField.Amount -> {

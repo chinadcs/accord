@@ -123,8 +123,8 @@ class MoreFlowTest {
         waitForText("Categorias e subcategorias")
         // recursos de fases seguintes não aparecem como botão vazio; a Sincronização já existe (S2)
         assert(compose.onAllNodesWithText("Sincronização", substring = true).fetchSemanticsNodes().isNotEmpty())
-        // Chat e Modelo no aparelho existem desde o S3.
-        assert(compose.onAllNodesWithText("Modelo no aparelho", substring = true).fetchSemanticsNodes().isNotEmpty())
+        // O Chat (modelo, exportar e limpar o histórico) existe desde o S3 e fica em "Configurações do Chat".
+        assert(compose.onAllNodesWithText("Configurações do Chat", substring = true).fetchSemanticsNodes().isNotEmpty())
         tap("Aparência")
         waitForText("Estilo dos cantos")
         tap("Escuro")

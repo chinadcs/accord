@@ -72,6 +72,8 @@
 
     <!-- Histórico do Chat em Mais -->
     <string name="more_group_chat">Chat neste aparelho</string>
+    <string name="more_chat_settings">Configurações do Chat</string>
+    <string name="chat_settings_title">Configurações do Chat</string>
     <string name="more_chat_model">Modelo no aparelho</string>
     <string name="more_chat_export">Exportar histórico do Chat</string>
     <string name="more_chat_import">Importar histórico do Chat</string>

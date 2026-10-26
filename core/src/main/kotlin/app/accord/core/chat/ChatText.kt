@@ -106,7 +106,8 @@ object ChatText {
     }
 
     private val digits = Regex("""\d{1,2}""")
-    private val explicitDate = Regex("""(\d{1,2})/(\d{1,2})(?:/(\d{2}|\d{4}))?""")
+    // Ano completo primeiro; limites impedem truncar ano/dia ou ignorar ano malformado.
+    private val explicitDate = Regex("""(?<![\d/])(\d{1,2})/(\d{1,2})(?:/(\d{4}|\d{2}))?(?![\d/])""")
 
     /**
      * Resolve a expressão com a data local de America/Sao_Paulo. "Dia N" sem mês é o dia N passado

@@ -137,7 +137,7 @@ private fun AccountEditor(form: AccountForm, onChange: (BankRef?, String?) -> Un
             Surface(
                 color = MaterialTheme.colorScheme.surfaceContainerLowest, shape = MaterialTheme.shapes.small,
                 border = androidx.compose.foundation.BorderStroke(1.dp, if (form.bankError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline),
-                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(role = Role.Button) { pickingBank = true },
+                modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.control).clickable(role = Role.Button) { pickingBank = true },
             ) {
                 Row(
                     Modifier.padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2),

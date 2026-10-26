@@ -6,21 +6,24 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.tween
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.NavigationBarItemDefaults
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -46,6 +49,7 @@ import app.accord.R
 import app.accord.core.space.DateCriterion
 import app.accord.core.space.EntrySituation
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
@@ -67,11 +71,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.intl.LocaleList
-import androidx.compose.ui.text.style.Hyphens
-import androidx.compose.ui.text.style.LineBreak
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.pluralStringResource
 import app.accord.core.sync.EntryStage
 import app.accord.core.sync.SessionState
@@ -83,6 +85,7 @@ import app.accord.ui.firststeps.StepActions
 import app.accord.ui.nav.ROUTE_ACCESS
 import app.accord.ui.nav.ROUTE_CONFLICT
 import app.accord.ui.nav.ROUTE_SYNC
+import app.accord.ui.review.ReviewCategories
 import app.accord.ui.sync.ConflictRoute
 import app.accord.ui.sync.ConflictViewModel
 import app.accord.ui.sync.LocalOpenSync
@@ -92,6 +95,7 @@ import app.accord.ui.sync.ReviewViewModel
 import app.accord.ui.sync.SyncRoute
 import app.accord.ui.sync.SyncViewModel
 import app.accord.ui.components.RefreshOnResume
+import app.accord.ui.components.RootNavigationBar
 import androidx.compose.runtime.CompositionLocalProvider
 import app.accord.core.sync.ConnectionState
 import app.accord.ui.nav.ROUTE_FIRST_STEPS
@@ -164,6 +168,7 @@ import app.accord.ui.more.MoreActions
 import app.accord.ui.more.MoreScreen
 import app.accord.ui.more.AppearanceScreen
 import app.accord.ui.theme.Accord
+import com.composables.icons.lucide.R as Lucide
 import app.accord.ui.register.RegisterRoute
 import app.accord.ui.register.RegisterViewModel
 import java.time.YearMonth
@@ -225,12 +230,36 @@ private fun SpaceGate(container: AppContainer, onContinue: () -> Unit) {
 @Composable
 private fun MainApp(container: AppContainer, startRoute: String) {
     val navController = rememberNavController()
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    val openRoot: (Root) -> Unit = { root ->
+        focusManager.clearFocus(force = true)
+        keyboard?.hide()
+        navController.openRoot(root)
+    }
     val access by container.access.status.collectAsStateWithLifecycle()
     val syncStatus by container.sync.status.collectAsStateWithLifecycle()
     val entry by navController.currentBackStackEntryAsState()
     val destination = entry?.destination
     // A barra inferior só aparece nas raízes; detalhes e formulários escondem-na.
     val onRoot = Root.entries.any { destination?.route == it.start }
+    val selectedRoot = Root.entries.firstOrNull { root -> destination?.hierarchy?.any { it.route == root.graph } == true }
+    val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    // O Chat já oferece registro manual abaixo do campo; ali um FAB cobriria o compositor.
+    val showAdd = !imeVisible && onRoot && selectedRoot in setOf(Root.Budget, Root.Entries)
+    var registerSpeedDialOpen by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(selectedRoot) { registerSpeedDialOpen = false }
+
+    fun openManualRegistration(kind: String, form: String? = null) {
+        focusManager.clearFocus(force = true)
+        keyboard?.hide()
+        registerSpeedDialOpen = false
+        val route = buildString {
+            append("$ROUTE_REGISTER?$ARG_REGISTER_KIND=$kind")
+            form?.let { append("&$ARG_REGISTER_FORM=$it") }
+        }
+        navController.navigate(route)
+    }
 
     // Avisos depois de salvar, com Desfazer; ficam aqui para sobreviver à troca de tela.
     val snackbar = remember { SnackbarHostState() }
@@ -273,6 +302,39 @@ private fun MainApp(container: AppContainer, startRoute: String) {
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbar) },
+        floatingActionButton = {
+            if (showAdd) {
+                Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                    if (registerSpeedDialOpen) {
+                        SpeedDialAction(
+                            stringResource(R.string.register_speed_dial_income), Lucide.drawable.lucide_ic_banknote_arrow_up,
+                        ) { openManualRegistration("income") }
+                        SpeedDialAction(
+                            stringResource(R.string.register_speed_dial_expense), Lucide.drawable.lucide_ic_arrow_down_left,
+                        ) { openManualRegistration("expense", "pix") }
+                        SpeedDialAction(
+                            stringResource(R.string.register_speed_dial_card_expense), Lucide.drawable.lucide_ic_credit_card,
+                        ) { openManualRegistration("expense", "card") }
+                    }
+                    FloatingActionButton(
+                        onClick = { registerSpeedDialOpen = !registerSpeedDialOpen },
+                        modifier = Modifier.testTag("root-register-fab").semantics {
+                            contentDescription = context.getString(
+                                if (registerSpeedDialOpen) R.string.register_speed_dial_close else R.string.register_speed_dial_open,
+                            )
+                        },
+                        shape = CircleShape,
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                    ) {
+                        Icon(
+                            painterResource(if (registerSpeedDialOpen) Lucide.drawable.lucide_ic_x else Lucide.drawable.lucide_ic_plus),
+                            contentDescription = null,
+                        )
+                    }
+                }
+            }
+        },
         topBar = {
             // Sessão vencida: os dados e a fila ficam; só a pessoa pode entrar de novo, com a mesma conta.
             if (access.session == SessionState.NeedsRenewal && destination?.route != ROUTE_ACCESS) {
@@ -281,41 +343,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
         },
         bottomBar = {
             if (onRoot) {
-                val density = LocalDensity.current
-                val labelStyle = MaterialTheme.typography.labelSmall.copy(
-                    localeList = LocaleList("pt-BR"),
-                    lineBreak = LineBreak.Paragraph,
-                    hyphens = Hyphens.Auto,
-                )
-                val labelHeight = with(density) { (labelStyle.lineHeight * 2).toDp() }
-                Column {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    NavigationBar(
-                        modifier = Modifier.heightIn(min = if (density.fontScale >= 1.3f) 108.dp else 96.dp),
-                        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-                        tonalElevation = 0.dp,
-                    ) {
-                        Root.entries.forEach { root ->
-                            NavigationBarItem(
-                                selected = destination?.hierarchy?.any { it.route == root.graph } == true,
-                                onClick = { navController.openRoot(root) },
-                                icon = { Icon(painterResource(root.icon), contentDescription = null) },
-                                label = {
-                                    Box(Modifier.heightIn(min = labelHeight), contentAlignment = Alignment.Center) {
-                                        Text(stringResource(root.label), style = labelStyle, textAlign = TextAlign.Center)
-                                    }
-                                },
-                                colors = NavigationBarItemDefaults.colors(
-                                    selectedIconColor = MaterialTheme.colorScheme.primary,
-                                    selectedTextColor = MaterialTheme.colorScheme.onSurface,
-                                    indicatorColor = MaterialTheme.colorScheme.primaryContainer,
-                                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                                ),
-                            )
-                        }
-                    }
-                }
+                Box(Modifier.imePadding()) { RootNavigationBar(selectedRoot, openRoot) }
             }
         },
     ) { padding ->
@@ -346,8 +374,8 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             onOpenEntry = openEntry,
                             onEditEntry = { id -> navController.navigate("$ROUTE_EDIT/${Uri.encode(id)}") },
                             onManual = { route -> navController.navigate(route) },
-                            onOpenBudget = { navController.openRoot(Root.Budget) },
-                            onOpenEntries = { navController.openRoot(Root.Entries) },
+                            onOpenBudget = { openRoot(Root.Budget) },
+                            onOpenEntries = { openRoot(Root.Entries) },
                             onOpenCard = { navController.navigate(ROUTE_CARD) },
                         ),
                     )
@@ -366,6 +394,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                         onOpenCommitments = { month -> navController.navigate("$ROUTE_COMMITMENTS?$ARG_MONTH=$month") },
                         onOpenIncomes = { month -> navController.navigate("$ROUTE_INCOMES?$ARG_MONTH=$month") },
                         onOpenCard = { navController.navigate(ROUTE_CARD) },
+                        onSearch = { openRoot(Root.Entries) },
                     )
                 }
                 composable(
@@ -394,7 +423,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                         factory = viewModelFactory {
                             initializer {
                                 val month = container.clock.currentMonth()
-                                EntriesViewModel(container, createSavedStateHandle(), EntriesFilterState(month, month))
+                                EntriesViewModel(container, createSavedStateHandle(), EntriesFilterState(month, month, container.theme.entriesDateCriterion.value))
                             }
                         },
                     )
@@ -403,18 +432,23 @@ private fun MainApp(container: AppContainer, startRoute: String) {
             }
             navigation(startDestination = Root.Review.start, route = Root.Review.graph) {
                 composable(Root.Review.start) {
-                    val viewModel: ReviewViewModel = viewModel(factory = viewModelFactory { initializer { ReviewViewModel(container.sync) } })
+                    val viewModel: ReviewViewModel = viewModel(factory = viewModelFactory { initializer { ReviewViewModel(container.sync, container.chat) } })
                     val conflicts by viewModel.conflicts.collectAsStateWithLifecycle()
+                    val categories by viewModel.categories.collectAsStateWithLifecycle()
                     RefreshOnResume(viewModel::refresh)
                     ProvisionalRoot(
                         stringResource(R.string.review_title), stringResource(R.string.review_placeholder), padding, register,
-                        extra = { ReviewConflicts(conflicts) { id -> navController.navigate("$ROUTE_CONFLICT/${Uri.encode(id)}") } },
+                        extra = {
+                            ReviewConflicts(conflicts) { id -> navController.navigate("$ROUTE_CONFLICT/${Uri.encode(id)}") }
+                            ReviewCategories(categories, onAccept = viewModel::accept, onChoose = { navController.openRoot(Root.Chat) })
+                        },
                     )
                 }
             }
             navigation(startDestination = Root.More.start, route = Root.More.graph) {
                 composable(Root.More.start) {
                     val scope = rememberCoroutineScope()
+                    val entriesCriterion by container.theme.entriesDateCriterion.collectAsStateWithLifecycle()
                     var signOutPending by remember { mutableStateOf<Int?>(null) }
                     var chatDialog by remember { mutableStateOf<ChatHistoryDialog?>(null) }
                     val resolver = LocalContext.current.contentResolver
@@ -470,6 +504,8 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                         account = access.account,
                         sessionState = access.session,
                         syncStatus = syncStatus,
+                        entriesCriterion = entriesCriterion,
+                        onEntriesCriterionChange = container.theme::setEntriesDateCriterion,
                     )
                     chatDialog?.let { dialog ->
                         ChatHistoryDialogView(
@@ -653,7 +689,11 @@ private fun MainApp(container: AppContainer, startRoute: String) {
             composable("appearance") {
                 val theme by container.theme.preference.collectAsStateWithLifecycle()
                 val corners by container.theme.corners.collectAsStateWithLifecycle()
-                AppearanceScreen(padding, theme, corners, container.theme::set, container.theme::setCorners, onBack = { navController.popBackStack() })
+                val palette by container.theme.palette.collectAsStateWithLifecycle()
+                AppearanceScreen(
+                    padding, theme, corners, container.theme::set, container.theme::setCorners,
+                    onBack = { navController.popBackStack() }, palette = palette, onPalette = container.theme::setPalette,
+                )
             }
             composable(
                 "$ROUTE_INVOICE/{${InvoiceViewModel.ARG_MONTH}}",
@@ -704,6 +744,26 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 RegisterRoute(viewModel, padding, onExit = { navController.popBackStack() })
             }
         }
+        }
+    }
+}
+
+@Composable
+private fun SpeedDialAction(label: String, icon: Int, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    ) {
+        Row(
+            Modifier.padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2),
+            horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(label, style = MaterialTheme.typography.titleSmall)
+            Icon(painterResource(icon), contentDescription = null, tint = MaterialTheme.colorScheme.primary)
         }
     }
 }

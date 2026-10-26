@@ -2,8 +2,10 @@ package app.accord.ui.register
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -16,6 +18,9 @@ import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
@@ -28,15 +33,14 @@ import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.MaterialTheme
 import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -52,6 +56,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -59,9 +64,11 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.accord.ui.components.DetailHeader
+import app.accord.ui.banks.BankLogo
 import app.accord.R
 import app.accord.core.Frequency
 import app.accord.core.label
@@ -71,7 +78,9 @@ import app.accord.core.space.BankRef
 import app.accord.core.space.CategoryNode
 import app.accord.ui.categoryPath
 import app.accord.ui.components.DecorativeIcon
+import app.accord.ui.components.lucideRes
 import app.accord.ui.fullLabel
+import app.accord.ui.shortLabel
 import app.accord.ui.theme.Accord
 import app.accord.ui.theme.AccordSpacing
 import com.composables.icons.lucide.R as Lucide
@@ -112,12 +121,22 @@ fun RegisterScreen(
     val focus = remember { FormField.entries.associateWith { FocusRequester() } }
     val bring = remember { FormField.entries.associateWith { BringIntoViewRequester() } }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val keyboard = LocalSoftwareKeyboardController.current
 
     // Depois de salvar com erro, o foco vai para o primeiro campo errado e os demais dados ficam como estão.
     LaunchedEffect(state.focusTick) {
         val field = state.focusField ?: return@LaunchedEffect
         scope.launch { bring.getValue(field).bringIntoView() }
         runCatching { focus.getValue(field).requestFocus() }
+    }
+
+    LaunchedEffect(state.loading, state.autoFocusAmount, state.recoveredDraft) {
+        if (!state.loading && state.autoFocusAmount && !state.recoveredDraft &&
+            form.description.isBlank() && form.amountText.isBlank()
+        ) {
+            focus.getValue(FormField.Amount).requestFocus()
+            keyboard?.show()
+        }
     }
 
     var picking by remember { mutableStateOf<Picker?>(null) }
@@ -135,27 +154,23 @@ fun RegisterScreen(
             if (state.recoveredDraft) RecoveredBanner(onDismissRecovered)
             state.generalError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
 
-            // Tipo: despesa ou renda
-            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                listOf(FormKind.Expense to R.string.register_kind_expense, FormKind.Income to R.string.register_kind_income)
-                    .forEachIndexed { index, (kind, label) ->
-                        SegmentedButton(
-                            selected = form.kind == kind,
-                            onClick = { onChange { it.copy(kind = kind) } },
-                            shape = SegmentedButtonDefaults.itemShape(index, 2),
-                            modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
-                        ) { Text(stringResource(label)) }
-                    }
-            }
+            FormTextField(
+                value = form.amountText, onChange = { v -> onChange { it.copy(amountText = v) } },
+                label = stringResource(R.string.register_amount), hint = stringResource(R.string.register_amount_hint),
+                error = state.errors[FormField.Amount], keyboard = KeyboardType.Decimal,
+                focus = focus.getValue(FormField.Amount), bring = bring.getValue(FormField.Amount),
+                emphasized = true, leadingIcon = Lucide.drawable.lucide_ic_banknote,
+            )
 
-            if (form.kind == FormKind.Expense) {
-                Text(stringResource(R.string.register_payment), style = MaterialTheme.typography.titleMedium)
+            if (form.kind == FormKind.Expense && form.form != ExpenseForm.Card) {
+                Text(stringResource(R.string.register_payment), style = MaterialTheme.typography.titleLarge)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                    ExpenseForm.entries.forEach { option ->
+                    ExpenseForm.entries.filter { it != ExpenseForm.Card }.forEach { option ->
                         FilterChip(
                             selected = form.form == option,
                             onClick = { onChange { it.copy(form = option) } },
                             label = { Text(stringResource(option.label())) },
+                            leadingIcon = { DecorativeIcon(expenseFormIcon(option), modifier = Modifier.size(18.dp)) },
                             modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
                         )
                     }
@@ -166,13 +181,7 @@ fun RegisterScreen(
                 value = form.description, onChange = { v -> onChange { it.copy(description = v) } },
                 label = stringResource(R.string.register_description), error = state.errors[FormField.Description],
                 focus = focus.getValue(FormField.Description), bring = bring.getValue(FormField.Description),
-            )
-            FormTextField(
-                value = form.amountText, onChange = { v -> onChange { it.copy(amountText = v) } },
-                label = stringResource(R.string.register_amount), hint = stringResource(R.string.register_amount_hint),
-                error = state.errors[FormField.Amount], keyboard = KeyboardType.Decimal,
-                focus = focus.getValue(FormField.Amount), bring = bring.getValue(FormField.Amount),
-                emphasized = true,
+                leadingIcon = Lucide.drawable.lucide_ic_file_text,
             )
 
             val dateLabel = when {
@@ -180,35 +189,38 @@ fun RegisterScreen(
                 form.form == ExpenseForm.Boleto -> R.string.register_date_due
                 else -> R.string.register_date
             }
-            PickerField(
-                label = stringResource(dateLabel), value = form.date.fullLabel(), error = state.errors[FormField.Date],
-                bring = bring.getValue(FormField.Date),
-            ) { picking = Picker.Date(DateTarget.Main) }
+            DateChoices(
+                label = stringResource(dateLabel), date = form.date, today = state.today,
+                error = state.errors[FormField.Date], bring = bring.getValue(FormField.Date),
+                onPickOther = { picking = Picker.Date(DateTarget.Main) },
+                onSelectDate = { date -> onChange { it.copy(date = date) } },
+            )
 
+            val selectedCategoryIcon = form.categoryId?.let { state.categories[it]?.iconKey }?.let { lucideRes(it) }
             if (form.kind == FormKind.Expense) {
                 PickerField(
                     label = stringResource(R.string.register_category),
                     value = categoryPath(state.categories, form.categoryId) ?: stringResource(R.string.register_category_pick),
                     error = state.errors[FormField.Category], bring = bring.getValue(FormField.Category),
-                ) { picking = Picker.Category }
+                    leadingContent = selectedCategoryIcon?.let { icon -> { DecorativeIcon(icon) } },
+                ) { keyboard?.hide(); picking = Picker.Category }
             }
 
             if (form.allowsAccount) {
                 val account = state.accounts.firstOrNull { it.id == form.accountId }
+                val accountLogo: (@Composable () -> Unit)? = account?.let { selected ->
+                    { BankLogo(selected.bank, size = 32.dp) }
+                }
                 PickerField(
                     label = stringResource(R.string.register_account),
                     value = account?.let { accountLabel(it) }
                         ?: stringResource(if (state.accounts.isEmpty()) R.string.register_account_none else R.string.register_account_pick),
                     error = state.errors[FormField.Account], bring = bring.getValue(FormField.Account),
+                    leadingContent = accountLogo,
                 ) { picking = Picker.Account }
             }
 
-            OutlinedButton(
-                onClick = { onChange { it.copy(moreOptions = !it.moreOptions) } },
-                modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin),
-            ) {
-                Text(stringResource(if (form.moreOptions) R.string.register_less_options else R.string.register_more_options))
-            }
+            MoreOptionsToggle(expanded = form.moreOptions) { onChange { it.copy(moreOptions = !it.moreOptions) } }
             if (form.moreOptions) MoreOptions(state, onChange, focus, bring) { picking = it }
 
             InvoiceAndSchedule(state, onCorrectInvoice = { picking = Picker.Invoice }, onUseEstimate = { onChange { it.copy(invoice = null) } })
@@ -290,6 +302,54 @@ private fun ExpenseForm.label() = when (this) {
     ExpenseForm.Boleto -> R.string.register_form_boleto
 }
 
+@Composable
+private fun expenseFormIcon(form: ExpenseForm): Int = when (form) {
+    ExpenseForm.Card -> Lucide.drawable.lucide_ic_credit_card
+    ExpenseForm.Pix -> lucideRes("qr-code")
+    ExpenseForm.Debit -> Lucide.drawable.lucide_ic_credit_card
+    ExpenseForm.Cash -> Lucide.drawable.lucide_ic_banknote
+    ExpenseForm.Boleto -> Lucide.drawable.lucide_ic_receipt
+}
+
+@Composable
+private fun MoreOptionsToggle(expanded: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.rowTall),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = MaterialTheme.shapes.large,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
+        ) {
+            Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.medium) {
+                Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                    DecorativeIcon(Lucide.drawable.lucide_ic_settings_2, tint = MaterialTheme.colorScheme.onSecondaryContainer)
+                }
+            }
+            Column(Modifier.weight(1f)) {
+                Text(
+                    stringResource(if (expanded) R.string.register_less_options else R.string.register_more_options_short),
+                    style = MaterialTheme.typography.titleMedium,
+                )
+                Text(stringResource(R.string.register_more_options_hint), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            DecorativeIcon(if (expanded) Lucide.drawable.lucide_ic_chevron_up else Lucide.drawable.lucide_ic_chevron_down)
+        }
+    }
+}
+
+@Composable
+private fun OptionHeading(label: String, icon: Int) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+        DecorativeIcon(icon, tint = MaterialTheme.colorScheme.primary)
+        Text(label, style = MaterialTheme.typography.titleMedium)
+    }
+}
+
 internal fun accountLabel(account: AccountInfo): String {
     val bank = when (val b = account.bank) {
         is BankRef.Catalog -> b.name
@@ -330,26 +390,41 @@ internal fun FormTextField(
     hint: String? = null,
     keyboard: KeyboardType = KeyboardType.Text,
     emphasized: Boolean = false,
+    leadingIcon: Int? = null,
+    modifier: Modifier = Modifier,
 ) {
     val message = errorText(error)
     OutlinedTextField(
         value = value,
         onValueChange = onChange,
-        label = { Text(label) },
+        label = { Text(label, style = MaterialTheme.typography.titleMedium) },
         placeholder = hint?.let { { Text(it) } },
         isError = message != null,
         supportingText = message?.let { { Text(it) } },
         singleLine = true,
+        leadingIcon = if (leadingIcon != null) ({ DecorativeIcon(leadingIcon) }) else null,
         keyboardOptions = KeyboardOptions(keyboardType = keyboard),
-        textStyle = if (emphasized) Accord.typography.amountHero else MaterialTheme.typography.bodyLarge,
-        modifier = Modifier.fillMaxWidth().bringIntoViewRequester(bring).focusRequester(focus),
+        textStyle = if (emphasized) {
+            Accord.typography.amountInput.copy(textAlign = TextAlign.End)
+        } else {
+            MaterialTheme.typography.bodyLarge
+        },
+        shape = if (emphasized) MaterialTheme.shapes.extraLarge else MaterialTheme.shapes.small,
+        modifier = modifier.fillMaxWidth().bringIntoViewRequester(bring).focusRequester(focus),
     )
 }
 
 /** Campo que abre um seletor; a linha inteira é o alvo de toque e anuncia rótulo e valor. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-internal fun PickerField(label: String, value: String, error: FormError?, bring: BringIntoViewRequester, onClick: () -> Unit) {
+internal fun PickerField(
+    label: String,
+    value: String,
+    error: FormError?,
+    bring: BringIntoViewRequester,
+    leadingContent: (@Composable () -> Unit)? = null,
+    onClick: () -> Unit,
+) {
     val message = errorText(error)
     Column(Modifier.fillMaxWidth().bringIntoViewRequester(bring)) {
         Surface(
@@ -360,16 +435,75 @@ internal fun PickerField(label: String, value: String, error: FormError?, bring:
             ),
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 56.dp)
+                .heightIn(min = AccordSpacing.control)
                 .clickable(role = Role.Button, onClick = onClick)
                 .semantics(mergeDescendants = true) { contentDescription = listOfNotNull(label, value, message).joinToString(". ") },
         ) {
-            Column(Modifier.padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2), verticalArrangement = Arrangement.Center) {
-                Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Text(value, style = MaterialTheme.typography.bodyLarge)
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
+            ) {
+                leadingContent?.invoke()
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+                    Text(label, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(value, style = MaterialTheme.typography.bodyLarge)
+                }
+                DecorativeIcon(Lucide.drawable.lucide_ic_chevron_down)
             }
         }
         message?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(start = AccordSpacing.s4, top = AccordSpacing.s1)) }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
+@Composable
+private fun DateChoices(
+    label: String,
+    date: LocalDate,
+    today: LocalDate,
+    error: FormError?,
+    bring: BringIntoViewRequester,
+    onPickOther: () -> Unit,
+    onSelectDate: (LocalDate) -> Unit,
+) {
+    val yesterday = today.minusDays(1)
+    val other = date != today && date != yesterday
+    Column(
+        Modifier.fillMaxWidth().bringIntoViewRequester(bring),
+        verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
+    ) {
+        Text(label, style = MaterialTheme.typography.titleSmall)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+            FilterChip(
+                selected = date == today,
+                onClick = { onSelectDate(today) },
+                label = { Text(stringResource(R.string.register_date_today), style = MaterialTheme.typography.bodyLarge) },
+                leadingIcon = { DecorativeIcon(Lucide.drawable.lucide_ic_sun, modifier = Modifier.size(18.dp)) },
+                modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
+            )
+            FilterChip(
+                selected = date == yesterday,
+                onClick = { onSelectDate(yesterday) },
+                label = { Text(stringResource(R.string.register_date_yesterday), style = MaterialTheme.typography.bodyLarge) },
+                leadingIcon = { DecorativeIcon(Lucide.drawable.lucide_ic_history, modifier = Modifier.size(18.dp)) },
+                modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
+            )
+            FilterChip(
+                selected = other,
+                onClick = onPickOther,
+                label = {
+                    Text(
+                        if (other) stringResource(R.string.register_date_other_value, date.shortLabel())
+                        else stringResource(R.string.register_date_other),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                },
+                leadingIcon = { DecorativeIcon(Lucide.drawable.lucide_ic_calendar_days, modifier = Modifier.size(18.dp)) },
+                modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
+            )
+        }
+        errorText(error)?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
     }
 }
 
@@ -401,12 +535,37 @@ private fun MoreOptions(
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
             if (form.allowsInstallments) {
-                FormTextField(
-                    value = form.installmentsText, onChange = { v -> onChange { it.copy(installmentsText = v.filter(Char::isDigit)) } },
-                    label = stringResource(R.string.register_installments), hint = stringResource(R.string.register_installments_hint),
-                    error = state.errors[FormField.Installments], keyboard = KeyboardType.Number,
-                    focus = focus.getValue(FormField.Installments), bring = bring.getValue(FormField.Installments),
-                )
+                OptionHeading(stringResource(R.string.register_installments), Lucide.drawable.lucide_ic_layers)
+                val installmentCount = form.installmentsText.toIntOrNull() ?: 1
+                val decreaseLabel = stringResource(R.string.register_installments_decrease)
+                val increaseLabel = stringResource(R.string.register_installments_increase)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+                    IconButton(
+                        onClick = {
+                            onChange { it.copy(installmentsText = ((it.installmentsText.toIntOrNull() ?: 1) - 1).coerceAtLeast(1).toString()) }
+                        },
+                        enabled = installmentCount > 1,
+                        modifier = Modifier.size(AccordSpacing.touchMin).semantics { contentDescription = decreaseLabel },
+                    ) { Icon(painterResource(Lucide.drawable.lucide_ic_minus), contentDescription = null) }
+                    FormTextField(
+                        value = form.installmentsText, onChange = { v -> onChange { it.copy(installmentsText = v.filter(Char::isDigit)) } },
+                        label = stringResource(R.string.register_installments), hint = stringResource(R.string.register_installments_hint),
+                        error = state.errors[FormField.Installments], keyboard = KeyboardType.Number,
+                        focus = focus.getValue(FormField.Installments), bring = bring.getValue(FormField.Installments),
+                        leadingIcon = Lucide.drawable.lucide_ic_layers,
+                        modifier = Modifier.weight(1f),
+                    )
+                    IconButton(
+                        onClick = {
+                            onChange {
+                                val current = it.installmentsText.toIntOrNull() ?: 1
+                                it.copy(installmentsText = (if (current < Int.MAX_VALUE) current + 1 else current).toString())
+                            }
+                        },
+                        enabled = installmentCount < Int.MAX_VALUE,
+                        modifier = Modifier.size(AccordSpacing.touchMin).semantics { contentDescription = increaseLabel },
+                    ) { Icon(painterResource(Lucide.drawable.lucide_ic_plus), contentDescription = null) }
+                }
                 if (form.asksAmountMeaning) {
                     Text(stringResource(R.string.register_meaning_title), style = MaterialTheme.typography.titleMedium)
                     listOf(AmountMeaning.Total to R.string.register_meaning_total, AmountMeaning.PerInstallment to R.string.register_meaning_each)
@@ -427,7 +586,7 @@ private fun MoreOptions(
                 }
             }
 
-            Text(stringResource(R.string.register_repeat), style = MaterialTheme.typography.titleMedium)
+            OptionHeading(stringResource(R.string.register_repeat), Lucide.drawable.lucide_ic_repeat)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
                 listOf<Pair<Frequency?, Int>>(
                     null to R.string.register_repeat_none, Frequency.Monthly to R.string.register_repeat_monthly,
@@ -456,15 +615,19 @@ private fun MoreOptions(
                     )
                 }
                 if (form.settledDate != null) {
-                    PickerField(
+                    DateChoices(
                         label = stringResource(if (boleto) R.string.register_settled_date_boleto else R.string.register_settled_date_income),
-                        value = form.settledDate.fullLabel(), error = state.errors[FormField.SettledDate], bring = bring.getValue(FormField.SettledDate),
-                    ) { onPick(Picker.Date(DateTarget.Settled)) }
+                        date = form.settledDate, today = state.today, error = state.errors[FormField.SettledDate],
+                        bring = bring.getValue(FormField.SettledDate),
+                        onPickOther = { onPick(Picker.Date(DateTarget.Settled)) },
+                        onSelectDate = { date -> onChange { it.copy(settledDate = date) } },
+                    )
                     FormTextField(
                         value = form.settledAmountText, onChange = { v -> onChange { it.copy(settledAmountText = v) } },
                         label = stringResource(R.string.register_settled_amount), hint = stringResource(R.string.register_settled_amount_hint),
                         error = state.errors[FormField.SettledAmount], keyboard = KeyboardType.Decimal,
                         focus = focus.getValue(FormField.SettledAmount), bring = bring.getValue(FormField.SettledAmount),
+                        leadingIcon = Lucide.drawable.lucide_ic_banknote,
                     )
                 }
             }
@@ -550,28 +713,113 @@ internal fun DatePickerSheet(initial: LocalDate, onPick: (LocalDate) -> Unit, on
     ) { DatePicker(state = pickerState) }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun CategoryDialog(categories: Map<String, CategoryNode>, selected: String?, onPick: (String) -> Unit, onDismiss: () -> Unit) {
     val mains = categories.values.filter { it.parentId == null }.sortedBy { it.order }
-    AlertDialog(
+    val selectedNode = selected?.let(categories::get)
+    var parentId by remember(selected) { mutableStateOf(selectedNode?.parentId ?: selectedNode?.id) }
+    val parent = parentId?.let(categories::get)
+    val children = parent?.let { node -> categories.values.filter { it.parentId == node.id }.sortedBy { it.order } }.orEmpty()
+
+    val sheetState = androidx.compose.material3.rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.register_category)) },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
-                mains.forEach { main ->
-                    ChoiceRow(main.name, selected == main.id, indent = false) { onPick(main.id) }
-                    categories.values.filter { it.parentId == main.id }.sortedBy { it.order }.forEach { sub ->
-                        ChoiceRow(sub.name, selected == sub.id, indent = true) { onPick(sub.id) }
+        sheetState = sheetState,
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+    ) {
+        Column(
+            Modifier.fillMaxWidth().heightIn(max = 620.dp).padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2),
+            verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(stringResource(R.string.register_category), style = MaterialTheme.typography.headlineSmall)
+                    Text(
+                        stringResource(if (parent == null) R.string.register_category_choose_parent else R.string.register_category_choose_child),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                IconButton(onClick = onDismiss, modifier = Modifier.size(AccordSpacing.touchMin)) {
+                    Icon(painterResource(Lucide.drawable.lucide_ic_x), contentDescription = stringResource(R.string.register_picker_close))
+                }
+            }
+
+            if (parent == null) {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    modifier = Modifier.heightIn(max = 460.dp),
+                    verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+                    horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+                ) {
+                    items(mains, key = { it.id }) { main ->
+                        val subcategories = categories.values.any { it.parentId == main.id }
+                        CategoryTile(
+                            name = main.name, iconKey = main.iconKey,
+                            selected = selected == main.id || selectedNode?.parentId == main.id,
+                            onClick = {
+                                if (subcategories) parentId = main.id else onPick(main.id)
+                            },
+                        )
+                    }
+                }
+            } else {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                    IconButton(onClick = { parentId = null }, modifier = Modifier.size(AccordSpacing.touchMin)) {
+                        Icon(painterResource(Lucide.drawable.lucide_ic_arrow_left), contentDescription = stringResource(R.string.action_back))
+                    }
+                    DecorativeIcon(lucideRes(parent.iconKey))
+                    Text(parent.name, style = MaterialTheme.typography.titleMedium)
+                }
+                Button(
+                    onClick = { onPick(parent.id) },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin),
+                ) { Text(stringResource(R.string.register_category_use_parent, parent.name), style = MaterialTheme.typography.bodyLarge) }
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    modifier = Modifier.heightIn(max = 420.dp),
+                    verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+                    horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+                ) {
+                    items(children, key = { it.id }) { child ->
+                        CategoryTile(child.name, child.iconKey, selected == child.id) { onPick(child.id) }
                     }
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                Text(stringResource(R.string.register_picker_close))
-            }
-        },
-    )
+        }
+    }
+}
+
+@Composable
+private fun CategoryTile(name: String, iconKey: String, selected: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().heightIn(min = 96.dp),
+        shape = MaterialTheme.shapes.medium,
+        color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest,
+        border = BorderStroke(
+            if (selected) 1.5.dp else 1.dp,
+            if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
+        ),
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s2, vertical = AccordSpacing.s2),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
+        ) {
+            DecorativeIcon(
+                lucideRes(iconKey), modifier = Modifier.size(28.dp),
+                tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Text(
+                name, style = MaterialTheme.typography.bodyLarge,
+                color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center, maxLines = 2,
+            )
+        }
+    }
 }
 
 @Composable
@@ -582,7 +830,18 @@ internal fun AccountDialog(accounts: List<AccountInfo>, selected: String?, onPic
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 if (accounts.isEmpty()) Text(stringResource(R.string.register_account_none))
-                accounts.forEach { ChoiceRow(accountLabel(it), selected == it.id, indent = false) { onPick(it.id) } }
+                accounts.forEach { account ->
+                    Row(
+                        Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)
+                            .selectable(selected = selected == account.id, onClick = { onPick(account.id) }, role = Role.RadioButton),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+                    ) {
+                        RadioButton(selected = selected == account.id, onClick = null)
+                        BankLogo(account.bank, size = 32.dp)
+                        Text(accountLabel(account), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge, maxLines = 2)
+                    }
+                }
             }
         },
         confirmButton = {

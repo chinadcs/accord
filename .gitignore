@@ -13,5 +13,11 @@ local.properties
 *.iml
 .idea/
 
+# Bancada da Etapa 0 (S3 §2): código de terceiros baixado por scripts/poc/fetch-llama.ps1
+poc/third_party/
+poc/.cxx/
+poc/results/
+scripts/poc/__pycache__/
+
 # Referências visuais baixadas só para inspeção local; fontes ficam documentadas por links.
 /scratchpad/dribbble-references/

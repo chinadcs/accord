@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
@@ -25,6 +26,7 @@ import app.accord.core.space.BankRef
 import app.accord.core.space.Classification
 import app.accord.core.space.CommandId
 import app.accord.core.space.CommandResult
+import app.accord.core.space.DateCriterion
 import app.accord.core.space.DeterministicIds
 import app.accord.core.space.DirectPaymentKind
 import app.accord.core.space.Envelope
@@ -47,13 +49,18 @@ class EntriesFlowTest {
     val compose = createEmptyComposeRule()
 
     private var scenario: ActivityScenario<MainActivity>? = null
+    private var previousCriterion = DateCriterion.PurchaseDate
     private val tag = UUID.randomUUID().toString().take(6)
     private val grocery get() = "Mercado $tag"
     private val gear get() = "Equipamento $tag"
 
     @Before
     fun seed() = runBlocking {
-        val space = ApplicationProvider.getApplicationContext<AccordApplication>().container.space()
+        val container = ApplicationProvider.getApplicationContext<AccordApplication>().container
+        // O padrão agora é "data da compra"; estes fluxos conferem a parcela pelo mês da fatura.
+        previousCriterion = container.theme.entriesDateCriterion.value
+        container.theme.setEntriesDateCriterion(DateCriterion.BudgetMonth)
+        val space = container.space()
         val account = (space.execute(Envelope(CommandId("entries-account")), AddAccount(BankRef.Other("Banco"), "Conta")) as? CommandResult.Applied)
             ?.receipt?.changes?.single()?.id
         if (account != null) space.execute(Envelope(CommandId("entries-default")), SetMyDefaultAccount(account))
@@ -80,6 +87,7 @@ class EntriesFlowTest {
     @After
     fun close() {
         scenario?.close()
+        ApplicationProvider.getApplicationContext<AccordApplication>().container.theme.setEntriesDateCriterion(previousCriterion)
     }
 
     private fun waitForText(text: String) =
@@ -160,12 +168,14 @@ class EntriesFlowTest {
         compose.onNodeWithText("Conferir lançamentos").performClick()
 
         // a categoria acumula lançamentos de outros testes; o item deste pode estar abaixo da dobra
-        waitForText("Filtros (1)")
-        compose.onNodeWithText("Filtros (1)").assertIsDisplayed()
+        compose.waitUntil(8_000) { compose.onAllNodes(hasContentDescription("Filtros (1)")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNode(hasContentDescription("Filtros (1)")).assertIsDisplayed()
         compose.onNode(hasScrollAction()).performScrollToNode(hasText(grocery))
         waitForText(grocery)
         assert(compose.onAllNodesWithText(gear, substring = true).fetchSemanticsNodes().isEmpty())
 
+        // o cabeçalho com o Voltar é o primeiro item da lista e sai da composição ao rolar
+        compose.onNode(hasScrollAction()).performScrollToIndex(0)
         compose.onNode(hasContentDescription("Voltar")).performClick()
         waitForText("Conferir lançamentos")
     }

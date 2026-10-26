@@ -97,7 +97,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.categoryContent(
     value: CategoryData,
     onCheckEntries: (String, String?) -> Unit,
 ) {
-    item { CategorySummary(value.category) }
+    item { CategorySummary(value.category, value.node.iconKey) }
     if (value.subcategories.isEmpty()) {
         item { Text(stringResource(R.string.empty_category), style = MaterialTheme.typography.bodyLarge) }
     }
@@ -127,7 +127,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.categoryContent(
 }
 
 @Composable
-private fun CategorySummary(category: CategoryBudget) {
+private fun CategorySummary(category: CategoryBudget, iconKey: String) {
     val limit = category.limit
     val state = barState(limit)
     val headline = limit.total?.let {
@@ -141,7 +141,14 @@ private fun CategorySummary(category: CategoryBudget) {
     }
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-            Text(headline, style = Accord.typography.amountRow)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = MaterialTheme.shapes.medium) {
+                    androidx.compose.foundation.layout.Box(Modifier.padding(AccordSpacing.s2), contentAlignment = Alignment.Center) {
+                        DecorativeIcon(lucideRes(iconKey))
+                    }
+                }
+                Text(headline, style = Accord.typography.amountRow)
+            }
             BudgetBar(barFill(limit), state, excessMarker(limit, category.net))
             Text(detail, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (category.credits.cents != 0L) {

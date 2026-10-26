@@ -77,4 +77,5 @@
     <string name="remaining_after_spending">Restante da categoria após gastos: %s</string>
     <string name="action_check_entries">Conferir lançamentos</string>
     <string name="empty_category">Sem registros nesta categoria neste mês.</string>
+    <string name="percent_value">%1$d%%</string>
 </resources>

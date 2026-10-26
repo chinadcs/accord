@@ -123,10 +123,11 @@ class LimitsViewModel(
                 val limit = limitOf[main.id]
                 LimitRow(
                     categoryId = main.id, name = main.name,
-                    subs = categories.filter { it.parentId == main.id }.sortedBy { it.order }.map { LimitSub(it.id, it.name) },
+                    subs = categories.filter { it.parentId == main.id }.sortedBy { it.order }.map { LimitSub(it.id, it.name, it.iconKey) },
                     original = limit?.setting ?: app.accord.core.LimitSetting.UNDEFINED,
                     spent = budget?.categories?.firstOrNull { it.categoryId == main.id }?.net ?: Money.ZERO,
                     laterChanges = limit?.laterChanges.orEmpty(),
+                    iconKey = main.iconKey,
                 )
             }
             commandId = CommandId(UUID.randomUUID().toString())

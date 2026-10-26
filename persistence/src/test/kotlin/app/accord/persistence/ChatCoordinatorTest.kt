@@ -86,6 +86,47 @@ class ChatCoordinatorTest : ChatTestBase() {
     // ---- cenário 2: regra híbrida ----
 
     @Test
+    fun `categoria sugerida pelo modelo fica como opcao e so entra no orcamento quando o casal aceita`() = runBlocking<Unit> {
+        val e = env()
+        val suggestion = e.categoryRef("alimentacao.mercado")
+        e.fake.on("Zaffari 120 no cartão", Proposal.Clarify(QuestionField.Category, listOf(suggestion), reg("Zaffari", "120", payment = ChatPayment.Card)))
+        val message = e.say("Zaffari 120 no cartão")
+        assertEquals(MessageState.ToClassify, message.state)
+
+        // Salvo "a classificar": o valor existe, mas nenhuma categoria (e nenhum limite) o recebeu.
+        val detail = e.space.entry(purchaseId(e.entries(nov).single().id)).value()!!
+        assertEquals(Classification.ToClassify, detail.classification)
+        assertEquals(Money(12_000), e.toClassifyTotal(nov))
+
+        // A sugestão é a primeira opção da pergunta e fica guardada na mensagem, sem texto da conversa nas operações.
+        val question = e.store.openQuestions().single()
+        assertEquals(QuestionField.Category, question.field)
+        assertEquals(seed("alimentacao.mercado"), (question.options.first().value as OptionValue.Category).id)
+        assertEquals(listOf(seed("alimentacao.mercado")), e.message(message.id).categoryHints)
+        assertEquals(1, question.options.count { it.value is OptionValue.Category && (it.value as OptionValue.Category).id == seed("alimentacao.mercado") })
+
+        // Aceitar a sugestão classifica o mesmo lançamento.
+        e.coordinator.answer(question.id, question.options.first())
+        val classified = e.space.entry(detail.id).value()!!
+        assertEquals(Classification.Category(seed("alimentacao.mercado")), classified.classification)
+        assertEquals(Money(0), e.toClassifyTotal(nov))
+        assertEquals(1, e.entries(nov).size)
+    }
+
+    @Test
+    fun `sugestao recusada deixa o lancamento a classificar e a pergunta aberta ate outra escolha`() = runBlocking<Unit> {
+        val e = env()
+        e.fake.on("Zaffari 120 no cartão", Proposal.Clarify(QuestionField.Category, listOf(e.categoryRef("lazer.eventos")), reg("Zaffari", "120", payment = ChatPayment.Card)))
+        e.say("Zaffari 120 no cartão")
+        val detail = e.space.entry(purchaseId(e.entries(nov).single().id)).value()!!
+        val question = e.store.openQuestions().single()
+        // Escolher outra categoria que não a sugerida classifica com a escolhida, nunca com a do modelo.
+        val other = question.options.first { it.label == "Pet" }
+        e.coordinator.answer(question.id, other)
+        assertEquals(Classification.Category(seed("pet")), e.space.entry(detail.id).value()!!.classification)
+    }
+
+    @Test
     fun `amazon 150 no cartao sem categoria salva a classificar e a resposta classifica o mesmo lancamento`() = runBlocking<Unit> {
         val e = env()
         val before = e.committed(nov)

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="review_categories_title">Categorias a esclarecer</string>
+    <string name="review_categories_note">Estes lançamentos estão salvos sem categoria. Uma categoria só passa a valer depois que você aceitar ou escolher.</string>
+    <string name="review_category_item">%1$s · %2$s</string>
+    <string name="review_category_item_unknown">Lançamento</string>
+    <string name="review_category_suggested">Sugestão do modelo: %1$s</string>
+    <string name="review_category_no_suggestion">Sem sugestão</string>
+    <string name="review_category_accept">Aceitar</string>
+    <string name="review_category_accept_desc">Aceitar a categoria %1$s para %2$s</string>
+    <string name="review_category_choose">Escolher no Chat</string>
+    <string name="chat_category_suggested_tag">Sugerida</string>
+    <string name="chat_category_suggested_note">O modelo sugeriu uma categoria. Ela só vale depois que você tocar nela.</string>
+    <string name="chat_category_suggested_desc">%1$s, categoria sugerida pelo modelo</string>
+</resources>

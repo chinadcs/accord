@@ -1,6 +1,7 @@
 package app.accord.ui.theme
 
 import android.provider.Settings
+import androidx.annotation.StringRes
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
@@ -17,9 +18,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import app.accord.R
 
 /** Preferência de tema deste aparelho; não é dado financeiro e não sincroniza (tela 22). */
 enum class ThemePreference { System, Light, Dark }
+
+enum class ThemePalette(val key: String, @StringRes val labelRes: Int) {
+    Accord("accord", R.string.palette_accord),
+    Catppuccin("catppuccin", R.string.palette_catppuccin),
+    MidnightDusk("midnightdusk", R.string.palette_midnight_dusk),
+    Nord("nord", R.string.palette_nord),
+    Tako("tako", R.string.palette_tako),
+    TidalWave("tidalwave", R.string.palette_tidal_wave),
+    TokyoNight("tokyonight", R.string.palette_tokyo_night),
+}
 
 enum class CornerStyle { Rounded, Straight }
 
@@ -33,6 +45,15 @@ object AccordSpacing {
     val s5 = 24.dp
     val s6 = 32.dp
     val touchMin = 48.dp
+
+    /** Campo de seleção e ação principal flutuante: um passo acima do alvo mínimo. */
+    val control = 56.dp
+
+    /** Linha de lista tocável (opções, atalhos): confortável com texto ampliado. */
+    val rowMedium = 60.dp
+
+    /** Linha de lista com título e apoio, como alternar "mais opções" no registro. */
+    val rowTall = 64.dp
 }
 
 /** Estilos próprios sobre a escala do Material 3 (tokens §4). */
@@ -42,6 +63,10 @@ data class AccordTypography(
     val amountRow: TextStyle,
     /** Valor de destaque, como o restante do mês. */
     val amountHero: TextStyle,
+    /** Valor de painel ou de campo numérico médio, como o total dos limites. */
+    val amountPanel: TextStyle,
+    /** Valor digitado em destaque no registro: o campo principal da tela. */
+    val amountInput: TextStyle,
 )
 
 /** Durações de movimento (tokens §6). Com redução de movimento a troca é imediata. */
@@ -152,6 +177,7 @@ private fun rememberReducedMotion(): Boolean {
 fun AccordTheme(
     preference: ThemePreference = ThemePreference.System,
     cornerStyle: CornerStyle = CornerStyle.Rounded,
+    palette: ThemePalette = ThemePalette.Accord,
     content: @Composable () -> Unit,
 ) {
     val dark = when (preference) {
@@ -160,17 +186,24 @@ fun AccordTheme(
         ThemePreference.Dark -> true
     }
     val typography = AccordMaterialTypography
+    val context = LocalContext.current
+    val colorScheme = remember(context, palette, dark) { loadPalette(context, palette, dark) }
+    val accordColors = remember(palette, dark, colorScheme) {
+        paletteAccordColors(context, palette, colorScheme, dark)
+    }
     val accordTypography = AccordTypography(
         amountRow = typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold, fontFeatureSettings = TABULAR_FIGURES),
         amountHero = typography.headlineSmall.copy(fontFeatureSettings = TABULAR_FIGURES),
+        amountPanel = typography.headlineSmall.copy(fontSize = 30.sp, lineHeight = 36.sp, fontFeatureSettings = TABULAR_FIGURES),
+        amountInput = typography.headlineSmall.copy(fontSize = 52.sp, lineHeight = 60.sp, fontFeatureSettings = TABULAR_FIGURES),
     )
     CompositionLocalProvider(
-        LocalAccordColors provides if (dark) DarkAccordColors else LightAccordColors,
+        LocalAccordColors provides accordColors,
         LocalAccordTypography provides accordTypography,
         LocalAccordMotion provides AccordMotion(rememberReducedMotion()),
     ) {
         MaterialTheme(
-            colorScheme = if (dark) DarkColorScheme else LightColorScheme,
+            colorScheme = colorScheme,
             typography = typography,
             shapes = if (cornerStyle == CornerStyle.Rounded) RoundedShapes else StraightShapes,
             content = content,

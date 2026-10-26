@@ -21,9 +21,10 @@ data class LimitRow(
     val spent: Money,
     /** Meses posteriores que já têm configuração própria. */
     val laterChanges: List<YearMonth>,
+    val iconKey: String = "tag",
 )
 
-data class LimitSub(val id: String, val name: String)
+data class LimitSub(val id: String, val name: String, val iconKey: String = "tag")
 
 sealed interface LimitFieldError {
     data object Invalid : LimitFieldError

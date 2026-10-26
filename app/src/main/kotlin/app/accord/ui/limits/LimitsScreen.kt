@@ -2,6 +2,7 @@ package app.accord.ui.limits
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -11,12 +12,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.BorderStroke
 import app.accord.ui.components.AccordButton as Button
 import androidx.compose.material3.MaterialTheme
 import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
@@ -36,14 +40,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.accord.ui.components.DetailHeader
 import app.accord.R
 import app.accord.core.LimitScope
 import app.accord.core.label
-import app.accord.ui.components.AdaptiveRow
 import app.accord.ui.components.DecorativeIcon
+import app.accord.ui.components.lucideRes
 import app.accord.ui.components.MonthSelector
 import app.accord.ui.theme.Accord
 import app.accord.ui.theme.AccordSpacing
@@ -98,10 +103,28 @@ fun LimitsScreen(
                 }
                 is LimitsContent.Ready -> {
                     state.rows.forEach { row -> CategoryLimit(row, state, onTotal, onPart) }
-                    AdaptiveRow(
-                        start = { Text(stringResource(R.string.limits_total), style = MaterialTheme.typography.titleMedium) },
-                        end = { Text(state.totalOfCategories().format(), style = Accord.typography.amountRow) },
-                    )
+                    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.large) {
+                        Column(
+                            Modifier.fillMaxWidth().padding(AccordSpacing.s4),
+                            verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                                Surface(color = MaterialTheme.colorScheme.primary, shape = CircleShape) {
+                                    Box(Modifier.size(AccordSpacing.touchMin), contentAlignment = Alignment.Center) {
+                                        DecorativeIcon(Lucide.drawable.lucide_ic_wallet, tint = MaterialTheme.colorScheme.onPrimary)
+                                    }
+                                }
+                                Text(stringResource(R.string.limits_total), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                            }
+                            Text(
+                                state.totalOfCategories().format(),
+                                style = Accord.typography.amountPanel,
+                                modifier = Modifier.fillMaxWidth(),
+                                textAlign = TextAlign.End,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
+                    }
                     Text(stringResource(R.string.limits_total_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (state.initialSetup) Text(stringResource(R.string.limits_setup_scope), style = MaterialTheme.typography.bodyLarge)
                     else ScopeChoice(state, onScope)
@@ -155,15 +178,24 @@ private fun CategoryLimit(row: LimitRow, state: LimitsUiState, onTotal: (String,
     val totalError = state.errors[LimitKey(row.categoryId)]
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-            AdaptiveRow(
-                start = { Text(row.name, style = MaterialTheme.typography.titleSmall) },
-                end = { Text(stringResource(R.string.limits_spent, row.spent.format()), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) },
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = CircleShape) {
+                    Box(Modifier.size(AccordSpacing.touchMin), contentAlignment = Alignment.Center) {
+                        DecorativeIcon(lucideRes(row.iconKey))
+                    }
+                }
+                Column(Modifier.weight(1f)) {
+                    Text(row.name, style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.limits_spent, row.spent.format()), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
             OutlinedTextField(
                 value = totalText, onValueChange = { onTotal(row.categoryId, it) }, singleLine = true,
                 label = { Text(stringResource(R.string.limits_field_total, row.name)) },
                 placeholder = { Text(stringResource(R.string.limits_undefined)) },
                 isError = totalError != null, supportingText = errorText(totalError)?.let { { Text(it) } },
+                leadingIcon = { DecorativeIcon(Lucide.drawable.lucide_ic_banknote) },
+                textStyle = Accord.typography.amountPanel.copy(textAlign = TextAlign.End),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth(),
             )
             if (row.laterChanges.isNotEmpty()) {
@@ -174,6 +206,7 @@ private fun CategoryLimit(row: LimitRow, state: LimitsUiState, onTotal: (String,
             }
             if (row.subs.isNotEmpty()) {
                 Row(Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin), verticalAlignment = Alignment.CenterVertically) {
+                    DecorativeIcon(Lucide.drawable.lucide_ic_layers, tint = MaterialTheme.colorScheme.primary)
                     Text(stringResource(R.string.limits_split_toggle), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                     Switch(checked = splitOpen, onCheckedChange = { splitOpen = it })
                 }
@@ -191,6 +224,8 @@ private fun SplitFields(row: LimitRow, parts: Map<String, String>, state: Limits
             value = parts[sub.id].orEmpty(), onValueChange = { onPart(row.categoryId, sub.id, it) }, singleLine = true,
             label = { Text(sub.name) }, placeholder = { Text(stringResource(R.string.limits_no_split)) },
             isError = error != null, supportingText = errorText(error)?.let { { Text(it) } },
+            leadingIcon = { DecorativeIcon(lucideRes(sub.iconKey)) },
+            textStyle = Accord.typography.amountRow,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth(),
         )
     }

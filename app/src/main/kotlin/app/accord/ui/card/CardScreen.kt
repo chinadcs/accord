@@ -37,6 +37,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.accord.ui.components.DetailHeader
 import app.accord.R
 import app.accord.core.label
+import app.accord.core.Money
 import app.accord.core.space.InvoiceStatus
 import app.accord.core.space.InvoiceView
 import app.accord.ui.banks.BankLogo
@@ -156,6 +157,15 @@ private fun CardSummary(data: CardData, onStartEdit: () -> Unit) {
                         color = Accord.colors.onFinanceSurface)
                 }
             }
+            card.creditLimit?.let { limit ->
+                Text(stringResource(R.string.card_credit_limit_value, limit.format()), style = MaterialTheme.typography.bodyLarge,
+                    color = Accord.colors.onFinanceSurface)
+                val used = data.invoices.filterNot { it.paid }.fold(Money.ZERO) { total, invoice -> total + invoice.knownTotal }
+                if (used > limit) {
+                    Text(stringResource(R.string.card_credit_limit_exceeded, used.format()),
+                        style = MaterialTheme.typography.bodyMedium, color = Accord.colors.onFinanceSurface)
+                }
+            }
         }
     }
     OutlinedButton(onClick = onStartEdit, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
@@ -173,7 +183,7 @@ private fun CardEditor(edit: CardEditState, onChange: ((CardForm) -> CardForm) -
             Surface(
                 color = MaterialTheme.colorScheme.surfaceContainerLowest, shape = MaterialTheme.shapes.small,
                 border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
-                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(role = Role.Button) { pickingBank = true },
+                modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.control).clickable(role = Role.Button) { pickingBank = true },
             ) {
                 Row(
                     Modifier.padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2),
@@ -193,6 +203,9 @@ private fun CardEditor(edit: CardEditState, onChange: ((CardForm) -> CardForm) -
             }
             Field(stringResource(R.string.card_due_day), form.dueText, edit.errors[CardField.Due], KeyboardType.Number) { v ->
                 onChange { it.copy(dueText = v.filter(Char::isDigit).take(2)) }
+            }
+            Field(stringResource(R.string.card_credit_limit), form.creditLimitText, edit.errors[CardField.CreditLimit], KeyboardType.Decimal) { v ->
+                onChange { it.copy(creditLimitText = v.filter { char -> char.isDigit() || char == ',' || char == '.' }) }
             }
             Text(stringResource(if (initialSetup) R.string.card_setup_note else R.string.card_edit_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             edit.message?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
@@ -239,7 +252,7 @@ private fun ToConfirmRow(count: Int, onClick: () -> Unit) {
 private fun InvoiceRow(invoice: InvoiceView, onClick: () -> Unit) {
     val total = invoice.checkedTotal ?: invoice.knownTotal
     Column(
-        Modifier.fillMaxWidth().heightIn(min = 64.dp).clickable(role = Role.Button, onClick = onClick).padding(AccordSpacing.s4),
+        Modifier.fillMaxWidth().heightIn(min = AccordSpacing.rowTall).clickable(role = Role.Button, onClick = onClick).padding(AccordSpacing.s4),
         verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
     ) {
             AdaptiveRow(

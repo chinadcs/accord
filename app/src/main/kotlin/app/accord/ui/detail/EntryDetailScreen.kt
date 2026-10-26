@@ -21,27 +21,27 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.accord.ui.components.DetailHeader
 import app.accord.R
-import app.accord.ui.vendors.VendorCatalog
-import app.accord.ui.vendors.VendorLogo
+import app.accord.ui.vendors.EntryIdentityIcon
+import app.accord.ui.banks.BankLogo
 import app.accord.core.label
 import app.accord.core.space.EntryDetail
 import app.accord.core.space.EntryKind
 import app.accord.core.space.ExtraReason
 import app.accord.core.space.RefundStatus
 import app.accord.core.space.RefundView
-import app.accord.ui.categoryPath
 import app.accord.ui.components.AdaptiveRow
 import app.accord.ui.components.DecorativeIcon
+import app.accord.ui.components.lucideRes
 import app.accord.ui.components.RefreshOnResume
 import app.accord.ui.entries.SituationTags
 import app.accord.ui.fullLabel
@@ -49,6 +49,9 @@ import app.accord.ui.label
 import app.accord.ui.theme.Accord
 import app.accord.ui.theme.AccordSpacing
 import com.composables.icons.lucide.R as Lucide
+import java.time.YearMonth
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun EntryDetailRoute(
@@ -129,13 +132,13 @@ private fun ReadyDetail(
     onOpenCommitment: (String) -> Unit,
 ) {
     val d = data.detail
-    val vendor = remember(d.description, d.kind) {
-        if (d.kind != EntryKind.Income && d.kind != EntryKind.InvoicePayment) VendorCatalog.matchExplicitDescription(d.description) else null
-    }
     Surface(color = Accord.colors.financeSurface, contentColor = Accord.colors.onFinanceSurface, shape = MaterialTheme.shapes.large) {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
-                vendor?.let { VendorLogo(it) }
+                EntryIdentityIcon(
+                    d.description,
+                    allowVendor = d.kind != EntryKind.Income && d.kind != EntryKind.InvoicePayment,
+                )
                 Text(d.description, style = MaterialTheme.typography.titleLarge,
                     color = Accord.colors.onFinanceSurface, modifier = Modifier.weight(1f).semantics { heading() })
             }
@@ -155,8 +158,11 @@ private fun ReadyDetail(
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             DatesAndAmounts(d)
 
-            val path = categoryPath(data.categories, (d.classification as? app.accord.core.space.Classification.Category)?.id)
-            Text(path ?: stringResource(R.string.detail_category_unset), style = MaterialTheme.typography.bodyLarge)
+            val category = (d.classification as? app.accord.core.space.Classification.Category)?.id?.let(data.categories::get)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                DecorativeIcon(lucideRes(category?.iconKey ?: "tag"))
+                Text(category?.name ?: stringResource(R.string.detail_category_unset), style = MaterialTheme.typography.bodyLarge)
+            }
             d.method?.let { Text(it.label(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             d.accountId?.let { id ->
                 data.accounts[id]?.let { account ->
@@ -164,7 +170,10 @@ private fun ReadyDetail(
                         is app.accord.core.space.BankRef.Catalog -> b.name
                         is app.accord.core.space.BankRef.Other -> b.name
                     }
-                    Text(stringResource(R.string.detail_account, "$bank · ${account.nickname}"), style = MaterialTheme.typography.bodyMedium)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                        BankLogo(account.bank, size = 32.dp)
+                        Text(stringResource(R.string.detail_account, "$bank · ${account.nickname}"), style = MaterialTheme.typography.bodyMedium)
+                    }
                 }
             }
 
@@ -227,24 +236,29 @@ private fun DatesAndAmounts(d: EntryDetail) {
             val count = purchase?.installments?.size
             if (purchase != null && count != null) {
                 val each = purchase.installments.first().amount
-                Text(stringResource(R.string.detail_total_and_installments, d.purchaseDate?.fullLabel().orEmpty(), count, each.format()), style = body)
-                Text(stringResource(R.string.detail_purchase_total, purchase.total.format()), style = body)
-                if (number != null) {
-                    Text(stringResource(R.string.detail_installment_here, number, count, d.amount.format()), style = MaterialTheme.typography.bodyLarge)
-                    purchase.installments.firstOrNull { it.number == number }?.let {
-                        Text(stringResource(R.string.detail_invoice, it.invoiceMonth.label()), style = body)
-                    }
+                if (count > 1) {
+                    Text(stringResource(R.string.detail_total_and_installments, d.purchaseDate?.fullLabel().orEmpty(), count, each.format()), style = body)
+                } else {
+                    d.purchaseDate?.let { Text(stringResource(R.string.detail_purchase_on, it.fullLabel()), style = body) }
                 }
+                Text(stringResource(R.string.detail_purchase_total, purchase.total.format()), style = body)
+                val installment = number?.let { installmentNumber -> purchase.installments.firstOrNull { it.number == installmentNumber } }
+                if (count > 1 && number != null) {
+                    Text(stringResource(R.string.detail_installment_here, number, count, d.amount.format()), style = MaterialTheme.typography.bodyLarge)
+                }
+                installment?.let { InvoiceIndicator(it.invoiceMonth) }
             }
             d.dueDate?.let { Text(stringResource(R.string.detail_due_on, it.fullLabel()), style = body) }
         }
         EntryKind.CardPurchase -> {
             d.purchaseDate?.let { Text(stringResource(R.string.detail_purchase_on, it.fullLabel()), style = body) }
             purchase?.let { p ->
-                p.installments.firstOrNull()?.let { first ->
-                    Text(stringResource(R.string.detail_total_and_installments, d.purchaseDate?.fullLabel().orEmpty(), p.installments.size, first.amount.format()), style = body)
-                    Text(stringResource(R.string.detail_invoice, first.invoiceMonth.label()), style = body)
+                if (p.installments.size > 1) {
+                    p.installments.firstOrNull()?.let { first ->
+                        Text(stringResource(R.string.detail_installment_count, p.installments.size, first.amount.format()), style = body)
+                    }
                 }
+                p.installments.firstOrNull()?.let { InvoiceIndicator(it.invoiceMonth) }
             }
         }
         EntryKind.DirectPayment ->
@@ -276,6 +290,22 @@ private fun DatesAndAmounts(d: EntryDetail) {
         }
         EntryKind.Refund, EntryKind.InvoicePayment ->
             d.settledDate?.let { Text(stringResource(R.string.detail_paid_on, it.fullLabel()), style = body) }
+    }
+}
+
+private val DETAIL_INVOICE_MONTH = DateTimeFormatter.ofPattern("MM/yy", Locale.forLanguageTag("pt-BR"))
+
+@Composable
+private fun InvoiceIndicator(month: YearMonth) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = MaterialTheme.shapes.small) {
+        Row(
+            Modifier.padding(horizontal = AccordSpacing.s2, vertical = AccordSpacing.s1),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
+        ) {
+            DecorativeIcon(Lucide.drawable.lucide_ic_credit_card)
+            Text(stringResource(R.string.detail_invoice, month.format(DETAIL_INVOICE_MONTH)), style = MaterialTheme.typography.labelMedium)
+        }
     }
 }
 

@@ -23,6 +23,9 @@ import app.accord.core.space.AccountsView
 import app.accord.core.space.AddAccount
 import app.accord.core.space.AmountMeaning
 import app.accord.core.space.AssignmentState
+import app.accord.core.space.DateCriterion
+import app.accord.core.space.EntrySummary
+import app.accord.core.space.TotalBalance
 import app.accord.core.space.BankRef
 import app.accord.core.space.BoletoView
 import app.accord.core.space.CardInfo
@@ -375,6 +378,7 @@ class RoomFinanceSpace private constructor(
             if (c.dueDay !in 1..31) add(FieldError("dueDay", ErrorCode.OutOfRange, "O dia de vencimento vai de 1 a 31."))
             if (c.nickname.isBlank()) add(FieldError("nickname", ErrorCode.Required, "Informe um apelido para o cartão."))
             if (bank != null && bankName(bank).isEmpty()) add(FieldError("bank", ErrorCode.Required, "Informe o nome do banco."))
+            if (c.creditLimit?.cents?.let { it <= 0 } == true) add(FieldError("creditLimit", ErrorCode.OutOfRange, "O limite deve ser maior que zero."))
         }
         if (errors.isNotEmpty()) return stop(errors)
         return Planned.Go(months = emptySet()) {
@@ -390,6 +394,7 @@ class RoomFinanceSpace private constructor(
                     closingDay = c.closingDay,
                     dueDay = c.dueDay,
                     revision = revision,
+                    creditLimitCents = c.creditLimit?.cents,
                 ),
             )
             listOf(EntityChange(EntityType.Card, id, null, revision))
@@ -1109,6 +1114,9 @@ class RoomFinanceSpace private constructor(
     override suspend fun entries(filter: EntryFilter, cursor: Int, pageSize: Int): QueryResult<EntryPage> =
         query { entryQueries.entries(filter, cursor, pageSize) }
 
+    override suspend fun totalBalance(criterion: DateCriterion): QueryResult<TotalBalance> =
+        query { entryQueries.totalBalance(criterion) }
+
     override suspend fun commitments(month: YearMonth, kind: CommitmentKind): QueryResult<MonthCommitments> =
         query { entryQueries.commitments(month, kind) }
 
@@ -1355,7 +1363,7 @@ class RoomFinanceSpace private constructor(
     override suspend fun card(): QueryResult<CardInfo> = query {
         val row = dao.card(cardId(sessions.current().spaceId)) ?: error("Cartão do espaço não foi criado")
         val bank = row.bankName?.let { if (row.bankIspb != null) BankRef.Catalog(row.bankIspb, it) else BankRef.Other(it) }
-        CardInfo(row.id, bank, row.nickname, row.closingDay, row.dueDay, configured = row.revision > 0)
+        CardInfo(row.id, bank, row.nickname, row.closingDay, row.dueDay, row.creditLimitCents?.let(::Money), configured = row.revision > 0)
     }
 
     override suspend fun purchase(id: String): QueryResult<PurchaseDetail?> = query {

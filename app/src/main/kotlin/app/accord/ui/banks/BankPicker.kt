@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -38,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import app.accord.R
 import app.accord.core.space.BankRef
 import app.accord.ui.components.DecorativeIcon
+import app.accord.ui.theme.AccordLogoPlate
 import app.accord.ui.theme.AccordSpacing
 import com.composables.icons.lucide.R as Lucide
 
@@ -54,12 +54,12 @@ fun BankLogo(bank: BankRef?, modifier: Modifier = Modifier, size: Dp = 40.dp) {
             runCatching { context.assets.open(BankCatalog.logoAsset(id)).use { BitmapFactory.decodeStream(it) } }.getOrNull()?.asImageBitmap()
         }
     }
-    Surface(color = androidx.compose.ui.graphics.Color.White, shape = RoundedCornerShape(8.dp), modifier = modifier.size(size)) {
+    Surface(color = AccordLogoPlate.surface, shape = MaterialTheme.shapes.small, modifier = modifier.size(size)) {
         Box(Modifier.size(size).padding(3.dp), contentAlignment = Alignment.Center) {
             if (bitmap != null) {
                 Image(bitmap, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
             } else {
-                DecorativeIcon(Lucide.drawable.lucide_ic_landmark, tint = androidx.compose.ui.graphics.Color(0xFF444444))
+                DecorativeIcon(Lucide.drawable.lucide_ic_landmark, tint = AccordLogoPlate.glyph)
             }
         }
     }
@@ -114,6 +114,8 @@ fun BankPickerDialog(initial: BankRef?, onPick: (BankRef) -> Unit, onDismiss: ()
                             ) {
                                 BankLogo(bank.toRef().takeIf { bank.hasLogo })
                                 Text(bank.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                                // A seleção atual não depende de cor: ganha marca própria (o estado também vai ao TalkBack).
+                                if (selected) DecorativeIcon(Lucide.drawable.lucide_ic_check, tint = MaterialTheme.colorScheme.primary)
                             }
                         }
                     }

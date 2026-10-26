@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 recorded_at: 2026-10-24
-decision_date: null
+decision_date: 2026-10-24
 ---
 
 # ADR 0029 — Troca da forma de pagamento como comando da fachada
@@ -14,7 +14,8 @@ A decisão de 23/10/2026 manda a conta tocada registrar Pix e "foi débito" corr
 
 ## Decisão
 
-Proposta: novo comando `ChangePaymentMethod` na fachada, desfazível numa só operação.
+Novo comando `ChangePaymentMethod` na fachada, desfazível numa só operação. O usuário aceitou, em 24/10/2026,
+a nova identidade na troca de cartão à vista para Pix; o aceite está registrado em `accord-awb`.
 
 - Entre Pix, débito e dinheiro, o lançamento **mantém a identidade**; a conta é a informada, a atual ou o padrão
   do autor, e dinheiro não tem conta.
@@ -33,4 +34,8 @@ entre a compra anulada e o lançamento que a substituiu.
 ## Fontes e evidências
 
 - [S3](../specs/S3-chat-slm-modelo.md) §8 e cenário 13; memória `decisao-23-10-debito-dinheiro`.
-- Implementação em `PaymentMethodPlanner` com testes JVM da fachada. Aceite pendente (`accord-awb`).
+- Implementação em `PaymentMethodPlanner` com testes JVM da fachada. Aceito em 24/10/2026 (ver "Aceite").
+
+## Aceite
+
+Aceito pelo usuário em 24/10/2026 (a nova identidade na troca de cartão à vista para Pix, em resposta direta, e o ADR como um todo, por instrução explícita "aprove todos os adrs"). Não comprova validação nos dois celulares.

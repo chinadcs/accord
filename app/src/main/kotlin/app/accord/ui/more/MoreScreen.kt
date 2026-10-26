@@ -18,6 +18,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -28,9 +32,11 @@ import app.accord.R
 import app.accord.core.sync.AccountView
 import app.accord.core.sync.SessionState
 import app.accord.core.sync.SyncStatus
+import app.accord.core.space.DateCriterion
 import app.accord.ui.components.DecorativeIcon
 import app.accord.ui.theme.AccordSpacing
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.RadioButton
 import com.composables.icons.lucide.R as Lucide
 
 /** Destinos que a aba Mais abre nesta fase; o que ainda não existe não aparece como botão vazio. */
@@ -60,7 +66,14 @@ fun MoreScreen(
     account: AccountView? = null,
     sessionState: SessionState = SessionState.Valid,
     syncStatus: SyncStatus? = null,
+    entriesCriterion: DateCriterion = DateCriterion.PurchaseDate,
+    onEntriesCriterionChange: (DateCriterion) -> Unit = {},
 ) {
+    var showChatSettings by rememberSaveable { mutableStateOf(false) }
+    if (showChatSettings) {
+        ChatSettingsScreen(padding, actions, onBack = { showChatSettings = false })
+        return
+    }
     Column(
         Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
         verticalArrangement = Arrangement.spacedBy(AccordSpacing.s4),
@@ -99,6 +112,18 @@ fun MoreScreen(
             }
         }
 
+        Section(R.string.more_group_entries) {
+            Text(stringResource(R.string.entries_criterion_settings_note), style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2))
+            CriterionOption(R.string.entries_criterion_purchase, entriesCriterion == DateCriterion.PurchaseDate) {
+                onEntriesCriterionChange(DateCriterion.PurchaseDate)
+            }
+            CriterionOption(R.string.entries_criterion_budget, entriesCriterion == DateCriterion.BudgetMonth) {
+                onEntriesCriterionChange(DateCriterion.BudgetMonth)
+            }
+        }
+
         if (account != null) {
             Section(R.string.more_group_account) {
                 Text(stringResource(R.string.more_signed_as, account.email), style = MaterialTheme.typography.bodyMedium,
@@ -112,15 +137,46 @@ fun MoreScreen(
         }
 
         Section(R.string.more_group_chat) {
-            MoreRow(R.string.more_chat_model, Lucide.drawable.lucide_ic_cpu, actions.onChatModel)
-            MoreRow(R.string.more_chat_export, Lucide.drawable.lucide_ic_download, actions.onChatExport)
-            MoreRow(R.string.more_chat_import, Lucide.drawable.lucide_ic_upload, actions.onChatImport)
-            MoreRow(R.string.more_chat_clear, Lucide.drawable.lucide_ic_trash_2, actions.onChatClear)
+            MoreRow(R.string.more_chat_settings, Lucide.drawable.lucide_ic_message_circle, { showChatSettings = true })
         }
 
         Section(R.string.more_group_device) {
             MoreRow(R.string.appearance_title, Lucide.drawable.lucide_ic_palette, actions.onAppearance)
         }
+    }
+}
+
+@Composable
+private fun ChatSettingsScreen(padding: PaddingValues, actions: MoreActions, onBack: () -> Unit) {
+    Column(
+        Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
+        verticalArrangement = Arrangement.spacedBy(AccordSpacing.s4),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+            androidx.compose.material3.IconButton(onClick = onBack, modifier = Modifier.size(AccordSpacing.touchMin)) {
+                androidx.compose.material3.Icon(androidx.compose.ui.res.painterResource(Lucide.drawable.lucide_ic_arrow_left), contentDescription = stringResource(R.string.action_back))
+            }
+            Text(stringResource(R.string.chat_settings_title), style = MaterialTheme.typography.headlineSmall,
+                modifier = Modifier.semantics { heading() })
+        }
+        Section(R.string.more_group_chat) {
+            MoreRow(R.string.more_chat_model, Lucide.drawable.lucide_ic_cpu, actions.onChatModel)
+            MoreRow(R.string.more_chat_export, Lucide.drawable.lucide_ic_download, actions.onChatExport)
+            MoreRow(R.string.more_chat_import, Lucide.drawable.lucide_ic_upload, actions.onChatImport)
+            MoreRow(R.string.more_chat_clear, Lucide.drawable.lucide_ic_trash_2, actions.onChatClear)
+        }
+    }
+}
+
+@Composable
+private fun CriterionOption(label: Int, selected: Boolean, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).clickable(role = Role.RadioButton, onClick = onClick)
+            .padding(horizontal = AccordSpacing.s3),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = onClick)
+        Text(stringResource(label), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = AccordSpacing.s2))
     }
 }
 
@@ -140,7 +196,7 @@ private fun Section(title: Int, content: @Composable () -> Unit) {
 @Composable
 private fun MoreRow(label: Int, icon: Int, onClick: () -> Unit, supporting: String? = null) {
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 60.dp).clickable(role = Role.Button, onClick = onClick)
+        Modifier.fillMaxWidth().heightIn(min = AccordSpacing.rowMedium).clickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
     ) {

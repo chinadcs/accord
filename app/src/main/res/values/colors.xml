@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- neutral-98 (tokens §2.1) -->
-    <color name="accord_background">#FFFAF9F7</color>
+    <!-- neutral-98 (docs/design-tokens.md §2.1; Color.kt) -->
+    <color name="accord_background">#FFF8F8F1</color>
 </resources>

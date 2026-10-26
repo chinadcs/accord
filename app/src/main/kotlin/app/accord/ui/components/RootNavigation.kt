@@ -1,0 +1,133 @@
+package app.accord.ui.components
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.material3.Icon
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.text.intl.LocaleList
+import androidx.compose.ui.text.style.Hyphens
+import androidx.compose.ui.text.style.LineBreak
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
+import app.accord.ui.nav.Root
+import app.accord.ui.theme.AccordSpacing
+
+/** Cinco destinos persistentes, inclusive quando o Chat é a raiz inicial. */
+@Composable
+fun RootNavigationBar(selected: Root?, onSelect: (Root) -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    val enlarged = LocalDensity.current.fontScale >= 1.5f
+    val labelStyle = MaterialTheme.typography.labelSmall.copy(
+        localeList = LocaleList("pt-BR"),
+        lineBreak = LineBreak.Paragraph,
+        hyphens = Hyphens.Auto,
+    )
+    Column(
+        Modifier.fillMaxWidth()
+            .background(colors.background)
+            .windowInsetsPadding(WindowInsets.navigationBars)
+            .padding(start = AccordSpacing.s2, end = AccordSpacing.s2, top = AccordSpacing.s1, bottom = AccordSpacing.s2),
+    ) {
+        Box(
+            Modifier.fillMaxWidth().height(if (enlarged) 168.dp else 112.dp).testTag("root-navigation"),
+        ) {
+            Surface(
+                color = colors.surfaceContainerLow,
+                shape = MaterialTheme.shapes.large,
+                modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter),
+            ) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s1, vertical = AccordSpacing.s1)) {
+                    Root.entries.forEach { root ->
+                        if (root == Root.Chat) {
+                            Spacer(Modifier.weight(1f).height(64.dp))
+                        } else {
+                            val active = selected == root
+                            val rootLabel = stringResource(root.label)
+                            Surface(
+                                modifier = Modifier.weight(1f).heightIn(min = 64.dp).selectable(
+                                    selected = active,
+                                    role = Role.Tab,
+                                    onClick = { onSelect(root) },
+                                ),
+                                shape = MaterialTheme.shapes.medium,
+                                color = colors.surfaceContainerLow,
+                            ) {
+                                Column(
+                                    modifier = Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s1, vertical = AccordSpacing.s1),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
+                                ) {
+                                    Box(
+                                        Modifier.size(32.dp).background(if (active) colors.primary else Color.Transparent, CircleShape),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            painterResource(root.icon), contentDescription = null,
+                                            tint = if (active) colors.onPrimary else colors.onSurfaceVariant,
+                                            modifier = Modifier.size(20.dp),
+                                        )
+                                    }
+                                    Text(
+                                        rootLabel,
+                                        style = labelStyle,
+                                        color = if (active) colors.primary else colors.onSurfaceVariant,
+                                        textAlign = TextAlign.Center,
+                                        minLines = if (enlarged) 3 else 2,
+                                        maxLines = if (enlarged) 4 else 2,
+                                        modifier = Modifier.fillMaxWidth(),
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            Box(
+                Modifier.align(Alignment.TopCenter).size(72.dp).background(colors.background, CircleShape),
+            )
+            val chatLabel = stringResource(Root.Chat.label)
+            FloatingActionButton(
+                onClick = { onSelect(Root.Chat) },
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = AccordSpacing.s1)
+                    .selectable(selected = selected == Root.Chat, enabled = true, role = Role.Tab, onClick = { onSelect(Root.Chat) })
+                    .semantics {
+                        contentDescription = chatLabel
+                    },
+                shape = CircleShape,
+                containerColor = if (selected == Root.Chat) colors.primary else colors.secondaryContainer,
+                contentColor = if (selected == Root.Chat) colors.onPrimary else colors.onSecondaryContainer,
+            ) {
+                Icon(painterResource(Root.Chat.icon), contentDescription = null)
+            }
+        }
+    }
+}

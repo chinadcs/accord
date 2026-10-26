@@ -110,8 +110,8 @@ class EntryDetailUiTest {
         compose.onNodeWithText("Compra em 25/09/2026 · 6x de ${brl(200).format()}").assertIsDisplayed()
         compose.onNodeWithText("Total da compra: ${brl(1200).format()}").assertIsDisplayed()
         compose.onNodeWithText("Parcela neste mês: 1/6 · ${brl(200).format()}").assertIsDisplayed()
-        compose.onNodeWithText("Fatura: Outubro/2026").assertIsDisplayed()
-        compose.onNodeWithText("Eletrônicos > Equipamentos").assertIsDisplayed()
+        compose.onNodeWithText("Fatura: 10/26").assertIsDisplayed()
+        compose.onNodeWithText("Equipamentos").assertIsDisplayed() // o detalhe mostra o nome da categoria, sem o caminho completo
     }
 
     @Test

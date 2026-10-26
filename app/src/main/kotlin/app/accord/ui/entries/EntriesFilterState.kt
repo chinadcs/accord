@@ -14,7 +14,7 @@ import java.time.YearMonth
 data class EntriesFilterState(
     val from: YearMonth,
     val to: YearMonth,
-    val criterion: DateCriterion = DateCriterion.BudgetMonth,
+    val criterion: DateCriterion = DateCriterion.PurchaseDate,
     val categoryId: String? = null,
     val methods: Set<PaymentMethod> = emptySet(),
     val situations: Set<EntrySituation> = emptySet(),

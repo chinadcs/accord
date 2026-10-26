@@ -1,6 +1,7 @@
 package app.accord.ui.categories
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -86,6 +88,7 @@ fun CategoriesScreen(
     ) {
         DetailHeader(stringResource(R.string.categories_screen_title), onBack)
         OutlinedButton(onClick = { onCreate(null) }, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+            DecorativeIcon(Lucide.drawable.lucide_ic_plus)
             Text(stringResource(R.string.categories_new))
         }
         when (content) {
@@ -123,15 +126,21 @@ private fun MainRow(
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                DecorativeIcon(lucideRes(main.node.iconKey))
-                Text(main.node.name, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = CircleShape) {
+                    Box(Modifier.size(AccordSpacing.touchMin), contentAlignment = Alignment.Center) {
+                        DecorativeIcon(lucideRes(main.node.iconKey))
+                    }
+                }
+                Text(main.node.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                 if (reordering) ReorderButtons(main.node, onMove)
             }
             Row(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
                 TextButton(onClick = { onToggle(main.node.id) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                    Icon(painterResource(if (expanded) Lucide.drawable.lucide_ic_chevron_up else Lucide.drawable.lucide_ic_chevron_down), contentDescription = null)
                     Text(stringResource(if (expanded) R.string.categories_collapse else R.string.categories_expand, main.children.size))
                 }
                 TextButton(onClick = { onRename(main.node) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                    Icon(painterResource(Lucide.drawable.lucide_ic_pencil), contentDescription = null)
                     Text(stringResource(R.string.categories_rename))
                 }
             }
@@ -144,14 +153,17 @@ private fun MainRow(
                     }
                     Row(Modifier.padding(start = AccordSpacing.s4), horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
                         TextButton(onClick = { onRename(sub) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                            Icon(painterResource(Lucide.drawable.lucide_ic_pencil), contentDescription = null)
                             Text(stringResource(R.string.categories_rename))
                         }
                         TextButton(onClick = { onMoveSub(sub) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                            Icon(painterResource(lucideRes("arrow-left-right")), contentDescription = null)
                             Text(stringResource(R.string.categories_move))
                         }
                     }
                 }
                 TextButton(onClick = { onCreate(main.node.id) }, modifier = Modifier.padding(start = AccordSpacing.s4).heightIn(min = AccordSpacing.touchMin)) {
+                    Icon(painterResource(Lucide.drawable.lucide_ic_plus), contentDescription = null)
                     Text(stringResource(R.string.categories_new_sub))
                 }
             }

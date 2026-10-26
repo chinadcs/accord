@@ -11,6 +11,7 @@ import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.Density
@@ -49,7 +50,9 @@ class RedesignAppVisualReviewTest {
             fontScale = scale
             compose.waitForIdle()
             for ((label, slug) in roots) {
-                compose.onNode(hasText(label) and hasClickAction()).performClick()
+                // O Chat é o ícone central sem rótulo visual; os demais destinos têm texto.
+                if (label == "Chat") compose.onNodeWithContentDescription("Chat").performClick()
+                else compose.onNode(hasText(label) and hasClickAction()).performClick()
                 compose.waitForIdle()
                 val directory = File(context.getExternalFilesDir(null), "screens").apply { mkdirs() }
                 File(directory, "redesign-app-$slug-$suffix.png").outputStream().use { stream ->

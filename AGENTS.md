@@ -12,8 +12,9 @@ protocolo/adaptador remoto, migrações Supabase e testes. S1 está entregue no 
 de validação; S2 está entregue no Beads, com validação nos aparelhos (`accord-chf`) e decisões
 abertas (`accord-smv`) pendentes; S3 tem Chat, validador, histórico local e gerenciador do modelo
 implementados contra interpretador e fonte fake, sem motor, modelo, hospedagem nem medição nos
-aparelhos (Etapa 0 e Fases B/C pendentes no Beads). Código e ambiente local não comprovam implantação hospedada,
-validação nos dois celulares ou aprovação de propostas de implementação.
+aparelhos (Etapa 0 e Fases B/C pendentes no Beads). A bancada da Etapa 0 (`:poc`, `docs/poc/etapa-0.md`)
+está pronta e foi exercitada só no emulador; nada foi medido nos dois celulares. Código e ambiente local não comprovam implantação hospedada,
+validação nos dois celulares; os ADRs 0022–0025 e 0027–0029 foram aceitos pelo usuário em 24/10/2026, o que não prova implantação nem medição.
 Não apresentar requisitos, wireframes, fornecedor escolhido ou metas como funcionalidades
 implementadas, configurações executadas ou resultados medidos.
 
@@ -127,7 +128,7 @@ Meta: **até 5 s** do envio ao resultado visível de frase curta com modelo carr
 download e sync são medidos separadamente. Sem medição concluída ou cancelamento automático
 pela meta. Preservar mensagem/registro manual em demora/falha; inferência fora da thread da UI.
 
-Chat inicia o uso. Raízes: Chat, Orçamento, Lançamentos, Revisar e Mais. Seguir estados/recuperação
+Chat inicia o uso. Barra inferior: Lançamentos, Orçamento, Chat (ícone Astroid, sem rótulo visual), Revisar e Mais. Seguir estados/recuperação
 de cada spec e preservar rascunhos/contexto ao voltar. Texto pt-BR claro e sem julgamento,
 temas claro/escuro, fonte nativa, tokens semânticos, TalkBack, texto ampliado, movimento reduzido
 e teclado sem esconder ações. Referências adaptáveis: corpo 16 sp, títulos 20–24 sp, margem
@@ -143,7 +144,10 @@ as escolhas de plataforma, navegação, ícones ou acessibilidade.
 
 Inspecionar árvore real antes de sugerir comandos. Existem o wrapper Gradle (9.8.2) e os módulos
 `:core` (Kotlin JVM, motor financeiro e contratos), `:persistence` (Room, fachada e sync local),
-`:remote` (fake e adaptador HTTP) e `:app` (Android, Compose; minSdk 29, compileSdk 37).
+`:remote` (fake e adaptador HTTP), `:app` (Android, Compose; minSdk 29, compileSdk 37) e `:poc` (bancada
+de medição do SLM da Etapa 0: app debug separado `app.accord.poc`, sem INTERNET, que compila o llama.cpp
+fixado em `poc/llama-cpp.pin` com NDK/CMake; não faz parte do produto nem escolhe motor) e `:pocpc` (JVM: bateria de
+qualidade da Etapa 0 no PC via `llama-server` da mesma versão; mede acerto, não latência; ver `docs/poc/etapa-0.md`).
 Há configuração/migrações/testes Supabase locais em `supabase/` (ver seu README); isso não prova
 serviço em execução ou projeto hospedado. Não há gates `just`. Não executar comandos de outro
 projeto como disponíveis. O `java` do PATH desta máquina é
@@ -157,6 +161,9 @@ $env:ANDROID_HOME = "C:\Users\SEU_USUARIO\AppData\Local\Android\Sdk"
 .\gradlew.bat :app:connectedDebugAndroidTest    # exige emulador ou aparelho conectado
 supabase start; supabase test db                # Supabase LOCAL (Docker; portas 5532x), pgTAP; ver supabase/README.md
 .\scripts\run-debug.ps1                         # instala o debug e abre o app (-Fresh, -Shot, -Dump, -TestClass, -Serial)
+.\scripts\poc\poc-prepare.ps1 -Label s20fe        # Etapa 0: instala a bancada e grava a ficha (exige aparelho; ver docs/poc/etapa-0.md)
+python -m unittest discover -s scripts/poc -p "test_*.py"   # relatório da Etapa 0
+.\gradlew.bat :pocpc:test                         # runner da qualidade no PC, contra servidor falso (sem modelo)
 ```
 
 `gradle.properties` ativa cache de build, execução paralela e cache de configuração. O emulador

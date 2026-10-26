@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 recorded_at: 2026-10-24
-decision_date: null
+decision_date: 2026-10-24
 ---
 
 # ADR 0024 — Protocolo com estados de agregados, versões e cursor
@@ -38,4 +38,8 @@ ilimitada para aparelhos offline por muito tempo.
   [SyncEngine](../../persistence/src/main/kotlin/app/accord/persistence/SyncEngine.kt) existentes.
 - Estado implementado a validar com o usuário; não confundir com os princípios já aceitos nos
   ADRs [0017](0017-banco-fila-atomicos-e-idempotencia.md) e [0018](0018-conflitos-com-escolha-explicita.md).
-- Acompanhamento do aceite: Beads `accord-awb`.
+- Aceito em 24/10/2026 (ver "Aceite"); registro da revisão em Beads `accord-awb`.
+
+## Aceite
+
+Aceito pelo usuário em 24/10/2026, por instrução explícita ("aprove todos os adrs"), sem revisão ponto a ponto. O aceite vale para a escolha registrada; não comprova implantação hospedada, qualidade do modelo nem validação nos dois celulares. Itens descritos acima como abertos, pendentes ou a calibrar continuam abertos.

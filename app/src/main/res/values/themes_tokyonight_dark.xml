@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Colors for Tokyo Night Moon
+
+  https://github.com/folke/tokyonight.nvim/blob/main/lua/tokyonight/colors/moon.lua
+-->
+<resources>
+  <color name="tokyonight_dark_primary">#82AAFF</color>
+  <color name="tokyonight_dark_on_primary">#1B1D2B</color>
+  <color name="tokyonight_dark_primary_container">#444A73</color>
+  <color name="tokyonight_dark_on_primary_container">#9AB8FF</color>
+  <color name="tokyonight_dark_secondary">#86E1FC</color>
+  <color name="tokyonight_dark_on_secondary">#1B1D2B</color>
+  <color name="tokyonight_dark_secondary_container">#444A73</color>
+  <color name="tokyonight_dark_on_secondary_container">#B2EBFF</color>
+  <color name="tokyonight_dark_tertiary">#C099FF</color>
+  <color name="tokyonight_dark_on_tertiary">#1B1D2B</color>
+  <color name="tokyonight_dark_tertiary_container">#444A73</color>
+  <color name="tokyonight_dark_on_tertiary_container">#CAABFF</color>
+  <color name="tokyonight_dark_error">#FF757F</color>
+  <color name="tokyonight_dark_on_error">#1B1D2B</color>
+  <color name="tokyonight_dark_error_container">#C53B53</color>
+  <color name="tokyonight_dark_on_error_container">#FF8D94</color>
+  <color name="tokyonight_dark_background">#222436</color>
+  <color name="tokyonight_dark_on_background">#C8D3F5</color>
+  <color name="tokyonight_dark_surface">#222436</color>
+  <color name="tokyonight_dark_on_surface">#C8D3F5</color>
+  <color name="tokyonight_dark_surface_variant">#444A73</color>
+  <color name="tokyonight_dark_on_surface_variant">#828BB8</color>
+  <color name="tokyonight_dark_outline">#828BB8</color>
+  <color name="tokyonight_dark_outline_variant">#444A73</color>
+  <color name="tokyonight_dark_scrim">#000000</color>
+  <color name="tokyonight_dark_inverse_surface">#C8D3F5</color>
+  <color name="tokyonight_dark_inverse_on_surface">#222436</color>
+  <color name="tokyonight_dark_inverse_primary">#3D5C9E</color>
+  <color name="tokyonight_dark_surface_container_lowest">#1E202F</color>
+  <color name="tokyonight_dark_surface_dim">#222436</color>
+  <color name="tokyonight_dark_surface_container_low">#292C44</color>
+  <color name="tokyonight_dark_surface_container">#2D304B</color>
+  <color name="tokyonight_dark_surface_container_high">#363B5D</color>
+  <color name="tokyonight_dark_surface_container_highest">#3F466F</color>
+  <color name="tokyonight_dark_surface_bright">#434A77</color>
+</resources>

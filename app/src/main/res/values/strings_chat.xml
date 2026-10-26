@@ -115,4 +115,5 @@
     <string name="notice_action_interpret_now">Interpretar agora</string>
     <string name="notice_action_retry">Tentar de novo</string>
     <string name="chat_imported_count">%d mensagens importadas. Os lançamentos não mudaram.</string>
+    <string name="chat_model_badge_description">%1$s. %2$s</string>
 </resources>

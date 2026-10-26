@@ -239,11 +239,107 @@ class QueriesTest : SpaceTestBase() {
         assertEquals(brl(500), page.summary.incomes)
         assertEquals(brl(40), page.summary.credits)
         assertEquals(brl(70), page.summary.invoicePayments)
+        assertEquals(brl(500), page.summary.receivedIncomes)
+        assertEquals(brl(130), page.summary.committedExpenses)
+        assertEquals(brl(370), page.summary.balance)
         assertEquals(
             setOf(EntryKind.DirectPayment, EntryKind.Refund, EntryKind.Income, EntryKind.CardInstallment, EntryKind.InvoicePayment),
             page.rows.map { it.kind }.toSet(),
         )
         assertTrue(page.rows.single { it.kind == EntryKind.InvoicePayment }.situations.contains(EntrySituation.Paid))
+    }
+
+    @Test
+    fun `saldo usa só renda recebida e não conta renda prevista nem quitação de fatura`() = runBlocking<Unit> {
+        val h = open()
+        h.withDefaultAccount()
+        h.pix("Mercado", 80)
+        val received = h.space.execute(h.env(), RegisterIncome("Salário", brl(300), d(2026, 10, 5))).applied().changes.single().id
+        h.space.execute(h.env(), ReceiveIncome(received, Settlement(d(2026, 10, 6)))).applied()
+        h.space.execute(h.env(), RegisterIncome("Freela previsto", brl(900), d(2026, 10, 28))).applied()
+
+        val summary = h.space.entries(filter()).value().summary
+        assertEquals(brl(1200), summary.incomes)
+        assertEquals(brl(300), summary.receivedIncomes)
+        assertEquals(brl(220), summary.balance)
+    }
+
+    @Test
+    fun `saldo total acumula meses até o atual, sem renda prevista nem mês futuro, e ignora filtros`() = runBlocking<Unit> {
+        val h = open()
+        h.withDefaultAccount()
+        // setembro: salário recebido; outubro: gasto pago e mercado; novembro (futuro): fora do saldo de hoje
+        val salary = h.space.execute(h.env(), RegisterIncome("Salário", brl(1000), d(2026, 9, 5))).applied().changes.single().id
+        h.space.execute(h.env(), ReceiveIncome(salary, Settlement(d(2026, 9, 6)))).applied()
+        h.pix("Aluguel", 300, date = d(2026, 9, 10))
+        h.pix("Mercado", 80, date = d(2026, 10, 3))
+        h.space.execute(h.env(), RegisterIncome("Freela previsto", brl(700), d(2026, 10, 28))).applied()
+        h.pix("Viagem", 500, date = d(2026, 11, 12))
+
+        val header = h.space.totalBalance(DateCriterion.PurchaseDate).value()
+        val total = header.total
+        assertEquals(brl(1000), total.receivedIncomes)
+        assertEquals(brl(380), total.committedExpenses)
+        assertEquals(brl(620), total.balance)
+        // Receita e Despesa do cabeçalho são só do mês atual (outubro): setembro e novembro ficam de fora
+        assertEquals(Money.ZERO, header.month.receivedIncomes)
+        assertEquals(brl(80), header.month.committedExpenses)
+        // o saldo do mês de outubro sozinho é outra coisa: só o acumulado carrega setembro
+        assertEquals(brl(-80), h.space.entries(filter(criterion = DateCriterion.PurchaseDate)).value().summary.balance)
+    }
+
+    @Test
+    fun `saldo total desconta estorno confirmado e não soma quitação de fatura`() = runBlocking<Unit> {
+        val h = open()
+        h.withDefaultAccount()
+        val spent = h.pix("Compra", 100, date = d(2026, 9, 12))
+        h.space.execute(h.env(), RegisterRefund(spent, brl(40), RefundStatus.Confirmed, d(2026, 10, 2))).applied()
+        h.card("Fatura", 70, category = "compras", date = d(2026, 10, 3))
+        h.space.execute(h.env(), RegisterInvoiceTotal(oct, brl(70))).applied()
+        h.space.execute(h.env(), PayInvoice(oct, brl(70), d(2026, 10, 15))).applied()
+
+        val total = h.space.totalBalance(DateCriterion.PurchaseDate).value().total
+        assertEquals(brl(130), total.committedExpenses) // 100 + 70 − 40; a quitação de R$ 70 não entra de novo
+        assertEquals(brl(-130), total.balance)
+    }
+
+    @Test
+    fun `data da compra desconta parcelas canceladas e confirmadas, como o mês do orçamento`() = runBlocking<Unit> {
+        val h = open()
+        h.withDefaultAccount()
+        val id = h.card("Equipamento", 1200, 6) // compra em 25/09, 6 parcelas de R$ 200 a partir da fatura de outubro
+        val byPurchase = filter(from = sep, to = sep, criterion = DateCriterion.PurchaseDate)
+
+        h.space.execute(h.env(), RequestInstallmentCancellation(id, listOf(4, 5, 6))).applied()
+        // solicitado ainda é comprometido
+        assertEquals(brl(1200), h.space.entries(byPurchase).value().rows.single().amount)
+
+        h.space.execute(h.env(), ConfirmNonCharge(id, listOf(4, 5, 6))).applied()
+        val row = h.space.entries(byPurchase).value().rows.single()
+        assertEquals(brl(600), row.amount)
+        assertTrue(EntrySituation.Cancelled in row.situations)
+        assertEquals(6, row.installmentCount) // a identidade da compra não muda
+        assertEquals(brl(600), h.space.entries(byPurchase).value().summary.expenses)
+        // as parcelas que valem somam o mesmo que o critério do orçamento mostra mês a mês
+        val byBudget = (10..12).sumOf { m ->
+            h.space.entries(filter(from = ym(2026, m), to = ym(2026, m))).value().summary.expenses.cents
+        }
+        assertEquals(brl(600).cents, byBudget)
+        assertEquals(brl(600), h.space.totalBalance(DateCriterion.PurchaseDate).value().total.committedExpenses)
+    }
+
+    @Test
+    fun `compra toda cancelada continua na lista marcada e vale zero na data da compra`() = runBlocking<Unit> {
+        val h = open()
+        h.withDefaultAccount()
+        val id = h.card("Cancelada", 300, 3)
+        h.space.execute(h.env(), RequestInstallmentCancellation(id, listOf(1, 2, 3))).applied()
+        h.space.execute(h.env(), ConfirmNonCharge(id, listOf(1, 2, 3))).applied()
+
+        val page = h.space.entries(filter(from = sep, to = sep, criterion = DateCriterion.PurchaseDate)).value()
+        assertEquals(Money.ZERO, page.rows.single().amount)
+        assertTrue(EntrySituation.Cancelled in page.rows.single().situations)
+        assertEquals(Money.ZERO, page.summary.expenses)
     }
 
     @Test

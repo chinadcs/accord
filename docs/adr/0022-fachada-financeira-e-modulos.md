@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 recorded_at: 2026-10-24
-decision_date: null
+decision_date: 2026-10-24
 ---
 
 # ADR 0022 — Fachada financeira como entrada e núcleo independente de Android
@@ -33,4 +33,8 @@ não garante por si só que todas as origens respeitem a entrada comum.
   [contrato](../../core/src/main/kotlin/app/accord/core/space/Contract.kt).
 - Implementação existente; aceite do desenho concreto ainda não recuperado. Registrar a decisão
   do usuário sobre a proposta antes de mudar o estado; adoção de Room segue aceita no ADR 0016.
-- Acompanhamento do aceite: Beads `accord-awb`.
+- Aceito em 24/10/2026 (ver "Aceite"); registro da revisão em Beads `accord-awb`.
+
+## Aceite
+
+Aceito pelo usuário em 24/10/2026, por instrução explícita ("aprove todos os adrs"), sem revisão ponto a ponto. O aceite vale para a escolha registrada; não comprova implantação hospedada, qualidade do modelo nem validação nos dois celulares. Itens descritos acima como abertos, pendentes ou a calibrar continuam abertos.

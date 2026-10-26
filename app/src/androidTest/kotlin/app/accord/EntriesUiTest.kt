@@ -1,6 +1,13 @@
 package app.accord
 
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
@@ -15,11 +22,11 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performTextInput
 import app.accord.core.Money
 import app.accord.core.space.CategoryNode
-import app.accord.core.space.DateCriterion
 import app.accord.core.space.EntryKind
 import app.accord.core.space.EntryRow
 import app.accord.core.space.EntrySituation
 import app.accord.core.space.EntrySummary
+import app.accord.core.space.TotalBalance
 import app.accord.core.space.PaymentMethod
 import app.accord.ui.entries.EntriesFilterState
 import app.accord.ui.entries.EntriesScreen
@@ -62,9 +69,11 @@ class EntriesUiTest {
         next: Int? = null,
         stale: Boolean = false,
         loadMoreFailed: Boolean = false,
+        summary: EntrySummary? = EntrySummary(brl(250), Money.ZERO, Money.ZERO, Money.ZERO),
+        balance: TotalBalance? = summary?.let { TotalBalance(it, it) },
     ) = EntriesUiState(
         filter = filter, rows = rows, total = rows.size,
-        summary = EntrySummary(brl(250), Money.ZERO, Money.ZERO, Money.ZERO),
+        summary = summary, balance = balance,
         nextCursor = next, status = status, loadMoreFailed = loadMoreFailed, categories = categories, stale = stale,
     )
 
@@ -91,21 +100,111 @@ class EntriesUiTest {
     )
 
     @Test
+    fun limparFiltrosTambemLimpaOTextoVisivelDaBusca() {
+        var current by mutableStateOf(state(emptyList(), filter = filter.copy(search = "Spotify")))
+        compose.setContent {
+            AccordTheme {
+                EntriesScreen(current, PaddingValues(), {}, {},
+                    onClear = { current = state(sample) }, {}, {}, {}, {})
+            }
+        }
+        compose.onNodeWithContentDescription("Limpar busca").assertIsDisplayed()
+        compose.onNodeWithText("Limpar filtros").performScrollTo().performClick()
+        compose.onNodeWithContentDescription("Limpar busca").assertDoesNotExist()
+    }
+
+    @Test
     fun linhaMostraDataDescricaoCategoriaParcelaFormaEValor() {
         show(state(sample))
         compose.onNodeWithText("Equipamento").assertIsDisplayed()
         compose.onNodeWithText(brl(200).format()).assertIsDisplayed()
-        compose.onNodeWithText("25/09 · Eletrônicos > Equipamentos · Parcela 1/6 · Cartão").assertIsDisplayed()
-        compose.onNodeWithText("20/10 · Alimentação > Mercado · Pix").assertIsDisplayed()
+        compose.onNodeWithText("25/09 · Parcela 1/6 · Cartão").assertIsDisplayed()
+        compose.onNodeWithText("Equipamentos").assertIsDisplayed()
+        compose.onNodeWithText("20/10 · Pix").assertIsDisplayed()
     }
 
     @Test
-    fun resumoSeparaTiposEMostraAContagemSemSaldoMisturado() {
+    fun resumoSeparaTiposEMostraAContagemEExplicaOSaldo() {
         show(state(sample))
         compose.onNodeWithText("2 lançamentos").assertIsDisplayed()
         compose.onNodeWithText("Despesas").assertIsDisplayed()
-        compose.onNodeWithText(brl(250).format()).assertIsDisplayed()
-        compose.onNodeWithText("Cada tipo é somado à parte; não formam um saldo.").assertIsDisplayed()
+        // o mesmo total aparece no resumo por tipo e na Despesa do cabeçalho
+        compose.onAllNodesWithText(brl(250).format()).assertCountEquals(2)
+        compose.onNodeWithText(
+            "Estes totais são só da lista filtrada. O saldo total, no alto, é tudo o que foi recebido menos as despesas até este mês, " +
+                "já abatidos os estornos; a receita e a despesa do cabeçalho são só deste mês. " +
+                "Renda prevista e quitações de fatura não entram.",
+        ).assertIsDisplayed()
+    }
+
+    private fun header(total: EntrySummary, month: EntrySummary = total) = TotalBalance(total, month)
+
+    @Test
+    fun cabecalhoMostraSaldoTotalAcumuladoComReceitaEDespesaSoDoMes() {
+        // sem o resumo da lista, para os valores do cabeçalho não aparecerem em dois lugares
+        val total = EntrySummary(brl(300), brl(1500), brl(50), Money.ZERO, receivedIncomes = brl(1000))
+        val month = EntrySummary(brl(120), brl(400), brl(20), Money.ZERO, receivedIncomes = brl(400))
+        show(state(sample, summary = null, balance = header(total, month)))
+        compose.onNodeWithText("Saldo total").assertIsDisplayed()
+        compose.onNodeWithText(brl(750).format()).assertIsDisplayed() // acumulado: 1000 − (300 − 50)
+        compose.onNodeWithText("Receita do mês").assertIsDisplayed()
+        compose.onNodeWithText(brl(400).format()).assertIsDisplayed()
+        compose.onNodeWithText("Despesa do mês").assertIsDisplayed()
+        compose.onNodeWithText(brl(100).format()).assertIsDisplayed() // do mês: 120 − 20
+    }
+
+    @Test
+    fun rendaPrevistaNaoEntraNoSaldo() {
+        show(state(sample, balance = header(EntrySummary(brl(100), brl(900), Money.ZERO, Money.ZERO, receivedIncomes = Money.ZERO))))
+        compose.onNodeWithText(Money(-10_000).format()).assertIsDisplayed()
+    }
+
+    @Test
+    fun saldoNegativoMostraOSinal() {
+        show(state(sample, balance = header(EntrySummary(brl(400), Money.ZERO, Money.ZERO, Money.ZERO, receivedIncomes = brl(100)))))
+        compose.onNodeWithText(Money(-30_000).format()).assertIsDisplayed()
+    }
+
+    @Test
+    fun semResumoOCabecalhoNaoInventaValores() {
+        show(state(emptyList(), status = EntriesStatus.Loading, summary = null))
+        compose.onNodeWithText("Saldo total").assertIsDisplayed()
+        compose.onAllNodesWithText("—").assertCountEquals(3)
+    }
+
+    @Test
+    fun saldoTotalNaoMudaComOPeriodoNemComOsFiltros() {
+        val total = EntrySummary(brl(300), brl(1500), Money.ZERO, Money.ZERO, receivedIncomes = brl(1000))
+        show(
+            state(
+                sample, filter = filter.copy(to = oct.plusMonths(2), search = "x"),
+                summary = EntrySummary(brl(9), Money.ZERO, Money.ZERO, Money.ZERO), balance = header(total),
+            ),
+        )
+        compose.onNodeWithText("Saldo total").assertIsDisplayed()
+        compose.onNodeWithText(brl(700).format()).assertIsDisplayed() // 1000 − 300, e não o resumo filtrado
+    }
+
+    @Test
+    fun botaoDeAjustesDoCabecalhoAbreOPainelDeFiltros() {
+        show(state(sample))
+        compose.onNodeWithContentDescription("Filtros").performClick()
+        compose.onNodeWithText("Aplicar").assertIsDisplayed()
+    }
+
+    @Test
+    fun textoAmpliadoEmpilhaReceitaDespesaEMantemOBotao() {
+        compose.setContent {
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            androidx.compose.runtime.CompositionLocalProvider(
+                androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(density.density, fontScale = 1.5f),
+            ) {
+                AccordTheme { EntriesScreen(state(sample), PaddingValues(), {}, {}, {}, {}, {}, {}, {}) }
+            }
+        }
+        compose.onNodeWithText("Receita do mês").assertIsDisplayed()
+        compose.onNodeWithText("Despesa do mês").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Filtros").assertIsDisplayed()
     }
 
     @Test
@@ -165,7 +264,7 @@ class EntriesUiTest {
     fun painelDeFiltrosAplicaApenasAoConfirmar() {
         var applied: EntriesFilterState? = null
         show(state(sample), onApply = { applied = it })
-        compose.onNodeWithText("Filtros").performClick()
+        compose.onNodeWithContentDescription("Filtros").performClick()
         compose.onNodeWithText("Cartão").performSemanticsAction(SemanticsActions.OnClick)
         compose.onNodeWithText("A classificar").performSemanticsAction(SemanticsActions.OnClick)
         compose.onNodeWithText("Aplicar").performClick()
@@ -178,7 +277,7 @@ class EntriesUiTest {
     fun cancelarOPainelNaoMudaOsFiltros() {
         var applied: EntriesFilterState? = null
         show(state(sample), onApply = { applied = it })
-        compose.onNodeWithText("Filtros").performClick()
+        compose.onNodeWithContentDescription("Filtros").performClick()
         compose.onNodeWithText("Pix").performClick()
         compose.onNodeWithText("Cancelar").performClick()
         assertEquals(null, applied)
@@ -188,34 +287,19 @@ class EntriesUiTest {
     fun painelEscolheCategoriaESubcategoria() {
         var applied: EntriesFilterState? = null
         show(state(sample), onApply = { applied = it })
-        compose.onNodeWithText("Filtros").performClick()
+        compose.onNodeWithContentDescription("Filtros").performClick()
         // há duas áreas rolantes (lista e painel); o painel é a última da árvore
         compose.onAllNodes(hasScrollAction()).onLast().performScrollToNode(hasText("Equipamentos"))
-        compose.onNodeWithText("Equipamentos").performSemanticsAction(SemanticsActions.OnClick)
+        // a lista também mostra o nome da categoria; o painel vem depois na árvore
+        compose.onAllNodesWithText("Equipamentos").onLast().performSemanticsAction(SemanticsActions.OnClick)
         compose.onNodeWithText("Aplicar").performClick()
         assertEquals("equip", applied!!.categoryId)
     }
 
     @Test
-    fun alternarOCriterioEnviaOutroCriterio() {
-        var applied: EntriesFilterState? = null
-        show(state(sample), onApply = { applied = it })
-        compose.onNodeWithText("Critério: mês do orçamento").assertIsDisplayed()
-        compose.onNodeWithText("Alterar").performClick()
-        assertEquals(DateCriterion.PurchaseDate, applied!!.criterion)
-    }
-
-    @Test
-    fun criterioDeDataDaCompraExplicaQueMostraCadaCompraUmaVez() {
-        show(state(sample, filter = filter.copy(criterion = DateCriterion.PurchaseDate)))
-        compose.onNodeWithText("Critério: data da compra").assertIsDisplayed()
-        compose.onNodeWithText("Mostra cada compra uma vez, pelo total.").assertIsDisplayed()
-    }
-
-    @Test
     fun filtroAtivoMostraAContagemNoBotao() {
         show(state(sample, filter = filter.copy(methods = setOf(PaymentMethod.Pix), situations = setOf(EntrySituation.Paid))))
-        compose.onNodeWithText("Filtros (2)").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Filtros (2)").assertIsDisplayed()
     }
 
     @Test
@@ -250,7 +334,7 @@ class EntriesUiTest {
 
     @Test
     fun erroSemLinhasNaoMostraZero() {
-        show(state(emptyList(), status = EntriesStatus.Failed))
+        show(state(emptyList(), status = EntriesStatus.Failed, summary = null))
         compose.onNodeWithText("Tentar de novo").assertIsDisplayed()
         assertEquals(0, compose.onAllNodes(hasText("R\$", substring = true)).fetchSemanticsNodes().size)
     }

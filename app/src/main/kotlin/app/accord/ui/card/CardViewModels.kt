@@ -48,15 +48,16 @@ data class CardForm(
     val bank: BankRef?,
     val closingText: String,
     val dueText: String,
+    val creditLimitText: String = "",
 ) {
     companion object {
         fun of(card: CardInfo) = if (card.configured) {
-            CardForm(card.nickname, card.bank, card.closingDay.toString(), card.dueDay.toString())
-        } else CardForm("", card.bank, "", "")
+            CardForm(card.nickname, card.bank, card.closingDay.toString(), card.dueDay.toString(), card.creditLimit?.formatPlain().orEmpty())
+        } else CardForm("", card.bank, "", "", "")
     }
 }
 
-enum class CardField { Nickname, Closing, Due }
+enum class CardField { Nickname, Closing, Due, CreditLimit }
 
 data class CardEditState(
     val form: CardForm,
@@ -113,18 +114,21 @@ class CardViewModel(
         val closing = state.form.closingText.trim().toIntOrNull()
         val due = state.form.dueText.trim().toIntOrNull()
         val nickname = state.form.nickname.trim().ifEmpty { state.form.bank?.displayName().orEmpty() }
+        val limitText = state.form.creditLimitText.trim()
+        val creditLimit = if (limitText.isBlank()) null else (Money.parse(limitText) as? MoneyParse.Ok)?.money
         val errors = buildMap {
             if (nickname.isBlank()) put(CardField.Nickname, "Escolha o banco ou informe um apelido para o cartão.")
             if (closing == null || closing !in 1..31) put(CardField.Closing, "O dia de fechamento vai de 1 a 31.")
             if (due == null || due !in 1..31) put(CardField.Due, "O dia de vencimento vai de 1 a 31.")
+            if (limitText.isNotBlank() && (creditLimit == null || creditLimit.cents <= 0)) put(CardField.CreditLimit, "Informe um limite maior que zero.")
         }
-        if (errors.isNotEmpty() || closing == null || due == null) {
+        if (errors.isNotEmpty() || closing == null || due == null || (limitText.isNotBlank() && creditLimit == null)) {
             _edit.update { it?.copy(errors = errors) }
             return
         }
         _edit.update { it?.copy(saving = true, errors = emptyMap(), message = null) }
         viewModelScope.launch {
-            val command = ConfigureCard(state.form.bank, nickname, closing, due)
+            val command = ConfigureCard(state.form.bank, nickname, closing, due, creditLimit)
             when (val result = provider.space().execute(Envelope(commandId), command)) {
                 is CommandResult.Applied -> saved(result.receipt.operationId, result.receipt.undoable)
                 is CommandResult.AlreadyApplied -> saved(result.receipt.operationId, result.receipt.undoable)
@@ -136,6 +140,7 @@ class CardViewModel(
                                 "closingDay" -> CardField.Closing
                                 "dueDay" -> CardField.Due
                                 "nickname" -> CardField.Nickname
+                                "creditLimit" -> CardField.CreditLimit
                                 else -> null
                             }?.let { f -> f to e.message }
                         }.toMap(),

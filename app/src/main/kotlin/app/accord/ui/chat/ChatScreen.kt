@@ -1,6 +1,7 @@
 package app.accord.ui.chat
 
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,6 +15,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,6 +26,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import app.accord.ui.components.AccordButton as Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.res.painterResource
 import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -38,6 +44,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -134,7 +141,7 @@ fun ChatScreen(
     Column(
         Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding(),
     ) {
-        ChatHeader(state.badge, actions.onOpenModel, Modifier.padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2))
+        ChatHeader(state.badge, actions.onOpenModel, actions.onOpenEntries, Modifier.padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2))
         if (state.loaded && state.items.isEmpty()) {
             EmptyChat(onExample, Modifier.weight(1f))
         } else {
@@ -154,13 +161,21 @@ fun ChatScreen(
 }
 
 @Composable
-private fun ChatHeader(badge: ModelBadge, onOpenModel: () -> Unit, modifier: Modifier = Modifier) {
+private fun ChatHeader(badge: ModelBadge, onOpenModel: () -> Unit, onSearch: () -> Unit, modifier: Modifier = Modifier) {
+    val keyboardOpen = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-            AccordMark()
-            Text(stringResource(R.string.chat_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+            if (!keyboardOpen) AccordMark()
+            if (keyboardOpen) {
+                Box(Modifier.weight(1f)) { ModelBadgeButton(badge, onOpenModel) }
+            } else {
+                Text(stringResource(R.string.chat_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f).semantics { heading() })
+            }
+            IconButton(onClick = onSearch, modifier = Modifier.size(AccordSpacing.touchMin)) {
+                Icon(painterResource(Lucide.drawable.lucide_ic_search), contentDescription = stringResource(R.string.search_entries))
+            }
         }
-        ModelBadgeButton(badge, onOpenModel)
+        if (!keyboardOpen) ModelBadgeButton(badge, onOpenModel)
         SyncIndicator()
     }
 }
@@ -175,10 +190,10 @@ private fun ModelBadgeButton(badge: ModelBadge, onClick: () -> Unit) {
         ModelBadge.InstalledNoEngine -> stringResource(R.string.chat_model_no_engine)
         ModelBadge.Problem -> stringResource(R.string.chat_model_problem)
     }
-    val description = stringResource(R.string.chat_model_open)
+    val description = stringResource(R.string.chat_model_badge_description, text, stringResource(R.string.chat_model_open))
     TextButton(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).semantics { contentDescription = "$text. $description" },
+        modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).semantics { contentDescription = description },
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             DecorativeIcon(
@@ -248,8 +263,18 @@ private fun Composer(text: String, onChange: (String) -> Unit, onSend: () -> Uni
                     send(Modifier)
                 }
             }
-            TextButton(onClick = onManual, modifier = Modifier.heightIn(min = AccordSpacing.touchMin).align(if (largeText) Alignment.CenterHorizontally else Alignment.Start)) {
-                Text(stringResource(R.string.chat_manual))
+            Surface(onClick = onManual, color = Color.Transparent, contentColor = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.control), shape = MaterialTheme.shapes.medium) {
+                Row(Modifier.padding(start = AccordSpacing.s3), verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
+                    Text(stringResource(R.string.chat_manual), style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+                    Surface(Modifier.size(AccordSpacing.control), shape = CircleShape, color = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            DecorativeIcon(Lucide.drawable.lucide_ic_plus, tint = MaterialTheme.colorScheme.onPrimary)
+                        }
+                    }
+                }
             }
         }
     }
@@ -371,7 +396,7 @@ private fun ReceiptCard(
                 }
             }
             if (item.question != null) {
-                CategoryChoices(item.question, summary, onAnswer)
+                CategoryChoices(item.question, summary, item.suggestedRef, onAnswer)
             }
             if (receipt.state != ReceiptState.Undone) {
                 ActionRow {
@@ -484,18 +509,30 @@ private fun StateTag(text: String, icon: Int) {
 private fun CategoryChoices(
     question: ChatQuestionRecord,
     summary: ReceiptSummary,
+    suggestedRef: String?,
     onAnswer: (ChatQuestionRecord, app.accord.core.chat.QuestionOption) -> Unit,
 ) {
     Text(
         stringResource(R.string.question_category, "${summary.description} ${Money(summary.totalCents).format()}"),
         style = MaterialTheme.typography.bodyLarge,
     )
+    if (suggestedRef != null) {
+        Text(stringResource(R.string.chat_category_suggested_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
     FlowRow(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
         question.options.forEach { option ->
-            OutlinedButton(
-                onClick = { onAnswer(question, option) },
-                modifier = Modifier.heightIn(min = AccordSpacing.touchMin).semantics { contentDescription = option.label },
-            ) { Text(option.label) }
+            if (option.ref == suggestedRef) {
+                val description = stringResource(R.string.chat_category_suggested_desc, option.label)
+                androidx.compose.material3.FilledTonalButton(
+                    onClick = { onAnswer(question, option) },
+                    modifier = Modifier.heightIn(min = AccordSpacing.touchMin).semantics { contentDescription = description },
+                ) { Text(stringResource(R.string.chat_category_suggested_tag) + ": " + option.label) }
+            } else {
+                OutlinedButton(
+                    onClick = { onAnswer(question, option) },
+                    modifier = Modifier.heightIn(min = AccordSpacing.touchMin).semantics { contentDescription = option.label },
+                ) { Text(option.label) }
+            }
         }
     }
 }

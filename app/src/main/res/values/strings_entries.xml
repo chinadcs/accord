@@ -6,7 +6,14 @@
     <string name="entries_search_label">Buscar descrição ou estabelecimento</string>
     <string name="entries_search_clear">Limpar busca</string>
     <string name="entries_filters">Filtros</string>
+    <string name="entries_pick_month">Escolher mês</string>
+    <string name="entries_previous_year">Ano anterior</string>
+    <string name="entries_next_year">Próximo ano</string>
+    <string name="entries_criterion_settings_note">Escolha como o período de Lançamentos é filtrado por padrão.</string>
     <string name="entries_filters_count">Filtros (%d)</string>
+    <string name="entries_previous_month">Mês anterior</string>
+    <string name="entries_next_month">Próximo mês</string>
+    <string name="entries_invoice_month">Fatura %1$s</string>
     <string name="entries_criterion_budget">Critério: mês do orçamento</string>
     <string name="entries_criterion_purchase">Critério: data da compra</string>
     <string name="entries_criterion_change">Alterar</string>
@@ -29,7 +36,10 @@
     <string name="summary_incomes">Rendas</string>
     <string name="summary_credits_list">Créditos de estorno</string>
     <string name="summary_invoice_payments">Quitações de fatura</string>
-    <string name="summary_note">Cada tipo é somado à parte; não formam um saldo.</string>
+    <string name="summary_note">Estes totais são só da lista filtrada. O saldo total, no alto, é tudo o que foi recebido menos as despesas até este mês, já abatidos os estornos; a receita e a despesa do cabeçalho são só deste mês. Renda prevista e quitações de fatura não entram.</string>
+    <string name="entries_balance_title">Saldo total</string>
+    <string name="entries_balance_income">Receita do mês</string>
+    <string name="entries_balance_expense">Despesa do mês</string>
 
     <!-- Painel de filtros -->
     <string name="filter_title">Filtros</string>
@@ -73,6 +83,7 @@
     <string name="detail_not_found_title">Lançamento não encontrado</string>
     <string name="detail_not_found_body">Ele pode ter sido excluído. Volte à lista para conferir.</string>
     <string name="detail_total_and_installments">Compra em %1$s · %2$dx de %3$s</string>
+    <string name="detail_installment_count">%1$dx de %2$s</string>
     <string name="detail_purchase_total">Total da compra: %s</string>
     <string name="detail_purchase_on">Compra em %s</string>
     <string name="detail_installment_here">Parcela neste mês: %1$d/%2$d · %3$s</string>

@@ -8,6 +8,7 @@ import app.accord.core.chat.MessageState
 import app.accord.core.chat.QuestionLink
 import app.accord.core.chat.QuestionState
 import app.accord.core.chat.undoableReceipt
+import app.accord.ui.review.suggestedCategoryOption
 
 /** Linhas da conversa, na ordem em que aparecem (tela 04 §3). Nada aqui calcula dinheiro. */
 sealed interface ChatItem {
@@ -23,8 +24,16 @@ sealed interface ChatItem {
         override val key get() = "w-${message.id}"
     }
 
-    /** Lançamento salvo. [question] é a pergunta de categoria de um lançamento "a classificar". */
-    data class Receipt(val receipt: ChatReceiptRecord, val undoAvailable: Boolean, val question: ChatQuestionRecord?) : ChatItem {
+    /**
+     * Lançamento salvo. [question] é a pergunta de categoria de um lançamento "a classificar"; [suggestedRef] é a opção que o
+     * modelo sugeriu (só uma opção: a categoria vale depois que a pessoa a escolher).
+     */
+    data class Receipt(
+        val receipt: ChatReceiptRecord,
+        val undoAvailable: Boolean,
+        val question: ChatQuestionRecord?,
+        val suggestedRef: String? = null,
+    ) : ChatItem {
         override val key get() = "r-${receipt.id}"
     }
 
@@ -54,7 +63,7 @@ fun buildChatItems(snapshot: ChatSnapshot): List<ChatItem> {
                 MessageState.Applied, MessageState.ToClassify -> {
                     snapshot.receipts.filter { it.messageId == message.id }.sortedBy { it.createdAtMillis }.forEach { receipt ->
                         val question = openQuestions.firstOrNull { it.link == QuestionLink.Entry(receipt.entryId) }
-                        add(ChatItem.Receipt(receipt, receipt.id == undoable, question))
+                        add(ChatItem.Receipt(receipt, receipt.id == undoable, question, question?.let { suggestedCategoryOption(it, message)?.ref }))
                     }
                 }
                 MessageState.Asked ->

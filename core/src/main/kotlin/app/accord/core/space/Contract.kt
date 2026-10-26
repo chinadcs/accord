@@ -66,6 +66,12 @@ interface FinanceSpace {
     /** Lista de Lançamentos (tela 07) com filtros, critério de data e paginação estável. */
     suspend fun entries(filter: EntryFilter, cursor: Int = 0, pageSize: Int = 50): QueryResult<EntryPage>
 
+    /**
+     * Saldo total (acumulado até o fim do mês atual) e o resumo do mês atual, sem filtros. Mesma regra de
+     * [EntrySummary.balance]: renda recebida menos despesa comprometida; renda prevista fica de fora.
+     */
+    suspend fun totalBalance(criterion: DateCriterion): QueryResult<TotalBalance>
+
     /** Detalhe do lançamento (tela 08) por ID estável; nulo se não existe. */
     suspend fun entry(id: String): QueryResult<EntryDetail?>
 
@@ -175,6 +181,8 @@ data class ConfigureCard(
     val nickname: String,
     val closingDay: Int,
     val dueDay: Int,
+    /** Limite contratado, usado apenas para alertar quando o total em faturas não pagas o exceder. */
+    val creditLimit: Money? = null,
 ) : Command
 
 /**
@@ -625,6 +633,7 @@ data class CardInfo(
     val nickname: String,
     val closingDay: Int,
     val dueDay: Int,
+    val creditLimit: Money? = null,
     /** Verdadeiro depois que alguém configurou o cartão (aqui ou no outro aparelho); a semente 8/15 não conta. */
     val configured: Boolean = true,
 )
@@ -813,13 +822,29 @@ data class EntryRow(
     val authorId: String?,
 )
 
-/** Somas separadas: despesas, rendas, créditos e quitações nunca viram um saldo misturado. */
+/**
+ * Somas separadas por tipo; quitações de fatura nunca entram em despesa nem em saldo.
+ * [incomes] mistura renda recebida e prevista; o saldo usa só [receivedIncomes], e renda prevista não vira saldo.
+ */
 data class EntrySummary(
     val expenses: Money,
     val incomes: Money,
     val credits: Money,
     val invoicePayments: Money,
-)
+    val receivedIncomes: Money = Money.ZERO,
+) {
+    /** Despesa comprometida (paga e a pagar) já abatida dos estornos confirmados; estorno não vira renda. */
+    val committedExpenses: Money get() = expenses - credits
+
+    /** Renda recebida menos despesa comprometida, sobre as mesmas linhas filtradas. */
+    val balance: Money get() = receivedIncomes - committedExpenses
+}
+
+/**
+ * Cabeçalho de Lançamentos: [total] acumula desde o primeiro lançamento até o fim do mês atual;
+ * [month] é só o mês atual. Os dois ignoram busca, filtros e o mês escolhido na lista.
+ */
+data class TotalBalance(val total: EntrySummary, val month: EntrySummary)
 
 data class EntryPage(val rows: List<EntryRow>, val nextCursor: Int?, val total: Int, val summary: EntrySummary)
 

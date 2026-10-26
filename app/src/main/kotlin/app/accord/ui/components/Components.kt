@@ -107,7 +107,7 @@ fun BudgetBar(fill: Float, state: BarState, marker: Float?, modifier: Modifier =
         BarState.Attention -> Accord.colors.attentionFill
         else -> MaterialTheme.colorScheme.primary
     }
-    val markerColor = MaterialTheme.colorScheme.onSurface
+    val markerColor = if (state == BarState.Excess) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurface
     Canvas(modifier.fillMaxWidth().height(8.dp).clearAndSetSemantics { }) {
         val radius = CornerRadius(4.dp.toPx())
         drawRoundRect(track, size = size, cornerRadius = radius)
@@ -115,8 +115,10 @@ fun BudgetBar(fill: Float, state: BarState, marker: Float?, modifier: Modifier =
             drawRoundRect(fillColor, size = Size(size.width * fill, size.height), cornerRadius = radius)
         }
         if (marker != null) {
-            // Marcador do limite, 2 dp, quando há excesso.
-            drawRect(markerColor, topLeft = Offset(size.width * marker - 1.dp.toPx(), 0f), size = Size(2.dp.toPx(), size.height))
+            // Mantém a marca do limite dentro da barra e com contraste próprio do estado de excesso.
+            val markerWidth = 2.dp.toPx()
+            val markerX = (size.width * marker - markerWidth / 2f).coerceIn(markerWidth, size.width - markerWidth * 2f)
+            drawRect(markerColor, topLeft = Offset(markerX, 0f), size = Size(markerWidth, size.height))
         }
     }
 }

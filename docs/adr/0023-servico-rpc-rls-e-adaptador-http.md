@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 recorded_at: 2026-10-24
-decision_date: null
+decision_date: 2026-10-24
 ---
 
 # ADR 0023 — Serviço por RPC PostgreSQL, RLS e adaptador HTTP substituível
@@ -34,4 +34,8 @@ referências e versão pode aceitar estado incoerente de um cliente defeituoso.
   [migração](../../supabase/migrations/20261024120000_espaco_e_sincronizacao.sql) e testes locais existem.
 - Código e fechamentos dessas fatias não aprovam a proposta nem comprovam implantação hospedada.
   Rate limit, código ativo único e conta em um espaço permanecem propostas em S2.
-- Acompanhamento do aceite: Beads `accord-awb`.
+- Aceito em 24/10/2026 (ver "Aceite"); registro da revisão em Beads `accord-awb`.
+
+## Aceite
+
+Aceito pelo usuário em 24/10/2026, por instrução explícita ("aprove todos os adrs"), sem revisão ponto a ponto. O aceite vale para a escolha registrada; não comprova implantação hospedada, qualidade do modelo nem validação nos dois celulares. Itens descritos acima como abertos, pendentes ou a calibrar continuam abertos.

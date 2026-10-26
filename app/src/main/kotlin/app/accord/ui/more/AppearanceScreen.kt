@@ -31,6 +31,7 @@ import app.accord.ui.components.DecorativeIcon
 import app.accord.ui.theme.AccordSpacing
 import app.accord.ui.theme.CornerStyle
 import app.accord.ui.theme.ThemePreference
+import app.accord.ui.theme.ThemePalette
 import com.composables.icons.lucide.R as Lucide
 
 @Composable
@@ -41,6 +42,8 @@ fun AppearanceScreen(
     onTheme: (ThemePreference) -> Unit,
     onCorners: (CornerStyle) -> Unit,
     onBack: () -> Unit,
+    palette: ThemePalette = ThemePalette.Accord,
+    onPalette: (ThemePalette) -> Unit = {},
 ) {
     Column(
         Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
@@ -59,6 +62,15 @@ fun AppearanceScreen(
                 ).forEachIndexed { index, (value, label) ->
                     if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                     AppearanceOption(stringResource(label), theme == value) { onTheme(value) }
+                }
+            }
+        }
+        Text(stringResource(R.string.appearance_palette), style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+            Column(Modifier.selectableGroup().padding(horizontal = AccordSpacing.s4)) {
+                ThemePalette.values().forEachIndexed { index, value ->
+                    if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    AppearanceOption(stringResource(value.labelRes), palette == value) { onPalette(value) }
                 }
             }
         }
@@ -90,7 +102,7 @@ fun AppearanceScreen(
 @Composable
 private fun AppearanceOption(label: String, selected: Boolean, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 60.dp).selectable(selected, role = Role.RadioButton, onClick = onClick),
+        Modifier.fillMaxWidth().heightIn(min = AccordSpacing.rowMedium).selectable(selected, role = Role.RadioButton, onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
     ) {

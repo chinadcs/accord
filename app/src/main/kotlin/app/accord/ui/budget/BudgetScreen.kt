@@ -1,6 +1,8 @@
 package app.accord.ui.budget
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +18,8 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import app.accord.ui.components.AccordButton as Button
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
 import androidx.compose.material3.Surface
@@ -26,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.Role
@@ -60,6 +65,7 @@ fun BudgetRoute(
     onOpenCommitments: (YearMonth) -> Unit = {},
     onOpenIncomes: (YearMonth) -> Unit = {},
     onOpenCard: () -> Unit = {},
+    onSearch: (() -> Unit)? = null,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     RefreshOnResume(viewModel::refresh)
@@ -67,7 +73,8 @@ fun BudgetRoute(
         state, padding,
         onPrevious = viewModel::previousMonth, onNext = viewModel::nextMonth, onRetry = viewModel::retry,
         onOpenCategory = onOpenCategory, onClassify = onClassify, onRegister = onRegister,
-        onOpenCommitments = onOpenCommitments, onOpenIncomes = onOpenIncomes, onOpenCard = onOpenCard,
+        onOpenCommitments = onOpenCommitments, onOpenIncomes = onOpenIncomes, onOpenCard = onOpenCard, onSearch = onSearch,
+        hasFloatingAction = true,
     )
 }
 
@@ -84,19 +91,28 @@ fun BudgetScreen(
     onOpenCommitments: (YearMonth) -> Unit = {},
     onOpenIncomes: (YearMonth) -> Unit = {},
     onOpenCard: () -> Unit = {},
+    onSearch: (() -> Unit)? = null,
+    hasFloatingAction: Boolean = false,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(
             start = AccordSpacing.s4, end = AccordSpacing.s4,
             top = padding.calculateTopPadding() + AccordSpacing.s4,
-            bottom = padding.calculateBottomPadding() + AccordSpacing.s4,
+            bottom = padding.calculateBottomPadding() + AccordSpacing.s4 + if (hasFloatingAction) 80.dp else 0.dp,
         ),
         verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
     ) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
-                ScreenTitle(stringResource(R.string.tab_budget))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    ScreenTitle(stringResource(R.string.tab_budget), Modifier.weight(1f))
+                    onSearch?.let { search ->
+                        IconButton(onClick = search, modifier = Modifier.size(AccordSpacing.touchMin)) {
+                            Icon(painterResource(Lucide.drawable.lucide_ic_search), contentDescription = stringResource(R.string.search_entries))
+                        }
+                    }
+                }
                 MonthSelector(state.month, onPrevious, onNext)
                 // "Salvo no aparelho" até haver sincronização concluída; depois, a data, nunca um selo de "em dia".
                 SyncIndicator()
@@ -108,9 +124,9 @@ fun BudgetScreen(
             }
             is BudgetContent.Failed -> {
                 item { FailureBanner(content.last?.month, onRetry) }
-                content.last?.let { budgetContent(it, onOpenCategory, onClassify, onRegister, onOpenCommitments, onOpenIncomes, onOpenCard) }
+                content.last?.let { budgetContent(it, onOpenCategory, onClassify, onRegister, onOpenCommitments, onOpenIncomes, onOpenCard, !hasFloatingAction) }
             }
-            is BudgetContent.Ready -> budgetContent(content.data, onOpenCategory, onClassify, onRegister, onOpenCommitments, onOpenIncomes, onOpenCard)
+            is BudgetContent.Ready -> budgetContent(content.data, onOpenCategory, onClassify, onRegister, onOpenCommitments, onOpenIncomes, onOpenCard, !hasFloatingAction)
         }
     }
 }
@@ -145,9 +161,10 @@ private fun LazyListScope.budgetContent(
     onOpenCommitments: (YearMonth) -> Unit,
     onOpenIncomes: (YearMonth) -> Unit,
     onOpenCard: () -> Unit,
+    showInlineManual: Boolean,
 ) {
     if (data.isEmpty) {
-        item { EmptyMonth(onRegister) }
+        item { EmptyMonth(onRegister, showInlineManual) }
         item { BudgetCriteria() }
         return
     }
@@ -185,7 +202,7 @@ private fun BudgetCriteria() {
 }
 
 @Composable
-private fun EmptyMonth(onRegister: () -> Unit) {
+private fun EmptyMonth(onRegister: () -> Unit, showInlineManual: Boolean) {
     Column(
         Modifier.fillMaxWidth().padding(vertical = AccordSpacing.s6),
         verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
@@ -198,7 +215,7 @@ private fun EmptyMonth(onRegister: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
-        Button(onClick = onRegister, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+        if (showInlineManual) Button(onClick = onRegister, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
             Text(stringResource(R.string.action_register_manually))
         }
     }
@@ -222,61 +239,42 @@ private fun SummaryCard(data: BudgetData) {
     val budget = data.budget
     val stackedMetrics = LocalDensity.current.fontScale >= 1.3f
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-        Surface(color = Accord.colors.financeSurface, shape = MaterialTheme.shapes.large) {
-            Column(Modifier.fillMaxWidth().padding(AccordSpacing.s5), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                Text(
-                    stringResource(R.string.summary_committed),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Accord.colors.onFinanceSurface,
-                )
-                Text(
-                    budget.committed.format(),
-                    style = Accord.typography.amountHero,
-                    color = Accord.colors.onFinanceSurface,
-                )
+        Surface(color = Accord.colors.financeSurface, contentColor = Accord.colors.onFinanceSurface, shape = MaterialTheme.shapes.large) {
+            Column(
+                Modifier.fillMaxWidth().padding(AccordSpacing.s5),
+                verticalArrangement = Arrangement.spacedBy(AccordSpacing.s4),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+                    Text(stringResource(R.string.summary_committed), style = MaterialTheme.typography.bodyMedium)
+                    Text(budget.committed.format(), style = Accord.typography.amountHero, textAlign = TextAlign.Center)
+                }
+                HorizontalDivider(color = Accord.colors.onFinanceSurface.copy(alpha = 0.2f))
+                if (stackedMetrics) {
+                    Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
+                        SummaryMetric(stringResource(R.string.summary_limits), if (data.hasLimits) budget.totalLimits.format() else stringResource(R.string.summary_no_limits))
+                        SummaryMetric(stringResource(R.string.summary_paid), budget.paid.format(), stringResource(R.string.summary_paid_note))
+                    }
+                } else {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s4)) {
+                        SummaryMetric(stringResource(R.string.summary_limits), if (data.hasLimits) budget.totalLimits.format() else stringResource(R.string.summary_no_limits), modifier = Modifier.weight(1f))
+                        // Pago integra o comprometido; a legenda impede somar os dois novamente.
+                        SummaryMetric(stringResource(R.string.summary_paid), budget.paid.format(), stringResource(R.string.summary_paid_note), Modifier.weight(1f))
+                    }
+                }
             }
         }
-        if (stackedMetrics) {
-            Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                SummaryMetric(stringResource(R.string.summary_limits), if (data.hasLimits) budget.totalLimits.format() else stringResource(R.string.summary_no_limits))
-                SummaryMetric(stringResource(R.string.summary_paid), budget.paid.format(), stringResource(R.string.summary_paid_note))
-            }
-        } else {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                SummaryMetric(
-                    stringResource(R.string.summary_limits),
-                    if (data.hasLimits) budget.totalLimits.format() else stringResource(R.string.summary_no_limits),
-                    modifier = Modifier.weight(1f),
-                )
-                // "Pago" é parte do comprometido, nunca uma parcela a somar de novo.
-                SummaryMetric(
-                    stringResource(R.string.summary_paid),
-                    budget.paid.format(),
-                    stringResource(R.string.summary_paid_note),
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-        Column(Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s1), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-            if (budget.credits.cents != 0L) {
-                LabelledAmount(stringResource(R.string.summary_credits), budget.credits.format())
-            }
-            if (budget.invoiceLinksToConfirm > 0) LinksToConfirm(budget.invoiceLinksToConfirm)
-        }
+        if (budget.credits.cents != 0L) LabelledAmount(stringResource(R.string.summary_credits), budget.credits.format())
+        if (budget.invoiceLinksToConfirm > 0) LinksToConfirm(budget.invoiceLinksToConfirm)
     }
 }
 
 @Composable
 private fun SummaryMetric(label: String, amount: String, note: String? = null, modifier: Modifier = Modifier) {
-    Surface(modifier = modifier, color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
-        Column(
-            Modifier.fillMaxWidth().heightIn(min = 96.dp).padding(AccordSpacing.s3),
-            verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
-        ) {
-            Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(amount, style = Accord.typography.amountRow, color = MaterialTheme.colorScheme.onSurface)
-            note?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-        }
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+        Text(amount, style = Accord.typography.amountRow)
+        note?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
     }
 }
 
@@ -363,18 +361,19 @@ private fun CategoryRow(category: CategoryBudget, name: String, iconKey: String,
     }
     val netCredit = if (category.net.isNegative) stringResource(R.string.category_net_credit, money(-category.net)) else null
     val percent = percentLabel(limit)
-    val description = listOfNotNull(name, amounts, status, barLabel, percent?.let { "$it%" }, breakdown, netCredit).joinToString(". ")
+    val description = listOfNotNull(name, amounts, status, barLabel, percent?.let { stringResource(R.string.percent_value, it) }, breakdown, netCredit).joinToString(". ")
 
     Column(Modifier.fillMaxWidth()) {
         Column(
             Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)
-                .clickable(onClickLabel = stringResource(R.string.category_open, name), onClick = onClick)
+                .clickable(onClickLabel = stringResource(R.string.category_open, name), role = Role.Button, onClick = onClick)
                 .semantics(mergeDescendants = true) { contentDescription = description }
                 .padding(horizontal = AccordSpacing.s1, vertical = AccordSpacing.s3),
             verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
         ) {
             Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
-                Surface(color = MaterialTheme.colorScheme.surfaceContainer, shape = MaterialTheme.shapes.small) {
+                Surface(color = MaterialTheme.colorScheme.surface, shape = CircleShape,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
                     Box(Modifier.size(AccordSpacing.touchMin), contentAlignment = Alignment.Center) {
                         DecorativeIcon(lucideRes(iconKey), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
@@ -415,7 +414,7 @@ private fun CategoryRow(category: CategoryBudget, name: String, iconKey: String,
                         })
                     }
                 },
-                end = { percent?.let { Text("$it%", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) } },
+                end = { percent?.let { Text(stringResource(R.string.percent_value, it), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) } },
             )
             breakdown?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             netCredit?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Accord.colors.success) }

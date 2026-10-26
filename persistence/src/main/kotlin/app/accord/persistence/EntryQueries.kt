@@ -19,6 +19,7 @@ import app.accord.core.space.NameKey
 import app.accord.core.space.OccurrenceView
 import app.accord.core.space.PaymentMethod
 import app.accord.core.space.PendingItem
+import app.accord.core.space.TotalBalance
 import app.accord.core.space.RecurrenceForm
 import app.accord.core.space.RecurrenceKind
 import app.accord.core.label
@@ -39,6 +40,11 @@ internal class EntryQueries(
     private val invoiceDifference: suspend (YearMonth) -> Money?,
     private val today: () -> LocalDate,
 ) {
+    private companion object {
+        /** Antes de qualquer dado possível do app; as consultas por mês só percorrem séries que existem. */
+        val EARLIEST_MONTH: YearMonth = YearMonth.of(2000, 1)
+    }
+
     private enum class Bucket { Expense, Income, Credit, InvoicePayment }
 
     private class Built(val row: EntryRow, val bucket: Bucket, val month: YearMonth, val spentBy: String?)
@@ -110,10 +116,13 @@ internal class EntryQueries(
             dao.purchasesBetween(fromDay, toDay).forEach { p ->
                 val rows = dao.installments(p.id)
                 val date = LocalDate.ofEpochDay(p.purchaseEpochDay)
+                // Parcela cancelada e confirmada deixa de contar, como no critério do orçamento; a compra segue na lista, marcada.
+                val cancelled = rows.filter { it.cancelState == CancellationPlanner.CANCEL_DONE }
+                val counted = if (cancelled.isEmpty()) p.totalCents else rows.sumOf { it.amountCents } - cancelled.sumOf { it.amountCents }
                 built += Built(
                     EntryRow(
                         id = p.id, kind = EntryKind.CardPurchase, description = p.description, categoryId = p.classificationId,
-                        amount = Money(p.totalCents), date = date, dueDate = null, method = PaymentMethod.Card,
+                        amount = Money(counted), date = date, dueDate = null, method = PaymentMethod.Card,
                         installmentNumber = null, installmentCount = rows.size,
                         situations = setOfNotNull(
                             EntrySituation.ToClassify.takeIf { p.classificationId == null },
@@ -197,7 +206,15 @@ internal class EntryQueries(
 
         // Ocorrências de recorrência são calculadas sob demanda para os meses pedidos.
         val seen = mutableSetOf<String>()
-        val occurrenceMonths = if (byBudget) months(f.from, f.to) else months(f.from.minusMonths(1), f.to.plusMonths(1))
+        // Sem série, não há o que expandir; com série, nada existe antes do mês da âncora (folga para pagamento antecipado).
+        val firstSeries = dao.activeRecurrences().minOfOrNull { YearMonth.from(LocalDate.ofEpochDay(it.anchorEpochDay)) }
+        val occurrenceMonths = if (firstSeries == null) {
+            emptyList()
+        } else {
+            val start = if (byBudget) f.from else f.from.minusMonths(1)
+            val end = if (byBudget) f.to else f.to.plusMonths(1)
+            months(maxOf(start, firstSeries.minusMonths(2)), end)
+        }
         for (month in occurrenceMonths) {
             for (o in occurrences(month)) {
                 val date = o.settledDate ?: o.scheduledDate
@@ -230,11 +247,26 @@ internal class EntryQueries(
         val page = matching.drop(cursor).take(pageSize)
         val next = (cursor + pageSize).takeIf { it < matching.size }
         fun total(bucket: Bucket) = matching.filter { it.bucket == bucket }.map { it.row.amount }.sum()
+        val receivedIncomes = matching
+            .filter { it.bucket == Bucket.Income && EntrySituation.Paid in it.row.situations }
+            .map { it.row.amount }.sum()
         return EntryPage(
             rows = page.map { it.row },
             nextCursor = next,
             total = matching.size,
-            summary = EntrySummary(total(Bucket.Expense), total(Bucket.Income), total(Bucket.Credit), total(Bucket.InvoicePayment)),
+            summary = EntrySummary(
+                total(Bucket.Expense), total(Bucket.Income), total(Bucket.Credit), total(Bucket.InvoicePayment),
+                receivedIncomes,
+            ),
+        )
+    }
+
+    /** Acumulado até o fim do mês atual e o mês atual; reaproveita a lista para valer a mesma regra de cada tipo. */
+    suspend fun totalBalance(criterion: DateCriterion): TotalBalance {
+        val current = YearMonth.from(today())
+        return TotalBalance(
+            total = entries(EntryFilter(EARLIEST_MONTH, current, criterion), 0, 1).summary,
+            month = entries(EntryFilter(current, current, criterion), 0, 1).summary,
         )
     }
 

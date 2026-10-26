@@ -15,9 +15,9 @@ enum class Root(
     @StringRes val label: Int,
     @DrawableRes val icon: Int,
 ) {
-    Chat("chat_graph", "chat", R.string.tab_chat, Lucide.drawable.lucide_ic_message_circle),
-    Budget("budget_graph", "budget", R.string.tab_budget, Lucide.drawable.lucide_ic_wallet),
     Entries("entries_graph", "entries", R.string.tab_entries, Lucide.drawable.lucide_ic_list),
+    Budget("budget_graph", "budget", R.string.tab_budget, Lucide.drawable.lucide_ic_wallet),
+    Chat("chat_graph", "chat", R.string.tab_chat, R.drawable.lucide_ic_astroid),
     Review("review_graph", "review", R.string.tab_review, Lucide.drawable.lucide_ic_circle_check),
     More("more_graph", "more", R.string.tab_more, Lucide.drawable.lucide_ic_ellipsis),
 }

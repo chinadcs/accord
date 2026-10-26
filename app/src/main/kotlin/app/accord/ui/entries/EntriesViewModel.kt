@@ -8,6 +8,7 @@ import app.accord.core.space.CategoryNode
 import app.accord.core.space.EntryPage
 import app.accord.core.space.EntryRow
 import app.accord.core.space.EntrySummary
+import app.accord.core.space.TotalBalance
 import app.accord.core.space.QueryResult
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -27,6 +28,8 @@ data class EntriesUiState(
     val rows: List<EntryRow> = emptyList(),
     val total: Int = 0,
     val summary: EntrySummary? = null,
+    /** Cabeçalho: saldo total acumulado e resumo do mês atual, sem filtros; independe da busca e do período da lista. */
+    val balance: TotalBalance? = null,
     val nextCursor: Int? = null,
     val status: EntriesStatus = EntriesStatus.Loading,
     /** A última tentativa de buscar mais linhas falhou; as já carregadas permanecem. */
@@ -45,9 +48,11 @@ class EntriesViewModel(
     val state: StateFlow<EntriesUiState> = _state.asStateFlow()
 
     private var job: Job? = null
+    private var balanceJob: Job? = null
 
     init {
         refresh()
+        refreshBalance()
         viewModelScope.launch { provider.feedback.undone.collect { reload() } }
     }
 
@@ -59,10 +64,16 @@ class EntriesViewModel(
 
     fun clearFilters() = apply(_state.value.filter.cleared(), debounce = false)
 
-    fun retry() = refresh()
+    fun retry() {
+        refresh()
+        refreshBalance()
+    }
 
     /** Volta de outra tela: relê o que está filtrado, mantendo as linhas até o resultado novo chegar. */
-    fun reload() = refresh()
+    fun reload() {
+        refresh()
+        refreshBalance()
+    }
 
     /** Carrega a página seguinte sem repetir nem reordenar linhas. */
     fun loadMore() {
@@ -80,9 +91,23 @@ class EntriesViewModel(
     }
 
     private fun apply(filter: EntriesFilterState, debounce: Boolean) {
+        val criterionChanged = filter.criterion != _state.value.filter.criterion
         filter.saveTo(saved)
         _state.value = _state.value.copy(filter = filter, status = EntriesStatus.Loading, stale = true)
         refresh(debounce)
+        if (criterionChanged) refreshBalance()
+    }
+
+    /** O saldo total só muda com os dados ou com o critério de data; falha mantém o valor anterior. */
+    private fun refreshBalance() {
+        balanceJob?.cancel()
+        val criterion = _state.value.filter.criterion
+        balanceJob = viewModelScope.launch {
+            when (val result = provider.space().totalBalance(criterion)) {
+                is QueryResult.Data -> _state.value = _state.value.copy(balance = result.value)
+                is QueryResult.Failure -> Unit
+            }
+        }
     }
 
     private fun refresh(debounce: Boolean = false) {

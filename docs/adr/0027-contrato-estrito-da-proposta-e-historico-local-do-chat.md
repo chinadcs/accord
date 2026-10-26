@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 recorded_at: 2026-10-24
-decision_date: null
+decision_date: 2026-10-24
 ---
 
 # ADR 0027 — Contrato estrito da proposta do Chat e histórico local por coordenador
@@ -54,4 +54,8 @@ o obtiver; o aviso é obrigatório.
   `decisao-24-10-historico-chat`, `pendencia-chat-hibrida`).
 - Implementação em `core.chat`, `persistence` (`RoomChatStore`) e `app/ui/chat`, com testes JVM e instrumentados
   no emulador. Isso não aprova a proposta nem comprova qualidade de modelo, latência ou uso nos dois celulares.
-- Aceite pendente de revisão (`accord-awb`).
+- Aceito em 24/10/2026 (ver "Aceite"); registro em `accord-awb`.
+
+## Aceite
+
+Aceito pelo usuário em 24/10/2026, por instrução explícita ("aprove todos os adrs"), sem revisão ponto a ponto. O aceite vale para a escolha registrada; não comprova implantação hospedada, qualidade do modelo nem validação nos dois celulares. Itens descritos acima como abertos, pendentes ou a calibrar continuam abertos.

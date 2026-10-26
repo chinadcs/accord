@@ -128,6 +128,7 @@ data class CardRow(
     val closingDay: Int,
     val dueDay: Int,
     val revision: Long,
+    val creditLimitCents: Long? = null,
 )
 
 /** Compra no cartão (entidade raiz); as parcelas derivam descrição e classificação dela. */
@@ -577,12 +578,13 @@ interface SpaceDao {
         SyncStateRow::class, ConflictRow::class, ConflictEntityRow::class,
         ChatMessageRow::class, ChatAttemptRow::class, ChatQuestionRow::class, ChatReceiptRow::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2, spec = Migration1To2::class),
         // S3: histórico do Chat, só neste aparelho.
         AutoMigration(from = 2, to = 3),
+        AutoMigration(from = 3, to = 4),
     ],
 )
 abstract class AccordDatabase : RoomDatabase() {

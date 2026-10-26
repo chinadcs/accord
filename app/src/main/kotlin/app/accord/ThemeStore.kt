@@ -3,6 +3,8 @@ package app.accord
 import android.content.Context
 import app.accord.ui.theme.ThemePreference
 import app.accord.ui.theme.CornerStyle
+import app.accord.ui.theme.ThemePalette
+import app.accord.core.space.DateCriterion
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,9 +15,21 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class ThemeStore(context: Context) {
     private val prefs = context.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+    private val _entriesDateCriterion = MutableStateFlow(
+        runCatching { DateCriterion.valueOf(prefs.getString(KEY_ENTRIES_DATE_CRITERION, null) ?: "") }
+            .getOrDefault(DateCriterion.PurchaseDate),
+    )
+    val entriesDateCriterion: StateFlow<DateCriterion> = _entriesDateCriterion.asStateFlow()
+
+    fun setEntriesDateCriterion(value: DateCriterion) {
+        prefs.edit().putString(KEY_ENTRIES_DATE_CRITERION, value.name).apply()
+        _entriesDateCriterion.value = value
+    }
 
     private val _preference = MutableStateFlow(read())
     val preference: StateFlow<ThemePreference> = _preference.asStateFlow()
+    private val _palette = MutableStateFlow(readPalette())
+    val palette: StateFlow<ThemePalette> = _palette.asStateFlow()
     private val _corners = MutableStateFlow(
         runCatching { CornerStyle.valueOf(prefs.getString(KEY_CORNERS, null).orEmpty()) }.getOrDefault(CornerStyle.Rounded),
     )
@@ -34,9 +48,19 @@ class ThemeStore(context: Context) {
         _preference.value = value
     }
 
+    private fun readPalette(): ThemePalette =
+        runCatching { ThemePalette.valueOf(prefs.getString(KEY_PALETTE, null) ?: "") }.getOrDefault(ThemePalette.Accord)
+
+    fun setPalette(value: ThemePalette) {
+        prefs.edit().putString(KEY_PALETTE, value.name).apply()
+        _palette.value = value
+    }
+
     private companion object {
         const val FILE = "accord_local_preferences"
         const val KEY = "theme"
         const val KEY_CORNERS = "corners"
+        const val KEY_PALETTE = "palette"
+        const val KEY_ENTRIES_DATE_CRITERION = "entries_date_criterion"
     }
 }

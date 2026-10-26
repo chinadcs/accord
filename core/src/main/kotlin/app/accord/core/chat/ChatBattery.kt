@@ -9,7 +9,9 @@ import java.time.LocalDate
  * aceitação. Nenhum dado real do casal: as frases reais ficam fora do repositório.
  */
 object ChatBattery {
-    const val VERSION = 1
+    // v1 está preservada no source/runtime de poc/results/pc/run-001-baseline.
+    // v2 corrige apenas os rótulos de categoria (autorização do usuário em 25/10/2026).
+    const val VERSION = 2
 
     val today: LocalDate = LocalDate.of(2026, 10, 22)
 
@@ -25,6 +27,9 @@ object ChatBattery {
             CategoryItem("c6", "pet", "Pet"),
             CategoryItem("c7", "eletronicos", "Eletrônicos"),
             CategoryItem("c8", "transporte", "Transporte"),
+            CategoryItem("c9", "lazer", "Lazer"),
+            CategoryItem("c10", "lazer.passeios", "Passeios", "lazer"),
+            CategoryItem("c11", "eletronicos.equipamentos", "Equipamentos", "eletronicos"),
         ),
         hasCard = true,
         cardLabel = "Cartão",
@@ -33,6 +38,20 @@ object ChatBattery {
         members = listOf(MemberItem("m1", "person-1", "Ana"), MemberItem("m2", "person-2", "Bruno")),
         receipts = receipts,
     )
+
+    /**
+     * Contexto do tamanho do produto: as 10 categorias principais e as subcategorias iniciais de
+     * [app.accord.core.space.CategorySeed]. O prompt de um casal real é bem maior que o da bateria
+     * pequena, e a Etapa 0 precisa medir o prefixo que o produto de fato enviará. Os IDs são as chaves
+     * do seed, os mesmos que o gabarito usa.
+     */
+    fun realisticContext(receipts: List<ReceiptItem> = listOf(ReceiptItem("r1", "receipt-1", "entry-1", "Último registro"))): ChatContext {
+        val small = context(receipts)
+        val items = app.accord.core.space.CategorySeed.items
+        return small.copy(
+            categories = items.mapIndexed { index, item -> CategoryItem("c${index + 1}", item.key, item.name, item.parentKey, app.accord.core.space.CategorySeed.hints[item.key]) },
+        )
+    }
 
     sealed interface Expected {
         /** Salvar: valor em centavos, parcelas, papel, data, categoria (ID; nulo = "a classificar") e meio. */
@@ -49,7 +68,7 @@ object ChatBattery {
 
         data class Asks(val field: QuestionField) : Expected
         data class Replies(val reply: StandardReply) : Expected
-        data class Corrects(val change: EntryChange) : Expected
+        data class Corrects(val change: EntryChange, val receiptId: String = "receipt-1", val entryId: String = "entry-1") : Expected
         data object Refuses : Expected
     }
 
@@ -74,18 +93,18 @@ object ChatBattery {
 
     val cases: List<Case> = listOf(
         // Valores
-        Case("valor-1", "Valores", "café 35 no pix", reg("café", "35", payment = ChatPayment.Pix), Expected.Registers(3500, payment = ChatPayment.Pix, accountId = "account-1")),
-        Case("valor-2", "Valores", "almoço 35,90 no pix", reg("almoço", "35,90", payment = ChatPayment.Pix), Expected.Registers(3590, payment = ChatPayment.Pix, accountId = "account-1")),
-        Case("valor-3", "Valores", "geladeira 1.200 no cartão", reg("geladeira", "1.200", payment = ChatPayment.Card), Expected.Registers(120_000, payment = ChatPayment.Card)),
+        Case("valor-1", "Valores", "café 35 no pix", reg("café", "35", category = "c1", payment = ChatPayment.Pix), Expected.Registers(3500, categoryId = "alimentacao", payment = ChatPayment.Pix, accountId = "account-1")),
+        Case("valor-2", "Valores", "almoço 35,90 no pix", reg("almoço", "35,90", category = "c1", payment = ChatPayment.Pix), Expected.Registers(3590, categoryId = "alimentacao", payment = ChatPayment.Pix, accountId = "account-1")),
+        Case("valor-3", "Valores", "geladeira 1.200 no cartão", reg("geladeira", "1.200", category = "c5", payment = ChatPayment.Card), Expected.Registers(120_000, categoryId = "casa", payment = ChatPayment.Card)),
         Case(
             "valor-4", "Valores", "tv 1.200 em 6x no cartão",
-            reg("tv", "1.200", role = AmountRole.PerInstallment, installments = "6x", payment = ChatPayment.Card),
-            Expected.Registers(120_000, 6, AmountRole.Total, payment = ChatPayment.Card),
+            reg("tv", "1.200", role = AmountRole.PerInstallment, installments = "6x", category = "c11", payment = ChatPayment.Card),
+            Expected.Registers(120_000, 6, AmountRole.Total, categoryId = "eletronicos.equipamentos", payment = ChatPayment.Card),
         ),
         Case(
             "valor-5", "Valores", "tv 6 parcelas de 200 no cartão",
-            reg("tv", "200", role = AmountRole.PerInstallment, installments = "6 parcelas", payment = ChatPayment.Card),
-            Expected.Registers(20_000, 6, AmountRole.PerInstallment, payment = ChatPayment.Card),
+            reg("tv", "200", role = AmountRole.PerInstallment, installments = "6 parcelas", category = "c11", payment = ChatPayment.Card),
+            Expected.Registers(20_000, 6, AmountRole.PerInstallment, categoryId = "eletronicos.equipamentos", payment = ChatPayment.Card),
         ),
         Case(
             "valor-6", "Valores", "tv em 6 parcelas de 200 no cartão",
@@ -98,18 +117,18 @@ object ChatBattery {
         // Datas
         Case(
             "data-1", "Datas", "mercado 50 dia 7 no pix",
-            reg("mercado", "50", date = day(DateKind.DayOfMonth, "dia 7"), payment = ChatPayment.Pix),
-            Expected.Registers(5000, date = LocalDate.of(2026, 10, 7), payment = ChatPayment.Pix, accountId = "account-1"),
+            reg("mercado", "50", date = day(DateKind.DayOfMonth, "dia 7"), category = "c3", payment = ChatPayment.Pix),
+            Expected.Registers(5000, date = LocalDate.of(2026, 10, 7), categoryId = "alimentacao.mercado", payment = ChatPayment.Pix, accountId = "account-1"),
         ),
         Case(
             "data-2", "Datas", "mercado 50 dia 25 no pix",
-            reg("mercado", "50", date = day(DateKind.DayOfMonth, "dia 25"), payment = ChatPayment.Pix),
-            Expected.Registers(5000, date = LocalDate.of(2026, 9, 25), payment = ChatPayment.Pix, accountId = "account-1"),
+            reg("mercado", "50", date = day(DateKind.DayOfMonth, "dia 25"), category = "c3", payment = ChatPayment.Pix),
+            Expected.Registers(5000, date = LocalDate.of(2026, 9, 25), categoryId = "alimentacao.mercado", payment = ChatPayment.Pix, accountId = "account-1"),
         ),
         Case(
             "data-3", "Datas", "mercado 50 ontem no pix",
-            reg("mercado", "50", date = day(DateKind.Yesterday, "ontem"), payment = ChatPayment.Pix),
-            Expected.Registers(5000, date = LocalDate.of(2026, 10, 21), payment = ChatPayment.Pix, accountId = "account-1"),
+            reg("mercado", "50", date = day(DateKind.Yesterday, "ontem"), category = "c3", payment = ChatPayment.Pix),
+            Expected.Registers(5000, date = LocalDate.of(2026, 10, 21), categoryId = "alimentacao.mercado", payment = ChatPayment.Pix, accountId = "account-1"),
         ),
         Case(
             "data-4", "Datas", "mercado 50 dia 31 no pix",
@@ -140,8 +159,8 @@ object ChatBattery {
         ),
         Case(
             "categoria-3", "Categorias", "viagem 300 no cartão",
-            reg("viagem", "300", category = "c99", payment = ChatPayment.Card),
-            Expected.Registers(30_000, payment = ChatPayment.Card),
+            reg("viagem", "300", category = "c10", payment = ChatPayment.Card),
+            Expected.Registers(30_000, categoryId = "lazer.passeios", payment = ChatPayment.Card),
         ),
         // Conversa
         Case(
@@ -165,15 +184,15 @@ object ChatBattery {
         // Pagamento
         Case("pagamento-1", "Pagamento", "mercado 35", reg("mercado", "35"), Expected.Asks(QuestionField.Payment)),
         Case("pagamento-2", "Pagamento", "mercado 35 hoje", reg("mercado", "35", payment = ChatPayment.Card), Expected.Asks(QuestionField.Payment)),
-        Case("pagamento-3", "Pagamento", "mercado 35 no cartão", reg("mercado", "35", payment = ChatPayment.Card), Expected.Registers(3500, payment = ChatPayment.Card)),
+        Case("pagamento-3", "Pagamento", "mercado 35 no cartão", reg("mercado", "35", category = "c3", payment = ChatPayment.Card), Expected.Registers(3500, categoryId = "alimentacao.mercado", payment = ChatPayment.Card)),
         Case(
-            "pagamento-4", "Pagamento", "mercado 35 no débito", reg("mercado", "35", payment = ChatPayment.Debit),
-            Expected.Registers(3500, payment = ChatPayment.Debit, accountId = "account-1"),
+            "pagamento-4", "Pagamento", "mercado 35 no débito", reg("mercado", "35", category = "c3", payment = ChatPayment.Debit),
+            Expected.Registers(3500, categoryId = "alimentacao.mercado", payment = ChatPayment.Debit, accountId = "account-1"),
         ),
-        Case("pagamento-5", "Pagamento", "mercado 35 em dinheiro", reg("mercado", "35", payment = ChatPayment.Cash), Expected.Registers(3500, payment = ChatPayment.Cash)),
+        Case("pagamento-5", "Pagamento", "mercado 35 em dinheiro", reg("mercado", "35", category = "c3", payment = ChatPayment.Cash), Expected.Registers(3500, categoryId = "alimentacao.mercado", payment = ChatPayment.Cash)),
         Case(
-            "pagamento-6", "Pagamento", "mercado 35 no pix itaú", reg("mercado", "35", payment = ChatPayment.Pix, account = "a2"),
-            Expected.Registers(3500, payment = ChatPayment.Pix, accountId = "account-2"),
+            "pagamento-6", "Pagamento", "mercado 35 no pix itaú", reg("mercado", "35", category = "c3", payment = ChatPayment.Pix, account = "a2"),
+            Expected.Registers(3500, categoryId = "alimentacao.mercado", payment = ChatPayment.Pix, accountId = "account-2"),
         ),
         Case("pagamento-7", "Pagamento", "mercado 35 no pix da conta nova", reg("mercado", "35", payment = ChatPayment.Pix, account = "a9"), Expected.Asks(QuestionField.Account)),
         // Fora do Chat no P0
@@ -224,7 +243,7 @@ object ChatBattery {
             } ?: false
             is Expected.Asks -> (decision as? ChatDecision.Ask)?.question?.field == expected.field
             is Expected.Replies -> (decision as? ChatDecision.Reply)?.reply == expected.reply
-            is Expected.Corrects -> (decision as? ChatDecision.Correct)?.plan?.change == expected.change
+            is Expected.Corrects -> (decision as? ChatDecision.Correct)?.plan?.let { it.change == expected.change && it.receiptId == expected.receiptId && it.entryId == expected.entryId } == true
             Expected.Refuses -> decision is ChatDecision.Refuse
         }
         return when {

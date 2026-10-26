@@ -88,6 +88,7 @@ fun SpaceRoute(
     DisposableEffect(viewModel) { onDispose { viewModel.leave() } }
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
+    val clipLabel = stringResource(R.string.space_code_clip_label)
     SpaceScreen(
         ui, access, padding, firstRun,
         onTab = viewModel::selectTab, onName = viewModel::onName, onCode = viewModel::onCode,
@@ -95,7 +96,7 @@ fun SpaceRoute(
         onRefresh = { viewModel.refresh(announce = true) },
         onCopy = { code ->
             scope.launch {
-                val clip = ClipData.newPlainText("Código de convite", code)
+                val clip = ClipData.newPlainText(clipLabel, code)
                 // O código é um segredo de uso único: o Android esconde a prévia quando suporta.
                 if (Build.VERSION.SDK_INT >= 33) {
                     clip.description.extras = PersistableBundle().apply { putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true) }
@@ -214,22 +215,21 @@ private fun ManageContent(
     onContinue: () -> Unit,
 ) {
     val space = checkNotNull(access.space)
-    Surface(color = MaterialTheme.colorScheme.primaryContainer, shape = MaterialTheme.shapes.medium) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             Text(stringResource(R.string.space_section_space), style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onPrimaryContainer)
-            Text(space.name, style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer)
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(space.name, style = MaterialTheme.typography.headlineSmall)
             Text(stringResource(R.string.space_section_participants), style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.onPrimaryContainer)
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
             val bothIn = (access.participants?.items?.size ?: 0) >= InviteCode.MAX_MEMBERS
             Text(
                 stringResource(R.string.space_you_connected) + " · " + stringResource(if (bothIn) R.string.space_other_connected else R.string.space_other_waiting),
-                style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onPrimaryContainer,
+                style = MaterialTheme.typography.bodyLarge,
             )
             Text(
                 access.participants?.let { stringResource(R.string.space_last_check, serviceTimeLabel(it.checkedAtMillis)) } ?: stringResource(R.string.space_never_checked),
-                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onPrimaryContainer,
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             OutlinedButton(onClick = onRefresh, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
                 Text(stringResource(R.string.space_check_participants))

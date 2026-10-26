@@ -5,7 +5,7 @@ Room, protocolo/fake/adaptador remoto, migrações Supabase e testes. S1 está f
 `accord-9tl`, com pendências em `accord-abv`; S2 está entregue em `accord-rsw` (testes JVM,
 Supabase local e emulador), com validação nos aparelhos em `accord-chf` e decisões abertas em
 `accord-smv`. A existência desses arquivos não comprova implantação hospedada, validação nos dois
-celulares ou aceite das propostas de implementação.
+celulares; os ADRs 0022–0025 e 0027–0029 foram aceitos em 24/10/2026, mas isso não prova implantação nem medição.
 
 ## Fontes e autoridade
 
@@ -31,7 +31,7 @@ exigem registrar a questão no Beads e esclarecer a decisão afetada.
 | Inferência | SLM no aparelho, sem fallback automático para IA remota | Modelo, motor, quantização e qualidade em português |
 | Distribuição | Download separado no primeiro uso, até 2 GB decimais por celular | Hospedagem, tamanho efetivo, retomada e espaço instalado |
 | Desempenho | Meta de até 5 s do envio ao resultado visível de frase curta, com modelo carregado | Medições nos dois celulares; carga inicial, RAM, bateria e aquecimento |
-| Compartilhamento | Supabase hospedado no plano Free, Auth e PostgreSQL | Esquema, RPC, RLS e protocolo locais existem; propostas nos ADRs 0023/0024; hospedagem e validações finais não comprovadas aqui |
+| Compartilhamento | Supabase hospedado no plano Free, Auth e PostgreSQL | Esquema, RPC, RLS e protocolo locais existem; decisões aceitas nos ADRs 0023/0024; hospedagem e validações finais não comprovadas aqui |
 | Dados locais | Banco/fila persistidos; Room com BundledSQLiteDriver; Chat local | Room implementado (ADR 0016); política detalhada de acesso local e Chat de S3 pendentes |
 | Importação | OFX estruturado e PDF bancário com texto selecionável, processados localmente | Bibliotecas e compatibilidade com fatura/extrato Itaú em BRL |
 | Interface | Lucide e catálogo/logotipos locais de logos-bancos-br, versão estável fixada; [tokens](docs/design-tokens.md) e [ícones](docs/icones-categorias.md) decididos | Ativos incorporados; revisão visual nos temas e aparelhos pendente |
@@ -65,6 +65,11 @@ accord/
                              importar). Sem motor integrado o Chat guarda a mensagem ("sem modelo").
                              Revisar só lista os conflitos de edição.
                              Assets locais: catálogo de bancos e logos (assets/banks, logos-bancos-br)
+  poc/                       bancada de medição da Etapa 0 (S3 §2): app debug separado app.accord.poc, sem
+                             INTERNET, com o llama.cpp fixado em poc/llama-cpp.pin e uma ponte JNI mínima;
+                             roda o prompt, o contrato e o validador do produto. Não é produto nem escolhe
+                             motor; exercitada só no emulador (docs/poc/etapa-0.md)
+  scripts/poc/               scripts da bancada (preparar, enviar modelos, rodar, coletar) e report.py
   gradle/libs.versions.toml  versões fixadas; wrapper Gradle 9.8.2 (gradlew)
   docs/
     plano-desenvolvimento.md requisitos, decisões e critérios de aceite
@@ -77,11 +82,12 @@ accord/
   .codex/                   adaptadores de agentes, configuração e hooks
 ```
 
-Existem `:core`, `:persistence`, `:remote` e `:app` (comandos em AGENTS.md). Detalhes implementados
-da fachada, RPC e protocolo permanecem propostas nos ADRs 0022–0024. Projeções financeiras
+Existem `:core`, `:persistence`, `:remote`, `:app` e `:poc` (comandos em AGENTS.md). Detalhes implementados
+da fachada, RPC e protocolo estão nos ADRs 0022–0024, aceitos em 24/10/2026. Projeções financeiras
 assumidas em S1 estão no ADR 0025. O contrato do Chat e o histórico local (0027), a distribuição e o
-ciclo de vida do modelo (0028) e a troca de forma de pagamento (0029) são propostas implementadas no S3.
-Esta revisão documenta o estado; não aprova essas propostas nem escolhe framework de DI, modelo/motor,
+ciclo de vida do modelo (0028) e a troca de forma de pagamento (0029) foram aceitos pelo usuário em 24/10/2026
+e estão implementados no S3 (aceite registrado em `accord-awb`; implantação e medições nos aparelhos seguem pendentes).
+Esta revisão documenta o estado; não aprova as demais propostas nem escolhe framework de DI, modelo/motor,
 hospedagem dos pesos ou leitor bancário. Nenhuma medição de modelo foi feita nos aparelhos (Etapa 0)
 e o download real, o motor e o download em segundo plano pelo sistema não existem.
 
@@ -234,7 +240,7 @@ inclusive com tentativas nos dois aparelhos; dispensar pista não exclui nem est
 
 ## Interface e validação futura
 
-Chat é a tela inicial. Raízes: Chat, Orçamento, Lançamentos, Revisar e Mais. Detalhes preservam
+Chat é a tela inicial. Barra inferior: Lançamentos, Orçamento, Chat (ícone Astroid, sem rótulo visual), Revisar e Mais. Detalhes preservam
 contexto ao voltar. Seguir cada spec, linguagem pt-BR clara e sem julgamento, temas claro/escuro,
 fonte nativa e tokens semânticos. Corpo 16 sp, títulos 20–24 sp, margens 16 dp e ritmo 4/8 dp
 são referências adaptáveis, não alturas rígidas. Validar TalkBack, texto ampliado, teclado,

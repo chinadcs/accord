@@ -20,17 +20,38 @@ import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.accord.R
+import app.accord.core.chat.ChatCoordinator
 import app.accord.core.sync.ConflictView
 import app.accord.persistence.SyncController
 import app.accord.ui.theme.Accord
+import app.accord.ui.review.CategoryReviewItem
+import app.accord.ui.review.buildCategoryReview
 import app.accord.ui.theme.AccordSpacing
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /** Conflitos de edição abertos, para a raiz Revisar listá-los junto das demais pendências. */
-class ReviewViewModel(private val sync: SyncController) : ViewModel() {
+@OptIn(ExperimentalCoroutinesApi::class)
+class ReviewViewModel(private val sync: SyncController, private val chat: StateFlow<ChatCoordinator?> = MutableStateFlow(null)) : ViewModel() {
+    /** Categorias a esclarecer (lançamentos "a classificar" com pergunta aberta), do histórico deste aparelho. */
+    val categories: StateFlow<List<CategoryReviewItem>> = chat
+        .flatMapLatest { coordinator -> coordinator?.snapshot?.map(::buildCategoryReview) ?: flowOf(emptyList()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Aceita a sugestão do modelo: só aqui a categoria passa a valer para o lançamento. */
+    fun accept(item: CategoryReviewItem) {
+        val option = item.suggestion ?: return
+        viewModelScope.launch { chat.value?.answer(item.question.id, option) }
+    }
+
     private val _conflicts = MutableStateFlow<List<ConflictView>>(emptyList())
     val conflicts: StateFlow<List<ConflictView>> = _conflicts.asStateFlow()
 

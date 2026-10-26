@@ -15,7 +15,8 @@ enum class AmountRole { Single, Total, PerInstallment }
 enum class QuestionField { Amount, AmountRole, Date, Payment, Account, Category, Target }
 
 /** Referências curtas emitidas pelo app (S3 §4): o modelo cita `c1`, `a2`, `r1`, nunca um ID. */
-data class CategoryItem(val ref: String, val id: String, val name: String, val parentId: String? = null)
+/** [hint] é a descrição de uso para o interpretador (S3 §4); nula quando a categoria não tem uma. */
+data class CategoryItem(val ref: String, val id: String, val name: String, val parentId: String? = null, val hint: String? = null)
 
 data class AccountItem(val ref: String, val id: String, val label: String)
 

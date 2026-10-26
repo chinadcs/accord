@@ -3,9 +3,11 @@ package app.accord
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.printToLog
 import androidx.test.core.app.ActivityScenario
@@ -108,7 +110,7 @@ class ChatFlowTest {
         waitForText("A classificar")
         waitForText("Amazon $tag R$")
         waitForText("qual categoria?")
-        compose.onNodeWithText("Pet").performClick()
+        compose.onNodeWithText("Pet").performScrollTo().assertIsDisplayed().performClick()
         // A pergunta some e o recibo mostra a categoria escolhida, no mesmo lançamento.
         compose.waitUntil(10_000) { compose.onAllNodesWithText("qual categoria?", substring = true).fetchSemanticsNodes().isEmpty() }
         waitForText("Alterado depois")
@@ -156,7 +158,8 @@ class ChatFlowTest {
         compose.onNodeWithText("Mensagem do Chat").performTextInput("mercado $tag 9")
         compose.onNodeWithText("Orçamento").performClick()
         waitForText("Orçamento")
-        compose.onNodeWithText("Chat").performClick()
+        // a aba Chat é o botão central da barra e só tem descrição, sem rótulo visual
+        compose.onNodeWithContentDescription("Chat").performClick()
         waitForText("mercado $tag 9")
     }
 

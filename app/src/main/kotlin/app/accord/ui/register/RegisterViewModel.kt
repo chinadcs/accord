@@ -35,6 +35,8 @@ enum class RegisterPhase { Editing, Saving, Saved }
 
 data class RegisterUiState(
     val form: RegisterForm,
+    val today: java.time.LocalDate = form.date,
+    val autoFocusAmount: Boolean = false,
     val errors: Map<FormField, FormError> = emptyMap(),
     /** Erro que não pertence a nenhum campo (ex.: falha inesperada). O conteúdo digitado é preservado. */
     val generalError: String? = null,
@@ -71,11 +73,25 @@ class RegisterViewModel(
     private var draftId: String? = saved[KEY_DRAFT]
 
     private val _state = MutableStateFlow(
-        RegisterUiState(form = saved.get<String>(KEY_FORM)?.let { FormCodec.decode(it, today) } ?: RegisterForm(
-            date = today,
-            // Aberto pela tela de Rendas: já parte de uma renda, sem escolher o tipo de novo.
-            kind = if (saved.get<String>(ARG_KIND) == KIND_INCOME) FormKind.Income else FormKind.Expense,
-        )),
+        RegisterUiState(
+            form = saved.get<String>(KEY_FORM)?.takeIf { '=' in it }?.let { FormCodec.decode(it, today) } ?: RegisterForm(
+                date = today,
+                // Atalhos do FAB e tela de Rendas definem tipo e meio antes de abrir o formulário.
+                kind = if (saved.get<String>(ARG_KIND) == KIND_INCOME) FormKind.Income else FormKind.Expense,
+                form = saved.get<String>(ARG_FORM)?.let { requested ->
+                    when (requested.lowercase()) {
+                        "pix" -> ExpenseForm.Pix
+                        "debit" -> ExpenseForm.Debit
+                        "cash" -> ExpenseForm.Cash
+                        "boleto" -> ExpenseForm.Boleto
+                        "card" -> ExpenseForm.Card
+                        else -> ExpenseForm.Pix
+                    }
+                } ?: ExpenseForm.Pix,
+            ),
+            today = today,
+            autoFocusAmount = saved.get<String>(KEY_FORM)?.contains('=') != true && saved.get<String>(KEY_DRAFT) == null,
+        ),
     )
     val state: StateFlow<RegisterUiState> = _state.asStateFlow()
 
@@ -99,7 +115,7 @@ class RegisterViewModel(
             }
             // Sem estado salvo da recriação do processo, retoma o rascunho mais recente, se houver.
             var recovered = false
-            if (!saved.contains(KEY_FORM)) {
+            if (saved.get<String>(KEY_FORM)?.contains('=') != true) {
                 (space.drafts() as? QueryResult.Data)?.value?.firstOrNull { it.source == DraftSource.Form }?.let { draft ->
                     draftId = draft.id
                     saved[KEY_DRAFT] = draft.id
@@ -295,7 +311,12 @@ class RegisterViewModel(
             draftId = null
             saved.remove<String>(KEY_DRAFT)
             saved.remove<String>(KEY_FORM)
-            _state.update { it.copy(form = withDefaultAccount(RegisterForm(date = today), it.defaultAccountId), recoveredDraft = false, errors = emptyMap()) }
+            _state.update {
+                it.copy(
+                    form = withDefaultAccount(RegisterForm(date = today), it.defaultAccountId),
+                    recoveredDraft = false, errors = emptyMap(), autoFocusAmount = true,
+                )
+            }
         }
     }
 
@@ -304,6 +325,7 @@ class RegisterViewModel(
 
     private companion object {
         const val ARG_KIND = "kind"
+        const val ARG_FORM = "form"
         const val KIND_INCOME = "income"
         const val KEY_FORM = "form"
         const val KEY_COMMAND = "commandId"

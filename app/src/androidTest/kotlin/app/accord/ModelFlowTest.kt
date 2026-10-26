@@ -52,10 +52,14 @@ class ModelFlowTest {
         }
     }
 
-    private fun openModel() {
+    /** Modelo, exportar e limpar o histórico ficam em "Configurações do Chat", dentro de Mais. */
+    private fun openChatSettings(item: String) {
         compose.onNodeWithText("Mais").performClick()
-        compose.onNodeWithText("Modelo no aparelho").performScrollTo().performClick()
+        compose.onNodeWithText("Configurações do Chat").performScrollTo().performClick()
+        compose.onNodeWithText(item).performScrollTo().performClick()
     }
+
+    private fun openModel() = openChatSettings("Modelo no aparelho")
 
     @Test
     fun tamanhoRealEEspacoAparecemAntesDeBaixarEOModeloFicaPronto() {
@@ -83,8 +87,7 @@ class ModelFlowTest {
 
     @Test
     fun limparHistoricoPedeConfirmacaoENaoAlteraLancamentos() {
-        compose.onNodeWithText("Mais").performClick()
-        compose.onNodeWithText("Limpar histórico do Chat").performScrollTo().performClick()
+        openChatSettings("Limpar histórico do Chat")
         waitForText("Nenhum lançamento muda")
         compose.onNodeWithText("Limpar", substring = false).performClick()
         waitForText("Histórico do Chat limpo")
@@ -92,8 +95,7 @@ class ModelFlowTest {
 
     @Test
     fun exportarAvisaQueOArquivoGuardaAsConversasSemSenha() {
-        compose.onNodeWithText("Mais").performClick()
-        compose.onNodeWithText("Exportar histórico do Chat").performScrollTo().performClick()
+        openChatSettings("Exportar histórico do Chat")
         waitForText("sem senha nem criptografia")
         compose.onNodeWithText("Cancelar").performClick()
     }

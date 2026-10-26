@@ -55,7 +55,7 @@ do status. Não atribuir ao autor da documentação a aprovação de uma decisã
 Decisões já aprovadas podem ser recuperadas diretamente como `accepted`, após conferir a fonte.
 Agentes registram escolhas técnicas dentro da autorização vigente; decisões reservadas ao usuário
 aguardam sua resposta. Implementação existente, tarefa fechada e ausência de objeção não aprovam
-uma proposta. Aceitar este fluxo não aceita automaticamente os ADRs 0022–0025 nem 0027–0029. A revisão de
+uma proposta. Os ADRs 0022–0025 e 0027–0029 foram aceitos pelo usuário em 24/10/2026. A revisão de
 aceite dessas propostas está na tarefa Beads `accord-awb`.
 
 Propostas podem evoluir antes do aceite. Para mudar uma decisão aceita, criar outro ADR e ligar
@@ -127,14 +127,16 @@ observada em 24/10/2026. Os estados abaixo são de decisão, não de conclusão 
 | [0019](0019-importacao-local-com-rastreabilidade.md) | Importação local com rastreabilidade | accepted |
 | [0020](0020-alertas-semanais-offline-primeiro.md) | Alertas semanais, offline primeiro | accepted |
 | [0021](0021-recursos-visuais-locais-e-versoes-fixadas.md) | Recursos visuais locais e versões fixadas | accepted |
-| [0022](0022-fachada-financeira-e-modulos.md) | Fachada financeira e separação de módulos | proposed |
-| [0023](0023-servico-rpc-rls-e-adaptador-http.md) | Serviço RPC/RLS e adaptador HTTP | proposed |
-| [0024](0024-protocolo-por-agregados-e-cursor.md) | Protocolo por agregados e cursor | proposed |
-| [0025](0025-projecoes-financeiras-derivadas.md) | Projeções financeiras derivadas | proposed |
+| [0022](0022-fachada-financeira-e-modulos.md) | Fachada financeira e separação de módulos | accepted |
+| [0023](0023-servico-rpc-rls-e-adaptador-http.md) | Serviço RPC/RLS e adaptador HTTP | accepted |
+| [0024](0024-protocolo-por-agregados-e-cursor.md) | Protocolo por agregados e cursor | accepted |
+| [0025](0025-projecoes-financeiras-derivadas.md) | Projeções financeiras derivadas | accepted |
 | [0026](0026-configuracao-inicial-e-conta-unica.md) | Vigência inicial de limites e padrão de conta única | accepted |
-| [0027](0027-contrato-estrito-da-proposta-e-historico-local-do-chat.md) | Contrato estrito da proposta do Chat e histórico local | proposed |
-| [0028](0028-distribuicao-verificada-e-ciclo-de-vida-do-modelo.md) | Distribuição verificada e ciclo de vida do modelo | proposed |
-| [0029](0029-troca-de-forma-de-pagamento-como-comando.md) | Troca da forma de pagamento como comando | proposed |
+| [0027](0027-contrato-estrito-da-proposta-e-historico-local-do-chat.md) | Contrato estrito da proposta do Chat e histórico local | accepted |
+| [0028](0028-distribuicao-verificada-e-ciclo-de-vida-do-modelo.md) | Distribuição verificada e ciclo de vida do modelo | accepted |
+| [0029](0029-troca-de-forma-de-pagamento-como-comando.md) | Troca da forma de pagamento como comando | accepted |
+| [0030](0030-interpretacao-local-em-etapas-na-poc.md) | Interpretação local em etapas e ligação de trechos na PoC | proposed |
+| [0031](0031-limite-de-credito-com-alerta.md) | Limite de crédito com alerta de excesso | accepted |
 
 Questões ainda sem decisão, como modelo/motor, leitores bancários, acesso local, retenção de
 idempotência e validação financeira no serviço, permanecem nos Beads/specs S2–S4. Suas tarefas

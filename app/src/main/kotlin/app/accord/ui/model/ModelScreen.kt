@@ -19,6 +19,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -96,54 +97,56 @@ fun ModelScreen(
             style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
         )
-        Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-            when (install) {
-                ModelInstall.Checking -> Row(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
-                    Text(stringResource(R.string.model_checking))
-                }
-                is ModelInstall.NoCatalog -> NoCatalog(install.error)
-                is ModelInstall.Available -> Available(install, status.active != null)
-                is ModelInstall.WaitingForWifi -> {
-                    Facts(install.manifest)
-                    Text(stringResource(R.string.model_waiting_wifi), style = MaterialTheme.typography.bodyLarge)
-                }
-                is ModelInstall.Downloading -> Downloading(install)
-                is ModelInstall.Paused -> {
-                    Text(stringResource(R.string.model_paused_title), style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        stringResource(R.string.model_paused_body, formatBytes(install.receivedBytes), formatBytes(install.totalBytes)),
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                when (install) {
+                    ModelInstall.Checking -> Row(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                        Text(stringResource(R.string.model_checking))
+                    }
+                    is ModelInstall.NoCatalog -> NoCatalog(install.error)
+                    is ModelInstall.Available -> Available(install, status.active != null)
+                    is ModelInstall.WaitingForWifi -> {
+                        Facts(install.manifest)
+                        Text(stringResource(R.string.model_waiting_wifi), style = MaterialTheme.typography.bodyLarge)
+                    }
+                    is ModelInstall.Downloading -> Downloading(install)
+                    is ModelInstall.Paused -> {
+                        Text(stringResource(R.string.model_paused_title), style = MaterialTheme.typography.titleMedium)
+                        Text(
+                            stringResource(R.string.model_paused_body, formatBytes(install.receivedBytes), formatBytes(install.totalBytes)),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                    is ModelInstall.Interrupted -> {
+                        Text(
+                            stringResource(R.string.model_interrupted_title, formatBytes(install.receivedBytes), formatBytes(install.totalBytes)),
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                        Text(
+                            stringResource(if (install.resumable) R.string.model_interrupted_resumable else R.string.model_interrupted_restart),
+                            style = MaterialTheme.typography.bodyLarge,
+                        )
+                    }
+                    is ModelInstall.Verifying -> Step(R.string.model_verifying)
+                    is ModelInstall.Installing -> Step(R.string.model_installing)
+                    is ModelInstall.Ready -> {
+                        Text(stringResource(R.string.model_status_ready), style = MaterialTheme.typography.titleMedium)
+                        Text(stringResource(R.string.model_version, install.version), style = MaterialTheme.typography.bodyMedium)
+                        Text(stringResource(R.string.model_ready_body), style = MaterialTheme.typography.bodyLarge)
+                        if (!state.engineAvailable) Text(stringResource(R.string.model_ready_no_engine), style = MaterialTheme.typography.bodyLarge)
+                    }
+                    is ModelInstall.Failed -> Text(
+                        stringResource(
+                            when (install.cause) {
+                                is FailureCause.Corrupted -> R.string.model_failed_corrupted
+                                FailureCause.Storage -> R.string.model_failed_storage
+                                FailureCause.Install -> R.string.model_failed_install
+                            },
+                        ),
                         style = MaterialTheme.typography.bodyLarge,
                     )
                 }
-                is ModelInstall.Interrupted -> {
-                    Text(
-                        stringResource(R.string.model_interrupted_title, formatBytes(install.receivedBytes), formatBytes(install.totalBytes)),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                    Text(
-                        stringResource(if (install.resumable) R.string.model_interrupted_resumable else R.string.model_interrupted_restart),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                }
-                is ModelInstall.Verifying -> Step(R.string.model_verifying)
-                is ModelInstall.Installing -> Step(R.string.model_installing)
-                is ModelInstall.Ready -> {
-                    Text(stringResource(R.string.model_status_ready), style = MaterialTheme.typography.titleMedium)
-                    Text(stringResource(R.string.model_version, install.version), style = MaterialTheme.typography.bodyMedium)
-                    Text(stringResource(R.string.model_ready_body), style = MaterialTheme.typography.bodyLarge)
-                    if (!state.engineAvailable) Text(stringResource(R.string.model_ready_no_engine), style = MaterialTheme.typography.bodyLarge)
-                }
-                is ModelInstall.Failed -> Text(
-                    stringResource(
-                        when (install.cause) {
-                            is FailureCause.Corrupted -> R.string.model_failed_corrupted
-                            FailureCause.Storage -> R.string.model_failed_storage
-                            FailureCause.Install -> R.string.model_failed_install
-                        },
-                    ),
-                    style = MaterialTheme.typography.bodyLarge,
-                )
             }
         }
 
@@ -266,7 +269,7 @@ private fun Available(install: ModelInstall.Available, updating: Boolean) {
     Facts(install.manifest)
     val blocker = install.blocker
     if (blocker is Blocker.SpaceShort) {
-        Text(stringResource(R.string.model_space_short, formatBytes(blocker.missingBytes)), style = MaterialTheme.typography.bodyLarge, color = Accord.colors.onAttentionContainer)
+        Text(stringResource(R.string.model_space_short, formatBytes(blocker.missingBytes)), style = MaterialTheme.typography.bodyLarge, color = Accord.colors.attention)
         if (blocker.canRemoveCurrent) {
             Text(stringResource(R.string.model_space_remove_note), style = MaterialTheme.typography.bodyMedium)
         } else {
@@ -288,10 +291,15 @@ private fun Downloading(install: ModelInstall.Downloading) {
         style = MaterialTheme.typography.titleMedium,
     )
     val description = stringResource(R.string.model_progress_description)
-    LinearProgressIndicator(
-        progress = { (percent ?: 0) / 100f },
-        modifier = Modifier.fillMaxWidth().semantics { contentDescription = description },
-    )
+    // Total desconhecido não vira 0%: a barra fica indeterminada até haver percentual real.
+    if (percent != null) {
+        LinearProgressIndicator(
+            progress = { percent / 100f },
+            modifier = Modifier.fillMaxWidth().semantics { contentDescription = description },
+        )
+    } else {
+        LinearProgressIndicator(Modifier.fillMaxWidth().semantics { contentDescription = description })
+    }
     Text(stringResource(R.string.model_downloading_note), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
 }
 

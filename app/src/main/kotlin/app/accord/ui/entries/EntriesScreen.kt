@@ -1,6 +1,7 @@
 package app.accord.ui.entries
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -14,7 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -49,6 +50,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -76,6 +78,8 @@ import app.accord.ui.theme.Accord
 import app.accord.ui.theme.AccordSpacing
 import com.composables.icons.lucide.R as Lucide
 import java.time.YearMonth
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @Composable
 fun EntriesRoute(
@@ -91,6 +95,7 @@ fun EntriesRoute(
         state, padding,
         onSearch = viewModel::setSearch, onApplyFilter = viewModel::applyFilter, onClear = viewModel::clearFilters,
         onRetry = viewModel::retry, onLoadMore = viewModel::loadMore, onOpenEntry = onOpenEntry, onNew = onNew, onBack = onBack,
+        showInlineNew = onBack != null,
     )
 }
 
@@ -108,9 +113,11 @@ fun EntriesScreen(
     onNew: () -> Unit,
     onBack: (() -> Unit)? = null,
     listState: LazyListState = rememberLazyListState(),
+    showInlineNew: Boolean = true,
 ) {
     var showFilters by rememberSaveable { mutableStateOf(false) }
-    var searchText by rememberSaveable { mutableStateOf(state.filter.search) }
+    var showMonthPicker by rememberSaveable { mutableStateOf(false) }
+    var searchText by rememberSaveable(state.filter.search) { mutableStateOf(state.filter.search) }
 
     // Carregamento progressivo: ao chegar perto do fim pede a página seguinte, sem mexer na ordem.
     LaunchedEffect(listState, state.rows.size, state.nextCursor) {
@@ -125,7 +132,7 @@ fun EntriesScreen(
         contentPadding = PaddingValues(
             start = AccordSpacing.s4, end = AccordSpacing.s4,
             top = padding.calculateTopPadding() + AccordSpacing.s4,
-            bottom = padding.calculateBottomPadding() + AccordSpacing.s4,
+            bottom = padding.calculateBottomPadding() + AccordSpacing.s4 + if (!showInlineNew) 80.dp else 0.dp,
         ),
         verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
     ) {
@@ -137,18 +144,20 @@ fun EntriesScreen(
                     }
                 }
                 ScreenTitle(stringResource(R.string.entries_title), Modifier.weight(1f))
-                Button(onClick = onNew, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                if (showInlineNew) Button(onClick = onNew, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
                     DecorativeIcon(Lucide.drawable.lucide_ic_plus, tint = MaterialTheme.colorScheme.onPrimary)
                     Text(stringResource(R.string.entries_new), modifier = Modifier.padding(start = AccordSpacing.s1))
                 }
             }
         }
+        item { BalanceHeader(state.filter, state.balance, onOpenFilters = { showFilters = true }) }
         item {
             OutlinedTextField(
                 value = searchText,
                 onValueChange = { searchText = it; onSearch(it) },
-                label = { Text(stringResource(R.string.entries_search_label)) },
+                label = { Text(stringResource(R.string.entries_search_label), style = MaterialTheme.typography.bodyMedium) },
                 singleLine = true,
+                shape = MaterialTheme.shapes.large,
                 leadingIcon = { DecorativeIcon(Lucide.drawable.lucide_ic_search) },
                 trailingIcon = {
                     if (searchText.isNotEmpty()) {
@@ -161,11 +170,9 @@ fun EntriesScreen(
             )
         }
         item {
-            FilterBar(state.filter, onOpenFilters = { showFilters = true }, onToggleCriterion = {
+            FilterBar(state.filter, onPickMonth = { showMonthPicker = true }, onChangeMonth = { delta ->
                 onApplyFilter(
-                    state.filter.copy(
-                        criterion = if (state.filter.criterion == DateCriterion.BudgetMonth) DateCriterion.PurchaseDate else DateCriterion.BudgetMonth,
-                    ),
+                    state.filter.copy(from = state.filter.from.plusMonths(delta), to = state.filter.to.plusMonths(delta)),
                 )
             })
         }
@@ -175,13 +182,25 @@ fun EntriesScreen(
         }
         if (state.rows.isNotEmpty()) {
             state.summary?.let { summary -> item { SummaryBlock(summary, state.total) } }
-            items(state.rows, key = { it.id }) { row -> EntryItem(row, state.categories, onOpenEntry) }
+            itemsIndexed(state.rows, key = { _, row -> row.id }) { index, row ->
+                Column {
+                    if (index == 0 || state.rows[index - 1].date != row.date) {
+                        Text(
+                            row.date.format(ENTRY_GROUP_DATE),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = AccordSpacing.s2, bottom = AccordSpacing.s1).semantics { heading() },
+                        )
+                    }
+                    EntryItem(row, state.categories, onOpenEntry)
+                }
+            }
             if (state.status == EntriesStatus.Loading && state.nextCursor != null) {
                 item { Text(stringResource(R.string.entries_loading_more), style = MaterialTheme.typography.bodyMedium) }
             }
             if (state.loadMoreFailed) item { ErrorBanner(true, onLoadMore) }
         } else if (state.status == EntriesStatus.Ready) {
-            item { EmptyState(state.filter.isFiltered, onClear, onNew) }
+            item { EmptyState(state.filter.isFiltered, onClear, onNew, showInlineNew) }
         } else if (state.status == EntriesStatus.Loading) {
             item { Text(stringResource(R.string.state_loading), style = MaterialTheme.typography.bodyLarge) }
         }
@@ -197,57 +216,86 @@ fun EntriesScreen(
             )
         }
     }
+    if (showMonthPicker) {
+        MonthPickerSheet(
+            selected = state.filter.from,
+            onSelect = { month ->
+                onApplyFilter(state.filter.copy(from = month, to = month))
+                showMonthPicker = false
+            },
+            onDismiss = { showMonthPicker = false },
+        )
+    }
 }
 
 private const val LOAD_MORE_DISTANCE = 4
+private val ENTRY_GROUP_DATE = DateTimeFormatter.ofPattern("dd 'de' MMMM 'de' yyyy", Locale.forLanguageTag("pt-BR"))
+private val ENTRY_INVOICE_MONTH = DateTimeFormatter.ofPattern("MM/yy", Locale.forLanguageTag("pt-BR"))
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun FilterBar(filter: EntriesFilterState, onOpenFilters: () -> Unit, onToggleCriterion: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-        FlowRow(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2), horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-            OutlinedButton(onClick = onOpenFilters, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                DecorativeIcon(Lucide.drawable.lucide_ic_list_filter)
-                Text(
-                    if (filter.activeCount > 0) stringResource(R.string.entries_filters_count, filter.activeCount) else stringResource(R.string.entries_filters),
-                    modifier = Modifier.padding(start = AccordSpacing.s1),
-                )
+private fun FilterBar(
+    filter: EntriesFilterState,
+    onPickMonth: () -> Unit,
+    onChangeMonth: (Long) -> Unit,
+) {
+    val monthPickerDescription = stringResource(R.string.entries_pick_month)
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { onChangeMonth(-1) }, modifier = Modifier.size(AccordSpacing.touchMin)) {
+                Icon(painterResource(Lucide.drawable.lucide_ic_chevron_left), contentDescription = stringResource(R.string.entries_previous_month))
             }
-            Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.small) {
+            Surface(
+                modifier = Modifier.weight(1f).clickable(role = Role.Button, onClick = onPickMonth)
+                    .semantics { contentDescription = monthPickerDescription },
+                color = MaterialTheme.colorScheme.surfaceContainerLow,
+                shape = MaterialTheme.shapes.small,
+            ) {
                 Row(
-                    Modifier.heightIn(min = AccordSpacing.touchMin).padding(horizontal = AccordSpacing.s3),
+                    Modifier.heightIn(min = AccordSpacing.touchMin).padding(horizontal = AccordSpacing.s2),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+                    horizontalArrangement = Arrangement.Center,
                 ) {
                     DecorativeIcon(Lucide.drawable.lucide_ic_calendar, modifier = Modifier.size(20.dp))
                     Text(
                         if (filter.from == filter.to) filter.from.label() else stringResource(R.string.entries_period, filter.from.label(), filter.to.label()),
                         style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.padding(start = AccordSpacing.s2),
+                    )
+                }
+            }
+            IconButton(onClick = { onChangeMonth(1) }, modifier = Modifier.size(AccordSpacing.touchMin)) {
+                Icon(painterResource(Lucide.drawable.lucide_ic_chevron_right), contentDescription = stringResource(R.string.entries_next_month))
+            }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@Composable
+private fun MonthPickerSheet(selected: YearMonth, onSelect: (YearMonth) -> Unit, onDismiss: () -> Unit) {
+    var year by rememberSaveable { mutableStateOf(selected.year) }
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                IconButton(onClick = { year-- }, modifier = Modifier.size(AccordSpacing.touchMin)) {
+                    Icon(painterResource(Lucide.drawable.lucide_ic_chevron_left), contentDescription = stringResource(R.string.entries_previous_year))
+                }
+                Text(year.toString(), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+                IconButton(onClick = { year++ }, modifier = Modifier.size(AccordSpacing.touchMin)) {
+                    Icon(painterResource(Lucide.drawable.lucide_ic_chevron_right), contentDescription = stringResource(R.string.entries_next_year))
+                }
+            }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                (1..12).forEach { monthNumber ->
+                    val month = YearMonth.of(year, monthNumber)
+                    FilterChip(
+                        selected = month == selected,
+                        onClick = { onSelect(month) },
+                        label = { Text(month.format(DateTimeFormatter.ofPattern("MMM", Locale.forLanguageTag("pt-BR"))).replaceFirstChar(Char::uppercase)) },
+                        modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
                     )
                 }
             }
         }
-        AdaptiveRow(
-            start = {
-                val budget = filter.criterion == DateCriterion.BudgetMonth
-                Column {
-                    Text(
-                        stringResource(if (budget) R.string.entries_criterion_budget else R.string.entries_criterion_purchase),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                    Text(
-                        stringResource(if (budget) R.string.entries_criterion_budget_hint else R.string.entries_criterion_purchase_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            },
-            end = {
-                TextButton(onClick = onToggleCriterion, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                    Text(stringResource(R.string.entries_criterion_change))
-                }
-            },
-        )
     }
 }
 
@@ -270,7 +318,7 @@ private fun ErrorBanner(keepsPrevious: Boolean, onRetry: () -> Unit) {
 }
 
 @Composable
-private fun EmptyState(filtered: Boolean, onClear: () -> Unit, onNew: () -> Unit) {
+private fun EmptyState(filtered: Boolean, onClear: () -> Unit, onNew: () -> Unit, showInlineNew: Boolean) {
     Column(
         Modifier.fillMaxWidth().padding(vertical = AccordSpacing.s6),
         verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
@@ -290,7 +338,7 @@ private fun EmptyState(filtered: Boolean, onClear: () -> Unit, onNew: () -> Unit
             OutlinedButton(onClick = onClear, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
                 Text(stringResource(R.string.entries_clear_filters))
             }
-        } else {
+        } else if (showInlineNew) {
             Button(onClick = onNew, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
                 Text(stringResource(R.string.action_register_manually))
             }
@@ -300,15 +348,30 @@ private fun EmptyState(filtered: Boolean, onClear: () -> Unit, onNew: () -> Unit
 
 @Composable
 private fun SummaryBlock(summary: EntrySummary, total: Int) {
+    val lines = listOf(
+        R.string.summary_expenses to summary.expenses,
+        R.string.summary_incomes to summary.incomes,
+        R.string.summary_credits_list to summary.credits,
+        R.string.summary_invoice_payments to summary.invoicePayments,
+    ).filter { it.second.cents != 0L }
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             Text(pluralStringResource(R.plurals.entries_total, total, total), style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-            fun Money.nonZero() = cents != 0L
-            if (summary.expenses.nonZero()) SummaryLine(stringResource(R.string.summary_expenses), summary.expenses)
-            if (summary.incomes.nonZero()) SummaryLine(stringResource(R.string.summary_incomes), summary.incomes)
-            if (summary.credits.nonZero()) SummaryLine(stringResource(R.string.summary_credits_list), summary.credits)
-            if (summary.invoicePayments.nonZero()) SummaryLine(stringResource(R.string.summary_invoice_payments), summary.invoicePayments)
+            if (androidx.compose.ui.platform.LocalDensity.current.fontScale >= 1.3f) {
+                lines.forEach { (label, amount) -> SummaryLine(stringResource(label), amount) }
+            } else {
+                lines.chunked(2).forEach { pair ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
+                        pair.forEach { (label, amount) ->
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+                                Text(stringResource(label), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(amount.format(), style = Accord.typography.amountRow)
+                            }
+                        }
+                    }
+                }
+            }
             Text(stringResource(R.string.summary_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
@@ -336,24 +399,25 @@ private fun EntryRow.visibleSituations(): List<EntrySituation> {
 
 @Composable
 private fun EntryItem(row: EntryRow, categories: Map<String, CategoryNode>, onOpen: (String) -> Unit) {
-    val path = categoryPath(categories, row.categoryId)
-    val icon = when (row.kind) {
-        EntryKind.InvoicePayment -> Lucide.drawable.lucide_ic_credit_card
-        EntryKind.Income -> lucideRes("banknote-arrow-down")
-        else -> lucideRes(categories[row.categoryId]?.iconKey ?: "tag")
-    }
+    val category = row.categoryId?.let(categories::get)
+    val categoryName = category?.name
     val situations = row.visibleSituations()
-    val installment = if (row.installmentNumber != null && row.installmentCount != null) {
-        stringResource(R.string.detail_installment_of, row.installmentNumber!!, row.installmentCount!!)
+    val installmentNumber = row.installmentNumber
+    val installmentCount = row.installmentCount
+    val installment = if (installmentNumber != null && installmentCount != null && installmentCount > 1) {
+        stringResource(R.string.detail_installment_of, installmentNumber, installmentCount)
     } else {
         null
     }
+    val invoiceMonth = row.dueDate?.let { YearMonth.from(it).format(ENTRY_INVOICE_MONTH) }
+        ?.takeIf { row.kind == EntryKind.CardInstallment }
+        ?.let { stringResource(R.string.entries_invoice_month, it) }
     val situationLabels = situations.map { it.label() }
     val subtitle = listOfNotNull(
-        row.date.shortLabel(), path, installment, row.method?.label(),
+        row.date.shortLabel(), installment, invoiceMonth, row.method?.label(),
         row.kind.label().takeIf { row.kind in setOf(EntryKind.Refund, EntryKind.InvoicePayment, EntryKind.Income) },
     ).joinToString(" · ")
-    val description = (listOf(row.description, row.amount.format(), subtitle) + situationLabels).joinToString(". ")
+    val description = (listOfNotNull(row.description, row.amount.format(), categoryName, subtitle.takeIf(String::isNotBlank)) + situationLabels).joinToString(". ")
 
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -368,7 +432,6 @@ private fun EntryItem(row: EntryRow, categories: Map<String, CategoryNode>, onOp
             ) {
                 EntryIdentityIcon(
                     description = row.description,
-                    fallbackIcon = icon,
                     allowVendor = row.kind != EntryKind.Income && row.kind != EntryKind.InvoicePayment,
                 )
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
@@ -377,6 +440,18 @@ private fun EntryItem(row: EntryRow, categories: Map<String, CategoryNode>, onOp
                         end = { Text(row.amount.format(), style = Accord.typography.amountRow, textAlign = TextAlign.End) },
                     )
                     Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (category != null) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
+                        ) {
+                            DecorativeIcon(
+                                lucideRes(category.iconKey),
+                                modifier = Modifier.size(16.dp),
+                            )
+                            Text(category.name, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                     if (situations.isNotEmpty()) SituationTags(situations)
                 }
             }

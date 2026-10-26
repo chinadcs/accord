@@ -11,6 +11,7 @@ import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -107,14 +108,22 @@ class RegisterUiTest {
         compose.onNodeWithText("Novo lançamento").assertIsDisplayed()
         compose.onNodeWithText("Descrição").assertIsDisplayed()
         compose.onNodeWithText("Valor (R$)").assertIsDisplayed()
-        compose.onNodeWithText("Cartão").assertIsDisplayed()
         compose.onNodeWithText("Salvar lançamento").assertIsDisplayed()
+        // compra no cartão (o padrão) não oferece as formas de pagamento imediatas
+        assertEquals(0, compose.onAllNodes(hasText("Pagamento")).fetchSemanticsNodes().size)
+    }
+
+    @Test
+    fun despesaImediataOfereceAsFormasDePagamento() {
+        show(base(form = RegisterForm(date = today, form = ExpenseForm.Pix)))
+        compose.onNodeWithText("Pagamento").assertIsDisplayed()
+        listOf("Pix", "Débito", "Dinheiro", "Boleto").forEach { compose.onNodeWithText(it).assertIsDisplayed() }
     }
 
     @Test
     fun escolherRendaTiraPagamentoECategoria() {
-        show(base())
-        compose.onNodeWithText("Renda").performClick()
+        // o tipo vem do botão "+" (Renda, Despesa ou Despesa no cartão), não de chips no formulário
+        show(base(form = RegisterForm(date = today, kind = FormKind.Income)))
         compose.onNodeWithText("Data prevista").assertIsDisplayed()
         assertEquals(0, compose.onAllNodes(hasText("Categoria", substring = true) and hasText("Escolher categoria", substring = true)).fetchSemanticsNodes().size)
         assertEquals(0, compose.onAllNodes(hasText("Pix")).fetchSemanticsNodes().size)
@@ -122,7 +131,7 @@ class RegisterUiTest {
 
     @Test
     fun boletoTrocaORotuloDaDataParaVencimento() {
-        show(base())
+        show(base(form = RegisterForm(date = today, form = ExpenseForm.Pix)))
         compose.onNodeWithText("Boleto").performClick()
         compose.onNodeWithText("Vencimento").assertIsDisplayed()
     }
@@ -163,6 +172,8 @@ class RegisterUiTest {
     fun seletorDeCategoriaMostraCaminhoCompletoDepoisDeEscolher() {
         show(base())
         compose.onNodeWithText("Escolher categoria").performClick()
+        // duas etapas: primeiro o grupo, depois a categoria
+        compose.onNodeWithText("Alimentação").performClick()
         compose.onNodeWithText("Delivery").performClick()
         compose.onNodeWithText("Alimentação > Delivery").assertIsDisplayed()
     }
@@ -192,8 +203,10 @@ class RegisterUiTest {
     fun maisOpcoesRevelamParcelasERecorrencia() {
         show(base())
         compose.onNode(hasScrollAction()).performScrollToNode(hasText("Mais opções", substring = true))
-        compose.onNodeWithText("Mais opções: parcelas, recorrência, fatura e pagamento").performClick()
-        see("Parcelas")
+        compose.onNodeWithText("Mais opções").performClick()
+        // "Parcelas" também aparece no título da seção e na dica do botão: o campo é o que aceita texto
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Parcelas") and hasSetTextAction())
+        compose.onNode(hasText("Parcelas") and hasSetTextAction()).assertIsDisplayed()
         see("Todo mês")
         see("Todo ano")
     }
