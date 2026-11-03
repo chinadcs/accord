@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Notificação de possível excesso (S5.5). A versão pública, na tela bloqueada, não leva categoria nem valor. -->
+    <string name="alert_channel_name">Possível excesso</string>
+    <string name="alert_channel_description">Avisa, no máximo uma vez por semana e por categoria, quando a previsão passa do limite.</string>
+    <string name="alert_public_title">Possível excesso em uma categoria</string>
+    <string name="alert_public_text">Abra o Accord para ver.</string>
+    <string name="alert_title_possible">%1$s: pode passar do limite</string>
+    <string name="alert_text_possible">Previsão de %1$s para um limite de %2$s, %3$s acima. É uma estimativa.</string>
+    <string name="alert_title_exceeded">%1$s: já passou do limite</string>
+    <string name="alert_text_exceeded">Gastos de %1$s para um limite de %2$s, %3$s acima.</string>
+    <!-- Preferências de alertas (tela 27) -->
+    <string name="alert_prefs_title">Preferências de alertas</string>
+    <string name="alert_prefs_switch">Avisos de possível excesso</string>
+    <string name="alert_prefs_on">Ativado neste aparelho</string>
+    <string name="alert_prefs_off">Desativado neste aparelho</string>
+    <string name="alert_prefs_undefined">Você ainda não escolheu. Enquanto isso, nenhum aviso é mostrado neste aparelho.</string>
+    <string name="alert_prefs_permission_granted">Permissão no aparelho: concedida</string>
+    <string name="alert_prefs_permission_denied">Permissão no aparelho: não concedida</string>
+    <string name="alert_prefs_permission_channel">Permissão no aparelho: o canal “Possível excesso” está desativado nos ajustes do sistema</string>
+    <string name="alert_prefs_denied_help">Sem a permissão o aviso não aparece neste aparelho, mas as previsões continuam no aplicativo. Se o Android não mostrar mais o pedido, abrimos os ajustes de notificação do app.</string>
+    <string name="alert_prefs_channel_help">Ative o canal nos ajustes do sistema para voltar a receber o aviso aqui.</string>
+    <string name="alert_prefs_allow">Permitir notificações</string>
+    <string name="alert_prefs_open_settings">Abrir ajustes do sistema</string>
+    <string name="alert_prefs_quota">Até um aviso por semana por categoria</string>
+    <string name="alert_prefs_recipients">Destinatários: vocês dois</string>
+    <string name="alert_prefs_window">Janela: segunda a domingo · no máximo 1 por categoria</string>
+    <string name="alert_prefs_window_note">A semana é renovada na segunda às 00h, no horário de São Paulo. Recalcular a previsão ou mudar um limite na mesma semana não gera outro aviso, e a virada da semana sozinha não envia nada.</string>
+    <string name="alert_prefs_forecasts_stay">As previsões continuam no aplicativo.</string>
+    <string name="alert_prefs_local_note">Esta escolha vale só para este aparelho. Salvar não envia aviso de teste nem aviso de antes.</string>
+    <string name="alert_prefs_save">Salvar preferências</string>
+    <string name="alert_prefs_saving">Salvando…</string>
+    <string name="alert_prefs_saved">Preferência salva neste aparelho.</string>
+    <string name="alert_prefs_save_failed">Não foi possível salvar agora. Nada mudou; tente de novo.</string>
+    <string name="more_alert_prefs">Preferências de alertas</string>
+    <string name="alert_menu_on">Ativados neste aparelho</string>
+    <string name="alert_menu_off">Desativados neste aparelho. As previsões continuam no aplicativo.</string>
+    <string name="alert_menu_undefined">Você ainda não escolheu. Nenhum aviso aparece neste aparelho.</string>
+    <string name="alert_menu_need_permission">Ativados, mas falta permitir as notificações neste aparelho</string>
+    <string name="alert_menu_channel">Ativados, mas o canal “Possível excesso” está desativado nos ajustes do sistema</string>
+
+    <!-- Passo obrigatório dos Primeiros passos -->
+    <string name="steps_notifications">Notificações</string>
+    <string name="steps_notifications_pending">Obrigatório neste aparelho: o Accord avisa vocês dois, no máximo uma vez por semana por categoria, quando a previsão passa do limite. Você pode desativar depois em Mais.</string>
+    <string name="steps_notifications_done">Permitidas neste aparelho. Você pode desativar depois em Mais.</string>
+    <string name="steps_notifications_channel">O canal “Possível excesso” está desativado nos ajustes do sistema.</string>
+    <string name="steps_notifications_action_pending">Permitir notificações</string>
+    <string name="steps_notifications_action_done">Ver preferências</string>
+    <string name="steps_notifications_required">Para começar, permita as notificações neste aparelho. Você pode desativá-las depois em Mais.</string>
+</resources>

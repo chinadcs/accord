@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Previsões e alertas (tela 20) e detalhe da previsão (tela 21) -->
+    <string name="forecast_title">Previsões e alertas</string>
+    <string name="forecast_intro">Conhecidos mais uma estimativa de novos gastos variáveis. A estimativa é sempre marcada como tal e não é recomendação.</string>
+    <string name="forecast_empty">Nenhuma categoria com gasto ou limite neste mês.</string>
+    <string name="forecast_retry_note">Não foi possível calcular a estimativa agora. Os compromissos conhecidos continuam visíveis.</string>
+    <string name="forecast_stale_banner">A visão compartilhada pode não incluir movimentos do outro celular. Isso reduz a confiança das previsões.</string>
+    <string name="forecast_invoice_open">Fatura do cartão que vence neste mês: aberta</string>
+    <string name="forecast_invoice_closed_config">Fatura do cartão que vence neste mês: fechada pelo dia configurado, ainda não conferida</string>
+    <string name="forecast_invoice_closed_conferred">Fatura do cartão que vence neste mês: fechada e conferida</string>
+    <plurals name="forecast_to_classify">
+        <item quantity="one">A classificar: %1$s em %2$d lançamento, fora das categorias</item>
+        <item quantity="other">A classificar: %1$s em %2$d lançamentos, fora das categorias</item>
+    </plurals>
+
+    <!-- Cartão da categoria -->
+    <string name="forecast_state_possible">possível excesso de %1$s</string>
+    <string name="forecast_state_occurred">excesso já ocorrido de %1$s</string>
+    <string name="forecast_state_within">dentro do limite</string>
+    <string name="forecast_state_no_limit">sem limite definido</string>
+    <string name="forecast_known_plus_estimated">Conhecidos %1$s + estimados %2$s (estimativa)</string>
+    <string name="forecast_known_only">Conhecidos %1$s</string>
+    <string name="forecast_known_unavailable">Conhecidos %1$s · estimativa indisponível: ainda não há mês completo de histórico</string>
+    <string name="forecast_total_limit">Previsão %1$s · limite %2$s</string>
+    <string name="forecast_total_no_limit">Previsão %1$s · sem limite definido</string>
+    <string name="forecast_total_ended">Mês encerrado: %1$s gastos conhecidos</string>
+    <string name="forecast_confidence_none">Confiança: sem ressalvas conhecidas</string>
+    <string name="forecast_confidence_low">Confiança: baixa · %1$s</string>
+    <string name="forecast_reason_history">histórico incompleto</string>
+    <string name="forecast_reason_coverage">cobertura incompleta</string>
+    <string name="forecast_reason_pendings">há pendências</string>
+    <string name="forecast_reason_classify">lançamentos a classificar</string>
+    <string name="forecast_reason_invoice">fechamento da fatura só pelo dia configurado</string>
+    <string name="forecast_reason_stale">visão compartilhada possivelmente desatualizada</string>
+    <string name="forecast_alert_none">Nenhum aviso nesta semana</string>
+    <string name="forecast_alert_shown">Aviso desta semana: registrado em %1$s · mostrado neste aparelho</string>
+    <string name="forecast_alert_pending">Aviso desta semana: registrado em %1$s · aguardando exibição neste aparelho</string>
+    <string name="forecast_alert_pref">Aviso desta semana: registrado em %1$s · não mostrado: avisos desativados neste aparelho</string>
+    <string name="forecast_alert_permission">Aviso desta semana: registrado em %1$s · não mostrado: sem permissão de notificação</string>
+    <string name="forecast_alert_channel">Aviso desta semana: registrado em %1$s · não mostrado: canal desativado nos ajustes</string>
+    <string name="forecast_alert_expired">Aviso desta semana: registrado em %1$s · não mostrado: a semana terminou antes de exibir</string>
+    <string name="forecast_alert_known">Aviso desta semana: registrado em %1$s · já existia quando este aparelho entrou</string>
+    <string name="forecast_open_detail">Entender previsão</string>
+    <string name="forecast_open_prefs">Preferências de alertas</string>
+    <string name="forecast_improve">Melhorar a cobertura</string>
+    <string name="forecast_improve_note">Revisar o que falta registrar ou conferir deixa a previsão mais confiável.</string>
+    <string name="forecast_card_description">%1$s: %2$s. %3$s. %4$s.</string>
+
+    <!-- Detalhe (tela 21) -->
+    <string name="forecast_detail_title">%1$s · previsão do mês</string>
+    <string name="forecast_detail_known">Conhecidos</string>
+    <string name="forecast_detail_estimated">Novos gastos variáveis (estimativa)</string>
+    <string name="forecast_detail_unavailable">indisponível</string>
+    <string name="forecast_detail_total">Previsão total</string>
+    <string name="forecast_detail_limit">Limite</string>
+    <string name="forecast_detail_no_limit">não definido</string>
+    <string name="forecast_detail_possible">Possível excesso</string>
+    <string name="forecast_detail_occurred">Excesso já ocorrido</string>
+    <string name="forecast_detail_check_entries">Conferir movimentos</string>
+    <string name="forecast_detail_how">Como foi estimado</string>
+    <string name="forecast_detail_how_hide">Esconder como foi estimado</string>
+    <string name="forecast_detail_composition">O que compõe os conhecidos</string>
+    <string name="forecast_nature_realized">Gastos já feitos</string>
+    <string name="forecast_nature_installments">Parcelas na fatura do mês</string>
+    <string name="forecast_nature_recurrences">Recorrências do mês</string>
+    <string name="forecast_nature_boletos">Boletos do mês</string>
+    <string name="forecast_nature_credits">Estornos confirmados (abatem)</string>
+    <plurals name="forecast_nature_line_count">
+        <item quantity="one">%1$s · %2$d item</item>
+        <item quantity="other">%1$s · %2$d itens</item>
+    </plurals>
+    <string name="forecast_to_confirm_note">Dos conhecidos, %1$s estão numa fatura estimada (a conferir) e podem mudar de mês.</string>
+    <string name="forecast_by_subcategory">Por subcategoria</string>
+    <string name="forecast_no_subcategory">Sem subcategoria</string>
+    <string name="forecast_can_change">O que já está comprometido não muda por conta própria; o estimado muda com novos gastos e com os dias que passam. Isto não é recomendação financeira.</string>
+    <string name="forecast_how_rule">Regra %1$s: ritmo dos últimos períodos completos × dias restantes, por canal. Calculado em %2$s.</string>
+    <string name="forecast_how_channel_card">Cartão · fatura de %1$s (%2$s a %3$s)</string>
+    <string name="forecast_how_channel_other">Demais meios · mês civil (%1$s a %2$s)</string>
+    <string name="forecast_how_ended">Período encerrado: só valem os conhecidos.</string>
+    <string name="forecast_how_closed">Fatura fechada: nada mais é estimado no cartão para ela.</string>
+    <string name="forecast_how_unavailable">Sem período completo no histórico: não há estimativa, o que não é o mesmo que zero.</string>
+    <string name="forecast_how_estimated">Gastos de %1$s em %2$d dias · períodos usados: %3$d · %4$d dias restantes · estimado %5$s</string>
+    <string name="forecast_confidence_section">Confiança</string>
+    <string name="forecast_check_destination">Conferir</string>
+    <string name="forecast_event_opened">Você abriu pelo aviso de %1$s.</string>
+    <string name="forecast_event_then">No aviso: previsão de %1$s para um limite de %2$s.</string>
+    <string name="forecast_event_changed">A previsão foi atualizada desde o aviso. Agora: %1$s.</string>
+    <string name="forecast_event_same">A previsão continua igual à do aviso.</string>
+    <string name="forecast_back_to_forecasts">Voltar às previsões</string>
+    <string name="forecast_gone_title">Esta categoria não está mais disponível</string>
+    <string name="forecast_gone_body">Ela foi removida ou não é uma categoria principal. As previsões do mês continuam na tela anterior.</string>
+    <string name="forecast_detail_loading">Calculando…</string>
+</resources>

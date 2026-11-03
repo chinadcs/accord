@@ -30,6 +30,8 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.accord.R
+import app.accord.alerts.AndroidNotifications
+import app.accord.ui.alerts.rememberAllowNotifications
 import app.accord.core.sync.StepId
 import app.accord.core.sync.StepStatus
 import app.accord.ui.components.DecorativeIcon
@@ -48,13 +50,16 @@ data class StepActions(
     val onStart: () -> Unit,
     val onRegisterManually: () -> Unit,
     val onBack: (() -> Unit)? = null,
+    /** "Permitir notificações" (passo obrigatório); a ação com o pedido do sistema nasce na rota. */
+    val onNotifications: () -> Unit = {},
 )
 
 @Composable
-fun FirstStepsRoute(viewModel: FirstStepsViewModel, padding: PaddingValues, actions: StepActions) {
+fun FirstStepsRoute(viewModel: FirstStepsViewModel, gate: AndroidNotifications, padding: PaddingValues, actions: StepActions) {
     val content by viewModel.content.collectAsStateWithLifecycle()
     RefreshOnResume(viewModel::refresh)
-    FirstStepsScreen(content, padding, actions)
+    val allow = rememberAllowNotifications(gate, onDone = viewModel::refresh)
+    FirstStepsScreen(content, padding, actions.copy(onNotifications = allow))
 }
 
 @Composable
@@ -86,10 +91,14 @@ fun FirstStepsScreen(content: StepsContent, padding: PaddingValues, actions: Ste
             }
         }
         Text(stringResource(R.string.steps_note_received), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Button(onClick = actions.onStart, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+        val canStart = (content as? StepsContent.Ready)?.canStart ?: false
+        if (content is StepsContent.Ready && !canStart) {
+            Text(stringResource(R.string.steps_notifications_required), style = MaterialTheme.typography.bodyMedium, color = Accord.colors.attention)
+        }
+        Button(onClick = actions.onStart, enabled = canStart, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
             Text(stringResource(R.string.steps_start))
         }
-        OutlinedButton(onClick = actions.onRegisterManually, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+        OutlinedButton(onClick = actions.onRegisterManually, enabled = canStart, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
             Text(stringResource(R.string.steps_register_manually))
         }
     }
@@ -142,5 +151,6 @@ private fun StepActions.open(id: StepId) = when (id) {
     StepId.AccountsAndMyDefault -> onAccounts()
     StepId.LimitsAndSplit -> onLimits()
     StepId.OtherPerson -> onSpace()
+    StepId.Notifications -> onNotifications()
     StepId.DeviceModel -> Unit
 }

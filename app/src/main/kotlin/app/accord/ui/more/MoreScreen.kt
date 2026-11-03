@@ -1,6 +1,13 @@
 package app.accord.ui.more
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.Switch
+import app.accord.core.alerts.NotificationAccess
+import app.accord.ui.alerts.AlertPreferencesUiState
+import app.accord.ui.alerts.menuStatus
+import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
+import app.accord.ui.theme.Accord
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -50,6 +57,12 @@ data class MoreActions(
     val onRegister: () -> Unit = {},
     val onSpace: () -> Unit = {},
     val onAppearance: () -> Unit = {},
+    val onAlertPreferences: () -> Unit = {},
+    val onForecasts: () -> Unit = {},
+    /** Liga ou desliga os avisos neste aparelho (salva na hora). */
+    val onAlertsToggle: (Boolean) -> Unit = {},
+    /** "Permitir notificações" (ou abrir os ajustes do sistema), quando falta a permissão ou o canal está desativado. */
+    val onAlertsAllow: () -> Unit = {},
     val onSignOut: () -> Unit = {},
     val onRenew: () -> Unit = {},
     val onSync: () -> Unit = {},
@@ -68,6 +81,8 @@ fun MoreScreen(
     syncStatus: SyncStatus? = null,
     entriesCriterion: DateCriterion = DateCriterion.PurchaseDate,
     onEntriesCriterionChange: (DateCriterion) -> Unit = {},
+    /** Preferência e situação real das notificações deste aparelho; nulo onde o menu não se aplica. */
+    alerts: AlertPreferencesUiState? = null,
 ) {
     var showChatSettings by rememberSaveable { mutableStateOf(false) }
     if (showChatSettings) {
@@ -94,6 +109,7 @@ fun MoreScreen(
             MoreRow(R.string.more_card, Lucide.drawable.lucide_ic_credit_card, actions.onCard)
             MoreRow(R.string.more_incomes, Lucide.drawable.lucide_ic_wallet, actions.onIncomes)
             MoreRow(R.string.more_commitments, Lucide.drawable.lucide_ic_calendar, actions.onCommitments)
+            MoreRow(R.string.forecast_title, Lucide.drawable.lucide_ic_trending_up, actions.onForecasts)
         }
 
         Section(R.string.more_group_space) {
@@ -134,6 +150,10 @@ fun MoreScreen(
                 }
                 MoreRow(R.string.more_sign_out, Lucide.drawable.lucide_ic_log_out, actions.onSignOut)
             }
+        }
+
+        alerts?.takeIf { !it.loading && !it.failed }?.let { state ->
+            Section(R.string.more_group_notifications) { NotificationsMenu(state, actions) }
         }
 
         Section(R.string.more_group_chat) {
@@ -191,6 +211,49 @@ private fun Section(title: Int, content: @Composable () -> Unit) {
             Column { content() }
         }
     }
+}
+
+/**
+ * Controle das notificações a um toque (S5.5b): a chave liga e desliga neste aparelho, a linha diz a situação real do sistema e, se falta permissão
+ * ou o canal está desativado, o botão leva a resolver. A tela 27 guarda os detalhes. Nada aqui é obrigatório depois do primeiro uso.
+ */
+@Composable
+private fun NotificationsMenu(state: AlertPreferencesUiState, actions: MoreActions) {
+    val status = state.menuStatus()
+    val label = stringResource(R.string.alert_prefs_switch)
+    val statusText = stringResource(status.text)
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = AccordSpacing.rowMedium)
+            .toggleable(value = state.enabled, role = Role.Switch, onValueChange = actions.onAlertsToggle)
+            .padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
+    ) {
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.small) {
+            DecorativeIcon(
+                if (state.enabled) Lucide.drawable.lucide_ic_bell else Lucide.drawable.lucide_ic_bell_off,
+                modifier = Modifier.padding(AccordSpacing.s2), tint = MaterialTheme.colorScheme.primary,
+            )
+        }
+        Column(Modifier.weight(1f)) {
+            Text(label, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                statusText, style = MaterialTheme.typography.bodySmall,
+                color = if (status.attention) Accord.colors.attention else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(checked = state.enabled, onCheckedChange = null)
+    }
+    if (state.access != NotificationAccess.Granted) {
+        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+        OutlinedButton(
+            onClick = actions.onAlertsAllow,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2).heightIn(min = AccordSpacing.touchMin),
+        ) {
+            Text(stringResource(if (state.access == NotificationAccess.ChannelDisabled) R.string.alert_prefs_open_settings else R.string.alert_prefs_allow))
+        }
+    }
+    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+    MoreRow(R.string.more_alert_prefs, Lucide.drawable.lucide_ic_sliders_horizontal, actions.onAlertPreferences)
 }
 
 @Composable

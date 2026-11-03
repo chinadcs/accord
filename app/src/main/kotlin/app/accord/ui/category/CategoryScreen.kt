@@ -1,5 +1,6 @@
 package app.accord.ui.category
 
+import app.accord.ui.categoryColor
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -46,10 +47,11 @@ fun CategoryRoute(
     padding: PaddingValues,
     onBack: () -> Unit,
     onCheckEntries: (categoryId: String, subcategoryId: String?) -> Unit,
+    onOpenForecast: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     RefreshOnResume(viewModel::refresh)
-    CategoryScreen(state, viewModel.month, padding, onBack, { viewModel.load() }, onCheckEntries)
+    CategoryScreen(state, viewModel.month, padding, onBack, { viewModel.load() }, onCheckEntries, onOpenForecast)
 }
 
 @Composable
@@ -60,6 +62,7 @@ fun CategoryScreen(
     onBack: () -> Unit,
     onRetry: () -> Unit,
     onCheckEntries: (String, String?) -> Unit,
+    onOpenForecast: () -> Unit = {},
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -88,7 +91,7 @@ fun CategoryScreen(
                     }
                 }
             }
-            is CategoryContent.Ready -> categoryContent(state.value, onCheckEntries)
+            is CategoryContent.Ready -> categoryContent(state.value, onCheckEntries, onOpenForecast)
         }
     }
 }
@@ -96,8 +99,9 @@ fun CategoryScreen(
 private fun androidx.compose.foundation.lazy.LazyListScope.categoryContent(
     value: CategoryData,
     onCheckEntries: (String, String?) -> Unit,
+    onOpenForecast: () -> Unit,
 ) {
-    item { CategorySummary(value.category, value.node.iconKey) }
+    item { CategorySummary(value.category, value.node.iconKey, categoryColor(value.data.categories, value.node.id)) }
     if (value.subcategories.isEmpty()) {
         item { Text(stringResource(R.string.empty_category), style = MaterialTheme.typography.bodyLarge) }
     }
@@ -124,10 +128,15 @@ private fun androidx.compose.foundation.lazy.LazyListScope.categoryContent(
             modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin),
         ) { Text(stringResource(R.string.action_check_entries)) }
     }
+    item {
+        OutlinedButton(onClick = onOpenForecast, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+            Text(stringResource(R.string.forecast_open_detail))
+        }
+    }
 }
 
 @Composable
-private fun CategorySummary(category: CategoryBudget, iconKey: String) {
+private fun CategorySummary(category: CategoryBudget, iconKey: String, tint: androidx.compose.ui.graphics.Color) {
     val limit = category.limit
     val state = barState(limit)
     val headline = limit.total?.let {
@@ -144,7 +153,7 @@ private fun CategorySummary(category: CategoryBudget, iconKey: String) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
                 Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = MaterialTheme.shapes.medium) {
                     androidx.compose.foundation.layout.Box(Modifier.padding(AccordSpacing.s2), contentAlignment = Alignment.Center) {
-                        DecorativeIcon(lucideRes(iconKey))
+                        DecorativeIcon(lucideRes(iconKey), tint = tint)
                     }
                 }
                 Text(headline, style = Accord.typography.amountRow)
@@ -198,7 +207,7 @@ private fun SubcategoryRow(value: CategoryData, id: String?, onClick: () -> Unit
             verticalAlignment = Alignment.Top,
             horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
         ) {
-            DecorativeIcon(lucideRes(node?.iconKey ?: "tag"))
+            DecorativeIcon(lucideRes(node?.iconKey ?: "tag"), tint = categoryColor(value.data.categories, id))
             AdaptiveRow(
                 start = {
                     Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {

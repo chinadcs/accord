@@ -1,5 +1,6 @@
 package app.accord.remote
 
+import app.accord.core.sync.AppliedVersion
 import app.accord.core.sync.AuthSession
 import app.accord.core.sync.EntityChangeEnvelope
 import app.accord.core.sync.EntityKey
@@ -98,7 +99,8 @@ abstract class SpaceServiceContract {
         type: String = "Movement",
         tombstone: Boolean = false,
         references: List<EntityKey> = emptyList(),
-    ) = EntityChangeEnvelope(type, id, base, state, tombstone, references)
+        createIfAbsent: Boolean = false,
+    ) = EntityChangeEnvelope(type, id, base, state, tombstone, references, createIfAbsent)
 
     private suspend fun push(session: AuthSession, spaceId: String, vararg ops: OperationEnvelope): List<OperationResult> =
         ok(service.push(session.accessToken, spaceId, ops.toList()))
@@ -493,6 +495,67 @@ abstract class SpaceServiceContract {
         assertEquals(RejectReason.TypeNotAllowed, result.reason)
     }
 
+    // ---- categoria removida (ADR 0039) ----
+
+    private fun category(id: String, base: Long?, removed: Boolean) =
+        change(id = id, base = base, type = "Category", state = """{"parentId":null,"removed":$removed}""")
+
+    private fun movement(id: String, base: Long?, category: String?, voided: Boolean = false) = change(
+        id = id, base = base, type = "Movement", tombstone = voided,
+        state = """{"classificationId":${category?.let { "\"$it\"" } ?: "null"},"voided":$voided}""",
+    )
+
+    @Test
+    fun `remover categoria com lançamento vivo apontando para ela é recusado e nada é gravado`() = test {
+        val couple = newCouple()
+        val id = UUID.randomUUID().toString()
+        val entry = UUID.randomUUID().toString()
+        push(couple.creator, couple.spaceId, op(couple.spaceId, category(id, null, false), movement(entry, null, id)))
+        val result = push(couple.creator, couple.spaceId, op(couple.spaceId, category(id, 1, true))).single()
+        assertIs<OperationResult.Rejected>(result)
+        assertEquals(RejectReason.CategoryInUse, result.reason)
+        val state = ok(service.pull(couple.creator.accessToken, couple.spaceId, 0, 100)).changes.first { it.id == id }
+        assertEquals(1, state.version)
+    }
+
+    @Test
+    fun `mover os lançamentos e remover a categoria na mesma operação é aceito`() = test {
+        val couple = newCouple()
+        val from = UUID.randomUUID().toString()
+        val to = UUID.randomUUID().toString()
+        val entry = UUID.randomUUID().toString()
+        push(couple.creator, couple.spaceId, op(couple.spaceId, category(from, null, false), category(to, null, false), movement(entry, null, from)))
+        val result = push(
+            couple.creator, couple.spaceId,
+            op(couple.spaceId, category(from, 1, true), movement(entry, 1, to)),
+        ).single()
+        assertIs<OperationResult.Applied>(result)
+    }
+
+    @Test
+    fun `lançamento novo numa categoria removida é recusado sem gravar e, sem categoria, é aceito`() = test {
+        val couple = newCouple()
+        val id = UUID.randomUUID().toString()
+        push(couple.creator, couple.spaceId, op(couple.spaceId, category(id, null, false)))
+        push(couple.creator, couple.spaceId, op(couple.spaceId, category(id, 1, true)))
+        val late = UUID.randomUUID().toString()
+        val refused = push(couple.partner!!, couple.spaceId, op(couple.spaceId, movement(late, null, id))).single()
+        assertIs<OperationResult.Rejected>(refused)
+        assertEquals(RejectReason.CategoryRemoved, refused.reason)
+        assertTrue(ok(service.pull(couple.creator.accessToken, couple.spaceId, 0, 100)).changes.none { it.id == late })
+        assertIs<OperationResult.Applied>(push(couple.partner!!, couple.spaceId, op(couple.spaceId, movement(late, null, null))).single())
+    }
+
+    @Test
+    fun `registro excluído pode citar categoria removida`() = test {
+        val couple = newCouple()
+        val id = UUID.randomUUID().toString()
+        push(couple.creator, couple.spaceId, op(couple.spaceId, category(id, null, false)))
+        push(couple.creator, couple.spaceId, op(couple.spaceId, category(id, 1, true)))
+        val deleted = push(couple.creator, couple.spaceId, op(couple.spaceId, movement(UUID.randomUUID().toString(), null, id, voided = true))).single()
+        assertIs<OperationResult.Applied>(deleted)
+    }
+
     @Test
     fun `protocolo não suportado é recusado e o resto do lote segue`() = test {
         val couple = newCouple()
@@ -565,5 +628,74 @@ abstract class SpaceServiceContract {
         assertIs<OperationResult.Applied>(edit)
         val back = push(couple.partner!!, couple.spaceId, op(couple.spaceId, change(id, base = 2, state = """{"valor":2}"""))).single()
         assertIs<OperationResult.Applied>(back)
+    }
+
+    // ---- evento de aviso (ADR 0044) ----
+
+    private fun alert(id: String, total: Int, createIfAbsent: Boolean = true, base: Long? = null, tombstone: Boolean = false) =
+        change(id, base, """{"categoryId":"c1","windowMonday":"2026-10-19","totalCents":$total}""", "AlertEvent", tombstone, createIfAbsent = createIfAbsent)
+
+    @Test
+    fun `o segundo aparelho que cria o mesmo evento recebe o canonico, sem conflito nem nova versao`() = test {
+        val couple = newCouple()
+        val id = UUID.randomUUID().toString()
+        val first = push(couple.creator, couple.spaceId, op(couple.spaceId, alert(id, 130_000))).single()
+        assertIs<OperationResult.Applied>(first)
+        assertEquals(listOf(AppliedVersion("AlertEvent", id, 1)), first.versions)
+        assertTrue(first.absorbed.isEmpty())
+
+        val second = push(couple.partner!!, couple.spaceId, op(couple.spaceId, alert(id, 135_000))).single()
+        assertIs<OperationResult.Applied>(second)
+        assertTrue(second.versions.isEmpty(), "nada foi escrito")
+        val canonical = second.absorbed.single()
+        assertEquals(id, canonical.id)
+        assertEquals(1, canonical.version)
+        assertTrue(canonical.state.contains("130000"), "o canônico é o do primeiro reconhecido")
+        assertEquals(1, ok(service.pull(couple.partner!!.accessToken, couple.spaceId, 0, 100)).changes.count { it.type == "AlertEvent" })
+    }
+
+    @Test
+    fun `reenviar a mesma operacao do evento devolve o mesmo resultado`() = test {
+        val couple = newCouple()
+        val id = UUID.randomUUID().toString()
+        push(couple.creator, couple.spaceId, op(couple.spaceId, alert(id, 130_000)))
+        val repeated = op(couple.spaceId, alert(id, 135_000), id = "op-fixa-$id")
+        val a = push(couple.partner!!, couple.spaceId, repeated).single()
+        val b = push(couple.partner!!, couple.spaceId, repeated).single()
+        assertIs<OperationResult.Applied>(a)
+        assertIs<OperationResult.Applied>(b)
+        assertTrue(b.repeated)
+        assertEquals(a.absorbed, b.absorbed)
+    }
+
+    @Test
+    fun `evento de aviso nao se altera nem se remove`() = test {
+        val couple = newCouple()
+        val id = UUID.randomUUID().toString()
+        push(couple.creator, couple.spaceId, op(couple.spaceId, alert(id, 130_000)))
+        val edit = push(couple.creator, couple.spaceId, op(couple.spaceId, alert(id, 1, createIfAbsent = false, base = 1))).single()
+        assertEquals(RejectReason.AlertEventImmutable, assertIs<OperationResult.Rejected>(edit).reason)
+        val remove = push(couple.creator, couple.spaceId, op(couple.spaceId, alert(id, 1, createIfAbsent = false, base = 1, tombstone = true))).single()
+        assertEquals(RejectReason.AlertEventImmutable, assertIs<OperationResult.Rejected>(remove).reason)
+        val recreate = push(couple.partner!!, couple.spaceId, op(couple.spaceId, alert(id, 1, createIfAbsent = false))).single()
+        assertEquals(RejectReason.AlertEventImmutable, assertIs<OperationResult.Rejected>(recreate).reason)
+        val stored = ok(service.pull(couple.creator.accessToken, couple.spaceId, 0, 100)).changes.single { it.id == id }
+        assertEquals(1, stored.version)
+        assertTrue(stored.state.contains("130000"))
+    }
+
+    @Test
+    fun `criar se ausente so vale para o evento de aviso`() = test {
+        val couple = newCouple()
+        val other = push(couple.creator, couple.spaceId, op(couple.spaceId, change(createIfAbsent = true))).single()
+        assertEquals(RejectReason.InvalidEnvelope, assertIs<OperationResult.Rejected>(other).reason)
+    }
+
+    @Test
+    fun `quem nao participa do espaco nao envia evento de aviso`() = test {
+        val couple = newCouple()
+        val stranger = signUp()
+        val failure = failure(service.push(stranger.accessToken, couple.spaceId, listOf(op(couple.spaceId, alert(UUID.randomUUID().toString(), 1)))))
+        assertEquals(RemoteFailure.NotMember, failure)
     }
 }

@@ -1,5 +1,7 @@
 package app.accord.ui.budget
 
+import androidx.compose.ui.graphics.Color
+import app.accord.ui.categoryColor
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.shape.CircleShape
@@ -66,6 +68,7 @@ fun BudgetRoute(
     onOpenIncomes: (YearMonth) -> Unit = {},
     onOpenCard: () -> Unit = {},
     onSearch: (() -> Unit)? = null,
+    onOpenForecasts: (YearMonth) -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     RefreshOnResume(viewModel::refresh)
@@ -74,7 +77,7 @@ fun BudgetRoute(
         onPrevious = viewModel::previousMonth, onNext = viewModel::nextMonth, onRetry = viewModel::retry,
         onOpenCategory = onOpenCategory, onClassify = onClassify, onRegister = onRegister,
         onOpenCommitments = onOpenCommitments, onOpenIncomes = onOpenIncomes, onOpenCard = onOpenCard, onSearch = onSearch,
-        hasFloatingAction = true,
+        hasFloatingAction = true, onOpenForecasts = onOpenForecasts,
     )
 }
 
@@ -93,6 +96,7 @@ fun BudgetScreen(
     onOpenCard: () -> Unit = {},
     onSearch: (() -> Unit)? = null,
     hasFloatingAction: Boolean = false,
+    onOpenForecasts: (YearMonth) -> Unit = {},
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -124,9 +128,9 @@ fun BudgetScreen(
             }
             is BudgetContent.Failed -> {
                 item { FailureBanner(content.last?.month, onRetry) }
-                content.last?.let { budgetContent(it, onOpenCategory, onClassify, onRegister, onOpenCommitments, onOpenIncomes, onOpenCard, !hasFloatingAction) }
+                content.last?.let { budgetContent(it, onOpenCategory, onClassify, onRegister, onOpenCommitments, onOpenIncomes, onOpenCard, !hasFloatingAction, onOpenForecasts) }
             }
-            is BudgetContent.Ready -> budgetContent(content.data, onOpenCategory, onClassify, onRegister, onOpenCommitments, onOpenIncomes, onOpenCard, !hasFloatingAction)
+            is BudgetContent.Ready -> budgetContent(content.data, onOpenCategory, onClassify, onRegister, onOpenCommitments, onOpenIncomes, onOpenCard, !hasFloatingAction, onOpenForecasts)
         }
     }
 }
@@ -162,6 +166,7 @@ private fun LazyListScope.budgetContent(
     onOpenIncomes: (YearMonth) -> Unit,
     onOpenCard: () -> Unit,
     showInlineManual: Boolean,
+    onOpenForecasts: (YearMonth) -> Unit,
 ) {
     if (data.isEmpty) {
         item { EmptyMonth(onRegister, showInlineManual) }
@@ -185,10 +190,11 @@ private fun LazyListScope.budgetContent(
             category = category,
             name = node?.name.orEmpty(),
             iconKey = node?.iconKey ?: "tag",
+            tint = categoryColor(data.categories, category.categoryId),
             onClick = { onOpenCategory(category.categoryId, data.month) },
         )
     }
-    item { MonthLinks({ onOpenCommitments(data.month) }, { onOpenIncomes(data.month) }, onOpenCard) }
+    item { MonthLinks({ onOpenCommitments(data.month) }, { onOpenIncomes(data.month) }, onOpenCard, { onOpenForecasts(data.month) }) }
 }
 
 @Composable
@@ -337,7 +343,7 @@ private fun ToClassifyRow(data: BudgetData, onClick: () -> Unit) {
 }
 
 @Composable
-private fun CategoryRow(category: CategoryBudget, name: String, iconKey: String, onClick: () -> Unit) {
+private fun CategoryRow(category: CategoryBudget, name: String, iconKey: String, tint: Color, onClick: () -> Unit) {
     val limit = category.limit
     val state = barState(limit)
     val money = { m: Money -> m.format() }
@@ -375,7 +381,7 @@ private fun CategoryRow(category: CategoryBudget, name: String, iconKey: String,
                 Surface(color = MaterialTheme.colorScheme.surface, shape = CircleShape,
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
                     Box(Modifier.size(AccordSpacing.touchMin), contentAlignment = Alignment.Center) {
-                        DecorativeIcon(lucideRes(iconKey), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        DecorativeIcon(lucideRes(iconKey), tint = tint)
                     }
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
@@ -425,8 +431,9 @@ private fun CategoryRow(category: CategoryBudget, name: String, iconKey: String,
 
 /** Caminhos do mês para o que já ocupa os próximos meses, as rendas e o cartão; cada um volta ao Orçamento. */
 @Composable
-private fun MonthLinks(onCommitments: () -> Unit, onIncomes: () -> Unit, onCard: () -> Unit) {
+private fun MonthLinks(onCommitments: () -> Unit, onIncomes: () -> Unit, onCard: () -> Unit, onForecasts: () -> Unit) {
     Column {
+        MonthLink(stringResource(R.string.budget_link_forecasts), Lucide.drawable.lucide_ic_trending_up, onForecasts)
         MonthLink(stringResource(R.string.budget_link_commitments), Lucide.drawable.lucide_ic_calendar, onCommitments)
         MonthLink(stringResource(R.string.budget_link_incomes), Lucide.drawable.lucide_ic_wallet, onIncomes)
         MonthLink(stringResource(R.string.budget_link_card), Lucide.drawable.lucide_ic_credit_card, onCard)

@@ -48,6 +48,9 @@ class AccessFlowTest {
 
     @Before
     fun freshApp() {
+        // O passo de notificações dos Primeiros passos é obrigatório (S5.5): estes fluxos já chegam com a permissão concedida.
+        androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation
+            .grantRuntimePermission(ApplicationProvider.getApplicationContext<AccordApplication>().packageName, android.Manifest.permission.POST_NOTIFICATIONS)
         store = InMemoryAccessStore(AccessSnapshot())
         launch(store)
     }

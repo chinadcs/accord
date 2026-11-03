@@ -5,6 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.accord.R
 import app.accord.SpaceProvider
+import app.accord.alerts.AndroidNotifications
+import app.accord.core.alerts.AlertPreference
+import app.accord.core.alerts.NotificationAccess
 import app.accord.core.Money
 import app.accord.core.space.QueryResult
 import app.accord.core.sum
@@ -29,14 +32,22 @@ data class StepRow(
 
 sealed interface StepsContent {
     data object Loading : StepsContent
-    data class Ready(val rows: List<StepRow>) : StepsContent
+
+    data class Ready(val rows: List<StepRow>) : StepsContent {
+        /** O passo de notificações é obrigatório (decisão de 03/11/2026): "Começar a registrar" só vale com a permissão concedida neste aparelho. */
+        val canStart: Boolean get() = rows.firstOrNull { it.id == StepId.Notifications }?.status != StepStatus.Pending
+    }
 }
 
 /**
  * Tela 03. Cada item vem dos dados persistidos neste aparelho: concluído só depois de salvo, e os que
  * dependem do outro aparelho mostram apenas o que já chegou aqui. Nada é pontuado nem exigido.
  */
-class FirstStepsViewModel(private val provider: SpaceProvider, private val access: AccessCenter) : ViewModel() {
+class FirstStepsViewModel(
+    private val provider: SpaceProvider,
+    private val access: AccessCenter,
+    private val notifications: AndroidNotifications,
+) : ViewModel() {
     private val _content = MutableStateFlow<StepsContent>(StepsContent.Loading)
     val content: StateFlow<StepsContent> = _content.asStateFlow()
 
@@ -51,9 +62,28 @@ class FirstStepsViewModel(private val provider: SpaceProvider, private val acces
             val accounts = (space.accounts() as? QueryResult.Data)?.value
             val limits = (space.limits(provider.clock.currentMonth()) as? QueryResult.Data)?.value.orEmpty()
             val total = limits.mapNotNull { it.setting.total }.sum()
+            val notificationAccess = notifications.access()
+            // Depois do passo o padrão é "ativado" (decisão de 03/11/2026); quem permitiu pelos ajustes do sistema também fica ativado.
+            if (notificationAccess == NotificationAccess.Granted && (space.alertPreference() as? QueryResult.Data)?.value == AlertPreference.Undefined) {
+                space.setAlertPreference(AlertPreference.Enabled)
+            }
+            val notificationsRow = StepRow(
+                StepId.Notifications,
+                if (notificationAccess == NotificationAccess.Granted) StepStatus.Done else StepStatus.Pending,
+                R.string.steps_notifications,
+                StepText(
+                    when (notificationAccess) {
+                        NotificationAccess.Granted -> R.string.steps_notifications_done
+                        NotificationAccess.ChannelDisabled -> R.string.steps_notifications_channel
+                        NotificationAccess.PermissionDenied -> R.string.steps_notifications_pending
+                    },
+                ),
+                if (notificationAccess == NotificationAccess.Granted) R.string.steps_notifications_action_done else R.string.steps_notifications_action_pending,
+            )
 
             _content.value = StepsContent.Ready(
-                steps.map { step ->
+                // ADR 0036: sem modelo no P0, o passo "modelo no aparelho" não aparece na lista.
+                steps.filter { it.id != StepId.DeviceModel }.map { step ->
                     val done = step.status == StepStatus.Done
                     when (step.id) {
                         StepId.InitialCategories -> StepRow(
@@ -82,9 +112,10 @@ class FirstStepsViewModel(private val provider: SpaceProvider, private val acces
                             StepText(if (done) R.string.steps_other_done else R.string.steps_other_pending),
                             if (done) R.string.steps_other_action_done else R.string.steps_other_action_pending,
                         )
+                        StepId.Notifications -> notificationsRow
                         StepId.DeviceModel -> StepRow(step.id, step.status, R.string.steps_model, StepText(R.string.steps_model_unavailable), null)
                     }
-                },
+                }.let { rows -> if (rows.any { it.id == StepId.Notifications }) rows else rows + notificationsRow },
             )
         }
     }
