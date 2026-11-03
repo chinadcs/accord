@@ -12,7 +12,7 @@
     <string name="categories_reorder_done">Concluir reorganização</string>
     <string name="categories_move_up">Subir %1$s</string>
     <string name="categories_move_down">Descer %1$s</string>
-    <string name="categories_note">Mudanças valem para o orçamento compartilhado. Não há exclusão: para trocar uma categoria, crie outra e lance nela.</string>
+    <string name="categories_note">Mudanças valem para o orçamento compartilhado. Para tirar uma categoria, mova os lançamentos dela para outra e remova: o histórico continua nos lançamentos movidos.</string>
     <string name="categories_name">Nome</string>
     <string name="categories_name_required">Informe um nome.</string>
     <string name="categories_save">Salvar</string>
@@ -39,4 +39,42 @@
     <string name="feedback_category_renamed">Nome atualizado.</string>
     <string name="feedback_subcategory_moved">Subcategoria movida daqui para frente.</string>
     <string name="feedback_order_changed">Ordem atualizada.</string>
+
+    <!-- Editar, mover lançamentos e remover categoria (ADR 0039) -->
+    <string name="categories_edit">Editar</string>
+    <string name="state_selected">Selecionado</string>
+    <string name="category_edit_title">Editar categoria</string>
+    <string name="category_edit_missing">Esta categoria não está mais disponível.</string>
+    <string name="category_edit_icon">Ícone</string>
+    <string name="category_edit_icon_current">Ícone atual</string>
+    <string name="category_edit_icon_option">Ícone %1$s</string>
+    <string name="category_edit_color">Cor</string>
+    <string name="category_edit_color_option">Cor %1$s</string>
+    <string name="category_edit_sub_color">A subcategoria usa a cor de “%1$s”.</string>
+    <string name="category_edit_move_entries">Mover lançamentos</string>
+    <string name="category_edit_remove">Remover categoria</string>
+    <string name="category_move_title">Mover lançamentos</string>
+    <string name="category_remove_title">Remover categoria</string>
+    <string name="category_move_source">Origem: %1$s</string>
+    <string name="category_move_source_with_subs">Origem: %1$s e as %2$d subcategorias</string>
+    <string name="category_move_destination">Mover para</string>
+    <string name="category_move_scope">Quais lançamentos</string>
+    <string name="category_move_scope_all">Todos, de qualquer mês</string>
+    <string name="category_move_scope_from">Só do mês atual em diante</string>
+    <string name="category_move_also_remove">Remover “%1$s” depois de mover</string>
+    <string name="category_move_impact_none">Não há lançamentos nesta categoria.</string>
+    <plurals name="category_move_impact">
+        <item quantity="one">%1$d lançamento muda de categoria (%2$s). Compras parceladas e recorrências mudam inteiras a partir do alcance escolhido.</item>
+        <item quantity="other">%1$d lançamentos mudam de categoria (%2$s). Compras parceladas e recorrências mudam inteiras a partir do alcance escolhido.</item>
+    </plurals>
+    <string name="category_remove_empty">“%1$s” não tem lançamentos. Ao remover, ela some das listas e dos seletores; o histórico não muda.</string>
+    <string name="category_remove_limits">Há limite definido para esta categoria em %1$s. O limite não passa para outra categoria: remover descarta esse limite.</string>
+    <string name="category_remove_limits_confirm">Entendi, descartar o limite</string>
+    <string name="category_move_known_note">Vale para os lançamentos que este celular conhece. Se o outro celular registrar algo nesta categoria sem conexão, o lançamento chega em “a classificar” em Revisar, sem categoria.</string>
+    <string name="category_move_confirm">Mover lançamentos</string>
+    <string name="category_move_and_remove_confirm">Mover e remover categoria</string>
+    <string name="category_remove_confirm">Remover categoria</string>
+    <string name="feedback_category_edited">Categoria atualizada.</string>
+    <string name="feedback_entries_moved">Lançamentos movidos.</string>
+    <string name="feedback_category_removed">Categoria removida.</string>
 </resources>

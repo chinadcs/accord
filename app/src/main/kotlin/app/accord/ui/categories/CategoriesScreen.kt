@@ -1,5 +1,7 @@
 package app.accord.ui.categories
 
+import app.accord.ui.categoryColor
+import app.accord.ui.ownColorKey
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -46,7 +48,7 @@ import app.accord.ui.theme.AccordSpacing
 import com.composables.icons.lucide.R as Lucide
 
 @Composable
-fun CategoriesRoute(viewModel: CategoriesViewModel, padding: PaddingValues, onBack: () -> Unit) {
+fun CategoriesRoute(viewModel: CategoriesViewModel, padding: PaddingValues, onBack: () -> Unit, onEdit: (String) -> Unit) {
     val content by viewModel.content.collectAsStateWithLifecycle()
     val dialog by viewModel.dialog.collectAsStateWithLifecycle()
     val expanded by viewModel.expanded.collectAsStateWithLifecycle()
@@ -57,7 +59,7 @@ fun CategoriesRoute(viewModel: CategoriesViewModel, padding: PaddingValues, onBa
         onToggle = viewModel::toggle, onToggleReorder = viewModel::toggleReorder, onMove = viewModel::move,
         onCreate = viewModel::startCreate, onRename = viewModel::startRename, onMoveSub = viewModel::startMove,
         onName = viewModel::setName, onDestination = viewModel::setDestination, onAnswer = viewModel::answer,
-        onSubmit = viewModel::submit, onClose = viewModel::close,
+        onSubmit = viewModel::submit, onClose = viewModel::close, onEdit = onEdit,
     )
 }
 
@@ -81,6 +83,7 @@ fun CategoriesScreen(
     onAnswer: (java.time.YearMonth, PartChoice?, String?) -> Unit,
     onSubmit: () -> Unit,
     onClose: () -> Unit,
+    onEdit: (String) -> Unit,
 ) {
     Column(
         Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
@@ -99,7 +102,7 @@ fun CategoriesScreen(
             }
             is CategoriesContent.Ready -> {
                 content.mains.forEach { main ->
-                    MainRow(main, main.node.id in expanded, reordering, onToggle, onMove, onCreate, onRename, onMoveSub)
+                    MainRow(main, main.node.id in expanded, reordering, onToggle, onMove, onCreate, onRename, onMoveSub, onEdit)
                 }
                 OutlinedButton(onClick = onToggleReorder, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
                     Text(stringResource(if (reordering) R.string.categories_reorder_done else R.string.categories_reorder))
@@ -122,13 +125,14 @@ private fun MainRow(
     onCreate: (String?) -> Unit,
     onRename: (CategoryNode) -> Unit,
     onMoveSub: (CategoryNode) -> Unit,
+    onEdit: (String) -> Unit,
 ) {
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
                 Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = CircleShape) {
                     Box(Modifier.size(AccordSpacing.touchMin), contentAlignment = Alignment.Center) {
-                        DecorativeIcon(lucideRes(main.node.iconKey))
+                        DecorativeIcon(lucideRes(main.node.iconKey), tint = categoryColor(main.node.ownColorKey()))
                     }
                 }
                 Text(main.node.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
@@ -143,11 +147,15 @@ private fun MainRow(
                     Icon(painterResource(Lucide.drawable.lucide_ic_pencil), contentDescription = null)
                     Text(stringResource(R.string.categories_rename))
                 }
+                TextButton(onClick = { onEdit(main.node.id) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                    Icon(painterResource(lucideRes("palette")), contentDescription = null)
+                    Text(stringResource(R.string.categories_edit))
+                }
             }
             if (expanded) {
                 main.children.forEach { sub ->
                     Row(Modifier.padding(start = AccordSpacing.s4), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                        DecorativeIcon(lucideRes(sub.iconKey))
+                        DecorativeIcon(lucideRes(sub.iconKey), tint = categoryColor(main.node.ownColorKey()))
                         Text(sub.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                         if (reordering) ReorderButtons(sub, onMove)
                     }
@@ -155,6 +163,10 @@ private fun MainRow(
                         TextButton(onClick = { onRename(sub) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
                             Icon(painterResource(Lucide.drawable.lucide_ic_pencil), contentDescription = null)
                             Text(stringResource(R.string.categories_rename))
+                        }
+                        TextButton(onClick = { onEdit(sub.id) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                            Icon(painterResource(lucideRes("palette")), contentDescription = null)
+                            Text(stringResource(R.string.categories_edit))
                         }
                         TextButton(onClick = { onMoveSub(sub) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
                             Icon(painterResource(lucideRes("arrow-left-right")), contentDescription = null)

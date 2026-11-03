@@ -92,6 +92,12 @@ interface SyncDao {
             "WHERE operationId = :operationId AND entityType = :type AND entityId = :entityId",
     )
     suspend fun resolveBase(operationId: String, type: String, entityId: String, base: Long?)
+    /** Reescreve o estado de uma entidade ainda não reconhecida (ADR 0039: categoria removida no outro celular). */
+    @Query(
+        "UPDATE operation_change SET state = :state, refs = :refs, revision = :revision " +
+            "WHERE operationId = :operationId AND entityType = :type AND entityId = :entityId",
+    )
+    suspend fun rewriteChange(operationId: String, type: String, entityId: String, state: String, refs: String, revision: Long)
     @Query("SELECT COUNT(*) FROM operation WHERE syncState IN (:states)") suspend fun countIn(states: List<String>): Int
     @Query("SELECT * FROM operation ORDER BY sequence DESC LIMIT :limit") suspend fun recentOperations(limit: Int): List<OperationRow>
 

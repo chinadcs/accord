@@ -14,6 +14,9 @@ import app.accord.core.space.CommandResult
 import app.accord.core.space.CorrectEntry
 import app.accord.core.space.DefineLimits
 import app.accord.core.space.DirectPaymentKind
+import app.accord.core.space.MoveCategoryEntries
+import app.accord.core.space.MoveScope
+import app.accord.core.space.RemoveCategory
 import app.accord.core.space.DraftSource
 import app.accord.core.space.EntityRef
 import app.accord.core.space.EntityType
@@ -559,5 +562,67 @@ class SyncEngineTest : SpaceTestBase() {
         val results = listOf(async { ana.sync() }, async { ana.sync() }).map { it.await() }
         assertTrue(results.any { it is SyncOutcome.Completed })
         assertEquals(base + 1, service.entityCount(spaceId))
+    }
+
+    // ---- categoria removida (ADR 0039) ----
+
+    @Test
+    fun `lançamento criado offline numa categoria removida no outro celular volta a classificar e chega ao serviço`() = runBlocking<Unit> {
+        couple()
+        val late = bruno.pix(30, category = "pet") // Bruno está offline: ainda não sabe da remoção
+        ana.space.execute(ana.handle.env(), RemoveCategory(seed("pet"))).applied()
+        ana.synced()
+
+        val first = bruno.synced()
+        assertEquals(0, first.newConflicts)
+        assertEquals(0, bruno.store.summary().rejectedOperations, "a recusa não fica como problema para a pessoa")
+        assertEquals(1, bruno.store.summary().awaitingOperations)
+        assertEquals(Classification.ToClassify, bruno.space.entry(late).value()!!.classification)
+
+        bruno.synced()
+        ana.synced()
+        assertEquals(0, bruno.store.summary().awaitingOperations)
+        assertEquals(Classification.ToClassify, ana.space.entry(late).value()!!.classification, "o outro celular também vê 'a classificar'")
+        assertEquals(30, ana.space.entry(late).value()!!.amount.cents / 100)
+        assertTrue(ana.space.categories().value().none { it.id == seed("pet") })
+        assertTrue(bruno.space.categories().value().none { it.id == seed("pet") })
+    }
+
+    @Test
+    fun `remoção recusada porque o outro celular acrescentou lançamentos leva esses lançamentos para a classificar e é aceita`() = runBlocking<Unit> {
+        couple()
+        val added = bruno.pix(45, category = "pet")
+        bruno.synced()
+        ana.space.execute(ana.handle.env(), RemoveCategory(seed("pet"))).applied() // Ana ainda não viu o lançamento do Bruno
+
+        ana.synced()
+        assertEquals(1, ana.store.summary().awaitingOperations, "a remoção voltou à fila com o lançamento que faltava")
+        assertEquals(0, ana.store.summary().rejectedOperations)
+        assertEquals(Classification.ToClassify, ana.space.entry(added).value()!!.classification)
+
+        ana.synced()
+        bruno.synced()
+        assertEquals(0, ana.store.summary().awaitingOperations)
+        assertEquals(Classification.ToClassify, bruno.space.entry(added).value()!!.classification)
+        assertTrue(bruno.space.categories().value().none { it.id == seed("pet") })
+    }
+
+    @Test
+    fun `dois celulares movendo a mesma categoria para destinos diferentes geram um conflito só`() = runBlocking<Unit> {
+        couple()
+        ana.pix(10, category = "lazer", description = "Cinema")
+        ana.pix(20, category = "lazer", description = "Parque")
+        ana.synced()
+        bruno.synced()
+
+        ana.space.execute(ana.handle.env(), MoveCategoryEntries(seed("lazer"), seed("casa"), MoveScope.All)).applied()
+        bruno.space.execute(bruno.handle.env(), MoveCategoryEntries(seed("lazer"), seed("compras"), MoveScope.All)).applied()
+        ana.synced()
+        bruno.synced()
+
+        val conflicts = bruno.store.conflicts()
+        assertEquals(1, conflicts.size, "um conflito para a operação, não um por lançamento")
+        assertEquals(2, conflicts.single().entities.size)
+        assertTrue(conflicts.single().entities.all { it.remote != null && "classificationId" in it.differingFields })
     }
 }

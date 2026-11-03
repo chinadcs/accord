@@ -1,0 +1,160 @@
+-- Accord S1/S2: categoria removida (ADR 0039).
+--
+-- Redefine apply_operation com duas recusas; autorização, versão, conflito, idempotência e atomicidade continuam as de S2.
+--   CategoryInUse:    a operação marca uma categoria como removida, mas ainda há lançamento vivo (guardado no serviço ou
+--                     na própria operação) apontando para ela. O aparelho recebe os lançamentos novos e move de novo.
+--   CategoryRemoved:  a operação grava lançamento, compra, boleto ou recorrência vivos numa categoria já removida. O
+--                     lançamento não é descartado: o aparelho o mantém salvo e a pessoa o classifica em Revisar.
+-- A categoria removida continua como linha em space_entities (campo "removed" no estado), para operações antigas resolverem.
+--
+-- shared-types: Category,Account,Preferences,Movement,Card,CardPurchase,Boleto,Income,Recurrence,Refund,Invoice,InvoicePayment,LimitPlan,IncomeCategory,ImportBatch
+
+create or replace function accord_private.apply_operation(p_space uuid, p_account uuid, p_op jsonb)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_id text := p_op ->> 'operationId';
+  v_changes jsonb := coalesce(p_op -> 'changes', '[]'::jsonb);
+  v_digest bytea;
+  v_prev public.applied_operations;
+  v_ch jsonb;
+  v_ref jsonb;
+  v_key_count int;
+  v_distinct_count int;
+  v_owner uuid;
+  v_base bigint;
+  v_current public.space_entities;
+  v_divergent jsonb := '[]'::jsonb;
+  v_unchanged jsonb := '[]'::jsonb;
+  v_versions jsonb := '[]'::jsonb;
+  v_cursor bigint;
+  v_version bigint;
+  v_result jsonb;
+begin
+  if v_id is null or v_id = '' then
+    return accord_private.rejected('', 'InvalidEnvelope', 'operationId ausente');
+  end if;
+  if coalesce(p_op ->> 'protocolVersion', '0') <> '1' then
+    return accord_private.rejected(v_id, 'ProtocolUnsupported');
+  end if;
+  if p_op ->> 'spaceId' is distinct from p_space::text then
+    return accord_private.rejected(v_id, 'ForeignSpace', 'espaço da operação difere do espaço do envio');
+  end if;
+
+  v_digest := sha256(convert_to(jsonb_build_object('space', p_op ->> 'spaceId', 'changes', v_changes)::text, 'UTF8'));
+  select * into v_prev from public.applied_operations o where o.operation_id = v_id;
+  if found then
+    if v_prev.space_id = p_space and v_prev.digest = v_digest then
+      return jsonb_set(v_prev.result, '{repeated}', 'true'::jsonb);
+    end if;
+    return accord_private.rejected(v_id, 'DivergentOperation');
+  end if;
+
+  if jsonb_typeof(v_changes) <> 'array' or jsonb_array_length(v_changes) = 0 then
+    return accord_private.rejected(v_id, 'InvalidEnvelope', 'operação sem alterações');
+  end if;
+
+  select count(*), count(distinct (c ->> 'type') || '|' || (c ->> 'id'))
+  into v_key_count, v_distinct_count from jsonb_array_elements(v_changes) c;
+  if v_key_count <> v_distinct_count then
+    return accord_private.rejected(v_id, 'InvalidEnvelope', 'entidade repetida na operação');
+  end if;
+
+  for v_ch in select c from jsonb_array_elements(v_changes) c loop
+    if coalesce(v_ch ->> 'type', '') = '' or coalesce(v_ch ->> 'id', '') = '' or not accord_private.is_json_object(v_ch ->> 'state') then
+      return accord_private.rejected(v_id, 'InvalidEnvelope', 'alteração malformada');
+    end if;
+    if not (v_ch ->> 'type') = any (accord_private.shared_types()) then
+      return accord_private.rejected(v_id, 'TypeNotAllowed', v_ch ->> 'type');
+    end if;
+    if jsonb_typeof(v_ch -> 'baseVersion') = 'number' and (v_ch ->> 'baseVersion')::bigint < 1 then
+      return accord_private.rejected(v_id, 'InvalidEnvelope', 'versão base inválida');
+    end if;
+    select e.space_id into v_owner from public.space_entities e where e.type = v_ch ->> 'type' and e.id = v_ch ->> 'id';
+    if v_owner is not null and v_owner <> p_space then
+      return accord_private.rejected(v_id, 'ForeignSpace');
+    end if;
+    for v_ref in select r from jsonb_array_elements(coalesce(v_ch -> 'references', '[]'::jsonb)) r loop
+      select e.space_id into v_owner from public.space_entities e where e.type = v_ref ->> 'type' and e.id = v_ref ->> 'id';
+      if v_owner is not null and v_owner <> p_space then
+        return accord_private.rejected(v_id, 'ForeignSpace');
+      end if;
+    end loop;
+  end loop;
+
+  for v_ch in select c from jsonb_array_elements(v_changes) c loop
+    v_base := case when jsonb_typeof(v_ch -> 'baseVersion') = 'number' then (v_ch ->> 'baseVersion')::bigint end;
+    select * into v_current from public.space_entities e where e.type = v_ch ->> 'type' and e.id = v_ch ->> 'id';
+    if v_base is null and found then
+      v_divergent := v_divergent || accord_private.entity_json(v_current);
+    elsif v_base is not null and not found then
+      return accord_private.rejected(v_id, 'InvalidEnvelope', 'versão base sem entidade');
+    elsif v_base is not null and v_current.version <> v_base then
+      v_divergent := v_divergent || accord_private.entity_json(v_current);
+    elsif found then
+      v_unchanged := v_unchanged || accord_private.entity_json(v_current);
+    end if;
+  end loop;
+  if jsonb_array_length(v_divergent) > 0 then
+    return jsonb_build_object('operationId', v_id, 'result', 'conflict', 'current', v_divergent, 'unchanged', v_unchanged);
+  end if;
+
+  -- ADR 0039: categoria removida. O serviço não guarda lançamento vivo apontando para categoria removida:
+  -- a operação que remove precisa antes tirar os lançamentos (do estado guardado e da própria operação), e o lançamento
+  -- que chega numa categoria já removida é recusado sem descartá-lo (o aparelho o mantém em "a classificar").
+  for v_ch in
+    select c from jsonb_array_elements(v_changes) c
+    where c ->> 'type' = 'Category' and coalesce((((c ->> 'state')::jsonb) ->> 'removed')::boolean, false)
+  loop
+    if exists (
+      select 1 from public.space_entities e
+      where e.space_id = p_space and not e.tombstone
+        and e.type in ('Movement', 'CardPurchase', 'Boleto', 'Recurrence')
+        and not exists (select 1 from jsonb_array_elements(v_changes) o where o ->> 'type' = e.type and o ->> 'id' = e.id)
+        and jsonb_path_exists(e.state::jsonb, '$.**.classificationId ? (@ == $id)', jsonb_build_object('id', v_ch ->> 'id'))
+    ) or exists (
+      select 1 from jsonb_array_elements(v_changes) o
+      where o ->> 'type' in ('Movement', 'CardPurchase', 'Boleto', 'Recurrence')
+        and not coalesce((o ->> 'tombstone')::boolean, false)
+        and jsonb_path_exists((o ->> 'state')::jsonb, '$.**.classificationId ? (@ == $id)', jsonb_build_object('id', v_ch ->> 'id'))
+    ) then
+      return accord_private.rejected(v_id, 'CategoryInUse', v_ch ->> 'id');
+    end if;
+  end loop;
+  for v_ch in
+    select c from jsonb_array_elements(v_changes) c
+    where c ->> 'type' in ('Movement', 'CardPurchase', 'Boleto', 'Recurrence') and not coalesce((c ->> 'tombstone')::boolean, false)
+  loop
+    if exists (
+      select 1
+      from jsonb_path_query((v_ch ->> 'state')::jsonb, '$.**.classificationId') as q (cid)
+      join public.space_entities k on k.type = 'Category' and k.space_id = p_space and k.id = (q.cid #>> '{}')
+      where coalesce(((k.state::jsonb) ->> 'removed')::boolean, false)
+    ) then
+      return accord_private.rejected(v_id, 'CategoryRemoved', v_ch ->> 'id');
+    end if;
+  end loop;
+
+  for v_ch in select c from jsonb_array_elements(v_changes) c loop
+    update public.spaces s set change_cursor = s.change_cursor + 1 where s.id = p_space returning s.change_cursor into v_cursor;
+    insert into public.space_entities as e (type, id, space_id, version, state, tombstone, author_id, service_time, change_cursor)
+    values (v_ch ->> 'type', v_ch ->> 'id', p_space, 1, v_ch ->> 'state', coalesce((v_ch ->> 'tombstone')::boolean, false), p_account, now(), v_cursor)
+    on conflict (type, id) do update
+      set version = e.version + 1, state = excluded.state, tombstone = excluded.tombstone,
+          author_id = excluded.author_id, service_time = excluded.service_time, change_cursor = excluded.change_cursor
+    returning e.version into v_version;
+    v_versions := v_versions || jsonb_build_object('type', v_ch ->> 'type', 'id', v_ch ->> 'id', 'version', v_version);
+  end loop;
+
+  v_result := jsonb_build_object('operationId', v_id, 'result', 'applied', 'versions', v_versions, 'cursor', v_cursor, 'repeated', false);
+  insert into public.applied_operations (operation_id, space_id, author_id, installation_id, digest, result)
+  values (v_id, p_space, p_account, coalesce(p_op ->> 'installationId', ''), v_digest, v_result);
+  return v_result;
+exception when others then
+  -- Qualquer defeito inesperado desfaz esta operação (ponto de salvamento do bloco) e a recusa.
+  return accord_private.rejected(coalesce(v_id, ''), 'InvalidEnvelope', sqlerrm);
+end;
+$$;
