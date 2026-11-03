@@ -8,6 +8,16 @@ import app.accord.core.LimitView
 import app.accord.core.Money
 import app.accord.core.RecurrenceFields
 import app.accord.core.RecurrenceScope
+import app.accord.core.alerts.AlertDisplay
+import app.accord.core.alerts.AlertEvent
+import app.accord.core.alerts.AlertKind
+import app.accord.core.alerts.AlertPreference
+import app.accord.core.alerts.AlertSnapshot
+import app.accord.core.alerts.DisplayState
+import app.accord.core.alerts.NotificationAccess
+import app.accord.core.forecast.CategoryForecast
+import app.accord.core.forecast.InvoiceClosure
+import app.accord.core.forecast.MonthForecast
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -22,6 +32,9 @@ interface FinanceSpace {
     suspend fun preview(command: Command): PreviewResult
 
     suspend fun categories(): QueryResult<List<CategoryNode>>
+
+    /** Categorias de renda (receitas): Investimento, Salário e Renda Extra de início, mais as criadas pelo casal. */
+    suspend fun incomeCategories(): QueryResult<List<IncomeCategoryNode>>
     suspend fun accounts(): QueryResult<AccountsView>
     suspend fun budget(month: YearMonth): QueryResult<MonthBudget>
 
@@ -86,7 +99,89 @@ interface FinanceSpace {
 
     /** Operações locais em ordem de sequência, a partir de [afterSequence] (exclusive). */
     suspend fun operations(afterSequence: Long = 0, limit: Int = 100): QueryResult<List<LocalOperation>>
+
+    /**
+     * Previsão do mês de orçamento por categoria principal (S5, telas 20): conhecidos + estimados. Calculada neste aparelho a partir dos dados locais; não é
+     * persistida nem sincronizada.
+     */
+    suspend fun forecasts(month: YearMonth): QueryResult<MonthForecast>
+
+    /** Detalhe da previsão de uma categoria principal (tela 21); nulo se [categoryId] não é uma categoria principal. */
+    suspend fun forecastDetail(categoryId: String, month: YearMonth): QueryResult<ForecastDetail?>
+
+    /**
+     * Avisos a exibir neste aparelho (adaptador de notificações, S5). Para cada evento pendente aplica [AlertDisplay.attempt] com a preferência e o acesso
+     * lidos agora: o que não pode ser exibido (preferência, permissão, canal, janela encerrada) é gravado como tal e não volta; o que pode continua
+     * pendente até [markAlertShown], de modo que um processo encerrado antes da exibição tenta de novo, sem exibir duas vezes.
+     */
+    suspend fun alertNotices(preference: AlertPreference, access: NotificationAccess): QueryResult<List<AlertNotice>>
+
+    /** O adaptador exibiu o aviso. Idempotente: um evento que já tem situação final não muda. */
+    suspend fun markAlertShown(eventId: String): QueryResult<Unit>
+
+    /** Eventos da janela atual e a situação de cada um neste aparelho (tela 20: "Aviso desta semana"). */
+    suspend fun alertStatuses(): QueryResult<List<AlertStatus>>
+
+    /** Um evento de aviso como este aparelho o conhece, pela chave da notificação (tela 21 aberta por aviso); nulo se não é deste espaço ou conta. */
+    suspend fun alertEvent(id: String): QueryResult<AlertEventView?>
+
+    /**
+     * Preferência de avisos deste aparelho (tela 27), ligada ao espaço e à conta. Só local: não sincroniza nem gera operação. [AlertPreference.Undefined]
+     * só existe antes do passo de notificações dos Primeiros passos.
+     */
+    suspend fun alertPreference(): QueryResult<AlertPreference>
+
+    /** Salvar a preferência não avalia nem exibe nada, nem retroativo, e não muda limite ou cálculo algum. */
+    suspend fun setAlertPreference(preference: AlertPreference): QueryResult<Unit>
 }
+
+/** Um aviso pronto para exibir. [id] é a chave da notificação (idempotente); o texto público não leva valores. */
+data class AlertNotice(val id: String, val categoryId: String, val kind: AlertKind, val windowMonday: LocalDate, val snapshot: AlertSnapshot)
+
+/**
+ * [snapshot] é o do evento canônico; [shownSnapshot] é o que ESTE aparelho calculou e mostrou, quando o gerou aqui (a tela 21 mostra o do aviso e o cálculo atual).
+ */
+data class AlertEventView(
+    val id: String,
+    val categoryId: String,
+    val month: YearMonth,
+    val windowMonday: LocalDate,
+    val kind: AlertKind,
+    val snapshot: AlertSnapshot,
+    val shownSnapshot: AlertSnapshot?,
+    val generatedAtMillis: Long,
+    val display: DisplayState,
+)
+
+data class AlertStatus(
+    val id: String,
+    val categoryId: String,
+    val windowMonday: LocalDate,
+    val kind: AlertKind,
+    val generatedAtMillis: Long,
+    val display: DisplayState,
+)
+
+/** Natureza do que compõe os conhecidos de uma categoria no mês (S5 "Detalhe da previsão"). */
+enum class KnownNature { Realized, Installments, Recurrences, Boletos, Credits }
+
+/** Uma linha da composição. [cents] é o valor com sinal (créditos de estorno são negativos); [count] é nulo quando a natureza não conta itens. */
+data class KnownLine(val nature: KnownNature, val cents: Long, val count: Int?)
+
+/**
+ * Composição aditiva dos conhecidos: a soma de [known] é exatamente `forecast.knownCents`. [toConfirm] é o subconjunto dos conhecidos que está na fatura
+ * estimada ("a conferir"), nunca somado de novo. [bySubcategory] segue o detalhe da categoria no mês (chave nula é "sem subcategoria").
+ */
+data class ForecastDetail(
+    val month: YearMonth,
+    val forecast: CategoryForecast,
+    val ruleVersion: String,
+    val invoice: InvoiceClosure,
+    val known: List<KnownLine>,
+    val toConfirm: KnownLine?,
+    val bySubcategory: Map<String?, Money>,
+    val calculatedAtMillis: Long,
+)
 
 // ---- rascunhos locais ----
 
@@ -125,7 +220,7 @@ value class CommandId(val value: String) {
     }
 }
 
-enum class Origin { Manual, Chat, Import }
+enum class Origin { Manual, Chat, Import, System }
 
 /**
  * [draftId]: ao efetivar um rascunho local, o comando de registro cita o rascunho, que é descartado
@@ -157,11 +252,26 @@ sealed interface Command
 
 data class CreateCategory(val name: String, val parentId: String? = null) : Command
 
+/**
+ * Registra o evento de aviso gerado pela avaliação interna da fachada (S5, ADR 0044). Nunca vem da interface nem do Chat: só a fachada o emite, com origem
+ * [Origin.System]. Cria o evento imutável, sua situação de exibição "pendente" e a operação que o leva ao serviço, na mesma transação.
+ */
+data class RecordAlertEvent(val event: AlertEvent) : Command
+
+/** Categoria de renda (receitas), separada das categorias de despesa; lista plana, nome único sem diferenciar caixa e acentos. */
+data class CreateIncomeCategory(val name: String) : Command
+
+data class RenameIncomeCategory(val categoryId: String, val name: String, val expectedRevision: Long? = null) : Command
+
 data class AddAccount(val bank: BankRef, val nickname: String) : Command
 
 data class SetMyDefaultAccount(val accountId: String) : Command
 
-/** Pix, débito ou dinheiro: ocupa o mês da movimentação e já nasce pago. */
+/**
+ * Pix, débito ou dinheiro: ocupa o mês da movimentação e já nasce pago.
+ * [isCharge] marca tarifa ou juros confirmado, como na compra no cartão: sem classificação usa Serviços > Tarifas e juros, e a marca (não o nome da
+ * categoria, que é editável) mantém o movimento fora do ritmo histórico da previsão (S5).
+ */
 data class RegisterDirectPayment(
     val kind: DirectPaymentKind,
     val description: String,
@@ -171,6 +281,7 @@ data class RegisterDirectPayment(
     /** Pix e débito: o padrão do autor quando omitida. Dinheiro não tem conta. */
     val accountId: String? = null,
     val spentBy: String? = null,
+    val isCharge: Boolean = false,
 ) : Command
 
 enum class AmountMeaning { Total, PerInstallment }
@@ -252,6 +363,8 @@ data class RegisterIncome(
     val expectedDate: LocalDate,
     val accountId: String? = null,
     val received: Settlement? = null,
+    /** Categoria de renda (semente ou criada); nula quando a pessoa não escolhe. */
+    val incomeCategoryId: String? = null,
 ) : Command
 
 data class ReceiveIncome(
@@ -428,6 +541,52 @@ data class MoveSubcategory(
     val expectedRevision: Long? = null,
 ) : Command
 
+/** Cores que a pessoa pode escolher para uma categoria principal (ADR 0039): índices `0 until SIZE` da paleta do aplicativo. */
+object CategoryPalette {
+    const val SIZE = 12
+}
+
+/**
+ * Edita a categoria (ADR 0039): nome, ícone e, só na categoria principal, a cor (índice da paleta). Só o que vem
+ * preenchido muda. Subcategoria usa a cor da categoria principal, então não aceita [colorIndex].
+ */
+data class EditCategory(
+    val categoryId: String,
+    val name: String? = null,
+    val iconKey: String? = null,
+    val colorIndex: Int? = null,
+    val expectedRevision: Long? = null,
+) : Command
+
+/** Até onde a movimentação de lançamentos vale: todos os lançamentos da categoria ou os do mês [FromMonth] em diante. */
+sealed interface MoveScope {
+    data object All : MoveScope
+    data class FromMonth(val month: YearMonth) : MoveScope
+}
+
+/**
+ * Move para [toId] os lançamentos de [fromId] (e, se [fromId] é principal, os de suas subcategorias) numa só
+ * operação atômica (ADR 0039). Compra parcelada entra inteira quando alguma parcela está no alcance; recorrência muda
+ * a partir da primeira ocorrência do alcance (as anteriores ficam). Com [removeSource], a origem (e suas subcategorias) é removida na mesma operação, o que
+ * exige [MoveScope.All]. Limites nunca são transferidos: se a remoção descarta limites definidos daqui em
+ * diante, a resposta é Decisão necessária até [confirmDiscardLimits].
+ */
+data class MoveCategoryEntries(
+    val fromId: String,
+    val toId: String,
+    val scope: MoveScope,
+    val removeSource: Boolean = false,
+    val confirmDiscardLimits: Boolean = false,
+    val expectedRevision: Long? = null,
+) : Command
+
+/** Remove uma categoria que já não tem lançamentos (a linha permanece, marcada como removida). */
+data class RemoveCategory(
+    val categoryId: String,
+    val confirmDiscardLimits: Boolean = false,
+    val expectedRevision: Long? = null,
+) : Command
+
 data class EditAccount(
     val accountId: String,
     val nickname: String? = null,
@@ -469,6 +628,8 @@ data class CorrectEntry(
     val spentBy: String? = null,
     val confirmExtra: Boolean = false,
     val expectedRevision: Long? = null,
+    /** Só para renda: troca a categoria de renda. Em outros lançamentos é recusado. */
+    val incomeCategoryId: String? = null,
 ) : Command
 
 /**
@@ -484,6 +645,20 @@ data class ChangePaymentMethod(
     val accountId: String? = null,
     val expectedRevision: Long? = null,
 ) : Command
+
+/**
+ * Confirma uma revisão de importação (S4): cria, vincula, corrige e quita pelos mesmos comandos de S1, tudo numa só transação local, e grava o lote
+ * como confirmado (único estado do lote que sincroniza). A operação id é a identidade da confirmação: repetir devolve o resultado original.
+ * [summaryToken] identifica o que a pessoa viu; se algo relevante mudou, o resultado é versão desatualizada e nada é aplicado.
+ */
+data class ConfirmImportBatch(val batchId: String, val summaryToken: String) : Command
+
+/**
+ * Resolve uma dúvida que ficou guardada num lote confirmado (S4, fila de pendências): reaplica a reconciliação do movimento com as decisões
+ * da pessoa e, se ele agora é claro, executa os mesmos comandos de S1 da confirmação, tudo numa só transação. O ID da operação é a identidade
+ * da tentativa. [summaryToken] identifica o que a pessoa viu; se algo mudou, nada é aplicado.
+ */
+data class ResolveImportItem(val batchId: String, val ordinal: Int, val summaryToken: String) : Command
 
 /** Desfaz uma operação aplicada, se nada nas entidades afetadas mudou depois dela. */
 data class Undo(val operationId: String) : Command
@@ -525,7 +700,23 @@ sealed interface Decision {
 
     /** Mover subcategoria com parte do limite: a pessoa decide por mês o que fazer com cada parte. */
     data class LimitDivisionReview(val subcategoryId: String, val parts: List<InvolvedPart>) : Decision
+
+    /**
+     * Remover categoria com limite (ou parte de limite) definido daqui em diante: o limite não vai para outra
+     * categoria, e descartá-lo exige confirmação explícita. [months] são os meses com limite definido.
+     */
+    data class RemovedCategoryLimits(val categoryId: String, val months: List<YearMonth>) : Decision
 }
+
+/** O que uma movimentação de lançamentos alcança (prévia do ADR 0039). Estornos acompanham a origem. */
+data class CategoryMoveImpact(
+    /** Lançamentos diretos, compras no cartão, boletos e recorrências que mudam de categoria. */
+    val entries: Int,
+    /** Meses do orçamento afetados, em ordem. */
+    val months: List<YearMonth>,
+    /** A origem seria removida junto. */
+    val removesSource: Boolean,
+)
 
 sealed interface PreviewResult {
     data class Ready(
@@ -540,6 +731,8 @@ sealed interface PreviewResult {
         val replacedLimitMonths: List<YearMonth> = emptyList(),
         /** Compra parcelada com nova data: a fatura que a data indicaria, oferecida sem ser aplicada. */
         val suggestedInvoice: YearMonth? = null,
+        /** Mover lançamentos entre categorias: quantos e em quais meses. */
+        val categoryMove: CategoryMoveImpact? = null,
     ) : PreviewResult
 
     /** O comando seria rejeitado ou pediria uma decisão; o resultado explica o motivo. */
@@ -569,7 +762,7 @@ data class FieldError(
     val month: YearMonth? = null,
 )
 
-enum class EntityType { Category, Account, Preferences, Movement, Card, CardPurchase, Boleto, Income, Recurrence, Refund, Invoice, InvoicePayment, LimitPlan }
+enum class EntityType { Category, Account, Preferences, Movement, Card, CardPurchase, Boleto, Income, Recurrence, Refund, Invoice, InvoicePayment, LimitPlan, IncomeCategory, ImportBatch, AlertEvent }
 
 data class EntityRef(val type: EntityType, val id: String)
 
@@ -613,6 +806,18 @@ data class CategoryNode(
     val order: Int,
     val iconKey: String,
     val seedKey: String?,
+    /** Cor escolhida na categoria principal (índice da paleta); nulo vale a cor derivada. Subcategoria usa a do pai. */
+    val colorIndex: Int? = null,
+    val revision: Long = 0,
+)
+
+data class IncomeCategoryNode(
+    val id: String,
+    val name: String,
+    val order: Int,
+    val iconKey: String,
+    val seedKey: String?,
+    val revision: Long = 0,
 )
 
 data class MovementRow(
@@ -703,6 +908,7 @@ data class IncomeView(
     val budgetMonth: YearMonth,
     val revision: Long,
     val voided: Boolean,
+    val incomeCategoryId: String? = null,
 )
 
 /** Renda do mês: recebido e a receber como partes do esperado (R$ 6.000 + R$ 500 = R$ 6.500). */

@@ -40,6 +40,8 @@ class SyncEngine(
     private val access: SyncAccess,
     private val batchSize: Int = 20,
     private val pageSize: Int = 100,
+    /** Depois de aplicar alterações recebidas: a fachada avalia os avisos (S5, ADR 0044). */
+    private val onReceived: suspend () -> Unit = {},
 ) {
     private val mutex = Mutex()
     private val state = MutableStateFlow(SyncStatus(SyncSummary(0, 0, 0, null, 0)))
@@ -117,6 +119,7 @@ class SyncEngine(
             if (!page.hasMore) break
         }
 
+        if (received > 0) onReceived()
         store.markCycleComplete()
         state.update {
             it.copy(connection = ConnectionState.Online, service = ServiceState.Responding, session = SessionState.Valid, lastFailure = null)

@@ -1,5 +1,6 @@
 package app.accord.persistence
 
+import app.accord.core.space.CategoryMoveImpact
 import app.accord.core.space.CommandResult
 import app.accord.core.space.EntityChange
 import app.accord.core.space.ErrorCode
@@ -30,6 +31,8 @@ internal sealed interface Planned {
         val replacedLimitMonths: List<YearMonth> = emptyList(),
         /** Compra parcelada com nova data: a fatura que a data indicaria, oferecida sem ser aplicada. */
         val suggestedInvoice: YearMonth? = null,
+        /** Mover lançamentos entre categorias: quantos e em quais meses. */
+        val categoryMove: CategoryMoveImpact? = null,
         val commit: suspend () -> List<EntityChange>,
     ) : Planned
 }

@@ -29,6 +29,11 @@ data class EntityChangeEnvelope(
     val tombstone: Boolean = false,
     /** Entidades citadas pelo estado; o serviço confere que não pertencem a outro espaço. */
     val references: List<EntityKey> = emptyList(),
+    /**
+     * Criar só se ausente (ADR 0044), aceito apenas para `AlertEvent`: se o serviço já tem a entidade, nada é escrito, a versão não muda,
+     * não há conflito e o estado existente volta em [OperationResult.Applied.absorbed].
+     */
+    val createIfAbsent: Boolean = false,
 )
 
 data class EntityKey(val type: String, val id: String)
@@ -70,6 +75,15 @@ enum class RejectReason {
     /** Mesmo ID de operação com conteúdo diferente do já registrado. */
     DivergentOperation,
     ProtocolUnsupported,
+
+    /** Lançamento vivo numa categoria já removida (ADR 0039): o aparelho o mantém salvo e o devolve "a classificar". */
+    CategoryRemoved,
+
+    /** Remoção de categoria com lançamento vivo ainda apontando para ela (ADR 0039): é preciso mover de novo. */
+    CategoryInUse,
+
+    /** Evento de aviso é imutável (ADR 0044): não se altera nem se remove um que o serviço já tem. */
+    AlertEventImmutable,
 }
 
 sealed interface OperationResult {
@@ -81,6 +95,8 @@ sealed interface OperationResult {
         val versions: List<AppliedVersion>,
         val cursor: Long,
         val repeated: Boolean,
+        /** Entidades `createIfAbsent` que o serviço já tinha: o estado canônico, que o aparelho adota no lugar do seu (ADR 0044). */
+        val absorbed: List<RemoteEntityState> = emptyList(),
     ) : OperationResult
 
     /**

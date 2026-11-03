@@ -315,6 +315,8 @@ private fun reasonLabel(failure: String?): String {
             "ForeignSpace" -> R.string.sync_reason_ForeignSpace
             "DivergentOperation" -> R.string.sync_reason_DivergentOperation
             "ProtocolUnsupported" -> R.string.sync_reason_ProtocolUnsupported
+            "CategoryRemoved" -> R.string.sync_reason_CategoryRemoved
+            "CategoryInUse" -> R.string.sync_reason_CategoryInUse
             else -> R.string.sync_reason_other
         },
     )

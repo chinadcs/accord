@@ -42,6 +42,7 @@ fun commandLabel(commandType: String): Int = when (commandType) {
     "ConfigureCard" -> R.string.op_card
     "Undo" -> R.string.op_undo
     "ClassifyEntry" -> R.string.op_classify
+    "ConfirmImportBatch" -> R.string.op_import
     "ResolveConflict" -> R.string.op_resolve
     else -> R.string.op_other
 }
@@ -108,6 +109,7 @@ class SyncViewModel(private val provider: SpaceProvider, private val sync: SyncC
         return when (ref.type) {
             in ENTRY_TYPES -> (space.entry(ref.id) as? QueryResult.Data)?.value?.description
             EntityType.Category -> (space.categories() as? QueryResult.Data)?.value?.firstOrNull { it.id == ref.id }?.name
+            EntityType.IncomeCategory -> (space.incomeCategories() as? QueryResult.Data)?.value?.firstOrNull { it.id == ref.id }?.name
             EntityType.Account -> (space.accounts() as? QueryResult.Data)?.value?.accounts?.firstOrNull { it.id == ref.id }?.nickname
             else -> null
         }

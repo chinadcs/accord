@@ -50,7 +50,7 @@ class AccessCenterTest {
                 val db = databases.getOrPut(accountId to spaceId) { TestDatabase.create().also { opened += it } }
                 val space = RoomFinanceSpace.open(db.db, clock, { Session(spaceId, accountId) })
                 val syncStore = SyncStore(db.db, newId = { "op-${ids++}" })
-                return SpaceRuntime(space, syncStore, SyncEngine(syncStore, service, access))
+                return SpaceRuntime(space, syncStore, SyncEngine(syncStore, service, access), identity = Session(spaceId, accountId))
             }
 
             override fun close(accountId: String, spaceId: String) = Unit

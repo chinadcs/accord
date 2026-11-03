@@ -123,7 +123,10 @@ class SyncFlowTest {
         compose.waitUntil(timeoutMs) { compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isEmpty() }
 
     private fun tap(text: String) {
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText(text, substring = true))
+        // A tela pode ainda estar carregando o conteúdo: espera o texto existir antes de tocar.
+        compose.waitUntil(15_000) {
+            runCatching { compose.onNode(hasScrollAction()).performScrollToNode(hasText(text, substring = true)) }.isSuccess
+        }
         compose.onAllNodes(hasText(text, substring = true) and hasClickAction()).onFirst().performClick()
     }
 

@@ -32,6 +32,23 @@ data class CategoryRow(
     val iconKey: String,
     val seedKey: String?,
     val revision: Long,
+    /** Cor escolhida na categoria principal (índice da paleta, ADR 0039); nulo vale a cor derivada. */
+    val colorIndex: Int? = null,
+    /** Removida: a linha e o identificador permanecem para o outro aparelho e operações antigas resolverem. */
+    @ColumnInfo(defaultValue = "0") val removed: Boolean = false,
+)
+
+/** Categoria de renda (receitas): lista plana por espaço; as sementes têm revisão 0 e id determinístico, como as categorias de despesa. */
+@Entity(tableName = "income_category")
+@Serializable
+data class IncomeCategoryRow(
+    @PrimaryKey val id: String,
+    val name: String,
+    val nameKey: String,
+    val sortOrder: Int,
+    val iconKey: String,
+    val seedKey: String?,
+    val revision: Long,
 )
 
 @Entity(tableName = "account")
@@ -72,6 +89,8 @@ data class MovementEntity(
     val revision: Long,
     /** Registro de exclusão: a identidade permanece para a sincronização replicar. */
     val voided: Boolean,
+    /** Tarifa ou juros confirmado (ADR 0045): marca do movimento, independente do nome da categoria. Padrão falso: movimentos anteriores e de outro aparelho. */
+    @ColumnInfo(defaultValue = "0") val isCharge: Boolean = false,
 )
 
 @Entity(tableName = "operation", indices = [Index(value = ["operationId"], unique = true)])
@@ -199,6 +218,7 @@ data class IncomeRow(
     val origin: String,
     val revision: Long,
     val voided: Boolean,
+    val incomeCategoryId: String? = null,
 )
 
 @Entity(tableName = "recurrence")
@@ -364,14 +384,24 @@ data class BoletoSum(val classificationId: String?, val totalCents: Long, val pa
 
 data class ClassificationSum(val classificationId: String?, val totalCents: Long, val count: Int)
 
+/** Parcelas do mês por classificação; [multi] distingue a compra parcelada da compra à vista no cartão (S5, composição dos conhecidos). */
+data class KindSum(val classificationId: String?, val multi: Boolean, val totalCents: Long, val count: Int)
+
 @Dao
 interface SpaceDao {
     // categorias
     /** A semente é determinística; reinserir é inofensivo. */
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insertSeedCategories(rows: List<CategoryRow>)
+    @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insertSeedIncomeCategories(rows: List<IncomeCategoryRow>)
+    @Insert suspend fun insertIncomeCategory(row: IncomeCategoryRow)
+    @Upsert suspend fun upsertIncomeCategory(row: IncomeCategoryRow)
+    @Query("SELECT * FROM income_category ORDER BY sortOrder, name") suspend fun incomeCategories(): List<IncomeCategoryRow>
+    @Query("SELECT * FROM income_category WHERE id = :id") suspend fun incomeCategory(id: String): IncomeCategoryRow?
     @Insert suspend fun insertCategory(row: CategoryRow)
     @Query("SELECT * FROM category ORDER BY sortOrder, name") suspend fun categories(): List<CategoryRow>
     @Query("SELECT * FROM category WHERE id = :id") suspend fun category(id: String): CategoryRow?
+    /** Categoria disponível para classificar: existe e não foi removida. */
+    @Query("SELECT * FROM category WHERE id = :id AND removed = 0") suspend fun activeCategory(id: String): CategoryRow?
     @Query("SELECT * FROM category WHERE parentId IS :parentId") suspend fun siblings(parentId: String?): List<CategoryRow>
     @Query("SELECT COALESCE(MAX(sortOrder), -1) FROM category WHERE parentId IS :parentId")
     suspend fun maxOrder(parentId: String?): Int
@@ -413,6 +443,28 @@ interface SpaceDao {
             "GROUP BY p.classificationId",
     )
     suspend fun installmentSums(month: String): List<ClassificationSum>
+    @Query(
+        "SELECT p.classificationId AS classificationId, ((SELECT COUNT(*) FROM installment x WHERE x.purchaseId = p.id) > 1) AS multi, " +
+            "SUM(i.amountCents) AS totalCents, COUNT(*) AS count " +
+            "FROM installment i JOIN card_purchase p ON p.id = i.purchaseId " +
+            "WHERE p.voided = 0 AND i.invoiceMonth = :month AND i.cancelState != 'CANCELLED' " +
+            "GROUP BY p.classificationId, multi",
+    )
+    suspend fun installmentSumsByKind(month: String): List<KindSum>
+    @Query(
+        "SELECT p.classificationId AS classificationId, SUM(i.amountCents) AS totalCents, COUNT(*) AS count " +
+            "FROM installment i JOIN card_purchase p ON p.id = i.purchaseId " +
+            "WHERE p.voided = 0 AND i.invoiceMonth = :month AND i.assignment = 'ToConfirm' AND i.cancelState != 'CANCELLED' " +
+            "GROUP BY p.classificationId",
+    )
+    suspend fun toConfirmSums(month: String): List<ClassificationSum>
+    @Query("SELECT MIN(epochDay) FROM movement WHERE voided = 0") suspend fun firstMovementDay(): Long?
+    @Query("SELECT MIN(purchaseEpochDay) FROM card_purchase WHERE voided = 0") suspend fun firstPurchaseDay(): Long?
+    @Query(
+        "SELECT * FROM card_purchase p WHERE p.voided = 0 AND p.isCharge = 0 AND p.purchaseEpochDay BETWEEN :from AND :to " +
+            "AND (SELECT COUNT(*) FROM installment i WHERE i.purchaseId = p.id) = 1",
+    )
+    suspend fun singlePurchasesBetween(from: Long, to: Long): List<CardPurchaseRow>
     @Query(
         "SELECT COUNT(*) FROM installment i JOIN card_purchase p ON p.id = i.purchaseId " +
             "WHERE p.voided = 0 AND i.invoiceMonth = :month AND i.assignment = 'ToConfirm' AND i.cancelState != 'CANCELLED'",
@@ -505,6 +557,15 @@ interface SpaceDao {
     @Query("DELETE FROM limit_entry WHERE categoryId = :categoryId") suspend fun deleteLimitEntries(categoryId: String)
     @Insert suspend fun insertLimitEntries(rows: List<LimitEntryRow>)
 
+    // movimentação de lançamentos entre categorias (ADR 0039): inclui os excluídos, que também apontam para a categoria
+    @Query("SELECT * FROM movement WHERE classificationId IN (:ids)") suspend fun movementsIn(ids: List<String>): List<MovementEntity>
+    @Query("SELECT * FROM card_purchase WHERE classificationId IN (:ids)") suspend fun purchasesIn(ids: List<String>): List<CardPurchaseRow>
+    @Query("SELECT * FROM boleto WHERE classificationId IN (:ids)") suspend fun boletosIn(ids: List<String>): List<BoletoRow>
+    @Query("SELECT * FROM recurrence_segment WHERE classificationId IN (:ids)") suspend fun segmentsIn(ids: List<String>): List<RecurrenceSegmentRow>
+    @Query("SELECT * FROM recurrence_override WHERE classificationId IN (:ids)") suspend fun overridesIn(ids: List<String>): List<RecurrenceOverrideRow>
+    @Upsert suspend fun upsertSegments(rows: List<RecurrenceSegmentRow>)
+    @Upsert suspend fun upsertOverrides(rows: List<RecurrenceOverrideRow>)
+
     // reorganização de categorias
     @Upsert suspend fun upsertCategory(row: CategoryRow)
     @Query("SELECT * FROM category_move") suspend fun categoryMoves(): List<CategoryMoveRow>
@@ -559,6 +620,56 @@ interface SpaceDao {
     )
     suspend fun installmentsToConfirm(): List<InstallmentRow>
 
+    // importação (S4): lote, movimentos extraídos, decisões e pares distintos
+    // avisos de possível excesso (S5, ADR 0044)
+    @Upsert suspend fun upsertAlertEvent(row: AlertEventRow)
+    @Query("SELECT * FROM alert_event WHERE id = :id") suspend fun alertEvent(id: String): AlertEventRow?
+    @Query("SELECT * FROM alert_event ORDER BY generatedAtMillis, id") suspend fun alertEvents(): List<AlertEventRow>
+    @Upsert suspend fun upsertAlertDisplay(row: AlertDisplayRow)
+    @Query("SELECT * FROM alert_display WHERE eventId = :id") suspend fun alertDisplay(id: String): AlertDisplayRow?
+    @Query("SELECT * FROM alert_display ORDER BY updatedMillis, eventId") suspend fun alertDisplays(): List<AlertDisplayRow>
+    @Query("SELECT * FROM alert_display WHERE state = 'Pending' ORDER BY updatedMillis, eventId") suspend fun pendingAlertDisplays(): List<AlertDisplayRow>
+    @Query("SELECT * FROM alert_preference WHERE id = 1") suspend fun alertPreference(): AlertPreferenceRow?
+    @Upsert suspend fun upsertAlertPreference(row: AlertPreferenceRow)
+
+    @Upsert suspend fun upsertImportBatch(row: ImportBatchRow)
+    @Query("SELECT * FROM import_batch WHERE id = :id") suspend fun importBatch(id: String): ImportBatchRow?
+    @Query("SELECT * FROM import_batch WHERE sha256 = :sha256 ORDER BY startedAtMillis DESC, id") suspend fun importBatchesBySha(sha256: String): List<ImportBatchRow>
+    @Query("SELECT * FROM import_batch ORDER BY startedAtMillis DESC, id") suspend fun importBatches(): List<ImportBatchRow>
+    @Query("SELECT * FROM import_batch WHERE status = 'Confirmed'") suspend fun confirmedImportBatches(): List<ImportBatchRow>
+    @Query("DELETE FROM import_batch WHERE id = :id") suspend fun deleteImportBatch(id: String)
+    @Upsert suspend fun upsertImportMovements(rows: List<ImportMovementRow>)
+    @Query("SELECT * FROM import_movement WHERE batchId = :batchId ORDER BY ordinal") suspend fun importMovements(batchId: String): List<ImportMovementRow>
+    @Query("DELETE FROM import_movement WHERE batchId = :batchId") suspend fun deleteImportMovements(batchId: String)
+    @Query(
+        "SELECT m.* FROM import_movement m JOIN import_batch b ON b.id = m.batchId " +
+            "WHERE b.status = 'Confirmed' AND m.resolution IS NOT NULL AND m.resolution NOT IN ('AlreadyKnown', 'Pending') " +
+            "ORDER BY b.startedAtMillis, b.id, m.ordinal",
+    )
+    suspend fun effectedImportMovements(): List<ImportMovementRow>
+    @Query("SELECT DISTINCT m.batchId FROM import_movement m JOIN import_batch b ON b.id = m.batchId WHERE b.status = 'Confirmed' AND m.resolution = 'Pending' ORDER BY m.batchId")
+    suspend fun batchesWithPending(): List<String>
+    @Upsert suspend fun upsertImportDecisions(rows: List<ImportDecisionRow>)
+    @Query("SELECT * FROM import_decision WHERE batchId = :batchId ORDER BY ordinal, type, value") suspend fun importDecisions(batchId: String): List<ImportDecisionRow>
+    @Query("DELETE FROM import_decision WHERE batchId = :batchId") suspend fun deleteImportDecisions(batchId: String)
+    @Query("DELETE FROM import_decision WHERE batchId = :batchId AND ordinal = :ordinal AND type = :type")
+    suspend fun deleteImportDecision(batchId: String, ordinal: Int, type: String)
+    @Query("DELETE FROM import_decision WHERE batchId = :batchId AND ordinal = :ordinal") suspend fun deleteImportDecisionsOf(batchId: String, ordinal: Int)
+    @Upsert suspend fun upsertImportPairs(rows: List<ImportPairRow>)
+    @Query("SELECT * FROM import_pair WHERE batchId = :batchId ORDER BY key, entryId") suspend fun importPairs(batchId: String): List<ImportPairRow>
+    @Query("SELECT p.* FROM import_pair p JOIN import_batch b ON b.id = p.batchId WHERE b.status = 'Confirmed' ORDER BY p.key, p.entryId")
+    suspend fun confirmedImportPairs(): List<ImportPairRow>
+    @Query("DELETE FROM import_pair WHERE batchId = :batchId") suspend fun deleteImportPairs(batchId: String)
+
+    // dados do que a importação compara com o que o espaço já tem
+    @Query("SELECT * FROM movement WHERE voided = 0 AND accountId = :accountId AND epochDay BETWEEN :from AND :to ORDER BY epochDay, id")
+    suspend fun movementsOfAccount(accountId: String, from: Long, to: Long): List<MovementEntity>
+    @Query(
+        "SELECT p.* FROM card_purchase p WHERE p.voided = 0 AND (SELECT COUNT(*) FROM installment i WHERE i.purchaseId = p.id) > 1 ORDER BY p.purchaseEpochDay, p.id",
+    )
+    suspend fun installmentPurchases(): List<CardPurchaseRow>
+    @Query("SELECT * FROM boleto WHERE voided = 0 AND paidEpochDay IS NULL ORDER BY dueEpochDay, id") suspend fun unpaidBoletos(): List<BoletoRow>
+
     // operações
     @Insert suspend fun insertOperation(row: OperationRow): Long
     @Insert suspend fun insertChanges(rows: List<OperationChangeRow>)
@@ -572,19 +683,34 @@ interface SpaceDao {
 @Database(
     entities = [
         CategoryRow::class, AccountRow::class, PreferencesRow::class, MovementEntity::class,
-        CardRow::class, CardPurchaseRow::class, InstallmentRow::class, BoletoRow::class, IncomeRow::class,
+        CardRow::class, CardPurchaseRow::class, InstallmentRow::class, BoletoRow::class, IncomeRow::class, IncomeCategoryRow::class,
         EntitySyncRow::class, DraftRow::class, RefundRow::class, LimitPlanRow::class, LimitEntryRow::class, CategoryMoveRow::class, InvoiceRow::class, InvoicePaymentRow::class, RecurrenceRow::class, RecurrenceSegmentRow::class, RecurrenceOverrideRow::class, RecurrenceSettlementRow::class,
         OperationRow::class, OperationChangeRow::class,
         SyncStateRow::class, ConflictRow::class, ConflictEntityRow::class,
         ChatMessageRow::class, ChatAttemptRow::class, ChatQuestionRow::class, ChatReceiptRow::class,
+        ImportBatchRow::class, ImportMovementRow::class, ImportDecisionRow::class, ImportPairRow::class,
+        AlertEventRow::class, AlertDisplayRow::class, AlertPreferenceRow::class,
     ],
-    version = 4,
+    version = 11,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2, spec = Migration1To2::class),
         // S3: histórico do Chat, só neste aparelho.
         AutoMigration(from = 2, to = 3),
         AutoMigration(from = 3, to = 4),
+        AutoMigration(from = 4, to = 5),
+        // S4: lote de importação, movimentos extraídos, decisões e pares distintos.
+        AutoMigration(from = 5, to = 6),
+        // S4.3b: ligação "repetição de" entre movimentos do mesmo lote.
+        AutoMigration(from = 6, to = 7),
+        // ADR 0039: cor escolhida e marca de removida na categoria.
+        AutoMigration(from = 7, to = 8),
+        // S5 / ADR 0044: evento de aviso (compartilhado) e situação de exibição (só neste aparelho).
+        AutoMigration(from = 8, to = 9),
+        // S5.5: preferência de avisos deste aparelho (tela 27), só local.
+        AutoMigration(from = 9, to = 10),
+        // S5.7: marca de encargo no movimento (pagamento direto).
+        AutoMigration(from = 10, to = 11),
     ],
 )
 abstract class AccordDatabase : RoomDatabase() {

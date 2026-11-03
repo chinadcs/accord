@@ -246,6 +246,7 @@ class SupabaseSpaceService(
         put("baseVersion", c.baseVersion?.let(::JsonPrimitive) ?: JsonNull)
         put("state", c.state)
         put("tombstone", c.tombstone)
+        if (c.createIfAbsent) put("createIfAbsent", true)
         put("references", buildJsonArray { c.references.forEach { add(buildJsonObject { put("type", it.type); put("id", it.id) }) } })
     }
 
@@ -279,6 +280,7 @@ class SupabaseSpaceService(
                 },
                 cursor = o.long("cursor") ?: 0,
                 repeated = (o["repeated"] as? JsonPrimitive)?.booleanOrNull ?: false,
+                absorbed = (o["absorbed"] as? JsonArray).orEmpty().mapNotNull { it.obj() }.map(::entityState),
             )
             "conflict" -> OperationResult.Conflict(
                 id,

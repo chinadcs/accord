@@ -11,6 +11,9 @@ import java.time.ZoneId
  */
 class BudgetClock private constructor(private val clock: Clock) {
     fun today(): LocalDate = LocalDate.now(clock)
+
+    /** O instante atual, para a janela dos avisos (S5); nos testes, o do [Clock] fixo. */
+    fun now(): java.time.Instant = java.time.Instant.now(clock)
     fun currentMonth(): YearMonth = YearMonth.from(today())
 
     companion object {

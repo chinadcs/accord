@@ -67,6 +67,8 @@
     <string name="sync_reason_ForeignSpace">pertence a outro espaço</string>
     <string name="sync_reason_DivergentOperation">mesmo identificador com conteúdo diferente</string>
     <string name="sync_reason_ProtocolUnsupported">versão do protocolo não suportada</string>
+    <string name="sync_reason_CategoryRemoved">a categoria foi removida no outro celular; o lançamento volta a "a classificar"</string>
+    <string name="sync_reason_CategoryInUse">ainda há lançamentos nessa categoria; mova-os de novo antes de removê-la</string>
     <string name="sync_reason_other">motivo não identificado</string>
 
     <!-- Nomes das operações -->
@@ -88,6 +90,7 @@
     <string name="op_card">Cartão</string>
     <string name="op_undo">Desfazer</string>
     <string name="op_classify">Classificação</string>
+    <string name="op_import">Importação de documento</string>
     <string name="op_resolve">Escolha de versão</string>
     <string name="op_other">Alteração</string>
 
@@ -144,6 +147,9 @@
     <string name="conflict_entity_invoice_payment">Pagamento de fatura</string>
     <string name="conflict_entity_limit_plan">Limites</string>
     <string name="conflict_entity_category">Categoria</string>
+    <string name="conflict_entity_income_category">Categoria de renda</string>
+    <string name="conflict_entity_import_batch">Importação de documento</string>
+    <string name="conflict_entity_alert_event">Aviso de possível excesso</string>
     <string name="conflict_entity_account">Conta</string>
     <string name="conflict_entity_card">Cartão</string>
     <string name="conflict_entity_preferences">Preferências</string>
@@ -160,6 +166,7 @@
     <string name="field_received_on">Recebida em</string>
     <string name="field_received_amount">Valor recebido</string>
     <string name="field_category">Categoria</string>
+    <string name="field_income_category">Categoria de renda</string>
     <string name="field_account">Conta</string>
     <string name="field_kind">Forma</string>
     <string name="field_status">Situação</string>
@@ -182,6 +189,7 @@
     <string name="field_exceptions">Exceções</string>
     <string name="field_settlements">Pagamentos</string>
     <string name="field_icon">Ícone</string>
+    <string name="field_color">Cor</string>
     <string name="field_order">Ordem</string>
     <string name="field_moves">Mudanças de categoria principal</string>
     <plurals name="installments_summary_uniform">

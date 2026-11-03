@@ -128,7 +128,7 @@ sealed interface SignOutOutcome {
 
 enum class StepStatus { Done, Pending, Unavailable }
 
-enum class StepId { InitialCategories, DefaultCard, AccountsAndMyDefault, LimitsAndSplit, OtherPerson, DeviceModel }
+enum class StepId { InitialCategories, DefaultCard, AccountsAndMyDefault, LimitsAndSplit, OtherPerson, Notifications, DeviceModel }
 
 data class FirstStep(val id: StepId, val status: StepStatus)
 
@@ -136,6 +136,9 @@ data class FirstStep(val id: StepId, val status: StepStatus)
  * Lista de primeiros passos derivada dos dados persistidos, nunca de marcas separadas: só fica
  * concluído o que foi realmente salvo, e itens que dependem do outro aparelho só refletem o que já
  * chegou (S2 "Interações por tela", tela 03).
+ *
+ * O passo [StepId.Notifications] (obrigatório, decisão de 03/11/2026) depende da permissão do sistema neste aparelho; o aplicativo Android o acrescenta
+ * à lista, porque o núcleo não conhece a plataforma.
  */
 object FirstSteps {
     suspend fun derive(space: FinanceSpace, month: YearMonth, participants: Participants?): List<FirstStep> {

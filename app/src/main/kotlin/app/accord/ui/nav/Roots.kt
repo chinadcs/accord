@@ -26,6 +26,11 @@ enum class Root(
 const val ROUTE_ACCESS = "access"
 const val ROUTE_SPACE = "space"
 const val ROUTE_FIRST_STEPS = "first_steps"
+const val ROUTE_ALERT_PREFS = "alert_prefs"
+
+/** Previsões e alertas (tela 20), `forecasts?month=2026-10`, e o detalhe da previsão (tela 21), `forecast/{categoryId}/{month}?event=` (event: a chave do aviso que a abriu). */
+const val ROUTE_FORECASTS = "forecasts"
+const val ROUTE_FORECAST = "forecast"
 
 /** Sincronização (tela 26) e o modo conflito da tela 19: `conflict/{operationId}`. */
 const val ROUTE_SYNC = "sync"
@@ -56,8 +61,19 @@ const val ROUTE_INVOICE = "invoice"
 
 /** Categorias, contas e limites, abertos pela aba Mais; voltar retorna a ela. */
 const val ROUTE_CATEGORIES = "categories"
+const val ROUTE_CATEGORY_EDIT = "category-edit"
+const val ROUTE_CATEGORY_MOVE = "category-move"
 const val ROUTE_ACCOUNTS = "accounts"
 const val ROUTE_LIMITS = "limits"
+
+/** Importação (S4): escolher o arquivo, revisar o lote `import_review/{batchId}` e ver o resultado `import_result/{batchId}`. */
+const val ROUTE_IMPORT = "import"
+const val ROUTE_IMPORT_REVIEW = "import_review"
+const val ROUTE_IMPORT_RESULT = "import_result"
+
+/** Fila de pendências (tela 18), `pending?batch=` filtrada por lote, e a resolução de uma dúvida de importação `pending_item/{batchId}/{ordinal}` (tela 19). */
+const val ROUTE_PENDING = "pending"
+const val ROUTE_PENDING_ITEM = "pending_item"
 
 /** Rendas do mês: `incomes?month=2026-11`. */
 const val ROUTE_INCOMES = "incomes"

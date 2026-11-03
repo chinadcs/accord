@@ -79,12 +79,32 @@ import app.accord.core.sync.EntryStage
 import app.accord.core.sync.SessionState
 import app.accord.ui.access.AccessRoute
 import app.accord.ui.access.AccessViewModel
+import app.accord.ui.alerts.AlertPreferencesRoute
+import app.accord.ui.alerts.AlertPreferencesViewModel
+import app.accord.ui.alerts.rememberAllowNotifications
+import app.accord.core.alerts.NotificationAccess
+import app.accord.ui.components.RefreshOnResume
 import app.accord.ui.firststeps.FirstStepsRoute
 import app.accord.ui.firststeps.FirstStepsViewModel
 import app.accord.ui.firststeps.StepActions
 import app.accord.ui.nav.ROUTE_ACCESS
 import app.accord.ui.nav.ROUTE_CONFLICT
 import app.accord.ui.nav.ROUTE_SYNC
+import app.accord.ui.imports.AndroidPdfTextExtractor
+import app.accord.ui.imports.ContentResolverOpener
+import app.accord.ui.imports.ImportFileRoute
+import app.accord.ui.imports.ImportFileViewModel
+import app.accord.ui.imports.ImportHub
+import app.accord.ui.imports.ImportHubViewModel
+import app.accord.ui.imports.ImportResultRoute
+import app.accord.ui.imports.ImportResultViewModel
+import app.accord.ui.imports.ImportReviewRoute
+import app.accord.ui.imports.ImportReviewViewModel
+import app.accord.ui.pending.PendingHubCard
+import app.accord.ui.pending.PendingQueueRoute
+import app.accord.ui.pending.PendingQueueViewModel
+import app.accord.ui.pending.PendingResolveRoute
+import app.accord.ui.pending.PendingResolveViewModel
 import app.accord.ui.review.ReviewCategories
 import app.accord.ui.sync.ConflictRoute
 import app.accord.ui.sync.ConflictViewModel
@@ -98,6 +118,16 @@ import app.accord.ui.components.RefreshOnResume
 import app.accord.ui.components.RootNavigationBar
 import androidx.compose.runtime.CompositionLocalProvider
 import app.accord.core.sync.ConnectionState
+import app.accord.ui.forecast.ForecastDetailActions
+import app.accord.ui.forecast.ForecastDetailRoute
+import app.accord.ui.forecast.ForecastDetailViewModel
+import app.accord.ui.forecast.ForecastsActions
+import app.accord.ui.forecast.ForecastsRoute
+import app.accord.ui.forecast.ForecastsViewModel
+import app.accord.ui.forecast.ReasonDestination
+import app.accord.ui.nav.ROUTE_ALERT_PREFS
+import app.accord.ui.nav.ROUTE_FORECAST
+import app.accord.ui.nav.ROUTE_FORECASTS
 import app.accord.ui.nav.ROUTE_FIRST_STEPS
 import app.accord.ui.nav.ROUTE_SPACE
 import app.accord.ui.space.SpaceRoute
@@ -131,6 +161,12 @@ import app.accord.ui.nav.ROUTE_ENTRY
 import app.accord.ui.nav.ARG_MONTH
 import app.accord.ui.nav.ROUTE_ACCOUNTS
 import app.accord.ui.nav.ROUTE_CATEGORIES
+import app.accord.ui.nav.ROUTE_CATEGORY_EDIT
+import app.accord.ui.nav.ROUTE_CATEGORY_MOVE
+import app.accord.ui.categories.CategoryEditRoute
+import app.accord.ui.categories.CategoryEditViewModel
+import app.accord.ui.categories.CategoryMoveRoute
+import app.accord.ui.categories.CategoryMoveViewModel
 import app.accord.ui.nav.ROUTE_LIMITS
 import app.accord.ui.nav.ARG_REGISTER_CHAT
 import app.accord.ui.nav.ARG_REGISTER_FORM
@@ -152,6 +188,11 @@ import app.accord.ui.nav.ROUTE_CARD
 import app.accord.ui.nav.ROUTE_COMMITMENT
 import app.accord.ui.nav.ROUTE_COMMITMENTS
 import app.accord.ui.nav.ROUTE_EDIT
+import app.accord.ui.nav.ROUTE_PENDING
+import app.accord.ui.nav.ROUTE_PENDING_ITEM
+import app.accord.ui.nav.ROUTE_IMPORT
+import app.accord.ui.nav.ROUTE_IMPORT_RESULT
+import app.accord.ui.nav.ROUTE_IMPORT_REVIEW
 import app.accord.ui.nav.ROUTE_INCOMES
 import app.accord.ui.nav.ROUTE_INVOICE
 import app.accord.ui.nav.ROUTE_REGISTER
@@ -239,6 +280,19 @@ private fun MainApp(container: AppContainer, startRoute: String) {
     }
     val access by container.access.status.collectAsStateWithLifecycle()
     val syncStatus by container.sync.status.collectAsStateWithLifecycle()
+    val pendingAlert by container.pendingAlertEvent.collectAsStateWithLifecycle()
+    // Aviso tocado: pilha Orçamento, Previsões, Detalhe. Evento de outro espaço ou conta é ignorado e abre só as Previsões; com a sessão encerrada, espera entrar.
+    LaunchedEffect(pendingAlert, access.stage) {
+        val id = pendingAlert ?: return@LaunchedEffect
+        if (access.stage != EntryStage.Ready) return@LaunchedEffect
+        container.consumeAlertEvent()
+        val event = (container.space().alertEvent(id) as? app.accord.core.space.QueryResult.Data)?.value
+        openRoot(Root.Budget)
+        navController.navigate("$ROUTE_FORECASTS?$ARG_MONTH=${event?.month ?: container.clock.currentMonth()}")
+        if (event != null) {
+            navController.navigate("$ROUTE_FORECAST/${Uri.encode(event.categoryId)}/${event.month}?${ForecastDetailViewModel.ARG_EVENT}=${Uri.encode(id)}")
+        }
+    }
     val entry by navController.currentBackStackEntryAsState()
     val destination = entry?.destination
     // A barra inferior só aparece nas raízes; detalhes e formulários escondem-na.
@@ -266,8 +320,13 @@ private fun MainApp(container: AppContainer, startRoute: String) {
     val context = LocalContext.current
     // O aviso da ação anterior não cobre o botão Salvar do formulário que abre em seguida.
     val formRoute = destination?.route?.substringBefore('?')?.substringBefore('/')
-    val inForm = formRoute in setOf(ROUTE_REGISTER, ROUTE_EDIT, ROUTE_CARD, ROUTE_ACCOUNTS, ROUTE_CATEGORIES, ROUTE_LIMITS, ROUTE_FIRST_STEPS)
-    LaunchedEffect(destination?.route) { if (inForm) snackbar.currentSnackbarData?.dismiss() }
+    val inForm = formRoute in setOf(ROUTE_REGISTER, ROUTE_EDIT, ROUTE_CARD, ROUTE_ACCOUNTS, ROUTE_CATEGORIES, ROUTE_CATEGORY_EDIT, ROUTE_CATEGORY_MOVE, ROUTE_LIMITS, ROUTE_FIRST_STEPS, ROUTE_ALERT_PREFS)
+    // Só ao entrar num formulário vindo de fora: voltar de uma tela de edição para a lista (também formulário) não apaga o aviso da ação que acabou de salvar.
+    var cameFromForm by remember { mutableStateOf(false) }
+    LaunchedEffect(destination?.route) {
+        if (inForm && !cameFromForm) snackbar.currentSnackbarData?.dismiss()
+        cameFromForm = inForm
+    }
     LaunchedEffect(container) {
         container.feedback.events.collect { event ->
             launch {
@@ -395,6 +454,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                         onOpenIncomes = { month -> navController.navigate("$ROUTE_INCOMES?$ARG_MONTH=$month") },
                         onOpenCard = { navController.navigate(ROUTE_CARD) },
                         onSearch = { openRoot(Root.Entries) },
+                        onOpenForecasts = { month -> navController.navigate("$ROUTE_FORECASTS?$ARG_MONTH=$month") },
                     )
                 }
                 composable(
@@ -414,6 +474,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                         onCheckEntries = { categoryId, subcategoryId ->
                             navController.openFilteredEntries(viewModel.month, subcategoryId ?: categoryId, null)
                         },
+                        onOpenForecast = { navController.navigate("$ROUTE_FORECAST/${Uri.encode(viewModel.categoryId)}/${viewModel.month}") },
                     )
                 }
             }
@@ -436,9 +497,25 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     val conflicts by viewModel.conflicts.collectAsStateWithLifecycle()
                     val categories by viewModel.categories.collectAsStateWithLifecycle()
                     RefreshOnResume(viewModel::refresh)
+                    val hub: ImportHubViewModel = viewModel(factory = viewModelFactory { initializer { ImportHubViewModel(container) } })
+                    val hubState by hub.state.collectAsStateWithLifecycle()
+                    RefreshOnResume(hub::refresh)
+                    val queue: PendingQueueViewModel = viewModel(
+                        factory = viewModelFactory { initializer { PendingQueueViewModel(container, container.sync, container.chat, createSavedStateHandle()) } },
+                    )
+                    val queueState by queue.state.collectAsStateWithLifecycle()
+                    RefreshOnResume(queue::refresh)
                     ProvisionalRoot(
                         stringResource(R.string.review_title), stringResource(R.string.review_placeholder), padding, register,
                         extra = {
+                            PendingHubCard(queueState.items.size, queueState.loading) { navController.navigate(ROUTE_PENDING) }
+                            ImportHub(
+                                hubState,
+                                onImport = { navController.navigate(ROUTE_IMPORT) },
+                                onContinue = { id -> navController.navigate("$ROUTE_IMPORT_REVIEW/${Uri.encode(id)}") },
+                                onOpenResult = { id -> navController.navigate("$ROUTE_IMPORT_RESULT/${Uri.encode(id)}") },
+                                onDiscard = hub::discard,
+                            )
                             ReviewConflicts(conflicts) { id -> navController.navigate("$ROUTE_CONFLICT/${Uri.encode(id)}") }
                             ReviewCategories(categories, onAccept = viewModel::accept, onChoose = { navController.openRoot(Root.Chat) })
                         },
@@ -475,6 +552,13 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             )
                         }
                     }
+                    val alertsViewModel: AlertPreferencesViewModel = viewModel(
+                        factory = viewModelFactory { initializer { AlertPreferencesViewModel(container, container.notifications) } },
+                    )
+                    val alertsState by alertsViewModel.state.collectAsStateWithLifecycle()
+                    // Voltar dos ajustes do sistema atualiza a situação real das notificações.
+                    RefreshOnResume(alertsViewModel::refresh)
+                    val allowNotifications = rememberAllowNotifications(container.notifications, onDone = alertsViewModel::refresh)
                     MoreScreen(
                         padding,
                         actions = MoreActions(
@@ -487,6 +571,14 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             onRegister = register,
                             onSpace = { navController.navigate(ROUTE_SPACE) },
                             onAppearance = { navController.navigate("appearance") },
+                            onAlertPreferences = { navController.navigate(ROUTE_ALERT_PREFS) },
+                            onForecasts = { navController.navigate(ROUTE_FORECASTS) },
+                            onAlertsToggle = { enabled ->
+                                alertsViewModel.toggleNow(enabled)
+                                // Ligar sem permissão leva direto ao pedido do sistema (ou aos ajustes), sem esconder o que falta.
+                                if (enabled && alertsState.access != NotificationAccess.Granted) allowNotifications()
+                            },
+                            onAlertsAllow = allowNotifications,
                             onSignOut = {
                                 // Sempre uma decisão explícita, com o número de operações por enviar à vista.
                                 scope.launch {
@@ -506,6 +598,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                         syncStatus = syncStatus,
                         entriesCriterion = entriesCriterion,
                         onEntriesCriterionChange = container.theme::setEntriesDateCriterion,
+                        alerts = alertsState,
                     )
                     chatDialog?.let { dialog ->
                         ChatHistoryDialogView(
@@ -575,6 +668,58 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 EditEntryRoute(viewModel, padding, onExit = { navController.popBackStack() })
             }
             composable(
+                "$ROUTE_FORECASTS?$ARG_MONTH={$ARG_MONTH}",
+                arguments = listOf(navArgument(ARG_MONTH) { type = NavType.StringType; nullable = true; defaultValue = null }),
+            ) {
+                val viewModel: ForecastsViewModel = viewModel(
+                    factory = viewModelFactory { initializer { ForecastsViewModel(container, createSavedStateHandle()) } },
+                )
+                ForecastsRoute(
+                    viewModel, padding,
+                    ForecastsActions(
+                        onBack = { navController.popBackStack() },
+                        onOpenDetail = { id -> navController.navigate("$ROUTE_FORECAST/${Uri.encode(id)}/${viewModel.month}") },
+                        onOpenPreferences = { navController.navigate(ROUTE_ALERT_PREFS) },
+                        onImproveCoverage = { openRoot(Root.Review) },
+                        onClassify = { navController.openFilteredEntries(viewModel.month, null, EntrySituation.ToClassify) },
+                    ),
+                )
+            }
+            composable(
+                "$ROUTE_FORECAST/{${ForecastDetailViewModel.ARG_CATEGORY}}/{${ForecastDetailViewModel.ARG_MONTH}}?${ForecastDetailViewModel.ARG_EVENT}={${ForecastDetailViewModel.ARG_EVENT}}",
+                arguments = listOf(
+                    navArgument(ForecastDetailViewModel.ARG_CATEGORY) { type = NavType.StringType },
+                    navArgument(ForecastDetailViewModel.ARG_MONTH) { type = NavType.StringType },
+                    navArgument(ForecastDetailViewModel.ARG_EVENT) { type = NavType.StringType; nullable = true; defaultValue = null },
+                ),
+            ) {
+                val viewModel: ForecastDetailViewModel = viewModel(
+                    factory = viewModelFactory { initializer { ForecastDetailViewModel(container, createSavedStateHandle()) } },
+                )
+                ForecastDetailRoute(
+                    viewModel, padding,
+                    ForecastDetailActions(
+                        onBack = { navController.popBackStack() },
+                        onCheckEntries = { navController.openFilteredEntries(viewModel.month, viewModel.categoryId, null) },
+                        onBackToForecasts = {
+                            if (!navController.popBackStack("$ROUTE_FORECASTS?$ARG_MONTH={$ARG_MONTH}", inclusive = false)) {
+                                navController.navigate("$ROUTE_FORECASTS?$ARG_MONTH=${viewModel.month}")
+                            }
+                        },
+                        onOpenCommitments = { navController.navigate("$ROUTE_COMMITMENTS?$ARG_MONTH=${viewModel.month}") },
+                        onDestination = { destination ->
+                            when (destination) {
+                                ReasonDestination.Review -> openRoot(Root.Review)
+                                ReasonDestination.Pendings -> navController.navigate(ROUTE_PENDING)
+                                ReasonDestination.Card -> navController.navigate(ROUTE_CARD)
+                                ReasonDestination.Sync -> navController.navigate(ROUTE_SYNC)
+                            }
+                        },
+                        onOpenPreferences = { navController.navigate(ROUTE_ALERT_PREFS) },
+                    ),
+                )
+            }
+            composable(
                 "$ROUTE_COMMITMENTS?$ARG_MONTH={$ARG_MONTH}",
                 arguments = listOf(navArgument(ARG_MONTH) { type = NavType.StringType; nullable = true; defaultValue = null }),
             ) {
@@ -630,15 +775,21 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 val viewModel: SpaceViewModel = viewModel(factory = viewModelFactory { initializer { SpaceViewModel(container.access) } })
                 SpaceRoute(viewModel, padding, firstRun = false, onContinue = {}, onBack = { navController.popBackStack() })
             }
+            composable(ROUTE_ALERT_PREFS) {
+                val viewModel: AlertPreferencesViewModel = viewModel(
+                    factory = viewModelFactory { initializer { AlertPreferencesViewModel(container, container.notifications) } },
+                )
+                AlertPreferencesRoute(viewModel, container.notifications, padding, onBack = { navController.popBackStack() })
+            }
             composable(ROUTE_FIRST_STEPS) {
                 val viewModel: FirstStepsViewModel = viewModel(
-                    factory = viewModelFactory { initializer { FirstStepsViewModel(container, container.access) } },
+                    factory = viewModelFactory { initializer { FirstStepsViewModel(container, container.access, container.notifications) } },
                 )
                 val goToChat: () -> Unit = {
                     navController.navigate(Root.Chat.graph) { popUpTo(ROUTE_FIRST_STEPS) { inclusive = true } }
                 }
                 FirstStepsRoute(
-                    viewModel, padding,
+                    viewModel, container.notifications, padding,
                     StepActions(
                         onCategories = { navController.navigate(ROUTE_CATEGORIES) },
                         onCard = { navController.navigate("$ROUTE_CARD?initialSetup=true") },
@@ -655,7 +806,38 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 val viewModel: CategoriesViewModel = viewModel(
                     factory = viewModelFactory { initializer { CategoriesViewModel(container, createSavedStateHandle()) } },
                 )
-                CategoriesRoute(viewModel, padding, onBack = { navController.popBackStack() })
+                CategoriesRoute(
+                    viewModel, padding, onBack = { navController.popBackStack() },
+                    onEdit = { id -> navController.navigate("$ROUTE_CATEGORY_EDIT/$id") },
+                )
+            }
+            composable(
+                "$ROUTE_CATEGORY_EDIT/{${CategoryEditViewModel.ARG_CATEGORY}}",
+                arguments = listOf(navArgument(CategoryEditViewModel.ARG_CATEGORY) { type = NavType.StringType }),
+            ) {
+                val viewModel: CategoryEditViewModel = viewModel(
+                    factory = viewModelFactory { initializer { CategoryEditViewModel(container, createSavedStateHandle()) } },
+                )
+                CategoryEditRoute(
+                    viewModel, padding, onBack = { navController.popBackStack() },
+                    onMove = { id -> navController.navigate("$ROUTE_CATEGORY_MOVE/$id?${CategoryMoveViewModel.ARG_REMOVE}=false") },
+                    onRemove = { id -> navController.navigate("$ROUTE_CATEGORY_MOVE/$id?${CategoryMoveViewModel.ARG_REMOVE}=true") },
+                )
+            }
+            composable(
+                "$ROUTE_CATEGORY_MOVE/{${CategoryMoveViewModel.ARG_CATEGORY}}?${CategoryMoveViewModel.ARG_REMOVE}={${CategoryMoveViewModel.ARG_REMOVE}}",
+                arguments = listOf(
+                    navArgument(CategoryMoveViewModel.ARG_CATEGORY) { type = NavType.StringType },
+                    navArgument(CategoryMoveViewModel.ARG_REMOVE) { type = NavType.BoolType; defaultValue = false },
+                ),
+            ) {
+                val viewModel: CategoryMoveViewModel = viewModel(
+                    factory = viewModelFactory { initializer { CategoryMoveViewModel(container, createSavedStateHandle()) } },
+                )
+                // Depois de mover ou remover, volta à lista de categorias (a edição pode já nem existir).
+                CategoryMoveRoute(viewModel, padding, onBack = {
+                    if (!navController.popBackStack(ROUTE_CATEGORIES, inclusive = false)) navController.popBackStack()
+                })
             }
             composable(ROUTE_ACCOUNTS) {
                 val viewModel: AccountsViewModel = viewModel(
@@ -705,6 +887,73 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 InvoiceRoute(
                     viewModel, padding, onBack = { navController.popBackStack() },
                     onSeeEntries = { month -> navController.openFilteredEntries(month, null, null) },
+                )
+            }
+            composable(ROUTE_IMPORT) {
+                val appContext = LocalContext.current.applicationContext
+                val resolver = appContext.contentResolver
+                val viewModel: ImportFileViewModel = viewModel(
+                    factory = viewModelFactory { initializer { ImportFileViewModel(container, ContentResolverOpener(resolver), AndroidPdfTextExtractor(appContext)) } },
+                )
+                ImportFileRoute(
+                    viewModel, padding, onBack = { navController.popBackStack() },
+                    onOpenReview = { id -> navController.navigate("$ROUTE_IMPORT_REVIEW/${Uri.encode(id)}") { popUpTo(ROUTE_IMPORT) { inclusive = true } } },
+                    onOpenResult = { id -> navController.navigate("$ROUTE_IMPORT_RESULT/${Uri.encode(id)}") { popUpTo(ROUTE_IMPORT) { inclusive = true } } },
+                )
+            }
+            composable("$ROUTE_IMPORT_REVIEW/{batchId}", arguments = listOf(navArgument("batchId") { type = NavType.StringType })) { entry ->
+                val batchId = Uri.decode(entry.arguments?.getString("batchId").orEmpty())
+                val viewModel: ImportReviewViewModel = viewModel(
+                    factory = viewModelFactory { initializer { ImportReviewViewModel(container, createSavedStateHandle(), batchId) } },
+                )
+                ImportReviewRoute(
+                    viewModel, padding, onBack = { navController.popBackStack() },
+                    // Depois de confirmar, voltar do resultado leva a Revisar, nunca de volta à confirmação.
+                    onOpenResult = { id -> navController.navigate("$ROUTE_IMPORT_RESULT/${Uri.encode(id)}") { popUpTo("$ROUTE_IMPORT_REVIEW/{batchId}") { inclusive = true } } },
+                    onClosed = { navController.popBackStack() },
+                )
+            }
+            composable("$ROUTE_IMPORT_RESULT/{batchId}", arguments = listOf(navArgument("batchId") { type = NavType.StringType })) { entry ->
+                val batchId = Uri.decode(entry.arguments?.getString("batchId").orEmpty())
+                val viewModel: ImportResultViewModel = viewModel(
+                    factory = viewModelFactory { initializer { ImportResultViewModel(container, batchId) } },
+                )
+                ImportResultRoute(
+                    viewModel, padding, onBack = { navController.popBackStack() },
+                    onSeeEntries = { navController.openRoot(Root.Entries) },
+                    onOpenEntry = openEntry,
+                    onResolvePending = { navController.navigate("$ROUTE_PENDING?batch=${Uri.encode(batchId)}") },
+                )
+            }
+            composable(
+                "$ROUTE_PENDING?batch={batch}",
+                arguments = listOf(navArgument("batch") { type = NavType.StringType; nullable = true; defaultValue = null }),
+            ) {
+                val viewModel: PendingQueueViewModel = viewModel(
+                    factory = viewModelFactory { initializer { PendingQueueViewModel(container, container.sync, container.chat, createSavedStateHandle()) } },
+                )
+                PendingQueueRoute(
+                    viewModel, padding, onBack = { navController.popBackStack() },
+                    onOpenImport = { id, ordinal -> navController.navigate("$ROUTE_PENDING_ITEM/${Uri.encode(id)}/$ordinal") },
+                    onOpenConflict = { id -> navController.navigate("$ROUTE_CONFLICT/${Uri.encode(id)}") },
+                    onOpenEntry = openEntry,
+                    onOpenInvoice = { month -> navController.navigate("$ROUTE_INVOICE/$month") },
+                    onOpenChat = { navController.openRoot(Root.Chat) },
+                )
+            }
+            composable(
+                "$ROUTE_PENDING_ITEM/{batchId}/{ordinal}",
+                arguments = listOf(navArgument("batchId") { type = NavType.StringType }, navArgument("ordinal") { type = NavType.IntType }),
+            ) { entry ->
+                val batchId = Uri.decode(entry.arguments?.getString("batchId").orEmpty())
+                val ordinal = entry.arguments?.getInt("ordinal") ?: 0
+                val viewModel: PendingResolveViewModel = viewModel(
+                    factory = viewModelFactory { initializer { PendingResolveViewModel(container, batchId, ordinal) } },
+                )
+                PendingResolveRoute(
+                    viewModel, padding, onBack = { navController.popBackStack() },
+                    onResolved = { navController.popBackStack() },
+                    onOpenCard = { navController.navigate("$ROUTE_CARD?initialSetup=false") },
                 )
             }
             composable(

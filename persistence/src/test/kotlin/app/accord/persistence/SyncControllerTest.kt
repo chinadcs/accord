@@ -55,7 +55,7 @@ class SyncControllerTest {
                 override suspend fun open(accountId: String, spaceId: String, access: SyncAccess): SpaceRuntime {
                     val db = dbs.getOrPut(accountId to spaceId) { TestDatabase.create().also { opened += it } }
                     val store = SyncStore(db.db, newId = { "novo-${ids++}" })
-                    return SpaceRuntime(RoomFinanceSpace.open(db.db, clock, { Session(spaceId, accountId) }), store, SyncEngine(store, service, access))
+                    return SpaceRuntime(RoomFinanceSpace.open(db.db, clock, { Session(spaceId, accountId) }), store, SyncEngine(store, service, access), identity = Session(spaceId, accountId))
                 }
 
                 override fun close(accountId: String, spaceId: String) = Unit

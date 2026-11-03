@@ -53,6 +53,14 @@ internal object EntityStates {
             }
             EntityType.Boleto -> dao.boleto(id)?.let { obj(BoletoRow.serializer(), it, true) }
             EntityType.Income -> dao.income(id)?.let { obj(IncomeRow.serializer(), it, true) }
+            EntityType.IncomeCategory -> dao.incomeCategory(id)?.let { obj(IncomeCategoryRow.serializer(), it, true) }
+            EntityType.AlertEvent -> dao.alertEvent(id)?.let { obj(AlertEventRow.serializer(), it, true) }
+            EntityType.ImportBatch -> dao.importBatch(id)?.let {
+                obj(ImportBatchRow.serializer(), it, true).with(
+                    "movements" to list(ImportMovementRow.serializer(), dao.importMovements(id)),
+                    "pairs" to list(ImportPairRow.serializer(), dao.importPairs(id)),
+                )
+            }
             EntityType.Recurrence -> dao.recurrence(id)?.let {
                 obj(RecurrenceRow.serializer(), it, true).with(
                     "segments" to list(RecurrenceSegmentRow.serializer(), dao.segments(id)),
@@ -81,6 +89,9 @@ internal object EntityStates {
         EntityType.CardPurchase -> dao.purchase(id)?.revision
         EntityType.Boleto -> dao.boleto(id)?.revision
         EntityType.Income -> dao.income(id)?.revision
+        EntityType.IncomeCategory -> dao.incomeCategory(id)?.revision
+        EntityType.ImportBatch -> dao.importBatch(id)?.revision
+        EntityType.AlertEvent -> dao.alertEvent(id)?.revision
         EntityType.Recurrence -> dao.recurrence(id)?.revision
         EntityType.Refund -> dao.refund(id)?.revision
         EntityType.Invoice -> dao.invoiceById(id)?.revision
@@ -114,6 +125,15 @@ internal object EntityStates {
             }
             EntityType.Boleto -> dao.upsertBoleto(json.decodeFromJsonElement(BoletoRow.serializer(), withRevision()))
             EntityType.Income -> dao.upsertIncome(json.decodeFromJsonElement(IncomeRow.serializer(), withRevision()))
+            EntityType.IncomeCategory -> dao.upsertIncomeCategory(json.decodeFromJsonElement(IncomeCategoryRow.serializer(), withRevision()))
+            EntityType.AlertEvent -> dao.upsertAlertEvent(json.decodeFromJsonElement(AlertEventRow.serializer(), withRevision()))
+            EntityType.ImportBatch -> {
+                dao.upsertImportBatch(json.decodeFromJsonElement(ImportBatchRow.serializer(), withRevision()))
+                dao.deleteImportMovements(id)
+                dao.upsertImportMovements(children("movements", ImportMovementRow.serializer()).map { it.copy(batchId = id) })
+                dao.deleteImportPairs(id)
+                dao.upsertImportPairs(children("pairs", ImportPairRow.serializer()).map { it.copy(batchId = id) })
+            }
             EntityType.Recurrence -> {
                 dao.upsertRecurrence(json.decodeFromJsonElement(RecurrenceRow.serializer(), withRevision()))
                 dao.deleteSegments(id)
@@ -163,6 +183,10 @@ internal object EntityStates {
                 val origin = (element["originType"] as? JsonPrimitive)?.contentOrNull?.let(originTypes::get)
                 val originId = (element["originId"] as? JsonPrimitive)?.contentOrNull
                 if (origin != null && originId != null) add(EntityKey(origin.name, originId))
+                // Movimento de lote confirmado: o lançamento, pagamento ou boleto a que a linha do documento ficou ligada.
+                val target = (element["targetType"] as? JsonPrimitive)?.contentOrNull?.let { name -> EntityType.entries.firstOrNull { it.name == name } }
+                val targetId = (element["targetId"] as? JsonPrimitive)?.contentOrNull
+                if (target != null && targetId != null) add(EntityKey(target.name, targetId))
             }
             is JsonArray -> element.forEach { addAll(referencesIn(it)) }
             else -> Unit

@@ -26,6 +26,8 @@ class AndroidSpaceRuntimeFactory(
     private val context: Context,
     private val clock: BudgetClock,
     private val remote: RemoteSpaceService,
+    /** Leva os avisos pendentes à notificação do Android (S5.5); chamado quando um evento novo é gravado ou recebido. */
+    private val alertSink: suspend () -> Unit = {},
 ) : SpaceRuntimeFactory {
     private val open = ConcurrentHashMap<Pair<String, String>, AccordDatabase>()
 
@@ -36,9 +38,11 @@ class AndroidSpaceRuntimeFactory(
                 .setQueryCoroutineContext(Dispatchers.IO)
                 .build()
         }
-        val space = RoomFinanceSpace.open(database, clock, { Session(spaceId, accountId) })
+        val identity = Session(spaceId, accountId)
+        val space = RoomFinanceSpace.open(database, clock, { identity })
+        space.onAlertRecorded = alertSink
         val store = SyncStore(database)
-        return SpaceRuntime(space, store, SyncEngine(store, remote, access), RoomChatStore(database))
+        return SpaceRuntime(space, store, SyncEngine(store, remote, access, onReceived = { space.evaluateAlerts(); alertSink() }), RoomChatStore(database), identity, imports = space.importSession())
     }
 
     override fun close(accountId: String, spaceId: String) {

@@ -9,10 +9,14 @@ import app.accord.core.space.ErrorCode
 import app.accord.core.space.FinanceSpace
 import app.accord.core.space.Undo
 import app.accord.access.AndroidSpaceRuntimeFactory
+import app.accord.alerts.AlertDispatcher
+import app.accord.alerts.AndroidNotifications
 import app.accord.access.SecureAccessStore
 import app.accord.core.chat.ChatCoordinator
 import app.accord.core.chat.ChatImportResult
 import app.accord.core.model.DistributionSource
+import app.accord.core.chat.RuleInterpreter
+import app.accord.core.importing.ImportSession
 import app.accord.core.model.ModelEngine
 import app.accord.model.ModelCenter
 import app.accord.model.UnconfiguredDistributionSource
@@ -47,6 +51,12 @@ interface SpaceProvider {
     val feedback: FeedbackBus
     suspend fun space(): FinanceSpace
 
+    /** Sessão de importação do espaço aberto (S4): prévia, decisões e confirmação. */
+    suspend fun imports(): ImportSession
+
+    /** Sugeridor local de categorias do espaço aberto; nulo quando a variante não o inclui (release não tem pesos, ADR 0032). */
+    suspend fun categorySuggester(): app.accord.core.chat.CategorySuggester? = null
+
     /** Desfaz uma operação; só funciona se nada nas entidades afetadas mudou depois dela. */
     suspend fun undo(operationId: String): UndoOutcome
 
@@ -65,6 +75,7 @@ class AppContainer(
     val remote: RemoteSpaceService = defaultRemote(),
     modelSource: DistributionSource = UnconfiguredDistributionSource,
     modelEngine: ModelEngine? = null,
+    val categoryPilot: app.accord.pilot.ChatPilot = app.accord.pilot.createChatPilot(context),
 ) : SpaceProvider {
     override val clock: BudgetClock = BudgetClock.system()
     override val feedback = FeedbackBus()
@@ -80,16 +91,40 @@ class AppContainer(
      */
     val models = ModelCenter(context, appScope, modelSource, modelEngine)
 
+    /**
+     * ADR 0036: o Chat do P0 interpreta com regras locais, sem modelo. Um motor injetado (testes ou uma fase futura
+     * com SLM opcional) ou o piloto de demonstração (interpretador fake) tomam o lugar das regras.
+     */
+    val usesRuleInterpreter: Boolean = !categoryPilot.replacesInterpreter && modelEngine == null
+
     private val chatState = MutableStateFlow<ChatCoordinator?>(null)
 
     /** Conversa do espaço aberto; nula onde não há espaço. O histórico mora no banco do par, só neste aparelho. */
     val chat: StateFlow<ChatCoordinator?> = chatState.asStateFlow()
 
+    private val alertToOpen = MutableStateFlow<String?>(null)
+
+    /** A chave do evento de uma notificação tocada, até a navegação a abrir (depois de entrar, se a sessão precisar). */
+    val pendingAlertEvent: StateFlow<String?> = alertToOpen.asStateFlow()
+
+    fun openAlertEvent(eventId: String?) {
+        alertToOpen.value = eventId?.takeIf { it.isNotBlank() }
+    }
+
+    fun consumeAlertEvent() {
+        alertToOpen.value = null
+    }
+
+    /** Notificações do Android para os avisos de possível excesso (S5.5): canal, situação real e publicação. */
+    val notifications = AndroidNotifications(context).also { it.ensureChannel() }
+
+    private val alertDispatcher: AlertDispatcher = AlertDispatcher(notifications) { access.runtime.value?.space }
+
     /** Conta, sessão, espaço, convite e primeiros passos (tela 01, 02 e 03). */
-    val access = AccessCenter(
+    val access: AccessCenter = AccessCenter(
         remote = remote,
         store = accessStore,
-        runtimes = AndroidSpaceRuntimeFactory(context, clock, remote),
+        runtimes = AndroidSpaceRuntimeFactory(context, clock, remote, alertDispatcher::dispatch),
         currentMonth = { clock.currentMonth() },
     )
 
@@ -117,6 +152,8 @@ class AppContainer(
                     scheduler.schedulePeriodic()
                     runtime.engine.syncNow()
                     scheduler.enqueue()
+                    // Aviso gravado e ainda não exibido (processo encerrado antes) é tentado de novo ao abrir o espaço.
+                    alertDispatcher.dispatch()
                 }
             }
         }
@@ -132,10 +169,12 @@ class AppContainer(
                 val coordinator = ChatCoordinator(
                     space = runtime.space,
                     store = store,
-                    interpreters = models.runtime.source,
+                    interpreters = categoryPilot.interpreters ?: if (usesRuleInterpreter) RuleInterpreter.source else models.runtime.source,
                     clock = clock,
                     scope = chatScope,
                     onFinanceChanged = feedback::notifyChanged,
+                    categorySuggester = categoryPilot.suggester(runtime.identity.spaceId),
+                    onCategoryPilotEvent = categoryPilot::record,
                 )
                 coordinator.recover()
                 chatState.value = coordinator
@@ -160,6 +199,11 @@ class AppContainer(
 
     /** Espera a fachada do espaço da conta atual; só é chamada por telas que existem com espaço aberto. */
     override suspend fun space(): FinanceSpace = access.runtime.filterNotNull().first().space
+
+    override suspend fun imports(): ImportSession = checkNotNull(access.runtime.filterNotNull().first().imports) { "O espaço aberto não oferece importação" }
+
+    override suspend fun categorySuggester(): app.accord.core.chat.CategorySuggester? =
+        categoryPilot.suggester(access.runtime.filterNotNull().first().identity.spaceId)
 
     /** Conta e espaço a que o histórico do Chat deste aparelho pertence; o arquivo de transferência só entra no mesmo par. */
     private fun chatOwner(): String? {

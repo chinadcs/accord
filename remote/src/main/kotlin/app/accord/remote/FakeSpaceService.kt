@@ -125,6 +125,9 @@ class FakeSpaceService(
     fun storedEntity(spaceId: String, type: String, id: String): RemoteEntityState? =
         spaces[spaceId]?.entities?.get(EntityKey(type, id))
 
+    fun storedEntities(spaceId: String, type: String): List<RemoteEntityState> =
+        spaces[spaceId]?.entities?.values?.filter { it.type == type }.orEmpty()
+
     fun entityCount(spaceId: String): Int = spaces[spaceId]?.entities?.size ?: 0
     fun spaceCursor(spaceId: String): Long = spaces[spaceId]?.cursor ?: 0
 
@@ -331,6 +334,7 @@ class FakeSpaceService(
         if (keys.toSet().size != keys.size) return reject(op, RejectReason.InvalidEnvelope, "entidade repetida na operação")
         for (change in op.changes) {
             if (change.type !in SharedTypes.all) return reject(op, RejectReason.TypeNotAllowed, change.type)
+            if (change.createIfAbsent && change.type != ALERT_EVENT) return reject(op, RejectReason.InvalidEnvelope, "createIfAbsent só vale para evento de aviso")
             val base = change.baseVersion
             if (base != null && base < 1) return reject(op, RejectReason.InvalidEnvelope)
             val owner = entityOwner[EntityKey(change.type, change.id)]
@@ -340,8 +344,22 @@ class FakeSpaceService(
                 if (refOwner != null && refOwner != space.id) return reject(op, RejectReason.ForeignSpace)
             }
         }
+        // Evento de aviso (ADR 0044): imutável. Já existente, só `createIfAbsent` é aceito e devolve o canônico, sem conflito nem nova versão.
+        val absorbed = mutableListOf<RemoteEntityState>()
+        for (change in op.changes.filter { it.type == ALERT_EVENT }) {
+            val current = space.entities[EntityKey(change.type, change.id)]
+            if (change.tombstone) return reject(op, RejectReason.AlertEventImmutable, "evento de aviso não se remove")
+            if (current != null) {
+                if (!change.createIfAbsent) return reject(op, RejectReason.AlertEventImmutable, "evento de aviso não se altera")
+                absorbed += current
+            } else if (change.baseVersion != null) {
+                return reject(op, RejectReason.InvalidEnvelope, "versão base sem entidade")
+            }
+        }
+        val absorbedKeys = absorbed.map { EntityKey(it.type, it.id) }.toSet()
+        val writes = op.changes.filter { EntityKey(it.type, it.id) !in absorbedKeys }
         val divergent = mutableListOf<RemoteEntityState>()
-        for (change in op.changes) {
+        for (change in writes.filter { it.type != ALERT_EVENT }) {
             val current = space.entities[EntityKey(change.type, change.id)]
             val base = change.baseVersion
             when {
@@ -351,12 +369,14 @@ class FakeSpaceService(
             }
         }
         if (divergent.isNotEmpty()) {
-            val unchanged = op.changes.mapNotNull { space.entities[EntityKey(it.type, it.id)] }.filter { it !in divergent }
+            val unchanged = writes.mapNotNull { space.entities[EntityKey(it.type, it.id)] }.filter { it !in divergent }
             return OperationResult.Conflict(op.operationId, divergent, unchanged)
         }
 
+        categoryRule(op, space)?.let { return it }
+
         val now = clock()
-        val versions = op.changes.map { change ->
+        val versions = writes.map { change ->
             val key = EntityKey(change.type, change.id)
             val version = (space.entities[key]?.version ?: 0) + 1
             space.cursor += 1
@@ -367,9 +387,60 @@ class FakeSpaceService(
             entityOwner[key] = space.id
             AppliedVersion(change.type, change.id, version)
         }
-        val result = OperationResult.Applied(op.operationId, versions, space.cursor, repeated = false)
+        val result = OperationResult.Applied(op.operationId, versions, space.cursor, repeated = false, absorbed = absorbed)
         applied[op.operationId] = AppliedRecord(space.id, op.changes, result)
         return result
+    }
+
+    /** Tipos cujo estado aponta para categoria de despesa por `classificationId` (inclusive em trechos de recorrência). */
+    private val classified = setOf("Movement", "CardPurchase", "Boleto", "Recurrence")
+
+    private companion object {
+        const val ALERT_EVENT = "AlertEvent"
+    }
+
+    private val lenient = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+
+    private fun classificationsIn(element: kotlinx.serialization.json.JsonElement): Set<String> = buildSet {
+        when (element) {
+            is kotlinx.serialization.json.JsonObject -> for ((key, value) in element) {
+                val text = (value as? kotlinx.serialization.json.JsonPrimitive)?.takeIf { it !is kotlinx.serialization.json.JsonNull }?.content
+                if (key == "classificationId" && text != null) add(text) else addAll(classificationsIn(value))
+            }
+            is kotlinx.serialization.json.JsonArray -> element.forEach { addAll(classificationsIn(it)) }
+            else -> Unit
+        }
+    }
+
+    private fun parse(state: String) = runCatching { lenient.parseToJsonElement(state) }.getOrNull()
+
+    private fun isRemovedCategory(state: String): Boolean =
+        ((parse(state) as? kotlinx.serialization.json.JsonObject)?.get("removed") as? kotlinx.serialization.json.JsonPrimitive)?.content == "true"
+
+    /**
+     * Categoria removida (ADR 0039), igual ao SQL: remover exige que nenhum lançamento vivo ainda aponte para a categoria
+     * (CategoryInUse) e lançamento novo não pode apontar para categoria já removida (CategoryRemoved).
+     */
+    private fun categoryRule(op: OperationEnvelope, space: Space): OperationResult? {
+        val inOp = op.changes.map { EntityKey(it.type, it.id) }.toSet()
+        for (change in op.changes.filter { it.type == "Category" && isRemovedCategory(it.state) }) {
+            val storedUse = space.entities.values.any { e ->
+                e.type in classified && !e.tombstone && EntityKey(e.type, e.id) !in inOp &&
+                    parse(e.state)?.let { change.id in classificationsIn(it) } == true
+            }
+            val opUse = op.changes.any { c ->
+                c.type in classified && !c.tombstone && parse(c.state)?.let { change.id in classificationsIn(it) } == true
+            }
+            if (storedUse || opUse) return reject(op, RejectReason.CategoryInUse, change.id)
+        }
+        for (change in op.changes.filter { it.type in classified && !it.tombstone }) {
+            val used = parse(change.state)?.let(::classificationsIn).orEmpty()
+            val removed = used.any { id ->
+                space.entities[EntityKey("Category", id)]?.let { isRemovedCategory(it.state) } == true
+            }
+            if (removed) return reject(op, RejectReason.CategoryRemoved, change.id)
+        }
+        return null
     }
 
     override suspend fun pull(accessToken: String, spaceId: String, afterCursor: Long, limit: Int): RemoteResult<PullPage> = call {

@@ -16,10 +16,18 @@ import app.accord.ui.theme.AccordTheme
 import app.accord.ui.theme.ThemePreference
 
 class MainActivity : ComponentActivity() {
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        (application as AccordApplication).container.openAlertEvent(intent.getStringExtra(app.accord.alerts.AndroidNotifications.EXTRA_ALERT_EVENT))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val container = (application as AccordApplication).container
+        // Toque numa notificação de aviso: só a chave do evento vem na intenção; o app abre Orçamento, Previsões e o detalhe (S5.6).
+        if (savedInstanceState == null) container.openAlertEvent(intent?.getStringExtra(app.accord.alerts.AndroidNotifications.EXTRA_ALERT_EVENT))
         setContent {
             val preference by container.theme.preference.collectAsStateWithLifecycle()
             val corners by container.theme.corners.collectAsStateWithLifecycle()

@@ -4,6 +4,14 @@ import androidx.room.immediateTransaction
 import androidx.room.useWriterConnection
 import app.accord.core.BudgetClock
 import app.accord.core.CardCycle
+import app.accord.core.alerts.AlertPreference
+import app.accord.core.alerts.NotificationAccess
+import app.accord.core.space.AlertEventView
+import app.accord.core.space.AlertNotice
+import app.accord.core.space.AlertStatus
+import app.accord.core.space.RecordAlertEvent
+import app.accord.core.forecast.MonthForecast
+import app.accord.core.space.ForecastDetail
 import app.accord.core.Frequency
 import app.accord.core.InvoicePhase
 import app.accord.core.LimitSetting
@@ -21,6 +29,9 @@ import app.accord.core.Template
 import app.accord.core.space.AccountInfo
 import app.accord.core.space.AccountsView
 import app.accord.core.space.AddAccount
+import app.accord.core.space.EditCategory
+import app.accord.core.space.MoveCategoryEntries
+import app.accord.core.space.RemoveCategory
 import app.accord.core.space.AmountMeaning
 import app.accord.core.space.AssignmentState
 import app.accord.core.space.DateCriterion
@@ -33,18 +44,23 @@ import app.accord.core.space.CategoryBudget
 import app.accord.core.space.CategoryLimit
 import app.accord.core.space.CategoryNode
 import app.accord.core.space.CategorySeed
+import app.accord.core.space.IncomeCategoryNode
+import app.accord.core.space.IncomeCategorySeed
 import app.accord.core.space.Classification
 import app.accord.core.space.ClassifyEntry
 import app.accord.core.space.CancelState
 import app.accord.core.space.Command
 import app.accord.core.space.CommandResult
 import app.accord.core.space.ConfigureCard
+import app.accord.core.space.ConfirmImportBatch
+import app.accord.core.space.ResolveImportItem
 import app.accord.core.space.ConfirmNonCharge
 import app.accord.core.space.ConfirmRefund
 import app.accord.core.space.ChangePaymentMethod
 import app.accord.core.space.CorrectEntry
 import app.accord.core.space.CorrectInvoiceAssignment
 import app.accord.core.space.CreateCategory
+import app.accord.core.space.CreateIncomeCategory
 import app.accord.core.space.CreateRecurrence
 import app.accord.core.space.Decision
 import app.accord.core.space.DefineLimits
@@ -107,6 +123,7 @@ import app.accord.core.space.ReceiveIncome
 import app.accord.core.space.RegisterBoleto
 import app.accord.core.space.RegisterCardPurchase
 import app.accord.core.space.RenameCategory
+import app.accord.core.space.RenameIncomeCategory
 import app.accord.core.space.ReorderCategories
 import app.accord.core.space.RegisterDirectPayment
 import app.accord.core.space.RegisterIncome
@@ -119,6 +136,7 @@ import app.accord.core.space.SetMyDefaultAccount
 import app.accord.core.space.Settlement
 import app.accord.core.space.ToClassifyLine
 import app.accord.core.space.Undo
+import app.accord.core.importing.ImportSession
 import app.accord.core.label
 import app.accord.core.sum
 import kotlinx.coroutines.CancellationException
@@ -166,6 +184,42 @@ class RoomFinanceSpace private constructor(
         invoiceDifference = { invoiceView(it).totalDifference },
         today = { clock.today() },
     )
+    internal val importEvaluator = ImportEvaluator(
+        dao, sessions,
+        cycle = { cycleOf(sessions.current().spaceId) },
+        invoice = { invoiceView(it) },
+        cardId = { cardId(it) },
+        applicable = { command -> plan(sessions.current(), Origin.Import, command) is Planned.Go },
+    )
+    private val forecastQueries = ForecastQueries(
+        dao, syncDao,
+        tree = { tree() },
+        cycle = { cycleOf(sessions.current().spaceId) },
+        today = { clock.today() },
+        nowMillis = nowMillis,
+        budget = { (budget(it) as QueryResult.Data).value },
+        limit = { categoryId, month -> limitsPlanner.timeline(categoryId).settingFor(month) },
+        occurrences = { occurrencesIn(it) },
+        pendings = { entryQueries.pendings() },
+        feesCategoryId = { DeterministicIds.seedCategory(sessions.current().spaceId, CategorySeed.FEES_AND_INTEREST) },
+        invoiceConferredClosed = { invoiceView(it).let { view -> view.conferred || view.paid } },
+    )
+    private val alertCenter = AlertCenter(
+        db, clock, sessions,
+        forecast = { forecastQueries.forecasts(it) },
+        run = { envelope, command -> execute(envelope, command) },
+        recorded = { alertsRecorded() },
+    )
+
+    /**
+     * O adaptador de notificações do aparelho (S5.5) se registra aqui para ser avisado quando um evento novo é gravado. Fica fora do contrato
+     * da fachada porque é do aparelho, não do espaço.
+     */
+    @Volatile
+    var onAlertRecorded: suspend () -> Unit = {}
+
+    private suspend fun alertsRecorded() = onAlertRecorded()
+    private val importPlanner = ImportPlanner(dao, importEvaluator, { session, envelope, command -> applyInTransaction(session, envelope, command) }, nowMillis)
     private val categoryPlanner = CategoryPlanner(dao, limitsPlanner, { tree() }) { clock.currentMonth() }
     private val invoicePlanner = InvoicePlanner(
         dao,
@@ -177,6 +231,8 @@ class RoomFinanceSpace private constructor(
 
     private suspend fun plan(session: Session, origin: Origin, command: Command): Planned = when (command) {
         is CreateCategory -> planCreateCategory(command)
+        is CreateIncomeCategory -> planCreateIncomeCategory(command)
+        is RenameIncomeCategory -> planRenameIncomeCategory(command)
         is AddAccount -> planAddAccount(command)
         is SetMyDefaultAccount -> planSetDefaultAccount(session, command)
         is RegisterDirectPayment -> planDirectPayment(session, origin, command)
@@ -204,87 +260,124 @@ class RoomFinanceSpace private constructor(
         is RenameCategory -> categoryPlanner.planRename(command)
         is ReorderCategories -> categoryPlanner.planReorder(command)
         is MoveSubcategory -> categoryPlanner.planMove(session, command)
+        is EditCategory -> categoryPlanner.planEdit(command)
+        is MoveCategoryEntries -> categoryPlanner.planMoveEntries(session, command)
+        is RemoveCategory -> categoryPlanner.planRemove(session, command)
         is EditAccount -> planEditAccount(command)
         is ClassifyEntry -> planClassify(command)
+        is RecordAlertEvent -> alertCenter.plan(command, nowMillis())
+        is ConfirmImportBatch -> importPlanner.plan(session, command)
+        is ResolveImportItem -> importPlanner.planResolve(session, command)
         is Undo -> planUndo(command)
     }
 
     // ---- execução e prévia ----
 
     override suspend fun execute(envelope: Envelope, command: Command): CommandResult {
-        val session = sessions.current()
-        return db.useWriterConnection { connection ->
-            connection.immediateTransaction {
-                val existing = dao.operation(envelope.commandId.value)
-                if (existing != null) return@immediateTransaction CommandResult.AlreadyApplied(receiptOf(existing))
+        val result = executeCommand(envelope, command)
+        // S5: depois de um comando confirmado, a fachada avalia os avisos do mês corrente (fora da transação do comando, que já está válido).
+        if (result is CommandResult.Applied && changesBudgetNumbers(command)) evaluateAlerts()
+        return result
+    }
 
-                when (val planned = plan(session, envelope.origin, command)) {
-                    is Planned.Stop -> planned.result
-                    is Planned.Go -> {
-                        val committed = planned.commit()
-                        // Estado completo de cada entidade depois do comando: é o que a operação leva ao serviço.
-                        // A versão base é a última reconhecida; fica em aberto (encadeada) quando outra operação
-                        // ainda não reconhecida altera a mesma entidade, e é fixada quando ela for reconhecida.
-                        val changeRows = committed.map { change ->
-                            val snapshot = checkNotNull(EntityStates.read(dao, change.type, change.id)) {
-                                "Entidade ${change.type} ${change.id} sumiu depois do comando"
-                            }
-                            val chained = syncDao.openOperationsOn(change.type.name, change.id).isNotEmpty()
-                            OperationChangeRow(
-                                operationId = envelope.commandId.value,
-                                entityType = change.type.name,
-                                entityId = change.id,
-                                baseVersion = if (chained) null else dao.serviceVersion(change.type.name, change.id),
-                                revision = change.revision,
-                                state = snapshot.state,
-                                tombstone = snapshot.tombstone,
-                                refs = EntityStates.encodeReferences(snapshot.references),
-                                chained = chained,
-                            )
-                        }
-                        val changes = changeRows.map { EntityChange(EntityType.valueOf(it.entityType), it.entityId, it.baseVersion, it.revision) }
-                        val row = OperationRow(
-                            operationId = envelope.commandId.value,
-                            spaceId = session.spaceId,
-                            authorId = session.personId,
-                            origin = envelope.origin.name,
-                            commandType = command::class.simpleName.orEmpty(),
-                            deviceTimeMillis = nowMillis(),
-                            affectedMonths = planned.months.sorted().joinToString(","),
-                            undoable = planned.undoable,
-                            acknowledged = false,
-                            detail = planned.detail,
-                        )
-                        val sequence = dao.insertOperation(row)
-                        dao.insertChanges(changeRows)
-                        envelope.draftId?.let { dao.deleteDraft(it) }
-                        beforeCommit()
-                        CommandResult.Applied(receiptOf(row.copy(sequence = sequence), changes))
+    /** Cadastros de conta e de categoria de renda não mudam número nenhum do orçamento; o próprio registro do evento nunca dispara avaliação. */
+    private fun changesBudgetNumbers(command: Command) = command !is RecordAlertEvent && command !is AddAccount && command !is SetMyDefaultAccount &&
+        command !is CreateIncomeCategory && command !is RenameIncomeCategory
+
+    /**
+     * Avaliação dos avisos de possível excesso (S5, ADR 0044). Só mudança nos dados avalia: a fachada a chama depois dos comandos confirmados e o motor de
+     * sincronização depois de aplicar o que chegou. Nunca falha quem a chamou.
+     */
+    suspend fun evaluateAlerts() = alertCenter.evaluate(app.accord.core.alerts.AlertTrigger.DataChange)
+
+    private suspend fun executeCommand(envelope: Envelope, command: Command): CommandResult {
+        val session = sessions.current()
+        return try {
+            db.useWriterConnection { connection ->
+                connection.immediateTransaction { applyInTransaction(session, envelope, command) }
+            }
+        } catch (abort: ImportAbort) {
+            // Um passo da confirmação de importação foi recusado: a transação inteira foi desfeita.
+            abort.result
+        }
+    }
+
+    /**
+     * Planeja um comando e grava as entidades e a operação **na transação já aberta**. A confirmação de importação reaproveita este caminho
+     * para cada comando de S1 que aplica, o que mantém um só validador e um só registro de operações (S4 "Confirmação").
+     */
+    private suspend fun applyInTransaction(session: Session, envelope: Envelope, command: Command): CommandResult {
+        val existing = dao.operation(envelope.commandId.value)
+        if (existing != null) return CommandResult.AlreadyApplied(receiptOf(existing))
+
+        return when (val planned = plan(session, envelope.origin, command)) {
+            is Planned.Stop -> planned.result
+            is Planned.Go -> {
+                val committed = planned.commit()
+                // Estado completo de cada entidade depois do comando: é o que a operação leva ao serviço.
+                // A versão base é a última reconhecida; fica em aberto (encadeada) quando outra operação
+                // ainda não reconhecida altera a mesma entidade, e é fixada quando ela for reconhecida.
+                val changeRows = committed.map { change ->
+                    val snapshot = checkNotNull(EntityStates.read(dao, change.type, change.id)) {
+                        "Entidade ${change.type} ${change.id} sumiu depois do comando"
                     }
+                    val chained = syncDao.openOperationsOn(change.type.name, change.id).isNotEmpty()
+                    OperationChangeRow(
+                        operationId = envelope.commandId.value,
+                        entityType = change.type.name,
+                        entityId = change.id,
+                        baseVersion = if (chained) null else dao.serviceVersion(change.type.name, change.id),
+                        revision = change.revision,
+                        state = snapshot.state,
+                        tombstone = snapshot.tombstone,
+                        refs = EntityStates.encodeReferences(snapshot.references),
+                        chained = chained,
+                    )
                 }
+                val changes = changeRows.map { EntityChange(EntityType.valueOf(it.entityType), it.entityId, it.baseVersion, it.revision) }
+                val row = OperationRow(
+                    operationId = envelope.commandId.value,
+                    spaceId = session.spaceId,
+                    authorId = session.personId,
+                    origin = envelope.origin.name,
+                    commandType = command::class.simpleName.orEmpty(),
+                    deviceTimeMillis = nowMillis(),
+                    affectedMonths = planned.months.sorted().joinToString(","),
+                    undoable = planned.undoable,
+                    acknowledged = false,
+                    detail = planned.detail,
+                )
+                val sequence = dao.insertOperation(row)
+                dao.insertChanges(changeRows)
+                envelope.draftId?.let { dao.deleteDraft(it) }
+                beforeCommit()
+                CommandResult.Applied(receiptOf(row.copy(sequence = sequence), changes))
             }
         }
     }
+
+    /** Sessão de importação OFX/PDF (S4) sobre esta fachada: a confirmação passa por [ConfirmImportBatch]. */
+    fun importSession(): ImportSession = RoomImportSession(db, this, importEvaluator, sessions, nowMillis)
 
     override suspend fun preview(command: Command): PreviewResult =
         when (val planned = plan(sessions.current(), Origin.Manual, command)) {
             is Planned.Stop -> PreviewResult.Blocked(planned.result)
             is Planned.Go -> PreviewResult.Ready(
                 planned.before, planned.after, planned.months, planned.replaced, planned.linkedRefundIds,
-                planned.replacedLimitMonths, planned.suggestedInvoice,
+                planned.replacedLimitMonths, planned.suggestedInvoice, planned.categoryMove,
             )
         }
 
     // ---- cadastros ----
 
-    private suspend fun tree() = CategoryTree(dao.categories().associateBy { it.id }, dao.categoryMoves())
+    private suspend fun tree() = CategoryTree(dao.categories().filterNot { it.removed }.associateBy { it.id }, dao.categoryMoves())
 
     private suspend fun planCreateCategory(c: CreateCategory): Planned {
         val name = c.name.trim()
         if (name.isEmpty()) return stop("name", ErrorCode.Required, "Informe o nome da categoria.")
         val parentId = c.parentId
         if (parentId != null) {
-            val parent = dao.category(parentId)
+            val parent = dao.activeCategory(parentId)
                 ?: return stop("parentId", ErrorCode.UnknownReference, "Categoria principal não encontrada.")
             if (parent.parentId != null) {
                 return stop("parentId", ErrorCode.NotAllowed, "Subcategoria não pode ter subcategorias.")
@@ -409,7 +502,10 @@ class RoomFinanceSpace private constructor(
         val errors = mutableListOf<FieldError>()
         if (c.description.isBlank()) errors += FieldError("description", ErrorCode.Required, "Informe a descrição.")
         if (c.amount.cents <= 0) errors += FieldError("amount", ErrorCode.MustBePositive, "O valor precisa ser maior que zero.")
-        val classificationId = validateClassification(c.classification, errors)
+        val chosenId = validateClassification(c.classification, errors)
+        // Encargo confirmado sem classificação usa Serviços > Tarifas e juros, pela identidade da semente (como na compra no cartão).
+        val classificationId = chosenId
+            ?: if (c.isCharge) DeterministicIds.seedCategory(session.spaceId, CategorySeed.FEES_AND_INTEREST) else null
 
         var accountId: String? = null
         if (c.kind == DirectPaymentKind.Cash) {
@@ -441,6 +537,7 @@ class RoomFinanceSpace private constructor(
                 origin = origin.name,
                 revision = 1,
                 voided = false,
+                isCharge = c.isCharge,
             )
             dao.insertMovement(row)
             listOf(EntityChange(EntityType.Movement, row.id, null, 1))
@@ -452,7 +549,7 @@ class RoomFinanceSpace private constructor(
         when (classification) {
             Classification.ToClassify -> null
             is Classification.Category -> {
-                if (dao.category(classification.id) == null) {
+                if (dao.activeCategory(classification.id) == null) {
                     errors += FieldError("classification", ErrorCode.UnknownReference, "Categoria não encontrada.")
                 }
                 classification.id
@@ -688,6 +785,55 @@ class RoomFinanceSpace private constructor(
         }
     }
 
+    private suspend fun planCreateIncomeCategory(c: CreateIncomeCategory): Planned {
+        val name = c.name.trim()
+        if (name.isEmpty()) return stop("name", ErrorCode.Required, "Informe o nome da categoria de renda.")
+        val key = NameKey.of(name)
+        val all = dao.incomeCategories()
+        if (all.any { it.nameKey == key }) {
+            return stop("name", ErrorCode.DuplicateName, "Já existe uma categoria de renda com esse nome. Escolha outro nome.")
+        }
+        return Planned.Go(months = emptySet()) {
+            val row = IncomeCategoryRow(
+                id = UUID.randomUUID().toString(),
+                name = name,
+                nameKey = key,
+                sortOrder = (all.maxOfOrNull { it.sortOrder } ?: -1) + 1,
+                iconKey = IncomeCategorySeed.CUSTOM_ICON,
+                seedKey = null,
+                revision = 1,
+            )
+            dao.insertIncomeCategory(row)
+            listOf(EntityChange(EntityType.IncomeCategory, row.id, null, 1))
+        }
+    }
+
+    private suspend fun planRenameIncomeCategory(c: RenameIncomeCategory): Planned {
+        val row = dao.incomeCategory(c.categoryId)
+            ?: return stop("categoryId", ErrorCode.UnknownReference, "Categoria de renda não encontrada.")
+        if (c.expectedRevision != null && c.expectedRevision != row.revision) {
+            return Planned.Stop(CommandResult.StaleVersion(row.id, row.revision))
+        }
+        val name = c.name.trim()
+        if (name.isEmpty()) return stop("name", ErrorCode.Required, "Informe o nome da categoria de renda.")
+        val key = NameKey.of(name)
+        if (dao.incomeCategories().any { it.id != row.id && it.nameKey == key }) {
+            return stop("name", ErrorCode.DuplicateName, "Já existe uma categoria de renda com esse nome. Escolha outro nome.")
+        }
+        return Planned.Go(months = emptySet()) {
+            val next = row.copy(name = name, nameKey = key, revision = row.revision + 1)
+            dao.upsertIncomeCategory(next)
+            listOf(EntityChange(EntityType.IncomeCategory, next.id, null, next.revision))
+        }
+    }
+
+    /** Categoria de renda informada: precisa existir; nula é permitida (renda sem categoria). */
+    private suspend fun validateIncomeCategory(id: String?, errors: MutableList<FieldError>) {
+        if (id != null && dao.incomeCategory(id) == null) {
+            errors += FieldError("incomeCategoryId", ErrorCode.UnknownReference, "Categoria de renda não encontrada.")
+        }
+    }
+
     private suspend fun planRegisterIncome(session: Session, origin: Origin, c: RegisterIncome): Planned {
         val errors = mutableListOf<FieldError>()
         if (c.description.isBlank()) errors += FieldError("description", ErrorCode.Required, "Informe a descrição.")
@@ -697,6 +843,7 @@ class RoomFinanceSpace private constructor(
         val received = c.received
         if (received != null) validateSettlement(received, "received", errors)
         val accountId = resolveRequiredAccount(session, c.accountId, errors)
+        validateIncomeCategory(c.incomeCategoryId, errors)
         if (errors.isNotEmpty()) return stop(errors)
 
         val months = setOfNotNull(YearMonth.from(c.expectedDate), received?.let { YearMonth.from(it.date) })
@@ -713,6 +860,7 @@ class RoomFinanceSpace private constructor(
                 origin = origin.name,
                 revision = 1,
                 voided = false,
+                incomeCategoryId = c.incomeCategoryId,
             )
             dao.insertIncome(row)
             listOf(EntityChange(EntityType.Income, row.id, null, 1))
@@ -794,7 +942,7 @@ class RoomFinanceSpace private constructor(
         when (c.kind) {
             RecurrenceKind.Expense -> when {
                 categoryId == null -> errors += FieldError("categoryId", ErrorCode.Required, "Escolha a categoria.")
-                dao.category(categoryId) == null ->
+                dao.activeCategory(categoryId) == null ->
                     errors += FieldError("categoryId", ErrorCode.UnknownReference, "Categoria não encontrada.")
             }
             RecurrenceKind.Income -> if (categoryId != null) {
@@ -855,7 +1003,7 @@ class RoomFinanceSpace private constructor(
             when {
                 loaded.row.kind == RecurrenceKind.Income.name ->
                     errors += FieldError("classificationId", ErrorCode.NotAllowed, "Renda não tem categoria.")
-                dao.category(it) == null ->
+                dao.activeCategory(it) == null ->
                     errors += FieldError("classificationId", ErrorCode.UnknownReference, "Categoria não encontrada.")
             }
         }
@@ -935,7 +1083,7 @@ class RoomFinanceSpace private constructor(
     // ---- classificar ----
 
     private suspend fun planClassify(c: ClassifyEntry): Planned {
-        if (dao.category(c.category.id) == null) {
+        if (dao.activeCategory(c.category.id) == null) {
             return stop("category", ErrorCode.UnknownReference, "Categoria não encontrada.")
         }
         val purchase = dao.purchase(c.entityId)
@@ -980,6 +1128,7 @@ class RoomFinanceSpace private constructor(
         EntityType.CardPurchase -> dao.purchase(change.entityId)?.revision
         EntityType.Boleto -> dao.boleto(change.entityId)?.revision
         EntityType.Income -> dao.income(change.entityId)?.revision
+        EntityType.IncomeCategory -> dao.incomeCategory(change.entityId)?.revision
         EntityType.Recurrence -> dao.recurrence(change.entityId)?.revision
         EntityType.Refund -> dao.refund(change.entityId)?.revision
         EntityType.Invoice -> dao.invoiceRows().firstOrNull { it.id == change.entityId }?.revision
@@ -1345,7 +1494,13 @@ class RoomFinanceSpace private constructor(
     override suspend fun categories(): QueryResult<List<CategoryNode>> = query {
         val now = clock.currentMonth()
         val categories = tree()
-        dao.categories().map { CategoryNode(it.id, categories.parentAt(it.id, now), it.name, it.sortOrder, it.iconKey, it.seedKey) }
+        dao.categories().filterNot { it.removed }.map {
+            CategoryNode(it.id, categories.parentAt(it.id, now), it.name, it.sortOrder, it.iconKey, it.seedKey, it.colorIndex, it.revision)
+        }
+    }
+
+    override suspend fun incomeCategories(): QueryResult<List<IncomeCategoryNode>> = query {
+        dao.incomeCategories().map { IncomeCategoryNode(it.id, it.name, it.sortOrder, it.iconKey, it.seedKey, it.revision) }
     }
 
     override suspend fun accounts(): QueryResult<AccountsView> = query {
@@ -1564,6 +1719,7 @@ class RoomFinanceSpace private constructor(
             budgetMonth = YearMonth.from(received ?: expected),
             revision = revision,
             voided = voided,
+            incomeCategoryId = incomeCategoryId,
         )
     }
 
@@ -1680,6 +1836,23 @@ class RoomFinanceSpace private constructor(
         )
     }
 
+    override suspend fun alertNotices(preference: AlertPreference, access: NotificationAccess): QueryResult<List<AlertNotice>> =
+        query { alertCenter.notices(preference, access) }
+
+    override suspend fun markAlertShown(eventId: String): QueryResult<Unit> = query { alertCenter.markShown(eventId) }
+
+    override suspend fun alertStatuses(): QueryResult<List<AlertStatus>> = query { alertCenter.statuses() }
+
+    override suspend fun alertEvent(id: String): QueryResult<AlertEventView?> = query { alertCenter.event(id) }
+
+    override suspend fun alertPreference(): QueryResult<AlertPreference> = query { alertCenter.preference() }
+
+    override suspend fun setAlertPreference(preference: AlertPreference): QueryResult<Unit> = query { alertCenter.setPreference(preference) }
+
+    override suspend fun forecasts(month: YearMonth): QueryResult<MonthForecast> = query { forecastQueries.forecasts(month) }
+
+    override suspend fun forecastDetail(categoryId: String, month: YearMonth): QueryResult<ForecastDetail?> = query { forecastQueries.detail(categoryId, month) }
+
     override suspend fun operations(afterSequence: Long, limit: Int): QueryResult<List<LocalOperation>> = query {
         val rows = dao.operationsAfter(afterSequence, limit)
         val changes = if (rows.isEmpty()) emptyMap() else dao.changesOf(rows.map { it.operationId }).groupBy { it.operationId }
@@ -1739,6 +1912,19 @@ class RoomFinanceSpace private constructor(
             )
         }
         dao.insertSeedCategories(rows)
+        dao.insertSeedIncomeCategories(
+            IncomeCategorySeed.items.mapIndexed { index, item ->
+                IncomeCategoryRow(
+                    id = DeterministicIds.seedIncomeCategory(spaceId, item.key),
+                    name = item.name,
+                    nameKey = NameKey.of(item.name),
+                    sortOrder = index,
+                    iconKey = item.icon,
+                    seedKey = item.key,
+                    revision = 0,
+                )
+            },
+        )
         // Um cartão por espaço, com os dias padrão 8 e 15 até a pessoa configurar.
         dao.insertSeedCard(CardRow(cardId(spaceId), null, null, "Cartão", CardCycle().closingDay, CardCycle().dueDay, 0))
     }

@@ -2,6 +2,8 @@ package app.accord.persistence
 
 import androidx.room.immediateTransaction
 import androidx.room.useWriterConnection
+import app.accord.core.alerts.AlertDisplay
+import app.accord.core.alerts.EventSource
 import app.accord.core.space.EntityRef
 import app.accord.core.space.EntityType
 import app.accord.core.space.ItemSync
@@ -17,6 +19,7 @@ import app.accord.core.sync.PROTOCOL_VERSION
 import app.accord.core.sync.ProblemKind
 import app.accord.core.sync.ProblemOperation
 import app.accord.core.sync.PullPage
+import app.accord.core.sync.RejectReason
 import app.accord.core.sync.ReceiveSummary
 import app.accord.core.sync.RemoteEntityState
 import app.accord.core.sync.ResolveResult
@@ -110,6 +113,8 @@ class SyncStore(
                         EntityChangeEnvelope(
                             type = it.entityType, id = it.entityId, baseVersion = it.baseVersion, state = it.state,
                             tombstone = it.tombstone, references = EntityStates.decodeReferences(it.refs),
+                            // Evento de aviso (ADR 0044): se o outro aparelho chegou primeiro, o serviço devolve o canônico em vez de conflito.
+                            createIfAbsent = it.entityType == EntityType.AlertEvent.name && it.baseVersion == null,
                         )
                     },
                 )
@@ -144,6 +149,8 @@ class SyncStore(
     private suspend fun acknowledge(op: OperationRow, result: OperationResult.Applied) {
         sync.setOperationState(op.operationId, OpState.ACKNOWLEDGED, true, null)
         dao.upsertSync(result.versions.map { EntitySyncRow(it.type, it.id, it.version) })
+        // O serviço já tinha o evento: o canônico substitui o estado local, e a exibição já registrada para a chave continua valendo.
+        result.absorbed.forEach { adoptAlertEvent(it, EventSource.Received) }
         sync.conflict(op.operationId)?.let {
             if (it.status != ConflictStatus.RESOLVED) sync.upsertConflict(it.copy(status = ConflictStatus.RESOLVED, choice = "ACKNOWLEDGED"))
         }
@@ -206,6 +213,21 @@ class SyncStore(
     // ---- recebimento ----
 
     /**
+     * Adota o estado canônico de um evento de aviso e garante a situação de exibição deste aparelho: a que já existe para a chave é mantida (um aparelho que
+     * já exibiu não exibe de novo); sem ela, nasce da origem do conhecimento (S5, [AlertDisplay.onKnown]).
+     */
+    private suspend fun adoptAlertEvent(remote: RemoteEntityState, source: EventSource) {
+        EntityStates.apply(dao, EntityType.AlertEvent, remote.id, remote.state)
+        dao.upsertSync(listOf(EntitySyncRow(remote.type, remote.id, remote.version)))
+        val event = dao.alertEvent(remote.id) ?: return
+        val existing = dao.alertDisplay(remote.id)
+        if (existing != null) return
+        val now = nowMillis()
+        val state = AlertDisplay.onKnown(java.time.LocalDate.parse(event.windowMonday), source, java.time.Instant.ofEpochMilli(now), null)
+        dao.upsertAlertDisplay(AlertDisplayRow(remote.id, state.name, now))
+    }
+
+    /**
      * Aplica uma página recebida numa transação. Entidade sem operação local aberta passa a ter o
      * estado recebido; com operação aberta, a diferença de versão vira conflito e o estado local
      * permanece visível como "versão local pendente". Nenhuma operação de saída é gerada.
@@ -213,12 +235,19 @@ class SyncStore(
     suspend fun applyPage(page: PullPage): ReceiveSummary = transaction {
         val applied = mutableListOf<EntityRef>()
         var conflicts = 0
+        // Antes do primeiro ciclo completo, o que já existe no espaço é "já conhecido" (S5): não notifica.
+        val firstCycle = sync.syncState()?.lastSyncMillis == null
         for (remote in page.changes.sortedBy { it.cursor }) {
             val type = EntityType.entries.firstOrNull { it.name == remote.type } ?: continue
             val known = dao.serviceVersion(remote.type, remote.id) ?: 0
             if (remote.version <= known) continue
             val open = sync.openOperationsOn(remote.type, remote.id)
-            if (open.isEmpty()) {
+            if (type == EntityType.AlertEvent) {
+                // Evento de aviso é imutável e criado por chave: nunca vira conflito. A operação local ainda aberta (mesma chave, mesmo ID) é substituída.
+                open.forEach { sync.setOperationState(it.operationId, OpState.SUPERSEDED, true, null) }
+                adoptAlertEvent(remote, if (firstCycle) EventSource.FirstSync else EventSource.Received)
+                applied += EntityRef(type, remote.id)
+            } else if (open.isEmpty()) {
                 EntityStates.apply(dao, type, remote.id, remote.state)
                 dao.upsertSync(listOf(EntitySyncRow(remote.type, remote.id, remote.version)))
                 applied += EntityRef(type, remote.id)
@@ -250,8 +279,111 @@ class SyncStore(
             }
         }
         if (page.nextCursor > stateRow().cursor) sync.upsertSyncState(stateRow().copy(cursor = page.nextCursor))
+        repairRemovedCategories()
         recomputeHolds()
         ReceiveSummary(applied, conflicts)
+    }
+
+    /**
+     * ADR 0039: um celular removeu uma categoria enquanto o outro ainda tinha lançamento nela. O lançamento nunca se
+     * perde nem vai para outra categoria sozinho: fica salvo sem categoria ("a classificar" em Revisar), e a operação que
+     * o leva ao serviço é reescrita com o estado novo.
+     *  - Lançamento novo ainda não reconhecido numa categoria removida pelo outro celular: a operação dele é reescrita.
+     *  - Remoção daqui recusada porque o outro celular acrescentou lançamentos na categoria: eles entram na própria
+     *    operação de remoção, que volta à fila (sem isso a remoção nunca seria aceita).
+     * O serviço só recusa o que ainda cita a categoria removida, então nenhuma operação que ele já aplicou é reescrita.
+     */
+    private suspend fun repairRemovedCategories() {
+        val removed = dao.categories().filter { it.removed }.map { it.id }.toSet()
+        if (removed.isEmpty()) return
+        val retryable = setOf(RejectReason.CategoryRemoved.name, RejectReason.CategoryInUse.name)
+        val candidates = sync.operationsIn(OpState.OPEN).filter {
+            it.syncState == OpState.PENDING || it.syncState == OpState.HELD ||
+                (it.syncState == OpState.REJECTED && it.lastFailure?.substringBefore(':') in retryable)
+        }
+        val inOpen = mutableSetOf<String>()
+        for (op in candidates) {
+            var changed = false
+            for (row in sync.changesOf(op.operationId)) {
+                inOpen += key(row.entityType, row.entityId)
+                val type = EntityType.entries.firstOrNull { it.name == row.entityType } ?: continue
+                if (!clearRemovedCategory(type, row.entityId, removed)) continue
+                rewrite(op.operationId, type, row.entityId)
+                changed = true
+            }
+            // Lançamentos que o outro celular acrescentou numa categoria que esta operação remove.
+            for (categoryId in removalsOf(op)) {
+                for ((type, id) in strays(categoryId)) {
+                    if (key(type.name, id) in inOpen || sync.openOperationsOn(type.name, id).isNotEmpty()) continue
+                    clearRemovedCategory(type, id, removed)
+                    val snapshot = checkNotNull(EntityStates.read(dao, type, id))
+                    sync.insertChanges(
+                        listOf(
+                            OperationChangeRow(
+                                operationId = op.operationId, entityType = type.name, entityId = id,
+                                baseVersion = dao.serviceVersion(type.name, id), revision = EntityStates.revisionOf(dao, type, id),
+                                state = snapshot.state, tombstone = snapshot.tombstone,
+                                refs = EntityStates.encodeReferences(snapshot.references),
+                            ),
+                        ),
+                    )
+                    inOpen += key(type.name, id)
+                    changed = true
+                }
+            }
+            if (changed && op.syncState == OpState.REJECTED) sync.setOperationState(op.operationId, OpState.PENDING, false, null)
+        }
+    }
+
+    private suspend fun rewrite(operationId: String, type: EntityType, id: String) {
+        val snapshot = checkNotNull(EntityStates.read(dao, type, id))
+        sync.rewriteChange(
+            operationId, type.name, id, snapshot.state,
+            EntityStates.encodeReferences(snapshot.references), EntityStates.revisionOf(dao, type, id),
+        )
+    }
+
+    /** Categorias que a operação marca como removidas. */
+    private suspend fun removalsOf(op: OperationRow): List<String> =
+        sync.changesOf(op.operationId).filter { it.entityType == EntityType.Category.name }
+            .filter { row -> dao.category(row.entityId)?.removed == true && json.parseToJsonElement(row.state).jsonObject["removed"]?.toString() == "true" }
+            .map { it.entityId }
+
+    /** Lançamentos vivos que ainda citam a categoria [categoryId]. */
+    private suspend fun strays(categoryId: String): List<Pair<EntityType, String>> {
+        val ids = listOf(categoryId)
+        return dao.movementsIn(ids).filter { !it.voided }.map { EntityType.Movement to it.id } +
+            dao.purchasesIn(ids).filter { !it.voided }.map { EntityType.CardPurchase to it.id } +
+            dao.boletosIn(ids).filter { !it.voided }.map { EntityType.Boleto to it.id } +
+            (dao.segmentsIn(ids).map { it.recurrenceId } + dao.overridesIn(ids).map { it.recurrenceId }).distinct()
+                .filter { dao.recurrence(it)?.voided == false }.map { EntityType.Recurrence to it }
+    }
+
+    /** Tira dos lançamentos [removed] como classificação (voltam a "a classificar"); verdadeiro se algo mudou. */
+    private suspend fun clearRemovedCategory(type: EntityType, id: String, removed: Set<String>): Boolean {
+        fun gone(classification: String?) = classification != null && classification in removed
+        return when (type) {
+            EntityType.Movement -> dao.movement(id)?.takeIf { !it.voided && gone(it.classificationId) }
+                ?.let { dao.upsertMovement(it.copy(classificationId = null, revision = it.revision + 1)); true } ?: false
+            EntityType.CardPurchase -> dao.purchase(id)?.takeIf { !it.voided && gone(it.classificationId) }
+                ?.let { dao.upsertPurchase(it.copy(classificationId = null, revision = it.revision + 1)); true } ?: false
+            EntityType.Boleto -> dao.boleto(id)?.takeIf { !it.voided && gone(it.classificationId) }
+                ?.let { dao.upsertBoleto(it.copy(classificationId = null, revision = it.revision + 1)); true } ?: false
+            EntityType.Recurrence -> {
+                val row = dao.recurrence(id)
+                val segments = dao.segments(id)
+                val overrides = dao.overrides(id)
+                if (row == null || row.voided || (segments.none { gone(it.classificationId) } && overrides.none { gone(it.classificationId) })) {
+                    false
+                } else {
+                    dao.upsertSegments(segments.map { if (gone(it.classificationId)) it.copy(classificationId = null) else it })
+                    dao.upsertOverrides(overrides.map { if (gone(it.classificationId)) it.copy(classificationId = null) else it })
+                    dao.upsertRecurrence(row.copy(revision = row.revision + 1))
+                    true
+                }
+            }
+            else -> false
+        }
     }
 
     // ---- conflitos ----
