@@ -23,7 +23,12 @@ sealed interface IncomesContent {
     data class Ready(val summary: IncomeSummary) : IncomesContent
 }
 
-data class IncomesUiState(val month: YearMonth, val content: IncomesContent = IncomesContent.Loading)
+/** [incomeCategoryNames] resolve o identificador da categoria de renda para o nome exibido na lista. */
+data class IncomesUiState(
+    val month: YearMonth,
+    val content: IncomesContent = IncomesContent.Loading,
+    val incomeCategoryNames: Map<String, String> = emptyMap(),
+)
 
 /**
  * Rendas do mês (tela 28): recebido e a receber são partes do esperado, nunca duas rendas. Renda
@@ -67,9 +72,13 @@ class IncomesViewModel(
         val month = _state.value.month
         if (!keepContent) _state.update { it.copy(content = IncomesContent.Loading) }
         viewModelScope.launch {
-            val summary = (provider.space().incomes(month) as? QueryResult.Data)?.value
+            val space = provider.space()
+            val summary = (space.incomes(month) as? QueryResult.Data)?.value
+            val names = (space.incomeCategories() as? QueryResult.Data)?.value.orEmpty().associate { it.id to it.name }
             if (_state.value.month != month) return@launch
-            _state.update { it.copy(content = summary?.let(IncomesContent::Ready) ?: IncomesContent.Failed) }
+            _state.update {
+                it.copy(content = summary?.let(IncomesContent::Ready) ?: IncomesContent.Failed, incomeCategoryNames = names)
+            }
         }
     }
 

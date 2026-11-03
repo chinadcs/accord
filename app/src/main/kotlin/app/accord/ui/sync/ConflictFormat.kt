@@ -21,6 +21,7 @@ sealed interface FieldValue {
     data class Day(val epochDay: Long?) : FieldValue
     data class MonthValue(val month: String?) : FieldValue
     data class CategoryRef(val id: String?) : FieldValue
+    data class IncomeCategoryRef(val id: String?) : FieldValue
     data class AccountRef(val id: String?) : FieldValue
     data class Flag(val value: Boolean) : FieldValue
     data class Deleted(val deleted: Boolean) : FieldValue
@@ -41,7 +42,7 @@ data class FieldLine(@StringRes val label: Int, val value: FieldValue, val diffe
 object ConflictFormat {
     private val json = Json { ignoreUnknownKeys = true }
 
-    private enum class Kind { Text, Cents, Day, Month, Category, Account, Flag, Deleted, Installments, Limits, Count }
+    private enum class Kind { Text, Cents, Day, Month, Category, IncomeCategory, Account, Flag, Deleted, Installments, Limits, Count }
 
     private data class Spec(val key: String, @StringRes val label: Int, val kind: Kind)
 
@@ -67,7 +68,11 @@ object ConflictFormat {
             Spec("description", R.string.field_description, Kind.Text), Spec("expectedCents", R.string.field_expected, Kind.Cents),
             Spec("expectedEpochDay", R.string.field_expected_date, Kind.Day), Spec("receivedEpochDay", R.string.field_received_on, Kind.Day),
             Spec("receivedCents", R.string.field_received_amount, Kind.Cents), Spec("accountId", R.string.field_account, Kind.Account),
-            Spec("voided", R.string.field_status, Kind.Deleted),
+            Spec("incomeCategoryId", R.string.field_income_category, Kind.IncomeCategory), Spec("voided", R.string.field_status, Kind.Deleted),
+        ),
+        EntityType.IncomeCategory to listOf(
+            Spec("name", R.string.field_name, Kind.Text), Spec("iconKey", R.string.field_icon, Kind.Text),
+            Spec("sortOrder", R.string.field_order, Kind.Text),
         ),
         EntityType.Recurrence to listOf(
             Spec("kind", R.string.field_kind, Kind.Text), Spec("frequency", R.string.field_frequency, Kind.Text),
@@ -92,7 +97,8 @@ object ConflictFormat {
         EntityType.Category to listOf(
             Spec("name", R.string.field_name, Kind.Text), Spec("parentId", R.string.field_parent, Kind.Category),
             Spec("iconKey", R.string.field_icon, Kind.Text), Spec("sortOrder", R.string.field_order, Kind.Text),
-            Spec("moves", R.string.field_moves, Kind.Count),
+            Spec("moves", R.string.field_moves, Kind.Count), Spec("colorIndex", R.string.field_color, Kind.Text),
+            Spec("removed", R.string.field_status, Kind.Deleted),
         ),
         EntityType.Account to listOf(
             Spec("bankName", R.string.field_bank, Kind.Text), Spec("nickname", R.string.field_nickname, Kind.Text),
@@ -116,6 +122,9 @@ object ConflictFormat {
         EntityType.InvoicePayment -> R.string.conflict_entity_invoice_payment
         EntityType.LimitPlan -> R.string.conflict_entity_limit_plan
         EntityType.Category -> R.string.conflict_entity_category
+        EntityType.IncomeCategory -> R.string.conflict_entity_income_category
+        EntityType.ImportBatch -> R.string.conflict_entity_import_batch
+        EntityType.AlertEvent -> R.string.conflict_entity_alert_event
         EntityType.Account -> R.string.conflict_entity_account
         EntityType.Card -> R.string.conflict_entity_card
         EntityType.Preferences -> R.string.conflict_entity_preferences
@@ -145,6 +154,7 @@ object ConflictFormat {
             Kind.Day -> FieldValue.Day(primitive?.longOrNull)
             Kind.Month -> FieldValue.MonthValue(primitive?.contentOrNull)
             Kind.Category -> FieldValue.CategoryRef(primitive?.contentOrNull)
+            Kind.IncomeCategory -> FieldValue.IncomeCategoryRef(primitive?.contentOrNull)
             Kind.Account -> FieldValue.AccountRef(primitive?.contentOrNull)
             Kind.Flag -> FieldValue.Flag(primitive?.booleanOrNull ?: false)
             Kind.Deleted -> FieldValue.Deleted(primitive?.booleanOrNull ?: false)

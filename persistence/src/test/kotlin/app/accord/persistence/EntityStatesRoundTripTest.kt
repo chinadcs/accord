@@ -14,6 +14,7 @@ import app.accord.core.space.Classification
 import app.accord.core.space.CommitmentKind
 import app.accord.core.space.CorrectEntry
 import app.accord.core.space.CreateCategory
+import app.accord.core.space.CreateIncomeCategory
 import app.accord.core.space.CreateRecurrence
 import app.accord.core.space.DefineLimits
 import app.accord.core.space.DeleteEntry
@@ -31,6 +32,7 @@ import app.accord.core.space.RegisterBoleto
 import app.accord.core.space.RegisterCardPurchase
 import app.accord.core.space.RegisterDirectPayment
 import app.accord.core.space.RegisterIncome
+import app.accord.core.space.RenameIncomeCategory
 import app.accord.core.space.RegisterInvoiceTotal
 import app.accord.core.space.RegisterRefund
 import app.accord.core.space.SetMyDefaultAccount
@@ -98,8 +100,10 @@ class EntityStatesRoundTripTest : SpaceTestBase() {
             RegisterBoleto("Condomínio", Classification.Category(seed("casa.contas-domesticas")), d(2026, 10, 30), brl(100)),
         ).applied().changes.single().id
         h.space.execute(h.env(), PayBoleto(boleto, Settlement(d(2026, 11, 3)))).applied()
-        val income = h.space.execute(h.env(), RegisterIncome("Salário", brl(5000), d(2026, 10, 5))).applied().changes.single().id
+        val salary = h.space.execute(h.env(), CreateIncomeCategory("Freelas")).applied().changes.single().id
+        val income = h.space.execute(h.env(), RegisterIncome("Salário", brl(5000), d(2026, 10, 5), incomeCategoryId = salary)).applied().changes.single().id
         h.space.execute(h.env(), ReceiveIncome(income, Settlement(d(2026, 10, 6)))).applied()
+        h.space.execute(h.env(), RenameIncomeCategory(salary, "Trabalho avulso")).applied()
         val gym = h.space.execute(
             h.env(),
             CreateRecurrence(
@@ -139,6 +143,9 @@ class EntityStatesRoundTripTest : SpaceTestBase() {
             same(a.space.invoice(month).value(), b.space.invoice(month).value(), "fatura de $month")
         }
         same(a.space.categories().value(), b.space.categories().value())
+        same(a.space.incomeCategories().value(), b.space.incomeCategories().value())
+        assertTrue(b.space.incomeCategories().value().any { it.name == "Trabalho avulso" }, "categoria criada e renomeada chega ao outro aparelho")
+        assertTrue(b.space.incomes(YearMonth.of(2026, 10)).value().items.any { it.incomeCategoryId != null }, "renda categorizada chega com a categoria")
         same(a.space.accounts().value(), b.space.accounts().value())
         same(a.space.card().value(), b.space.card().value())
         same(a.space.invoices().value(), b.space.invoices().value())

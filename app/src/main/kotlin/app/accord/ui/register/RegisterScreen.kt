@@ -1,5 +1,9 @@
 package app.accord.ui.register
 
+import app.accord.ui.colorKey
+import app.accord.ui.categoryColor
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.shape.CircleShape
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.BorderStroke
@@ -101,6 +105,7 @@ fun RegisterRoute(viewModel: RegisterViewModel, padding: PaddingValues, onExit: 
         onChange = viewModel::update, onSave = viewModel::save, onBack = viewModel::requestBack,
         onKeepEditing = viewModel::keepEditing, onSaveDraft = viewModel::saveDraftAndExit, onDiscard = viewModel::discardAndExit,
         onDismissRecovered = viewModel::dismissRecoveredDraft,
+        onCreateIncomeCategory = viewModel::createIncomeCategory,
     )
 }
 
@@ -116,6 +121,7 @@ fun RegisterScreen(
     onSaveDraft: () -> Unit,
     onDiscard: () -> Unit,
     onDismissRecovered: () -> Unit,
+    onCreateIncomeCategory: (String, (String?) -> Unit) -> Unit = { _, done -> done(null) },
 ) {
     val form = state.form
     val focus = remember { FormField.entries.associateWith { FocusRequester() } }
@@ -197,13 +203,24 @@ fun RegisterScreen(
             )
 
             val selectedCategoryIcon = form.categoryId?.let { state.categories[it]?.iconKey }?.let { lucideRes(it) }
+            val selectedCategoryColor = categoryColor(state.categories, form.categoryId)
             if (form.kind == FormKind.Expense) {
                 PickerField(
                     label = stringResource(R.string.register_category),
                     value = categoryPath(state.categories, form.categoryId) ?: stringResource(R.string.register_category_pick),
                     error = state.errors[FormField.Category], bring = bring.getValue(FormField.Category),
-                    leadingContent = selectedCategoryIcon?.let { icon -> { DecorativeIcon(icon) } },
+                    leadingContent = selectedCategoryIcon?.let { icon -> { DecorativeIcon(icon, tint = selectedCategoryColor) } },
                 ) { keyboard?.hide(); picking = Picker.Category }
+            }
+
+            if (form.kind == FormKind.Income) {
+                val chosen = state.incomeCategories.firstOrNull { it.id == form.incomeCategoryId }
+                PickerField(
+                    label = stringResource(R.string.register_income_category),
+                    value = chosen?.name ?: stringResource(R.string.register_income_category_pick),
+                    error = null, bring = remember { BringIntoViewRequester() },
+                    leadingContent = chosen?.let { node -> { DecorativeIcon(lucideRes(node.iconKey)) } },
+                ) { keyboard?.hide(); picking = Picker.IncomeCategory }
             }
 
             if (form.allowsAccount) {
@@ -250,6 +267,12 @@ fun RegisterScreen(
             onChange { it.copy(categoryId = id) }
             picking = null
         }, onDismiss = { picking = null })
+        Picker.IncomeCategory -> IncomeCategoryDialog(
+            categories = state.incomeCategories, selected = form.incomeCategoryId,
+            onPick = { id -> onChange { it.copy(incomeCategoryId = id) }; picking = null },
+            onCreate = onCreateIncomeCategory,
+            onDismiss = { picking = null },
+        )
         Picker.Account -> AccountDialog(state.accounts, form.accountId, onPick = { id ->
             onChange { it.copy(accountId = id) }
             picking = null
@@ -288,6 +311,7 @@ fun RegisterScreen(
 private sealed interface Picker {
     data class Date(val target: DateTarget) : Picker
     data object Category : Picker
+    data object IncomeCategory : Picker
     data object Account : Picker
     data object Invoice : Picker
 }
@@ -757,7 +781,7 @@ internal fun CategoryDialog(categories: Map<String, CategoryNode>, selected: Str
                     items(mains, key = { it.id }) { main ->
                         val subcategories = categories.values.any { it.parentId == main.id }
                         CategoryTile(
-                            name = main.name, iconKey = main.iconKey,
+                            name = main.name, iconKey = main.iconKey, color = categoryColor(main.colorKey(categories)),
                             selected = selected == main.id || selectedNode?.parentId == main.id,
                             onClick = {
                                 if (subcategories) parentId = main.id else onPick(main.id)
@@ -770,7 +794,7 @@ internal fun CategoryDialog(categories: Map<String, CategoryNode>, selected: Str
                     IconButton(onClick = { parentId = null }, modifier = Modifier.size(AccordSpacing.touchMin)) {
                         Icon(painterResource(Lucide.drawable.lucide_ic_arrow_left), contentDescription = stringResource(R.string.action_back))
                     }
-                    DecorativeIcon(lucideRes(parent.iconKey))
+                    DecorativeIcon(lucideRes(parent.iconKey), tint = categoryColor(parent.colorKey(categories)))
                     Text(parent.name, style = MaterialTheme.typography.titleMedium)
                 }
                 Button(
@@ -784,7 +808,7 @@ internal fun CategoryDialog(categories: Map<String, CategoryNode>, selected: Str
                     horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
                 ) {
                     items(children, key = { it.id }) { child ->
-                        CategoryTile(child.name, child.iconKey, selected == child.id) { onPick(child.id) }
+                        CategoryTile(child.name, child.iconKey, categoryColor(child.colorKey(categories)), selected == child.id) { onPick(child.id) }
                     }
                 }
             }
@@ -792,11 +816,24 @@ internal fun CategoryDialog(categories: Map<String, CategoryNode>, selected: Str
     }
 }
 
+/**
+ * Quadro de uma categoria: ícone na cor da categoria principal (a subcategoria herda a do pai) e nome. O mesmo quadro
+ * serve ao seletor do registro manual e às sugestões do Chat; [caption] identifica o pai de uma subcategoria.
+ */
 @Composable
-private fun CategoryTile(name: String, iconKey: String, selected: Boolean, onClick: () -> Unit) {
+internal fun CategoryTile(
+    name: String,
+    iconKey: String,
+    color: Color,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    caption: String? = null,
+    compact: Boolean = false,
+    onClick: () -> Unit,
+) {
     Surface(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().heightIn(min = 96.dp),
+        modifier = modifier.fillMaxWidth().heightIn(min = 96.dp),
         shape = MaterialTheme.shapes.medium,
         color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHighest,
         border = BorderStroke(
@@ -805,19 +842,28 @@ private fun CategoryTile(name: String, iconKey: String, selected: Boolean, onCli
         ),
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s2, vertical = AccordSpacing.s2),
+            Modifier.fillMaxWidth().padding(horizontal = if (compact) AccordSpacing.s1 else AccordSpacing.s2, vertical = AccordSpacing.s2),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
         ) {
-            DecorativeIcon(
-                lucideRes(iconKey), modifier = Modifier.size(28.dp),
-                tint = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            // Selecionado, o ícone fica sobre um disco sólido da superfície: a cor da categoria mantém contraste sobre o destaque.
+            Surface(shape = CircleShape, color = if (selected) MaterialTheme.colorScheme.surface else color.copy(alpha = 0.16f)) {
+                Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
+                    DecorativeIcon(lucideRes(iconKey), modifier = Modifier.size(28.dp), tint = color)
+                }
+            }
             Text(
-                name, style = MaterialTheme.typography.bodyLarge,
+                name, style = if (compact) MaterialTheme.typography.bodyMedium else MaterialTheme.typography.bodyLarge,
                 color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
                 textAlign = TextAlign.Center, maxLines = 2,
             )
+            if (caption != null) {
+                Text(
+                    caption, style = MaterialTheme.typography.labelMedium,
+                    color = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center, maxLines = 1,
+                )
+            }
         }
     }
 }

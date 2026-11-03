@@ -102,6 +102,20 @@ class RegisterFormTest {
     }
 
     @Test
+    fun `renda leva a categoria de renda escolhida, que é opcional`() {
+        val categorized = assertIs<RegisterIncome>(ok(form(kind = FormKind.Income, category = null).copy(incomeCategoryId = "salario")))
+        assertEquals("salario", categorized.incomeCategoryId)
+        assertEquals(null, assertIs<RegisterIncome>(ok(form(kind = FormKind.Income, category = null))).incomeCategoryId)
+    }
+
+    @Test
+    fun `a categoria de renda sobrevive ao rascunho e à recriação do processo`() {
+        val f = form(kind = FormKind.Income, category = null).copy(incomeCategoryId = "salario")
+        assertEquals("salario", app.accord.ui.register.FormCodec.decode(app.accord.ui.register.FormCodec.encode(f), today).incomeCategoryId)
+        assertEquals("salario", app.accord.ui.register.FormCodec.fromFields(app.accord.ui.register.FormCodec.toFields(f), today).incomeCategoryId)
+    }
+
+    @Test
     fun `despesa exige categoria mas renda não`() {
         assertEquals(FormError.CategoryRequired, invalid(form(category = null))[FormField.Category])
         assertTrue(ok(form(kind = FormKind.Income, category = null)) is RegisterIncome)

@@ -11,6 +11,9 @@ import app.accord.core.space.AccountInfo
 import app.accord.core.space.CategoryNode
 import app.accord.core.space.CommandId
 import app.accord.core.space.CommandResult
+import app.accord.core.space.CreateIncomeCategory
+import app.accord.core.space.EntityType
+import app.accord.core.space.IncomeCategoryNode
 import app.accord.core.space.Decision
 import app.accord.core.space.DeleteRecurrence
 import app.accord.core.space.Envelope
@@ -57,6 +60,7 @@ data class EditUiState(
     val nothingChanged: Boolean = false,
     val categories: Map<String, CategoryNode> = emptyMap(),
     val accounts: List<AccountInfo> = emptyList(),
+    val incomeCategories: List<IncomeCategoryNode> = emptyList(),
     val saving: Boolean = false,
     val prompt: EditPrompt? = null,
     /** Ocorrências adiante com ajuste próprio que esta edição substituiria (recorrência). */
@@ -104,6 +108,7 @@ class EditEntryViewModel(
             }
             val categories = (space.categories() as? QueryResult.Data)?.value
             val accounts = (space.accounts() as? QueryResult.Data)?.value
+            val incomeCategories = (space.incomeCategories() as? QueryResult.Data)?.value.orEmpty()
             if (categories == null || accounts == null) {
                 _state.update { it.copy(content = EditContent.Failed) }
                 return@launch
@@ -116,7 +121,7 @@ class EditEntryViewModel(
                     content = original?.let(EditContent::Ready) ?: EditContent.NotEditable,
                     form = original?.let(EditForm::of),
                     categories = categories.associateBy { c -> c.id },
-                    accounts = accounts.accounts,
+                    accounts = accounts.accounts, incomeCategories = incomeCategories,
                     replacedOccurrences = emptyList(), suggestedInvoice = null,
                 )
             }
@@ -139,12 +144,31 @@ class EditEntryViewModel(
         EditField.Amount -> a.amountText == b.amountText
         EditField.Date -> a.date == b.date
         EditField.Category -> a.categoryId == b.categoryId
+        EditField.IncomeCategory -> a.incomeCategoryId == b.incomeCategoryId
         EditField.Account -> a.accountId == b.accountId
         EditField.Scope -> a.scope == b.scope
     }
 
     val isDirty: Boolean
         get() = _state.value.let { s -> s.original?.let { s.form != EditForm.of(it) } == true }
+
+    /** Cria uma categoria de renda pelo seletor e a escolhe no formulário; [onResult] recebe a recusa em português ou nulo. */
+    fun createIncomeCategory(name: String, onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            val space = provider.space()
+            when (val result = space.execute(Envelope(CommandId(UUID.randomUUID().toString()), Origin.Manual), CreateIncomeCategory(name))) {
+                is CommandResult.Applied -> {
+                    val created = result.receipt.changes.firstOrNull { it.type == EntityType.IncomeCategory }?.id
+                    val all = (space.incomeCategories() as? QueryResult.Data)?.value.orEmpty()
+                    _state.update { it.copy(incomeCategories = all) }
+                    update { f -> f.copy(incomeCategoryId = created ?: f.incomeCategoryId) }
+                    onResult(null)
+                }
+                is CommandResult.Rejected -> onResult(result.errors.joinToString(" ") { it.message })
+                else -> onResult("Não foi possível criar a categoria agora. Tente de novo.")
+            }
+        }
+    }
 
     // ---- prévia ----
 

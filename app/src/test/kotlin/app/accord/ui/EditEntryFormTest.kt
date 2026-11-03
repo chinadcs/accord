@@ -138,4 +138,44 @@ class EditEntryFormTest {
         val extra = assertIs<CorrectEntry>(assertIs<EditForm.Built.Ok>(EditForm.of(plain).copy(description = "x").build(plain, confirmExtra = true)).command)
         assertTrue(extra.confirmExtra)
     }
+
+    // ---- accord-llf7.5: categoria de renda ----
+
+    private fun income(incomeCategory: String? = "salario") = original(target = EditTarget.Income, category = null).copy(incomeCategoryId = incomeCategory)
+
+    @Test
+    fun rendaTrocaACategoriaDeRendaEsoElaVaiNoComando() {
+        val o = income()
+        val built = ok(EditForm.of(o).copy(incomeCategoryId = "extra"), o)
+        val command = assertIs<CorrectEntry>(built.command)
+        assertTrue(built.changed)
+        assertEquals("extra", command.incomeCategoryId)
+        assertNull(command.category)
+        assertNull(command.description)
+    }
+
+    @Test
+    fun rendaSemTrocaDeCategoriaNaoViraAlteracao() {
+        val o = income()
+        val built = ok(EditForm.of(o), o)
+        assertFalse(built.changed)
+        assertNull(assertIs<CorrectEntry>(built.command).incomeCategoryId)
+    }
+
+    @Test
+    fun rendaSemCategoriaPodeGanharUmaMasNaoVoltaASemCategoriaPeloComando() {
+        val none = income(incomeCategory = null)
+        assertEquals("salario", assertIs<CorrectEntry>(ok(EditForm.of(none).copy(incomeCategoryId = "salario"), none).command).incomeCategoryId)
+        val had = income()
+        assertFalse(ok(EditForm.of(had).copy(incomeCategoryId = null), had).changed)
+    }
+
+    @Test
+    fun categoriaDeRendaSoEEditavelEmRenda() {
+        assertTrue(income().incomeCategoryEditable)
+        assertFalse(original().incomeCategoryEditable)
+        val direct = original()
+        assertNull(assertIs<CorrectEntry>(ok(EditForm.of(direct).copy(incomeCategoryId = "extra", description = "x"), direct).command).incomeCategoryId)
+        assertEquals(EditField.IncomeCategory, EditForm.fieldOf("incomeCategoryId"))
+    }
 }

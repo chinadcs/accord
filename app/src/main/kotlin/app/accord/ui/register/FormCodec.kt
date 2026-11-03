@@ -23,6 +23,7 @@ object FormCodec {
         put("amount", f.amountText)
         put("date", f.date.toString())
         f.categoryId?.let { put("categoryId", it) }
+        f.incomeCategoryId?.let { put("incomeCategoryId", it) }
         f.accountId?.let { put("accountId", it) }
         put("installments", f.installmentsText)
         f.amountMeaning?.let { put("amountMeaning", it.name) }
@@ -40,6 +41,7 @@ object FormCodec {
         amountText = fields["amount"].orEmpty(),
         date = fields["date"]?.let { runCatching { LocalDate.parse(it) }.getOrNull() } ?: fallbackDate,
         categoryId = fields["categoryId"],
+        incomeCategoryId = fields["incomeCategoryId"],
         accountId = fields["accountId"],
         installmentsText = fields["installments"] ?: "1",
         amountMeaning = fields["amountMeaning"]?.let { runCatching { AmountMeaning.valueOf(it) }.getOrNull() },

@@ -48,6 +48,7 @@ import app.accord.ui.fullLabel
 import app.accord.ui.register.AccountDialog
 import app.accord.ui.register.CategoryDialog
 import app.accord.ui.register.DatePickerSheet
+import app.accord.ui.register.IncomeCategoryDialog
 import app.accord.ui.register.FormTextField
 import app.accord.ui.register.PickerField
 import app.accord.ui.register.accountLabel
@@ -66,6 +67,7 @@ fun EditEntryRoute(viewModel: EditEntryViewModel, padding: PaddingValues, onExit
         onChange = viewModel::update, onSave = { viewModel.save() }, onBack = viewModel::requestBack,
         onConfirmPrompt = viewModel::confirmPrompt, onDismissPrompt = viewModel::dismissPrompt,
         onAskDelete = viewModel::askDelete, onDelete = { viewModel.deleteOccurrence(it) }, onRetry = viewModel::load,
+        onCreateIncomeCategory = viewModel::createIncomeCategory,
     )
 }
 
@@ -82,6 +84,7 @@ fun EditEntryScreen(
     onAskDelete: () -> Unit,
     onDelete: (RecurrenceScope) -> Unit,
     onRetry: () -> Unit,
+    onCreateIncomeCategory: (String, (String?) -> Unit) -> Unit = { _, _ -> },
 ) {
     val focus = remember { EditField.entries.associateWith { FocusRequester() } }
     val bring = remember { EditField.entries.associateWith { BringIntoViewRequester() } }
@@ -152,6 +155,12 @@ fun EditEntryScreen(
             Picker.Category -> CategoryDialog(state.categories, form.categoryId, onPick = { id ->
                 onChange { it.copy(categoryId = id) }; picking = null
             }, onDismiss = { picking = null })
+            Picker.IncomeCategory -> IncomeCategoryDialog(
+                categories = state.incomeCategories, selected = form.incomeCategoryId,
+                onPick = { id -> onChange { it.copy(incomeCategoryId = id) }; picking = null },
+                onCreate = onCreateIncomeCategory, onDismiss = { picking = null },
+                allowNone = original?.incomeCategoryId == null,
+            )
             Picker.Account -> AccountDialog(state.accounts, form.accountId, onPick = { id ->
                 onChange { it.copy(accountId = id) }; picking = null
             }, onDismiss = { picking = null })
@@ -161,7 +170,7 @@ fun EditEntryScreen(
     PromptDialogs(state, onConfirmPrompt, onDismissPrompt, onDelete)
 }
 
-private enum class Picker { Date, Category, Account }
+private enum class Picker { Date, Category, IncomeCategory, Account }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -212,6 +221,14 @@ private fun Fields(
             value = categoryPath(state.categories, form.categoryId) ?: stringResource(R.string.register_category_pick),
             error = state.errors[EditField.Category], bring = bring.getValue(EditField.Category),
         ) { onPick(Picker.Category) }
+    }
+    if (original.incomeCategoryEditable) {
+        val chosen = state.incomeCategories.firstOrNull { it.id == form.incomeCategoryId }
+        PickerField(
+            label = stringResource(R.string.register_income_category),
+            value = chosen?.name ?: stringResource(R.string.register_income_category_pick),
+            error = state.errors[EditField.IncomeCategory], bring = bring.getValue(EditField.IncomeCategory),
+        ) { onPick(Picker.IncomeCategory) }
     }
     if (original.accountEditable) {
         val account = state.accounts.firstOrNull { it.id == form.accountId }

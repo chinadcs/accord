@@ -43,7 +43,7 @@ internal class CorrectionPlanner(
     private suspend fun validate(c: CorrectEntry, errors: MutableList<FieldError>) {
         c.description?.let { if (it.isBlank()) errors += FieldError("description", ErrorCode.Required, "Informe a descrição.") }
         c.amount?.let { if (it.cents <= 0) errors += FieldError("amount", ErrorCode.MustBePositive, "O valor precisa ser maior que zero.") }
-        c.category?.let { if (dao.category(it.id) == null) errors += FieldError("category", ErrorCode.UnknownReference, "Categoria não encontrada.") }
+        c.category?.let { if (dao.activeCategory(it.id) == null) errors += FieldError("category", ErrorCode.UnknownReference, "Categoria não encontrada.") }
         c.accountId?.let { if (dao.account(it) == null) errors += FieldError("accountId", ErrorCode.UnknownReference, "Conta não encontrada.") }
     }
 
@@ -73,12 +73,19 @@ internal class CorrectionPlanner(
 
     suspend fun plan(c: CorrectEntry): Planned {
         val nothing = c.description == null && c.category == null && c.date == null && c.amount == null &&
-            c.accountId == null && c.spentBy == null
+            c.accountId == null && c.spentBy == null && c.incomeCategoryId == null
         dao.purchase(c.entityId)?.let { return planPurchase(c, it, nothing) }
         dao.movement(c.entityId)?.let { return planMovement(c, it, nothing) }
         dao.boleto(c.entityId)?.let { return planBoleto(c, it, nothing) }
         dao.income(c.entityId)?.let { return planIncome(c, it, nothing) }
         return stop("entityId", ErrorCode.UnknownReference, "Lançamento não encontrado.")
+    }
+
+    /** Categoria de renda só existe em renda; as demais usam categoria de despesa. */
+    private fun rejectIncomeCategory(c: CorrectEntry, errors: MutableList<FieldError>) {
+        if (c.incomeCategoryId != null) {
+            errors += FieldError("incomeCategoryId", ErrorCode.NotAllowed, "Categoria de renda só vale para renda.")
+        }
     }
 
     private fun gate(c: CorrectEntry, voided: Boolean, revision: Long, id: String, nothing: Boolean): Planned.Stop? = when {
@@ -94,6 +101,7 @@ internal class CorrectionPlanner(
         gate(c, m.voided, m.revision, m.id, nothing)?.let { return it }
         val errors = mutableListOf<FieldError>()
         validate(c, errors)
+        rejectIncomeCategory(c, errors)
         refundFloor(m.id, c.amount, errors)
         if (m.kind == "Cash" && c.accountId != null) errors += FieldError("accountId", ErrorCode.NotAllowed, "Dinheiro não tem conta.")
         if (errors.isNotEmpty()) return stop(errors)
@@ -130,6 +138,7 @@ internal class CorrectionPlanner(
         val installments = dao.installments(p.id)
         val errors = mutableListOf<FieldError>()
         validate(c, errors)
+        rejectIncomeCategory(c, errors)
         if (c.accountId != null) errors += FieldError("accountId", ErrorCode.NotAllowed, "Compra no cartão não tem conta.")
         if (c.amount != null && installments.size > 1) {
             errors += FieldError(
@@ -191,6 +200,7 @@ internal class CorrectionPlanner(
         gate(c, b.voided, b.revision, b.id, nothing)?.let { return it }
         val errors = mutableListOf<FieldError>()
         validate(c, errors)
+        rejectIncomeCategory(c, errors)
         refundFloor(b.id, c.amount, errors)
         if (errors.isNotEmpty()) return stop(errors)
         needsExtra(c, b.origin == Origin.Import.name, paidInvoice = false)?.let { return it }
@@ -221,7 +231,11 @@ internal class CorrectionPlanner(
         gate(c, i.voided, i.revision, i.id, nothing)?.let { return it }
         val errors = mutableListOf<FieldError>()
         validate(c, errors)
-        if (c.category != null) errors += FieldError("category", ErrorCode.NotAllowed, "Renda não tem categoria.")
+        if (c.category != null) errors += FieldError("category", ErrorCode.NotAllowed, "Renda usa categoria de renda, não categoria de despesa.")
+        val newCategory = c.incomeCategoryId
+        if (newCategory != null && dao.incomeCategory(newCategory) == null) {
+            errors += FieldError("incomeCategoryId", ErrorCode.UnknownReference, "Categoria de renda não encontrada.")
+        }
         if (errors.isNotEmpty()) return stop(errors)
         needsExtra(c, i.origin == Origin.Import.name, paidInvoice = false)?.let { return it }
 
@@ -230,12 +244,13 @@ internal class CorrectionPlanner(
             expectedEpochDay = c.date?.toEpochDay() ?: i.expectedEpochDay,
             expectedCents = c.amount?.cents ?: i.expectedCents,
             accountId = c.accountId ?: i.accountId,
+            incomeCategoryId = c.incomeCategoryId ?: i.incomeCategoryId,
             revision = i.revision + 1,
         )
         fun budgetMonth(row: IncomeRow) = month(row.receivedEpochDay ?: row.expectedEpochDay)
         val detail = encode(
             "description" to i.description, "expectedDay" to i.expectedEpochDay.toString(),
-            "expected" to i.expectedCents.toString(), "account" to i.accountId,
+            "expected" to i.expectedCents.toString(), "account" to i.accountId, "incomeCategory" to i.incomeCategoryId,
         )
         return Planned.Go(months = setOf(budgetMonth(i), budgetMonth(next)), undoable = true, detail = detail) {
             dao.upsertIncome(next)
@@ -244,13 +259,16 @@ internal class CorrectionPlanner(
     }
 
     /** Restaura o estado anterior guardado na operação; devolve a nova revisão da entidade. */
+    /** Desfazer devolve a categoria anterior; se ela foi removida nesse meio tempo, o lançamento volta a "a classificar". */
+    private suspend fun live(categoryId: String?): String? = categoryId?.takeIf { dao.activeCategory(it) != null }
+
     suspend fun restore(type: EntityType, id: String, detail: String): Long {
         val d = decode(detail)
         return when (type) {
             EntityType.Movement -> {
                 val row = dao.movement(id)!!
                 val next = row.copy(
-                    description = d.getValue("description")!!, classificationId = d["classification"],
+                    description = d.getValue("description")!!, classificationId = live(d["classification"]),
                     epochDay = d.getValue("epochDay")!!.toLong(), amountCents = d.getValue("amount")!!.toLong(),
                     accountId = d["account"], spentBy = d["spentBy"], revision = row.revision + 1,
                 )
@@ -260,7 +278,7 @@ internal class CorrectionPlanner(
             EntityType.CardPurchase -> {
                 val row = dao.purchase(id)!!
                 val next = row.copy(
-                    description = d.getValue("description")!!, classificationId = d["classification"],
+                    description = d.getValue("description")!!, classificationId = live(d["classification"]),
                     purchaseEpochDay = d.getValue("purchaseDay")!!.toLong(), totalCents = d.getValue("total")!!.toLong(),
                     spentBy = d["spentBy"], revision = row.revision + 1,
                 )
@@ -280,7 +298,7 @@ internal class CorrectionPlanner(
             EntityType.Boleto -> {
                 val row = dao.boleto(id)!!
                 val next = row.copy(
-                    description = d.getValue("description")!!, classificationId = d["classification"],
+                    description = d.getValue("description")!!, classificationId = live(d["classification"]),
                     dueEpochDay = d.getValue("dueDay")!!.toLong(), expectedCents = d.getValue("expected")!!.toLong(),
                     accountId = d["account"], revision = row.revision + 1,
                 )
@@ -291,7 +309,8 @@ internal class CorrectionPlanner(
                 val row = dao.income(id)!!
                 val next = row.copy(
                     description = d.getValue("description")!!, expectedEpochDay = d.getValue("expectedDay")!!.toLong(),
-                    expectedCents = d.getValue("expected")!!.toLong(), accountId = d["account"], revision = row.revision + 1,
+                    expectedCents = d.getValue("expected")!!.toLong(), accountId = d["account"],
+                    incomeCategoryId = d["incomeCategory"], revision = row.revision + 1,
                 )
                 dao.upsertIncome(next)
                 next.revision

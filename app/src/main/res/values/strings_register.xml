@@ -31,6 +31,13 @@
     <string name="register_category_choose_parent">Escolha um grupo</string>
     <string name="register_category_choose_child">Agora escolha uma categoria</string>
     <string name="register_category_use_parent">Usar %1$s</string>
+    <string name="register_income_category">Categoria de renda</string>
+    <string name="register_income_category_pick">Sem categoria</string>
+    <string name="register_income_category_none">Sem categoria</string>
+    <string name="register_income_category_new">Nova categoria de renda</string>
+    <string name="register_income_category_name">Nome da categoria de renda</string>
+    <string name="register_income_category_create">Criar e usar</string>
+    <string name="register_income_category_cancel">Cancelar</string>
     <string name="register_account">Conta</string>
     <string name="register_account_none">Nenhuma conta cadastrada</string>
     <string name="register_account_pick">Escolher conta</string>

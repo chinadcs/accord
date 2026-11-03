@@ -114,7 +114,7 @@ fun IncomesScreen(
                         }
                     }
                 } else {
-                    items(summary.items, key = { it.id }) { IncomeRow(it, onOpen, onReceive) }
+                    items(summary.items, key = { it.id }) { IncomeRow(it, state.incomeCategoryNames[it.incomeCategoryId], onOpen, onReceive) }
                 }
             }
         }
@@ -122,7 +122,7 @@ fun IncomesScreen(
 }
 
 @Composable
-private fun IncomeRow(income: IncomeView, onOpen: (String) -> Unit, onReceive: (IncomeView) -> Unit) {
+private fun IncomeRow(income: IncomeView, categoryName: String?, onOpen: (String) -> Unit, onReceive: (IncomeView) -> Unit) {
     val received = income.receivedDate != null
     val line = if (received) {
         stringResource(R.string.incomes_line_received, income.receivedDate?.shortLabel().orEmpty())
@@ -141,6 +141,9 @@ private fun IncomeRow(income: IncomeView, onOpen: (String) -> Unit, onReceive: (
             Row(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalAlignment = Alignment.CenterVertically) {
                 DecorativeIcon(if (received) Lucide.drawable.lucide_ic_circle_check else Lucide.drawable.lucide_ic_clock)
                 Text(line, style = MaterialTheme.typography.bodyMedium)
+            }
+            if (categoryName != null) {
+                Text(categoryName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             // Valor efetivo e previsto aparecem rotulados, sem pendência pela diferença.
             if (received && income.receivedAmount != null && income.receivedAmount != income.expectedAmount) {

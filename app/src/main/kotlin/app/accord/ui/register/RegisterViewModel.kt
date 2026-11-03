@@ -11,6 +11,9 @@ import app.accord.core.space.AssignmentState
 import app.accord.core.space.CategoryNode
 import app.accord.core.space.CommandId
 import app.accord.core.space.CommandResult
+import app.accord.core.space.CreateIncomeCategory
+import app.accord.core.space.EntityType
+import app.accord.core.space.IncomeCategoryNode
 import app.accord.core.space.Decision
 import app.accord.core.space.DraftSource
 import app.accord.core.space.Envelope
@@ -41,6 +44,7 @@ data class RegisterUiState(
     /** Erro que não pertence a nenhum campo (ex.: falha inesperada). O conteúdo digitado é preservado. */
     val generalError: String? = null,
     val categories: Map<String, CategoryNode> = emptyMap(),
+    val incomeCategories: List<IncomeCategoryNode> = emptyList(),
     val accounts: List<AccountInfo> = emptyList(),
     val defaultAccountId: String? = null,
     /** Cronograma e fatura vindos da prévia da fachada, para compra no cartão. */
@@ -109,6 +113,7 @@ class RegisterViewModel(
             val space = provider.space()
             val categories = (space.categories() as? QueryResult.Data)?.value
             val accounts = (space.accounts() as? QueryResult.Data)?.value
+            val incomeCategories = (space.incomeCategories() as? QueryResult.Data)?.value.orEmpty()
             if (categories == null || accounts == null) {
                 _state.update { it.copy(loading = false, loadFailed = true) }
                 return@launch
@@ -127,6 +132,7 @@ class RegisterViewModel(
             _state.update {
                 it.copy(
                     categories = categories.associateBy { c -> c.id },
+                    incomeCategories = incomeCategories,
                     accounts = accounts.accounts,
                     defaultAccountId = accounts.myDefaultAccountId,
                     loading = false,
@@ -159,7 +165,7 @@ class RegisterViewModel(
         if (!r.allowsInstallments) r = r.copy(installmentsText = "1", amountMeaning = null)
         if (r.kind != FormKind.Expense || r.form != ExpenseForm.Card || r.frequency != null) r = r.copy(invoice = null)
         if (!(r.kind == FormKind.Income || r.form == ExpenseForm.Boleto)) r = r.copy(settledDate = null, settledAmountText = "")
-        if (r.kind == FormKind.Income) r = r.copy(categoryId = null)
+        if (r.kind == FormKind.Income) r = r.copy(categoryId = null) else r = r.copy(incomeCategoryId = null)
         if (!r.allowsAccount) r = r.copy(accountId = null)
         if (!r.asksAmountMeaning) r = r.copy(amountMeaning = null)
         return r
@@ -176,6 +182,27 @@ class RegisterViewModel(
         FormField.Invoice -> a.invoice == b.invoice
         FormField.SettledDate -> a.settledDate == b.settledDate
         FormField.SettledAmount -> a.settledAmountText == b.settledAmountText
+    }
+
+    /**
+     * Cria uma categoria de renda pelo seletor e a escolhe no formulário. [onResult] recebe a mensagem de recusa
+     * (nome em branco ou repetido, em português) ou nulo quando deu certo.
+     */
+    fun createIncomeCategory(name: String, onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            val space = provider.space()
+            when (val result = space.execute(Envelope(CommandId(UUID.randomUUID().toString()), Origin.Manual), CreateIncomeCategory(name))) {
+                is CommandResult.Applied -> {
+                    val created = result.receipt.changes.firstOrNull { it.type == EntityType.IncomeCategory }?.id
+                    val all = (space.incomeCategories() as? QueryResult.Data)?.value.orEmpty()
+                    _state.update { it.copy(incomeCategories = all) }
+                    update { f -> f.copy(incomeCategoryId = created ?: f.incomeCategoryId) }
+                    onResult(null)
+                }
+                is CommandResult.Rejected -> onResult(result.errors.joinToString(" ") { it.message })
+                else -> onResult("Não foi possível criar a categoria agora. Tente de novo.")
+            }
+        }
     }
 
     // ---- prévia (compra no cartão) ----

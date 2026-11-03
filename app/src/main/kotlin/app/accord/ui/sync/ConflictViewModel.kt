@@ -7,6 +7,7 @@ import app.accord.R
 import app.accord.SpaceProvider
 import app.accord.core.space.AccountInfo
 import app.accord.core.space.CategoryNode
+import app.accord.core.space.IncomeCategoryNode
 import app.accord.core.space.QueryResult
 import app.accord.core.sync.ConflictChoice
 import app.accord.core.sync.ConflictView
@@ -22,7 +23,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** Nomes de categorias e contas para a comparação mostrar nomes, nunca identificadores. */
-data class ConflictLookup(val categories: Map<String, CategoryNode> = emptyMap(), val accounts: Map<String, AccountInfo> = emptyMap())
+data class ConflictLookup(val categories: Map<String, CategoryNode> = emptyMap(), val accounts: Map<String, AccountInfo> = emptyMap(), val incomeCategories: Map<String, IncomeCategoryNode> = emptyMap())
 
 data class ConflictUi(
     val loading: Boolean = true,
@@ -78,7 +79,8 @@ class ConflictViewModel(
         val space = provider.space()
         val categories = (space.categories() as? QueryResult.Data)?.value.orEmpty().associateBy { it.id }
         val accounts = (space.accounts() as? QueryResult.Data)?.value?.accounts.orEmpty().associateBy { it.id }
-        return ConflictLookup(categories, accounts)
+        val incomeCategories = (space.incomeCategories() as? QueryResult.Data)?.value.orEmpty().associateBy { it.id }
+        return ConflictLookup(categories, accounts, incomeCategories)
     }
 
     fun select(choice: ConflictChoice) = _ui.update { it.copy(selected = choice, message = null) }

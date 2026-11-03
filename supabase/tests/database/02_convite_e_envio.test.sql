@@ -1,7 +1,7 @@
 -- Convite (prazo, substituição, normalização, tentativas) e envio/recebimento no banco.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(19);
+select plan(22);
 
 create schema tests;
 grant usage on schema tests to authenticated;
@@ -95,6 +95,21 @@ select is((public.push_operations('00000000-0000-0000-0000-0000000000e1',
 select is((select count(*)::int from public.space_entities where id = 'l2'), 0, 'a alteração irmã não ficou aplicada');
 select is((public.pull_changes('00000000-0000-0000-0000-0000000000e1', 0, 100)) -> 'changes' -> 0 ->> 'state', '{"valor":6800}', 'o estado volta byte a byte');
 select is((public.pull_changes('00000000-0000-0000-0000-0000000000e1', 0, 100)) ->> 'hasMore', 'false', 'sem mais páginas');
+
+-- ---- categoria de renda (ADR 0038): tipo aceito; tipo desconhecido continua recusado ----
+select is((public.push_operations('00000000-0000-0000-0000-0000000000e1',
+  '[{"operationId":"op-ic","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":1,"installationId":"i1","localTimeMillis":1,
+     "changes":[{"type":"IncomeCategory","id":"ic1","baseVersion":null,"state":"{}","tombstone":false}]}]')) -> 'results' -> 0 ->> 'result',
+  'applied', 'categoria de renda é um tipo sincronizável');
+-- ---- lote de importação confirmado (ADR 0040): tipo aceito ----
+select is((public.push_operations('00000000-0000-0000-0000-0000000000e1',
+  '[{"operationId":"op-ib","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":1,"installationId":"i1","localTimeMillis":1,
+     "changes":[{"type":"ImportBatch","id":"ib1","baseVersion":null,"state":"{}","tombstone":false}]}]')) -> 'results' -> 0 ->> 'result',
+  'applied', 'lote de importação confirmado é um tipo sincronizável');
+select is((public.push_operations('00000000-0000-0000-0000-0000000000e1',
+  '[{"operationId":"op-xx","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":1,"installationId":"i1","localTimeMillis":1,
+     "changes":[{"type":"Inexistente","id":"x1","baseVersion":null,"state":"{}","tombstone":false}]}]')) -> 'results' -> 0 ->> 'result',
+  'rejected', 'tipo desconhecido continua recusado');
 
 select * from finish();
 rollback;

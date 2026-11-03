@@ -124,11 +124,30 @@ object CategorySeed {
  * Identidades determinísticas (S1 §6): dois aparelhos, mesmo offline, chegam à mesma identidade
  * e o resultado vira comparação de versões em S2, nunca duplicação.
  */
+/** Categorias de renda iniciais (decisão de 02/11/2026). A pessoa pode criar outras; o ícone das criadas é genérico. */
+object IncomeCategorySeed {
+    data class Item(val key: String, val name: String, val icon: String)
+
+    /** Ícone das categorias de renda criadas pela pessoa. */
+    const val CUSTOM_ICON = "tag"
+
+    const val INVESTMENT = "investimento"
+    const val SALARY = "salario"
+    const val EXTRA = "renda-extra"
+
+    val items: List<Item> = listOf(
+        Item(INVESTMENT, "Investimento", "trending-up"),
+        Item(SALARY, "Salário", "briefcase"),
+        Item(EXTRA, "Renda Extra", "circle-plus"),
+    )
+}
+
 object DeterministicIds {
     fun of(spaceId: String, kind: String, key: String): String =
         UUID.nameUUIDFromBytes("$spaceId|$kind|$key".toByteArray(Charsets.UTF_8)).toString()
 
     fun seedCategory(spaceId: String, seedKey: String) = of(spaceId, "category", seedKey)
+    fun seedIncomeCategory(spaceId: String, seedKey: String) = of(spaceId, "incomecategory", seedKey)
     fun preferences(spaceId: String, personId: String) = of(spaceId, "preferences", personId)
 }
 

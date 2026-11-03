@@ -199,6 +199,9 @@ fun fieldText(value: FieldValue, lookup: ConflictLookup): String {
         is FieldValue.CategoryRef -> value.id?.let { id ->
             categoryPath(lookup.categories, id) ?: stringResource(R.string.value_unknown)
         } ?: stringResource(R.string.situation_to_classify)
+        is FieldValue.IncomeCategoryRef -> value.id?.let { id ->
+            lookup.incomeCategories[id]?.name ?: stringResource(R.string.value_unknown)
+        } ?: none
         is FieldValue.AccountRef -> value.id?.let { id ->
             lookup.accounts[id]?.let { "${it.nickname}" } ?: stringResource(R.string.value_unknown)
         } ?: none

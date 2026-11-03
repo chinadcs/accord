@@ -18,4 +18,5 @@
     <string name="budget_link_commitments">Compromissos</string>
     <string name="budget_link_incomes">Rendas</string>
     <string name="budget_link_card">Cartão e faturas</string>
+    <string name="budget_link_forecasts">Previsões e alertas</string>
 </resources>

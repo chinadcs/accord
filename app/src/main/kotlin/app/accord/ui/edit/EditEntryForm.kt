@@ -15,7 +15,7 @@ import app.accord.ui.register.FormError
 import java.time.LocalDate
 
 /** Campos editáveis na ordem visual; o foco vai para o primeiro com erro. */
-enum class EditField { Description, Amount, Date, Category, Account, Scope }
+enum class EditField { Description, Amount, Date, Category, IncomeCategory, Account, Scope }
 
 /** O que a edição pode alterar em cada tipo de lançamento (S1 §4.2); o resto fica fixo e explicado na tela. */
 enum class EditTarget { Direct, CardPurchase, Boleto, Income, Occurrence }
@@ -39,7 +39,10 @@ data class EditOriginal(
     val occurrence: Int? = null,
     val paid: Boolean = false,
     val method: PaymentMethod? = null,
+    /** Só renda: a categoria de renda (ADR 0038); nula é "sem categoria". */
+    val incomeCategoryId: String? = null,
 ) {
+    val incomeCategoryEditable: Boolean get() = target == EditTarget.Income
     val amountEditable: Boolean get() = !(target == EditTarget.CardPurchase && installments > 1)
     val categoryEditable: Boolean get() = target != EditTarget.Income
     val dateEditable: Boolean get() = target != EditTarget.Occurrence && date != null
@@ -76,7 +79,7 @@ data class EditOriginal(
                 EntryKind.Income -> EditOriginal(
                     detail.id, EditTarget.Income, detail.description, null, detail.income?.expectedDate ?: detail.dueDate,
                     detail.income?.expectedAmount ?: detail.amount, detail.accountId, detail.revision,
-                    paid = detail.income?.receivedDate != null,
+                    paid = detail.income?.receivedDate != null, incomeCategoryId = detail.income?.incomeCategoryId,
                 )
                 EntryKind.RecurrenceOccurrence -> {
                     val o = detail.occurrence ?: return null
@@ -100,6 +103,7 @@ data class EditForm(
     val accountId: String?,
     /** Alcance de uma recorrência; nulo até a pessoa escolher (sem opção pré-selecionada). */
     val scope: RecurrenceScope? = null,
+    val incomeCategoryId: String? = null,
 ) {
     sealed interface Built {
         data class Ok(val command: Command, val changed: Boolean) : Built
@@ -131,6 +135,8 @@ data class EditForm(
         val newCategory = categoryId.takeIf { original.categoryEditable && it != original.categoryId }
         val newAccount = accountId.takeIf { original.accountEditable && it != original.accountId }
         val newDate = date.takeIf { original.dateEditable && it != original.date }
+        // Sem categoria não é uma troca: o comando só leva uma categoria de renda existente.
+        val newIncomeCategory = incomeCategoryId.takeIf { original.incomeCategoryEditable && it != null && it != original.incomeCategoryId }
 
         if (original.target == EditTarget.Occurrence) {
             val fields = RecurrenceFields(
@@ -144,12 +150,12 @@ data class EditForm(
                 changed = !fields.isEmpty,
             )
         }
-        val changed = newDescription != null || newAmount != null || newCategory != null || newAccount != null || newDate != null
+        val changed = newDescription != null || newAmount != null || newCategory != null || newAccount != null || newDate != null || newIncomeCategory != null
         return Built.Ok(
             CorrectEntry(
                 entityId = original.entityId, description = newDescription, category = newCategory?.let { Classification.Category(it) },
                 date = newDate, amount = newAmount, accountId = newAccount, confirmExtra = confirmExtra,
-                expectedRevision = original.revision,
+                expectedRevision = original.revision, incomeCategoryId = newIncomeCategory,
             ),
             changed = changed,
         )
@@ -158,7 +164,7 @@ data class EditForm(
     companion object {
         fun of(original: EditOriginal) = EditForm(
             description = original.description, amountText = original.amount.formatPlain(), date = original.date,
-            categoryId = original.categoryId, accountId = original.accountId,
+            categoryId = original.categoryId, accountId = original.accountId, incomeCategoryId = original.incomeCategoryId,
         )
 
         fun fieldOf(field: String): EditField? = when (field) {
@@ -166,6 +172,7 @@ data class EditForm(
             "amount" -> EditField.Amount
             "date", "dueDate" -> EditField.Date
             "category", "classification", "categoryId" -> EditField.Category
+            "incomeCategoryId" -> EditField.IncomeCategory
             "accountId" -> EditField.Account
             "scope" -> EditField.Scope
             else -> null

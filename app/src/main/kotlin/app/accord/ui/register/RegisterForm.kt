@@ -59,6 +59,8 @@ data class RegisterForm(
     val amountText: String = "",
     val date: LocalDate,
     val categoryId: String? = null,
+    /** Categoria de renda (opcional); só vale para renda. */
+    val incomeCategoryId: String? = null,
     val accountId: String? = null,
     val installmentsText: String = "1",
     val amountMeaning: AmountMeaning? = null,
@@ -136,7 +138,7 @@ data class RegisterForm(
                 frequency = frequency,
                 firstDate = date,
             )
-            kind == FormKind.Income -> RegisterIncome(description.trim(), amount, date, account, settlement)
+            kind == FormKind.Income -> RegisterIncome(description.trim(), amount, date, account, settlement, incomeCategoryId)
             form == ExpenseForm.Card -> RegisterCardPurchase(
                 description = description.trim(), classification = Classification.Category(categoryId!!), date = date, amount = amount,
                 amountMeaning = amountMeaning.takeIf { (count ?: 1) > 1 }, installments = count ?: 1, invoice = invoice,
