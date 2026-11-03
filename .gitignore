@@ -21,3 +21,9 @@ scripts/poc/__pycache__/
 
 # Referências visuais baixadas só para inspeção local; fontes ficam documentadas por links.
 /scratchpad/dribbble-references/
+
+# Acervo visual local, fora do versionamento.
+/docs/branding/
+poc
+pocpc
+.kotlin/
