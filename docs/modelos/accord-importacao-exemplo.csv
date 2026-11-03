@@ -1,0 +1,8 @@
+﻿id;data;descricao;valor;moeda;parcela;categoria;origem
+ex-0001;2026-10-02;Mercado Exemplo;-87,45;BRL;;Mercado;Conta Corrente
+ex-0002;2026-10-03;Padaria Exemplo;-12,30;BRL;;Alimentação;Conta Corrente
+ex-0003;03/10/2026;Posto Exemplo;-210,00;BRL;;Transporte > Combustível;Conta Corrente
+ex-0004;2026-10-05;Loja Exemplo;-150,00;BRL;2/3;;Conta Corrente
+ex-0005;2026-10-07;"Restaurante ""Exemplo"", centro";-64,90;BRL;;Restaurantes;Conta Corrente
+ex-0006;2026-10-10;Estorno Loja Exemplo;50,00;BRL;;;Conta Corrente
+ex-0007;2026-10-15;Pagamento recebido de Exemplo;1.250,00;BRL;;;Conta Corrente

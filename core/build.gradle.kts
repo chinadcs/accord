@@ -24,6 +24,8 @@ dependencies {
     api(libs.coroutines.core)
 
     testImplementation(libs.coroutines.test)
+    // Extrator de texto de PDF só dos testes (o do aplicativo é o PdfBox-Android): valida a leitura por layout na JVM.
+    testImplementation(libs.pdfbox.jvm)
     testImplementation(libs.kotlin.test.junit5)
     testImplementation(libs.junit.jupiter)
     testRuntimeOnly(libs.junit.platform.launcher)

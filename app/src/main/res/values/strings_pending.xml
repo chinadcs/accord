@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Pendências (tela 18) -->
+    <string name="pending_title">Pendências</string>
+    <string name="pending_filter_all">Todas</string>
+    <string name="pending_filter_chat">Chat</string>
+    <string name="pending_filter_import">Importação</string>
+    <string name="pending_filter_conflicts">Conflitos</string>
+    <string name="pending_filter_records">Lançamentos e faturas</string>
+    <string name="pending_batch_filter">Só as dúvidas da importação que você acabou de confirmar.</string>
+    <string name="pending_batch_clear">Ver todas</string>
+    <plurals name="pending_count">
+        <item quantity="one">%1$d pendência</item>
+        <item quantity="other">%1$d pendências</item>
+    </plurals>
+    <string name="pending_empty_title">Nenhuma pendência conhecida</string>
+    <string name="pending_empty_body">Isso não garante que tudo está registrado: só que nada que o aplicativo conhece está esperando você.</string>
+    <string name="pending_review_first">Revisar primeira pendência</string>
+    <string name="pending_continue_later">Você pode continuar depois.</string>
+    <string name="pending_ready">Pronto para aplicar.</string>
+    <string name="pending_reason_import">Dúvida de importação</string>
+    <string name="pending_reason_postponed">Você deixou para revisar depois</string>
+    <string name="pending_postponed_note">Você deixou este movimento para revisar depois. Nada foi criado para ele.</string>
+    <string name="pending_reason_ready">Dúvida resolvida, falta aplicar</string>
+    <string name="pending_reason_conflict">Conflito de edição</string>
+    <string name="pending_reason_category">Categoria a esclarecer</string>
+    <string name="pending_reason_invoice_link">Fatura a conferir</string>
+    <string name="pending_reason_payment">Pagamento de fatura divergente</string>
+    <string name="pending_reason_total">Total da fatura diverge</string>
+    <string name="pending_total_difference">Diferença de %1$s em relação ao que está registrado</string>
+
+    <!-- Resolver pendência (tela 19) -->
+    <string name="pending_resolve_title">Resolver pendência</string>
+    <string name="pending_gone">Esta pendência já foi resolvida</string>
+    <string name="pending_gone_body">Ela foi resolvida aqui ou no outro aparelho. Nada foi aplicado de novo.</string>
+    <string name="pending_back_queue">Voltar às pendências</string>
+    <string name="pending_apply">Aplicar decisão</string>
+    <string name="pending_later">Revisar depois</string>
+    <string name="pending_imported">Importado do arquivo</string>
+    <string name="pending_existing">Lançamento já registrado que pode ser o mesmo</string>
+    <string name="pending_same_link">É o mesmo movimento: vincular</string>
+    <string name="pending_different">São compras diferentes: manter as duas</string>
+    <string name="pending_repetition_title">Este movimento pode já ter sido tratado</string>
+    <string name="pending_confirm_new">É um movimento novo: registrar</string>
+    <string name="pending_dismiss">Já está registrado: descartar esta linha</string>
+    <string name="pending_credit_title">Um crédito não é renda só porque o valor é positivo</string>
+    <string name="pending_credit_income">É um recebimento: escolher a categoria de renda</string>
+    <string name="pending_credit_refund">É estorno de uma compra: escolher a compra</string>
+    <string name="pending_credit_refund_hint">O estorno abate a categoria da compra no mês em que o crédito entrou e não vira renda.</string>
+    <string name="pending_refund_pick">Compra ou pagamento estornado</string>
+    <string name="pending_refund_none">Nenhuma compra ou pagamento recente desta origem pode ser estornado. Registre o estorno no detalhe da compra.</string>
+    <string name="pending_refund_line">%1$s · %2$s · %3$s</string>
+    <string name="pending_refund_remaining">Ainda dá para estornar %1$s</string>
+    <string name="pending_invoice_diverges_line">Está na fatura de %1$s; o documento é da fatura de %2$s.</string>
+    <string name="pending_correct_invoice">É a mesma compra: corrigir a fatura para %1$s</string>
+    <string name="pending_correct_invoice_note">A compra continua uma só, com a data original. Só a fatura que você tinha escolhido muda.</string>
+    <string name="pending_shift_title">A parcela %1$d/%2$d está na fatura de %3$s</string>
+    <string name="pending_shift_body">Para ela cair nessa fatura, a 1ª parcela passa a ser de %1$s e as seguintes acompanham, uma por mês. Você vê o antes e o depois abaixo.</string>
+    <string name="pending_shift_apply">Usar a 1ª parcela em %1$s</string>
+    <string name="pending_category_title">Falta a categoria</string>
+    <string name="pending_invoice_hint">Esta dúvida depende da fatura ou do cronograma de parcelas. Confira em Cartão e faturas: quando estiver certo, esta tela mostra que dá para aplicar.</string>
+    <string name="pending_open_card">Abrir cartão e faturas</string>
+    <string name="pending_consequence">O que vai acontecer</string>
+    <string name="pending_consequence_dismiss">Nada será criado. A linha fica lembrada como já tratada e não volta a perguntar.</string>
+    <string name="pending_consequence_missing">Ainda falta uma escolha ou há uma dúvida. Nada será aplicado até lá.</string>
+    <string name="pending_income_pick">Categoria de renda</string>
+    <string name="pending_changed">Os dados mudaram enquanto você olhava. Confira a situação atualizada antes de aplicar.</string>
+    <string name="pending_decide_rejected">Essa escolha não pôde ser guardada. Tente de novo.</string>
+    <string name="pending_not_ready">Ainda falta uma escolha ou há uma dúvida neste movimento. Nada foi aplicado.</string>
+    <string name="pending_invalid">A decisão não pôde ser aplicada e nada mudou. Revise e tente de novo.</string>
+    <string name="pending_apply_failed">Não foi possível aplicar agora. Nada foi alterado. Você pode tentar de novo sem duplicar nada.</string>
+
+    <!-- Resultado da importação e Revisar -->
+    <string name="import_res_dismissed">Repetição descartada</string>
+    <string name="import_res_refund">Estorno registrado</string>
+    <plurals name="import_summary_refunds">
+        <item quantity="one">%1$d estorno de compra</item>
+        <item quantity="other">%1$d estornos de compra</item>
+    </plurals>
+    <plurals name="import_summary_dismissed">
+        <item quantity="one">%1$d descartado como repetição</item>
+        <item quantity="other">%1$d descartados como repetição</item>
+    </plurals>
+    <plurals name="import_result_resolve">
+        <item quantity="one">Resolver %1$d pendência</item>
+        <item quantity="other">Resolver %1$d pendências</item>
+    </plurals>
+    <string name="pending_hub_title">Pendências</string>
+    <string name="pending_hub_open">Revisar pendências</string>
+    <plurals name="pending_hub_count">
+        <item quantity="one">%1$d pendência esperando você.</item>
+        <item quantity="other">%1$d pendências esperando você.</item>
+    </plurals>
+    <string name="pending_hub_none">Nenhuma pendência conhecida agora.</string>
+</resources>

@@ -47,6 +47,10 @@ class SpaceRuntime(
     val engine: SyncEngine,
     /** Histórico do Chat deste aparelho, no mesmo banco e fora da fila de sincronização (S3). */
     val chatStore: app.accord.core.chat.ChatStore? = null,
+    /** Immutable owner of this opened database; available before the UI access state is published. */
+    val identity: app.accord.core.space.Session,
+    /** Sessão de importação OFX/PDF do espaço (S4); nula onde o espaço não a oferece (testes de acesso). */
+    val imports: app.accord.core.importing.ImportSession? = null,
 )
 
 /**

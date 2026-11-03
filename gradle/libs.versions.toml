@@ -1,5 +1,8 @@
 # Versões estáveis fixadas exatamente (AGENTS.md). Conferidas em 24/10/2026 nos repositórios Maven.
 [versions]
+# Leitura de texto de PDF (S4.6): PDFBox na JVM só para testes; PdfBox-Android é o que vai no aplicativo. Ambos Apache-2.0.
+pdfbox = "2.0.37"
+pdfboxAndroid = "2.0.27.0"
 kotlin = "2.4.21"
 junit = "6.1.3"
 ksp = "2.3.12"
@@ -19,6 +22,8 @@ androidxTestRunner = "1.7.0"
 androidxTestExtJunit = "1.3.0"
 
 [libraries]
+pdfbox-jvm = { module = "org.apache.pdfbox:pdfbox", version.ref = "pdfbox" }
+pdfbox-android = { module = "com.tom-roush:pdfbox-android", version.ref = "pdfboxAndroid" }
 kotlin-test-junit5 = { module = "org.jetbrains.kotlin:kotlin-test-junit5", version.ref = "kotlin" }
 junit-jupiter = { module = "org.junit.jupiter:junit-jupiter", version.ref = "junit" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit" }

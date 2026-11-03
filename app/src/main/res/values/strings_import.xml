@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Importar arquivo (tela 15) -->
+    <string name="import_title">Importar arquivo</string>
+    <string name="import_intro">Use um PDF, OFX ou CSV disponível no aparelho.</string>
+    <string name="import_csv_note">CSV: só no modelo do Accord, com as colunas data, descricao e valor na primeira linha (e, se quiser, categoria e origem). O CSV exportado direto pelo banco não é lido.</string>
+    <string name="import_pdf_note">PDF: por enquanto só a fatura do cartão Itaú, testada com um exemplo. Se o seu PDF não for lido, use o OFX do banco.</string>
+    <string name="import_privacy">Guardaremos os dados dos movimentos, não uma cópia do arquivo. Seu arquivo original permanece onde está.</string>
+    <string name="import_pick">Selecionar arquivo</string>
+    <string name="import_pick_other">Escolher outro arquivo</string>
+    <string name="import_reading">Lendo o arquivo e extraindo os movimentos…</string>
+    <string name="import_cancel_reading">Cancelar leitura</string>
+    <string name="import_preparing">Preparando a prévia…</string>
+    <string name="import_prepare">Preparar prévia</string>
+    <string name="import_nothing_confirmed">Nada será confirmado sem a sua revisão.</string>
+    <string name="import_file_unnamed">Arquivo sem nome</string>
+    <string name="import_file_movements">Movimentos lidos: %1$d</string>
+    <string name="import_file_period">Período declarado pelo arquivo: %1$s</string>
+    <string name="import_file_currency">Moeda do arquivo: %1$s</string>
+    <string name="import_format_ofx">OFX</string>
+    <string name="import_format_pdf">PDF</string>
+    <string name="import_format_csv">CSV</string>
+    <string name="import_currency_warning">O arquivo está em %1$s. Dá para conferir os movimentos, mas a confirmação fica bloqueada: nada é convertido para reais.</string>
+    <string name="import_partial_coverage">%1$d trecho(s) do arquivo não foram reconhecidos. A leitura cobre só parte do documento.</string>
+    <string name="import_no_movements">Este arquivo não trouxe nenhum movimento. Escolha outro arquivo.</string>
+    <string name="import_kind_title">Tipo do documento</string>
+    <string name="import_kind_card">Fatura do cartão</string>
+    <string name="import_kind_account">Extrato da conta</string>
+    <string name="import_kind_declared_card">O arquivo indica que é uma fatura de cartão. Confira antes de preparar.</string>
+    <string name="import_kind_declared_account">O arquivo indica que é um extrato de conta. Confira antes de preparar.</string>
+    <string name="import_origin_account">Conta correspondente</string>
+    <string name="import_origin_no_accounts">Você ainda não cadastrou uma conta. Cadastre em Mais, Contas, e volte aqui.</string>
+    <string name="import_origin_card">Cartão</string>
+    <string name="import_card_default">Cartão</string>
+    <string name="import_invoice_title">Fatura do documento</string>
+    <string name="import_invoice_hint">Cada compra vai para a fatura da data dela, pelo fechamento do cartão. Compras perto do fechamento ficam marcadas "a conferir".</string>
+    <string name="import_invoice_by_date">Pela data de cada compra (recomendado)</string>
+    <string name="import_invoice_fixed">Uma fatura só para o arquivo inteiro</string>
+    <string name="import_invoice_fixed_hint">Mês de vencimento da fatura a que este arquivo pertence. Corrija se a sugestão não for a certa.</string>
+    <string name="import_source_invoice_by_date">Fatura: pela data de cada compra</string>
+    <string name="import_before_title">O que você vai importar?</string>
+    <string name="import_before_hint">Escolha antes se o arquivo é de uma conta ou do cartão. Depois, selecione o arquivo.</string>
+    <string name="import_kind_mismatch_card">O arquivo parece ser de uma fatura de cartão, mas você escolheu extrato de conta. Confira se escolheu o tipo certo.</string>
+    <string name="import_kind_mismatch_account">O arquivo parece ser de um extrato de conta, mas você escolheu fatura de cartão. Confira se escolheu o tipo certo.</string>
+    <string name="import_origin_mismatch">O arquivo cita "%1$s", que não é a conta ou o cartão que você escolheu. Confira a escolha.</string>
+    <string name="import_known_title">Este arquivo já foi importado</string>
+    <string name="import_known_confirmed">Os movimentos dele já estão conferidos. Abrir o resultado não importa nada outra vez.</string>
+    <string name="import_known_in_review">Há uma revisão dele em andamento. Continue de onde parou.</string>
+    <string name="import_known_open_result">Ver resultado</string>
+    <string name="import_known_open_review">Continuar revisão</string>
+    <string name="import_error_unreadable">Não foi possível ler este arquivo. Ele pode estar corrompido ou incompleto. Escolha outro arquivo ou tente novamente.</string>
+    <string name="import_error_too_large">Este arquivo é grande demais para importar (limite de 20 MB). Escolha outro arquivo.</string>
+    <string name="import_error_unsupported">Este arquivo não é um PDF, um OFX nem um CSV no modelo do Accord. Selecione um PDF exportado pelo banco com texto selecionável, um OFX ou um CSV com as colunas data, descricao e valor.</string>
+    <string name="import_error_pdf_unavailable">A leitura de PDF ainda não está disponível nesta versão. Selecione um OFX exportado pelo banco.</string>
+    <string name="import_error_protected">Este arquivo está protegido. Exporte uma cópia sem proteção ou escolha outro arquivo.</string>
+    <string name="import_error_no_text">Este PDF não tem texto utilizável para importar. Selecione um PDF exportado pelo banco com texto selecionável ou um OFX.</string>
+    <string name="import_error_layout">Este PDF tem texto, mas não é de um formato que o aplicativo já saiba ler. Por enquanto só a fatura do cartão Itaú em PDF é lida (testada com um exemplo). Use o OFX do banco.</string>
+    <string name="import_error_csv_columns">Este CSV não segue o modelo do Accord: ele precisa das colunas data, descricao e valor, cada uma uma só vez. Corrija a primeira linha e tente novamente.</string>
+    <string name="import_error_csv_origins">Este CSV nomeia mais de uma conta ou cartão na coluna origem. Uma importação tem uma só origem: separe em um arquivo para cada conta ou cartão.</string>
+    <string name="import_error_prepare">Não foi possível preparar a prévia. Nada foi alterado. Tente novamente.</string>
+
+    <!-- Revisar importação (tela 16) -->
+    <string name="import_review_title">Revisar importação</string>
+    <string name="import_review_missing">Esta revisão não foi encontrada. Ela pode ter sido descartada.</string>
+    <string name="import_review_empty">Este arquivo não trouxe movimentos. Volte e escolha outro arquivo.</string>
+    <string name="import_review_filter_empty">Nenhum movimento neste filtro.</string>
+    <plurals name="import_review_counts">
+        <item quantity="one">%1$d movimento: %2$d novos · %3$d vínculos · %4$d dúvidas</item>
+        <item quantity="other">%1$d movimentos: %2$d novos · %3$d vínculos · %4$d dúvidas</item>
+    </plurals>
+    <plurals name="import_review_known_count">
+        <item quantity="one">%1$d já conhecido de importações anteriores, sem alteração</item>
+        <item quantity="other">%1$d já conhecidos de importações anteriores, sem alteração</item>
+    </plurals>
+    <string name="import_source_change">Corrigir tipo, conta ou fatura</string>
+    <string name="import_source_title">Tipo, conta e fatura do documento</string>
+    <string name="import_source_note">Trocar a origem não confirma nada. Escolhas de vínculo que apontavam para lançamentos da origem anterior voltam a ser dúvida; as demais ficam.</string>
+    <string name="import_source_apply">Aplicar</string>
+    <string name="import_source_invoice_line">Fatura de %1$s</string>
+    <string name="import_source_dropped">Origem trocada. %1$d escolha(s) de vínculo apontavam para lançamentos da origem anterior e voltaram a ser dúvida.</string>
+    <string name="import_review_changed">Os dados mudaram desde a última conferência. Veja o resumo atualizado antes de confirmar.</string>
+    <string name="import_decide_rejected">Essa escolha não pôde ser aplicada. Abra o movimento e tente de novo.</string>
+    <string name="import_filter_all">Todos</string>
+    <string name="import_filter_new">Novos</string>
+    <string name="import_filter_links">Correspondências</string>
+    <string name="import_filter_doubts">Dúvidas</string>
+    <plurals name="import_accept_suggestions">
+        <item quantity="one">Aceitar %1$d sugestão de categoria</item>
+        <item quantity="other">Aceitar %1$d sugestões de categoria</item>
+    </plurals>
+    <string name="import_default_category">Escolher uma categoria para os que estão sem categoria</string>
+    <string name="import_amount_unknown">valor não lido</string>
+    <string name="import_no_description">Sem descrição</string>
+    <string name="import_category_prefix_suggested">Sugestão de categoria:</string>
+    <string name="import_category_prefix_history">Sugestão pelo seu histórico:</string>
+    <string name="import_category_prefix_bank">Sugestão pelo rótulo do banco (só vale se você aceitar):</string>
+    <string name="import_confirm_line">%1$d itens conferidos · %2$d pendências preservadas</string>
+    <string name="import_confirm">Confirmar itens conferidos</string>
+    <string name="import_choose_category">Escolher categoria</string>
+    <string name="import_accept_suggestion">Aceitar sugestão: %1$s</string>
+    <string name="import_link_to">Vincular a este lançamento</string>
+    <string name="import_keep_separate">São compras diferentes</string>
+    <string name="import_not_same">Não é o mesmo lançamento</string>
+    <string name="import_reset">Voltar à proposta automática</string>
+    <string name="import_original_show">Ver original do arquivo</string>
+    <string name="import_original_hide">Ocultar original</string>
+    <string name="import_entry_line">Lançamento já registrado: %1$s · %2$s · %3$s</string>
+    <string name="import_close">Fechar</string>
+    <string name="import_cancel">Cancelar</string>
+    <string name="import_discard">Descartar esta revisão</string>
+    <string name="import_discard_title">Descartar a revisão?</string>
+    <string name="import_discard_body">Os dados extraídos e as suas escolhas desta revisão serão apagados deste aparelho. O arquivo original não é alterado e nenhum lançamento é criado.</string>
+    <string name="import_discard_confirm">Descartar</string>
+    <string name="import_discard_failed">Não foi possível descartar. Tente novamente.</string>
+    <string name="import_confirm_invalid">Algum item não pôde ser aplicado e nada foi confirmado. Revise os movimentos e tente de novo.</string>
+    <string name="import_confirm_failed">Não foi possível confirmar agora. Nada foi aplicado. Você pode tentar de novo sem duplicar nada.</string>
+    <string name="import_blocked_currency">A moeda do arquivo não é suportada. Dá para conferir, mas a confirmação fica bloqueada e nada é convertido.</string>
+    <string name="import_blocked_confirmed">Esta revisão já foi confirmada.</string>
+    <string name="import_blocked_source">Escolha o tipo do documento e a conta ou o cartão antes de confirmar.</string>
+    <string name="import_blocked_nothing">Ainda não há nada conferido para confirmar. Resolva as dúvidas ou escolha categorias.</string>
+    <string name="import_summary_title">Confirmar itens conferidos</string>
+    <plurals name="import_summary_creates">
+        <item quantity="one">%1$d lançamento novo</item>
+        <item quantity="other">%1$d lançamentos novos</item>
+    </plurals>
+    <plurals name="import_summary_links">
+        <item quantity="one">%1$d vínculo com lançamento existente</item>
+        <item quantity="other">%1$d vínculos com lançamentos existentes</item>
+    </plurals>
+    <plurals name="import_summary_corrections">
+        <item quantity="one">%1$d fatura de compra corrigida</item>
+        <item quantity="other">%1$d faturas de compras corrigidas</item>
+    </plurals>
+    <plurals name="import_summary_installments">
+        <item quantity="one">%1$d parcela vinculada</item>
+        <item quantity="other">%1$d parcelas vinculadas</item>
+    </plurals>
+    <plurals name="import_summary_invoices">
+        <item quantity="one">%1$d quitação integral de fatura</item>
+        <item quantity="other">%1$d quitações integrais de fatura</item>
+    </plurals>
+    <plurals name="import_summary_boletos">
+        <item quantity="one">%1$d pagamento de boleto</item>
+        <item quantity="other">%1$d pagamentos de boleto</item>
+    </plurals>
+    <plurals name="import_summary_incomes">
+        <item quantity="one">%1$d renda recebida</item>
+        <item quantity="other">%1$d rendas recebidas</item>
+    </plurals>
+    <plurals name="import_summary_known">
+        <item quantity="one">%1$d já conhecido, sem alteração</item>
+        <item quantity="other">%1$d já conhecidos, sem alteração</item>
+    </plurals>
+    <plurals name="import_summary_pending">
+        <item quantity="one">%1$d dúvida continua aberta</item>
+        <item quantity="other">%1$d dúvidas continuam abertas</item>
+    </plurals>
+    <string name="import_summary_shift">Parcelas mudam de fatura. Antes: %1$s. Depois: %2$s.</string>
+    <string name="import_summary_note">Dúvidas não viram lançamento: ficam guardadas para você resolver depois. Pagamento de fatura não vira despesa nova.</string>
+    <string name="import_summary_confirm">Confirmar</string>
+
+    <!-- Classificação, dúvidas, efeitos e resolução -->
+    <string name="import_class_known">Já conhecido</string>
+    <string name="import_class_link">Vínculo seguro</string>
+    <string name="import_class_new">Novo</string>
+    <string name="import_class_doubt">Dúvida</string>
+    <string name="import_class_blocked">Bloqueado pela moeda</string>
+    <string name="import_doubt_amount">O valor não pôde ser lido com exatidão.</string>
+    <string name="import_doubt_date">A data não pôde ser lida.</string>
+    <string name="import_doubt_zero">O valor é zero.</string>
+    <string name="import_doubt_foreign">A linha está em moeda estrangeira dentro de um arquivo em reais.</string>
+    <string name="import_doubt_fitid">O mesmo identificador aparece com data ou valor diferentes.</string>
+    <string name="import_doubt_repetition">Pode ser repetição de um movimento já importado.</string>
+    <string name="import_doubt_removed">Este movimento já foi importado e o lançamento foi excluído depois.</string>
+    <string name="import_doubt_credit">Crédito a classificar: estorno ou recebimento?</string>
+    <string name="import_doubt_match">Pode corresponder a um lançamento que você já registrou.</string>
+    <string name="import_doubt_category">Falta escolher a categoria.</string>
+    <string name="import_doubt_invoice">A fatura da compra registrada é diferente da fatura do documento.</string>
+    <string name="import_doubt_installment_invoice">A parcela está em outra fatura no documento.</string>
+    <string name="import_doubt_shift_blocked">Mover a compra para a fatura do documento tocaria uma fatura quitada ou uma parcela cancelada.</string>
+    <string name="import_doubt_installment_value">O valor da parcela é diferente do cronograma registrado.</string>
+    <string name="import_doubt_installment_missing">Parcela de uma compra que não está registrada.</string>
+    <string name="import_doubt_total">O total da fatura ainda não foi conferido.</string>
+    <string name="import_doubt_payment">O valor do pagamento é diferente do total da fatura.</string>
+    <string name="import_doubt_invoice_payment">Pode ser o pagamento de uma fatura.</string>
+    <string name="import_doubt_boleto">Pode ser o pagamento de um boleto.</string>
+    <string name="import_doubt_review_later">Você deixou este movimento para revisar depois.</string>
+    <string name="import_doubt_cannot_apply">O aplicativo recusaria este passo agora (por exemplo, por uma fatura já quitada). Ele fica guardado e é tentado de novo depois.</string>
+    <string name="import_review_later">Revisar depois</string>
+    <string name="import_repeat_of">É repetição de outro movimento deste arquivo</string>
+    <string name="import_repeat_pick_title">Qual é o movimento original?</string>
+    <string name="import_repeat_line">%1$d · %2$s · %3$s</string>
+    <string name="import_result_repeat_of">Repetição do movimento %1$d deste arquivo; os dois originais ficam guardados.</string>
+    <string name="import_effect_create">Vira um lançamento novo.</string>
+    <string name="import_effect_link">Vincula a um lançamento existente, sem somar de novo.</string>
+    <string name="import_effect_link_correct">Vincula e corrige a fatura da compra para a do documento.</string>
+    <string name="import_effect_installment">Vincula à parcela %1$d de uma compra registrada.</string>
+    <string name="import_effect_installment_shift">Vincula à parcela %1$d e move as parcelas para a fatura do documento.</string>
+    <string name="import_effect_invoice">Quitação integral da fatura de %1$02d/%2$d, sem despesa nova.</string>
+    <string name="import_effect_boleto">Pagamento de um boleto registrado.</string>
+    <string name="import_effect_refund">Registra o crédito como estorno da compra escolhida, abatendo a categoria dela, sem virar renda.</string>
+    <string name="import_effect_income">Renda recebida (resgate ou rendimento de investimento).</string>
+    <string name="import_res_created">Lançamento criado</string>
+    <string name="import_res_linked">Vinculado</string>
+    <string name="import_res_installment">Parcela vinculada</string>
+    <string name="import_res_invoice">Fatura quitada</string>
+    <string name="import_res_boleto">Boleto pago</string>
+    <string name="import_res_income">Renda recebida</string>
+    <string name="import_res_known">Já conhecido</string>
+    <string name="import_res_pending">Dúvida guardada</string>
+
+    <!-- Resultado da importação (tela 17) -->
+    <string name="import_result_title">Resultado da importação</string>
+    <string name="import_result_missing">Este resultado não foi encontrado.</string>
+    <string name="import_result_done">Importação concluída</string>
+    <string name="import_result_partial">Importação concluída parcialmente</string>
+    <string name="import_result_covers">O arquivo cobre %1$s</string>
+    <string name="import_result_counts">%1$d novos · %2$d vinculados · %3$d pendentes</string>
+    <string name="import_result_nothing">Nenhum movimento foi aplicado.</string>
+    <string name="import_coverage_complete">Conferência do arquivo: concluída</string>
+    <string name="import_coverage_partial">Conferência do arquivo: parcial</string>
+    <plurals name="import_result_pending_kept">
+        <item quantity="one">%1$d dúvida ficou guardada, com o original preservado.</item>
+        <item quantity="other">%1$d dúvidas ficaram guardadas, com o original preservado.</item>
+    </plurals>
+    <plurals name="import_result_unread">
+        <item quantity="one">%1$d trecho do arquivo não foi reconhecido.</item>
+        <item quantity="other">%1$d trechos do arquivo não foram reconhecidos.</item>
+    </plurals>
+    <string name="import_result_originals">Os dados originais de cada movimento e as suas decisões ficam guardados neste aparelho. O arquivo em si não é guardado.</string>
+    <string name="import_result_see_entries">Ver lançamentos</string>
+    <string name="import_result_back_review">Voltar para Revisar</string>
+    <string name="import_result_open_entry">Abrir lançamento</string>
+    <string name="import_sync_saved">Salvo neste aparelho. Será enviado ao outro aparelho quando houver conexão.</string>
+    <string name="import_sync_acknowledged">Salvo neste aparelho e recebido pelo serviço.</string>
+    <string name="import_sync_received">Resultado recebido do outro aparelho.</string>
+
+    <!-- Importação em Revisar (tela 14) -->
+    <string name="import_hub_title">Importar do banco</string>
+    <string name="import_hub_in_review">Há uma revisão em andamento: %1$s.</string>
+    <string name="import_hub_continue">Continuar revisão</string>
+    <string name="import_hub_import">Importar arquivo</string>
+    <string name="import_hub_empty">Importe uma fatura ou um extrato para conferir o que já está registrado e trazer o que falta. Sem pressa.</string>
+    <string name="import_hub_coverage">Última conferência por origem</string>
+    <string name="import_hub_history">Arquivos importados</string>
+    <string name="import_hub_no_period">período não declarado</string>
+    <string name="import_coverage_complete_short">concluída</string>
+    <string name="import_coverage_partial_short">parcial</string>
+</resources>
