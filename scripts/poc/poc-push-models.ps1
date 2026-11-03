@@ -1,6 +1,6 @@
 ﻿# Copia modelos GGUF de E:\Projects\ai-models para o armazenamento interno da bancada no aparelho
 # (filesDir/model, o mesmo tipo de local que o produto usará) e confere o SHA-256 no próprio aparelho.
-# Uso: .\scripts\poc\poc-push-models.ps1 -Models pulse-qwen3-0.6b-q4km,qwen3.5-2b-q4km [-Serial XXXX] [-Source E:\Projects\ai-models]
+# Uso: .\scripts\poc\poc-push-models.ps1 -Models pulse-qwen3-0.6b-q4km,qwen3.5-2b-q5km [-Serial XXXX] [-Source E:\Projects\ai-models]
 # Precisa de espaço livre para o modelo e para uma cópia temporária (em /data/local/tmp) durante a cópia.
 # Com -Remove apaga os modelos listados do aparelho (ids ou 'all'); com -List mostra o que há lá.
 param(

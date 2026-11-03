@@ -8,7 +8,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** Perfil 15: marcas de aplicativos, categoria filha única escolhida pelo app e renda inequívoca sem modelo. */
+/** Historical profile 15/validator 8: brands, sole category child and locally grounded income. */
 class RoutedVersion15Test {
     private val ctx = SemanticRefs.apply(ChatBattery.realisticContext())
 
@@ -31,7 +31,7 @@ class RoutedVersion15Test {
         return model to RoutedInterpreter(model, PromptStyle.ChatMlNoThink, RoutedOptions(version)).interpret(InterpretRequest(text, ctx))
     }
 
-    private fun registered(text: String, raw: String) = (ChatValidator.evaluate(text, raw, ctx) as ChatDecision.Register).entry
+    private fun registered(text: String, raw: String) = (ChatValidator.evaluate(text, raw, ctx, version=8) as ChatDecision.Register).entry
 
     @Test
     fun `marcas de transporte e entrega apontam para a filha e uber eats nao vira transporte`() {
@@ -130,7 +130,7 @@ class RoutedVersion15Test {
             val category = expected.categoryId?.let(::ref)
             val (model, result) = run(case.text, 15, action = if (expected.nature == Nature.Income) "renda" else "despesa", category = category)
             if (model.grammars.isEmpty()) skipped++
-            val decision = ChatValidator.evaluate(case.text, result.raw, ctx)
+            val decision = ChatValidator.evaluate(case.text, result.raw, ctx, version=8)
             assertEquals(ChatBattery.Outcome.Match, ChatGrading.grade(case, decision).outcome, "${case.id} ${case.text}: $decision")
         }
         assertEquals(4, skipped)

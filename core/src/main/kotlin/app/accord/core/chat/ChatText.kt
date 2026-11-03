@@ -162,17 +162,62 @@ object ChatText {
         return marks.firstOrNull { (_, pattern) -> pattern.containsMatchIn(folded) }?.first
     }
 
+    /** Moving money between one's own accounts is outside the Chat registration contract. */
+    internal fun internalTransfer(text: String, savings: Boolean = false): Boolean {
+        val s = fold(text)
+        // Validator 17 / profile 14: setting money aside is also an internal movement, never an expense.
+        if (savings && (Regex("\\b(?:poupei|poupamos)\\b").containsMatchIn(s) ||
+                Regex("\\b(?:guardei|guardamos|separei|separamos|reservei|reservamos)\\b.*\\b(?:na|no|para|pra|pro|em)\\s+(?:(?:a|o|minha|meu|nossa|nosso)\\s+)*(?:poupanca|reserva|cofrinho|caixinha)\\b").containsMatchIn(s))) return true
+        return Regex("\\btransfer(?:i|iu|imos|iram|ir|indo)\\b").containsMatchIn(s) &&
+            Regex("\\b(?:entre (?:as )?(?:(?:minhas|nossas) )?contas|(?:para|pra|pro)\\s+(?:(?:a|o|minha|meu|nossa|nosso|outra|outro)\\s+)*(?:poupanca|conta|reserva))\\b").containsMatchIn(s)
+    }
+
     private val undoByText = Regex("""^(?:desfaz(?:er)?|apaga(?:r)?|exclui(?:r)?|remove(?:r)?|cancela(?:r)?)(?: (?:esse|essa|isso|o ultimo|a ultima))?[.!]*$""")
 
     /** "desfaz", "apaga esse": o Chat não desfaz por texto (decisão de 24/10/2026). */
     fun isUndoByText(text: String): Boolean = undoByText.matches(fold(text))
 
     private val paymentWords = mapOf(
-        ChatPayment.Card to Regex("""cart|credito|visa|master"""),
-        ChatPayment.Pix to Regex("""pix"""),
-        ChatPayment.Debit to Regex("""debito"""),
-        ChatPayment.Cash to Regex("""dinheiro|especie|cash"""),
+        ChatPayment.Card to Regex("""\b(?:cart|cartao|credito|visa|master|mastercard)\b"""),
+        ChatPayment.Pix to Regex("""\bpix\b"""),
+        ChatPayment.Debit to Regex("""\b(?:debito|debitei)\b"""),
+        ChatPayment.Cash to Regex("""\b(?:dinheiro|especie|cash)\b"""),
     )
+
+    /** Only for replaying the frozen validator 4 / reduced profiles 1–3. */
+    internal fun legacyMentionsPayment(text: String, payment: ChatPayment): Boolean =
+        Regex(when (payment) {
+            ChatPayment.Card -> "cart|credito|visa|master"
+            ChatPayment.Pix -> "pix"
+            ChatPayment.Debit -> "debito"
+            ChatPayment.Cash -> "dinheiro|especie|cash"
+        }).containsMatchIn(fold(text))
+
+    internal fun named(text: String, name: String): Boolean = name.isNotBlank() &&
+        Regex("(?<![\\p{L}\\p{N}_])${Regex.escape(fold(name))}(?![\\p{L}\\p{N}_])").containsMatchIn(fold(text))
+
+    private val nonSpenderPreposition = Regex("(?:^|[^a-z0-9])(?:para|pra|pro|ao|do|da|dos|das|de|com)\\s+(?:(?:o|a)\\s+)?$")
+
+    /**
+     * Members named as the one who spent. A name introduced by a recipient, owner or companion preposition
+     * ("para o Davi", "carro da Helena", "com a Bia") is context, not the spender; the sender remains the default.
+     * Validator 10 / profile 8.
+     */
+    internal fun spenders(text: String, context: ChatContext): List<MemberItem> {
+        val folded = fold(text)
+        return context.members.filter { member ->
+            if (member.name.isBlank()) return@filter false
+            Regex("(?<![\\p{L}\\p{N}_])${Regex.escape(fold(member.name))}(?![\\p{L}\\p{N}_])").findAll(folded)
+                .any { !nonSpenderPreposition.containsMatchIn(folded.substring(0, it.range.first)) }
+        }
+    }
+
+    /** An explicit third-person subject cannot silently become the current member after a rename. */
+    internal fun unknownPersonSubject(text: String, context: ChatContext, receipts: Boolean = false): Boolean {
+        val verbs = if (receipts) "gastou|comprou|pagou|recebeu" else "gastou|comprou|pagou"
+        val name = Regex("^([a-z]+)\\s+(?:$verbs)\\b").find(fold(text))?.groupValues?.get(1) ?: return false
+        return name != "cliente" && context.members.none { named(it.name, name) && named(text, it.name) }
+    }
 
     /** O meio de pagamento proposto precisa aparecer na frase: nunca se presume cartão. */
     fun mentionsPayment(text: String, payment: ChatPayment): Boolean =

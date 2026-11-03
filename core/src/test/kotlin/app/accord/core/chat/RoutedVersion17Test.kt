@@ -23,7 +23,7 @@ class RoutedVersion17Test {
     private fun run(text: String, version: Int, action: String = "despesa", category: String? = null): Pair<Scripted, ChatDecision> {
         val model = Scripted(action, category)
         val raw = RoutedInterpreter(model, PromptStyle.ChatMlNoThink, RoutedOptions(version)).interpret(InterpretRequest(text, ctx)).raw
-        return model to ChatValidator.evaluate(text, raw, ctx)
+        return model to ChatValidator.evaluate(text, raw, ctx, version = 5)
     }
 
     private fun ref(id: String) = ctx.categories.single { it.id == id }.ref

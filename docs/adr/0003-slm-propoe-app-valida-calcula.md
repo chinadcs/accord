@@ -25,6 +25,10 @@ O modelo não é autoridade monetária nem contorna invariantes. Registro manual
 quando a inferência falha. Saída estruturalmente válida ainda exige validação semântica.
 A escolha concreta da fachada é proposta separada no [ADR 0022](0022-fachada-financeira-e-modulos.md).
 
+Atualização de 02/11/2026: a separação entre quem propõe e quem valida/calcula permanece. Executar o SLM
+no aparelho deixou de ser requisito do P0; o P0 usa interpretador por regras e o SLM é candidato opcional
+adiado ([ADR 0036](0036-interpretador-por-regras-no-p0-e-slm-opcional.md)).
+
 ## Fontes e evidências
 
 - [Plano §§13.1–13.2/14](../plano-desenvolvimento.md), [S1](../specs/S1-base-motor-financeiro.md)

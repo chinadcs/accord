@@ -39,24 +39,33 @@ abstract class ChatTestBase : SpaceTestBase() {
         val database: TestDatabase,
         val fake: FakeInterpreter,
         instant: Instant,
+        val suggester: app.accord.core.chat.CategorySuggester? = null,
     ) {
         val store = RoomChatStore(database.db)
         val budgetClock = BudgetClock.of(Clock.fixed(instant, ZoneOffset.UTC))
         var modelInstalled = true
+        var interpretation: app.accord.core.chat.Interpreter = fake
+        var memberItems: List<app.accord.core.chat.MemberItem> = emptyList()
         var financeChanges = 0
+        val pilotEvents = kotlinx.coroutines.channels.Channel<app.accord.core.chat.CategoryPilotEvent>(kotlinx.coroutines.channels.Channel.UNLIMITED)
+        private val ownScopes = mutableListOf<CoroutineScope>()
+        fun stop() { ownScopes.forEach { it.cancel() } }
         val space get() = handle.space
         private var counter = 0
 
-        fun newCoordinator(): ChatCoordinator {
-            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default).also { scopes += it }
+        fun newCoordinator(eventSink: ((app.accord.core.chat.CategoryPilotEvent) -> Unit)? = null): ChatCoordinator {
+            val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default).also { scopes += it; ownScopes += it }
             return ChatCoordinator(
                 space = handle.space,
                 store = store,
-                interpreters = InterpreterSource { if (modelInstalled) ActiveInterpreter(fake, "fake-1") else null },
+                interpreters = InterpreterSource { if (modelInstalled) ActiveInterpreter(interpretation, "fake-1") else null },
                 clock = budgetClock,
                 scope = scope,
                 newId = { "id-${handle.person}-${database.hashCode()}-${counter++}" },
                 onFinanceChanged = { financeChanges++ },
+                members = { memberItems },
+                categorySuggester = suggester,
+                onCategoryPilotEvent = eventSink ?: { pilotEvents.trySend(it); Unit },
             )
         }
 
@@ -81,10 +90,10 @@ abstract class ChatTestBase : SpaceTestBase() {
         }
     }
 
-    protected fun env(instant: Instant = oct22, person: String = "ana", withAccounts: Boolean = true, defaultAccount: Boolean = true): Env {
+    protected fun env(instant: Instant = oct22, person: String = "ana", withAccounts: Boolean = true, defaultAccount: Boolean = true, suggester: app.accord.core.chat.CategorySuggester? = null): Env {
         val database = newDatabase()
         val handle = open(person = person, database = database, now = instant)
-        val env = Env(handle, database, FakeInterpreter(), instant)
+        val env = Env(handle, database, FakeInterpreter(), instant, suggester)
         if (withAccounts) runBlocking {
             val a = handle.space.execute(handle.env(), AddAccount(BankRef.Other("Nubank"), "Conta")).applied().changes.single().id
             handle.space.execute(handle.env(), AddAccount(BankRef.Other("Itaú"), "Salário")).applied()

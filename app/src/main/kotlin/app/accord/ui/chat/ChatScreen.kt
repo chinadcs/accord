@@ -1,7 +1,14 @@
 package app.accord.ui.chat
 
+import app.accord.ui.register.CategoryTile
+import app.accord.ui.register.CategoryDialog
+import app.accord.ui.colorKey
+import app.accord.ui.categoryColor
+import app.accord.core.space.CategoryNode
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,6 +20,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.WindowInsets
@@ -35,6 +43,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -44,7 +53,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -134,16 +143,17 @@ fun ChatScreen(
     onManual: (ChatMessage?) -> Unit,
 ) {
     val listState = rememberLazyListState()
+    val hasViewport by remember { derivedStateOf { listState.layoutInfo.viewportSize.height > 0 } }
     // A conversa acompanha o fim quando chega algo novo, sem mover o foco do campo de mensagem.
-    LaunchedEffect(state.items.lastOrNull()?.key) {
-        if (state.items.isNotEmpty()) listState.animateScrollToItem(state.items.lastIndex)
+    LaunchedEffect(state.items.lastOrNull()?.key, hasViewport) {
+        if (state.items.isNotEmpty() && hasViewport) listState.animateScrollToItem(state.items.lastIndex)
     }
     Column(
         Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding(),
     ) {
         ChatHeader(state.badge, actions.onOpenModel, actions.onOpenEntries, Modifier.padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2))
         if (state.loaded && state.items.isEmpty()) {
-            EmptyChat(onExample, Modifier.weight(1f))
+            EmptyChat(onExample, Modifier.weight(1f), state.badge == ModelBadge.FakePilot)
         } else {
             LazyColumn(
                 state = listState,
@@ -156,7 +166,7 @@ fun ChatScreen(
                 }
             }
         }
-        Composer(state.composer, onComposerChange, onSend, onManual = { onManual(null) })
+        Composer(state.composer, onComposerChange, onSend)
     }
 }
 
@@ -182,7 +192,11 @@ private fun ChatHeader(badge: ModelBadge, onOpenModel: () -> Unit, onSearch: () 
 
 @Composable
 private fun ModelBadgeButton(badge: ModelBadge, onClick: () -> Unit) {
+    // ADR 0036: sem modelo no P0, não há aviso nem caminho para a tela do modelo.
+    if (badge == ModelBadge.LocalRules) return
     val text = when (badge) {
+        ModelBadge.LocalRules -> return
+        ModelBadge.FakePilot -> stringResource(R.string.chat_fake_pilot)
         ModelBadge.NotInstalled -> stringResource(R.string.chat_model_not_installed)
         is ModelBadge.Downloading -> badge.percent?.let { stringResource(R.string.chat_model_downloading_percent, it) } ?: stringResource(R.string.chat_model_downloading)
         ModelBadge.Working -> stringResource(R.string.chat_model_working)
@@ -190,9 +204,18 @@ private fun ModelBadgeButton(badge: ModelBadge, onClick: () -> Unit) {
         ModelBadge.InstalledNoEngine -> stringResource(R.string.chat_model_no_engine)
         ModelBadge.Problem -> stringResource(R.string.chat_model_problem)
     }
-    val description = stringResource(R.string.chat_model_badge_description, text, stringResource(R.string.chat_model_open))
+    val description = stringResource(R.string.chat_model_badge_description, text, stringResource(if (badge == ModelBadge.FakePilot) R.string.chat_fake_pilot_open else R.string.chat_model_open))
+    var showPilot by rememberSaveable { mutableStateOf(false) }
+    if (showPilot) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showPilot = false },
+            title = { Text(stringResource(R.string.chat_fake_pilot)) },
+            text = { Text(stringResource(R.string.chat_fake_pilot_help), Modifier.verticalScroll(rememberScrollState())) },
+            confirmButton = { TextButton(onClick = { showPilot = false }) { Text(stringResource(R.string.chat_categories_close)) } },
+        )
+    }
     TextButton(
-        onClick = onClick,
+        onClick = { if (badge == ModelBadge.FakePilot) showPilot = true else onClick() },
         modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).semantics { contentDescription = description },
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -207,15 +230,17 @@ private fun ModelBadgeButton(badge: ModelBadge, onClick: () -> Unit) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun EmptyChat(onExample: (String) -> Unit, modifier: Modifier = Modifier) {
+private fun EmptyChat(onExample: (String) -> Unit, modifier: Modifier = Modifier, pilot: Boolean = false) {
     Column(modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s5)) {
         Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             Text(stringResource(R.string.chat_welcome_title), style = MaterialTheme.typography.titleLarge)
-            Text(stringResource(R.string.chat_welcome_body), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(if (pilot) R.string.chat_fake_pilot_welcome else R.string.chat_welcome_body), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             Text(stringResource(R.string.chat_examples_heading), style = MaterialTheme.typography.titleMedium)
-            listOf(R.string.chat_example_expense, R.string.chat_example_pix, R.string.chat_example_income).forEach { res ->
+            val examples = if (pilot) listOf(R.string.chat_pilot_pet, R.string.chat_pilot_fuel, R.string.chat_pilot_shirt, R.string.chat_pilot_amazon)
+                else listOf(R.string.chat_example_expense, R.string.chat_example_pix, R.string.chat_example_income)
+            examples.forEach { res ->
                 val example = stringResource(res)
                 Surface(onClick = { onExample(example) }, color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.small) {
                     Row(Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).padding(horizontal = AccordSpacing.s3, vertical = AccordSpacing.s2),
@@ -230,7 +255,7 @@ private fun EmptyChat(onExample: (String) -> Unit, modifier: Modifier = Modifier
 }
 
 @Composable
-private fun Composer(text: String, onChange: (String) -> Unit, onSend: () -> Unit, onManual: () -> Unit) {
+private fun Composer(text: String, onChange: (String) -> Unit, onSend: () -> Unit) {
     val largeText = LocalDensity.current.fontScale >= 1.3f
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, tonalElevation = AccordSpacing.s1) {
         Column(
@@ -263,19 +288,6 @@ private fun Composer(text: String, onChange: (String) -> Unit, onSend: () -> Uni
                     send(Modifier)
                 }
             }
-            Surface(onClick = onManual, color = Color.Transparent, contentColor = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.control), shape = MaterialTheme.shapes.medium) {
-                Row(Modifier.padding(start = AccordSpacing.s3), verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
-                    Text(stringResource(R.string.chat_manual), style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
-                    Surface(Modifier.size(AccordSpacing.control), shape = CircleShape, color = MaterialTheme.colorScheme.primary,
-                        contentColor = MaterialTheme.colorScheme.onPrimary) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            DecorativeIcon(Lucide.drawable.lucide_ic_plus, tint = MaterialTheme.colorScheme.onPrimary)
-                        }
-                    }
-                }
-            }
         }
     }
 }
@@ -297,7 +309,7 @@ private fun ChatItemView(
     when (item) {
         is ChatItem.User -> UserBubble(item.message.text)
         is ChatItem.Working -> WorkingCard(item.message, onCancel = { onCancel(item.message) }, onManual = { onManual(item.message) })
-        is ChatItem.Receipt -> ReceiptCard(item, today, actions, onAnswer, onUndo)
+        is ChatItem.Receipt -> ReceiptCard(item, today, actions, state.categories, onAnswer, onUndo)
         is ChatItem.Question -> QuestionCard(item, onAnswer, onAnswerAmount, onDiscard, onManual = { onManual(item.message) })
         is ChatItem.Notice -> NoticeCard(item.message, state, actions, onRetry = { onRetry(item.message) }, onManual = { onManual(item.message) })
     }
@@ -368,6 +380,7 @@ private fun ReceiptCard(
     item: ChatItem.Receipt,
     today: LocalDate,
     actions: ChatActions,
+    categories: Map<String, CategoryNode>,
     onAnswer: (ChatQuestionRecord, app.accord.core.chat.QuestionOption) -> Unit,
     onUndo: (String) -> Unit,
 ) {
@@ -396,7 +409,7 @@ private fun ReceiptCard(
                 }
             }
             if (item.question != null) {
-                CategoryChoices(item.question, summary, item.suggestedRef, onAnswer)
+                CategoryChoices(item.question, summary, item.suggestedRefs, categories, onAnswer)
             }
             if (receipt.state != ReceiptState.Undone) {
                 ActionRow {
@@ -504,35 +517,90 @@ private fun StateTag(text: String, icon: Int) {
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * Pergunta de categoria do recibo "a classificar": até três sugestões no mesmo quadro (ícone na cor da categoria e nome)
+ * do seletor do registro manual, e "Ver todas" abre esse mesmo seletor. Nada é aplicado sem o toque.
+ */
 @Composable
 private fun CategoryChoices(
     question: ChatQuestionRecord,
     summary: ReceiptSummary,
-    suggestedRef: String?,
+    suggestedRefs: List<String>,
+    categories: Map<String, CategoryNode>,
     onAnswer: (ChatQuestionRecord, app.accord.core.chat.QuestionOption) -> Unit,
 ) {
     Text(
         stringResource(R.string.question_category, "${summary.description} ${Money(summary.totalCents).format()}"),
         style = MaterialTheme.typography.bodyLarge,
     )
+    val suggestedRef = suggestedRefs.firstOrNull()
+    var showAll by rememberSaveable(question.id) { mutableStateOf(false) }
     if (suggestedRef != null) {
         Text(stringResource(R.string.chat_category_suggested_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-        question.options.forEach { option ->
-            if (option.ref == suggestedRef) {
-                val description = stringResource(R.string.chat_category_suggested_desc, option.label)
-                androidx.compose.material3.FilledTonalButton(
-                    onClick = { onAnswer(question, option) },
-                    modifier = Modifier.heightIn(min = AccordSpacing.touchMin).semantics { contentDescription = description },
-                ) { Text(stringResource(R.string.chat_category_suggested_tag) + ": " + option.label) }
+    val suggestions = suggestedRefs.take(3).mapNotNull { ref -> question.options.firstOrNull { it.ref == ref } }
+    if (suggestions.isNotEmpty()) {
+        // Com texto ampliado três colunas não cabem: os quadros passam a uma coluna, como o campo de mensagem.
+        val stacked = LocalDensity.current.fontScale >= 1.3f
+        val tile: @Composable (app.accord.core.chat.QuestionOption, Modifier) -> Unit = { option, tileModifier ->
+            val node = (option.value as? app.accord.core.chat.OptionValue.Category)?.id?.let(categories::get)
+            val isSuggested = option.ref == suggestedRef
+            if (node != null) {
+                val description = if (isSuggested) stringResource(R.string.chat_category_suggested_desc, option.label) else option.label
+                CategoryTile(
+                    name = node.name, iconKey = node.iconKey, color = categoryColor(node.colorKey(categories)), selected = isSuggested,
+                    modifier = tileModifier.semantics(mergeDescendants = true) { contentDescription = description },
+                    caption = node.parentId?.let(categories::get)?.name, compact = !stacked,
+                ) { onAnswer(question, option) }
             } else {
-                OutlinedButton(
-                    onClick = { onAnswer(question, option) },
-                    modifier = Modifier.heightIn(min = AccordSpacing.touchMin).semantics { contentDescription = option.label },
-                ) { Text(option.label) }
+                // Catálogo ainda não carregado: o rótulo completo continua escolhível.
+                OutlinedButton(onClick = { onAnswer(question, option) }, modifier = tileModifier.heightIn(min = AccordSpacing.touchMin)) {
+                    Text(if (isSuggested) stringResource(R.string.chat_category_suggested_tag) + ": " + option.label else option.label)
+                }
             }
+        }
+        if (stacked) {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                suggestions.forEach { tile(it, Modifier) }
+            }
+        } else {
+            Row(Modifier.fillMaxWidth().height(IntrinsicSize.Max), horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                suggestions.forEach { tile(it, Modifier.weight(1f).fillMaxHeight()) }
+                // Três colunas iguais, como na grade do registro manual, mesmo com menos de três sugestões.
+                repeat(3 - suggestions.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
+    }
+    OutlinedButton(onClick = { showAll = true }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+        Text(stringResource(R.string.chat_categories_all))
+    }
+    if (showAll) {
+        if (categories.isNotEmpty()) {
+            CategoryDialog(
+                categories = categories, selected = null,
+                onPick = { id ->
+                    showAll = false
+                    question.options.firstOrNull { (it.value as? app.accord.core.chat.OptionValue.Category)?.id == id }?.let { onAnswer(question, it) }
+                },
+                onDismiss = { showAll = false },
+            )
+        } else {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { showAll = false },
+                title = { Text(stringResource(R.string.chat_categories_all)) },
+                text = {
+                    val allOptions = question.options.sortedBy { if (" > " in it.label) 1 else 0 }
+                    androidx.compose.foundation.lazy.LazyColumn(Modifier.testTag("chat-category-catalog")) {
+                        items(allOptions.size) { index ->
+                            val option = allOptions[index]
+                            TextButton(onClick = { showAll = false; onAnswer(question, option) }, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+                                Text(option.label)
+                            }
+                        }
+                    }
+                },
+                confirmButton = { TextButton(onClick = { showAll = false }) { Text(stringResource(R.string.chat_categories_close)) } },
+            )
         }
     }
 }
@@ -714,7 +782,10 @@ private fun NoticeActions(message: ChatMessage, state: ChatUiState, actions: Cha
             }
         }
         MessageState.Refused, MessageState.Failed, MessageState.Interrupted, MessageState.Canceled -> {
-            OutlinedButton(onClick = onRetry, modifier = min) { Text(stringResource(R.string.notice_action_retry)) }
+            // As regras locais são determinísticas: repetir a mesma frase daria a mesma recusa, então só o registro manual resta.
+            if (!(message.state == MessageState.Refused && state.badge == ModelBadge.LocalRules)) {
+                OutlinedButton(onClick = onRetry, modifier = min) { Text(stringResource(R.string.notice_action_retry)) }
+            }
             manual()()
         }
         MessageState.NoModel -> {

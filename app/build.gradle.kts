@@ -1,4 +1,5 @@
 import java.util.Properties
+import java.security.MessageDigest
 
 plugins {
     alias(libs.plugins.android.application)
@@ -11,6 +12,27 @@ plugins {
 fun serviceSetting(name: String, env: String): String {
     val local = Properties().apply { rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use(::load) }
     return (local.getProperty(name) ?: providers.gradleProperty(name).orNull ?: System.getenv(env) ?: "")
+}
+
+// "true": piloto com interpretador fake (4 frases). "rules": sugestor de categorias com o interpretador por regras (ADR 0036).
+val categoryPilotMode = providers.gradleProperty("accord.categoryPilot").orNull
+val categoryPilotEnabled = categoryPilotMode == "true" || categoryPilotMode == "rules"
+val uiValidationIsolated = providers.gradleProperty("accord.uiValidation").orNull == "true"
+val pilotAssets = layout.buildDirectory.dir("generated/categoryPilotAssets")
+val pilotArtifact = rootProject.layout.projectDirectory.file("poc/results/pc/run-070-category-development-v3/learned/model.json")
+val validateCategoryPilotArtifact = tasks.register("validateCategoryPilotArtifact") {
+    val artifactFile = pilotArtifact.asFile
+    inputs.file(artifactFile)
+    doLast {
+        val bytes = artifactFile.readBytes()
+        check(bytes.size == 7_887_106 && MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) } ==
+            "5d40a47adf7024c672e091eb50ffc4cd81e2c2d89106077614202ed4478fa016") { "Invalid frozen category pilot artifact" }
+    }
+}
+val prepareCategoryPilotAssets = tasks.register<Copy>("prepareCategoryPilotAssets") {
+    dependsOn(validateCategoryPilotArtifact)
+    from(pilotArtifact) { into("category-pilot") }
+    into(pilotAssets)
 }
 
 android {
@@ -34,6 +56,20 @@ android {
         buildConfig = true
     }
 
+    buildTypes {
+        getByName("debug") {
+            buildConfigField("boolean", "CATEGORY_PILOT", categoryPilotEnabled.toString())
+            buildConfigField("boolean", "CATEGORY_PILOT_RULES", (categoryPilotMode == "rules").toString())
+            // Physical UI tests get independent storage; never reinstall/uninstall the user's app.
+            if (uiValidationIsolated) applicationIdSuffix = ".uivalidation"
+        }
+        getByName("release") {
+            buildConfigField("boolean", "CATEGORY_PILOT", "false")
+            buildConfigField("boolean", "CATEGORY_PILOT_RULES", "false")
+        }
+    }
+    if (categoryPilotEnabled) sourceSets.getByName("debug").assets.directories.add(pilotAssets.get().asFile.absolutePath)
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -42,6 +78,10 @@ android {
     testOptions {
         unitTests.all { it.useJUnitPlatform() }
     }
+}
+
+if (categoryPilotEnabled) tasks.configureEach {
+    if (name == "mergeDebugAssets") dependsOn(prepareCategoryPilotAssets)
 }
 
 kotlin {
@@ -69,8 +109,11 @@ dependencies {
     implementation(libs.lucide.icons)
     implementation(libs.work.runtime)
     implementation(libs.serialization.json)
+    // Texto de PDF no aparelho (S4.6): PdfBox-Android, Apache-2.0, versão fixada.
+    implementation(libs.pdfbox.android)
 
     debugImplementation(libs.compose.ui.tooling)
+    debugImplementation(project(":categorybench"))
 
     testImplementation(libs.kotlin.test.junit5)
     testImplementation(libs.junit.jupiter)

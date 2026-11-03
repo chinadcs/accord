@@ -38,7 +38,7 @@ try {
     Copy-Item -LiteralPath 'pocpc/build/install/pocpc' -Destination (Join-Path $destination 'runtime') -Recurse
     $snapshotFiles = @(
         'poc/assets/models.json', 'poc/llama-cpp.pin',
-        'core/src/main', 'pocpc/src/main',
+        'core/src/main', 'pocpc/src/main', 'categorybench/src/main', 'categorybench/build.gradle.kts', 'settings.gradle.kts',
         'core/build.gradle.kts', 'pocpc/build.gradle.kts', 'gradle/libs.versions.toml',
         'scripts/poc/pc-run-version.ps1'
     )

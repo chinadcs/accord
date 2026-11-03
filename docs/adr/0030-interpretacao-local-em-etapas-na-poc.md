@@ -51,7 +51,50 @@ Fica pendente: a fila vale só para o aparelho que recebeu a mensagem (o Chat n�
 lançamento "a classificar" sem a sugestão. A decisão não torna o perfil 19 o adaptador do produto: o motor continua não
 integrado ao Chat (`accord-q12`).
 
+## Comparação de classificação sem SLM (26/10/2026)
+
+Por pedido do usuário, `accord-nsu.10` implementa uma bancada de categorias independente do motor:
+vocabulário atual, ampliação por expressões de treino, regressão logística sobre n-gramas e combinação
+em cascata. O treino usa Python/scikit-learn fixado; a JVM executa os pesos exportados sem Python,
+GGUF ou servidor. Há partições distintas para treino, seleção, calibração, corte de abstenção e teste,
+com grupos de entidades/expressões indivisíveis. A referência de 95% de precisão é experimental.
+
+Essa autorização cobre o experimento, **não a adoção no produto**. Não muda proposta financeira,
+validador, banco, fila, privacidade do Chat ou decisões de modelo/motor. O formato local de intercâmbio
+fica nas bancadas `:pocpc`/`:poc` e no núcleo compartilhado `:categorybench`, fora das APIs do aplicativo.
+Na bancada original, `:app` não dependia desse módulo; o piloto debug posterior está no ADR 0032.
+Corpus e intermediários com descrições/gabaritos ficam
+fora do repositório; snapshots locais preservam código, pesos e métricas sem frases completas.
+O [método e resultado](../poc/classificador-ngramas-jvm.md) registram a execução e seus limites.
+
 ## Consequências
+
+Em 26/10/2026, o [ADR 0033](0033-pipeline-reduzido-de-frases-livres.md) propõe um desenho de
+produto reduzido: intenção/trechos pelo SLM e categoria no classificador separado, com aceite
+próprio antes da escolha do motor. Essa preparação não aceita os perfis experimentais deste
+registro nem altera o piloto fake aceito no ADR 0032.
+
+Em `accord-nsu.12`, por autorização do usuário, a auditoria manteve o gabarito congelado e isolou
+três casos discutíveis. A guarda experimental `evidence-v1` conserva relações do texto original
+para vetar sugestões inconsistentes e impede sobreposição lexical de outra família. Não altera
+pesos/cortes ou grava categoria automaticamente. Seu ganho foi medido como **regressão conhecida**,
+sem afirmar nova generalização. O núcleo foi extraído para `:categorybench` para executar o mesmo
+código JVM/Android, com serialização gerada no módulo compartilhado. Três processos novos no S20 FE
+confirmaram paridade de 2.880 decisões. Inicialmente o S23 FE foi reservado para outra sessão;
+após os resultados, em 26/10/2026, o usuário aceitou a validação do classificador/guarda no S20 FE
+como suficiente também para o S23 FE e dispensou a repetição (`accord-nsu.13`). Esse aceite encerra
+a exigência desta bancada; a evidência e os números permanecem medidos somente no S20 FE. A
+[evidência](../poc/auditoria-categorias-e-s20fe.md) e o [plano de piloto](../poc/piloto-classificacao-assistida.md)
+preservam limites de memória/latência e confirmação explícita. Naquele registro, o piloto ainda não
+estava implementado; a autorização e implementação posterior com fake estão no ADR 0032.
+
+Na continuação autorizada em 26/10 (`accord-nsu.11`), corpora antigos passam a desenvolvimento,
+com avaliação escrita por outro agente sem acesso ao treino/resultados, após autorização explícita
+do usuário. A bancada compara uma guarda lexical por família/filhas, seleção de categorias lexicais
+apenas na etapa de seleção e classificador recalibrado. O intercâmbio local schema 2 preserva leitura
+do schema 1; não altera APIs financeiras. Fonte/runtime, pesos e cortes congelam antes de receber
+o teste. O [resultado pareado](../poc/classificador-ngramas-avaliacao-independente.md) melhora cobertura
+e precisão da combinação, mas não atinge 95%; não há adoção no produto ou comprovação nos celulares.
 
 A separação reduz a quantidade de decisões por chamada e permite auditar os erros por etapa.
 A ligação local evita inventar campos, mas só é segura quando há um candidato inequívoco;
@@ -62,8 +105,8 @@ Chamadas e prefixos adicionais podem aumentar tempo e RAM. A medida relevante pa
 do pipeline completo, com quantidade de chamadas e perfil registrados. Resultados do PC não
 comprovam a meta de 5 s nos aparelhos. O protótipo atual não cobre toda a conversação: perguntas
 abertas, descrições complexas e correções fora do único recibo exigem desenho/testes antes de
-qualquer integração. O aplicativo continua com inferência/validação original e sem opção nova
-de produto para a pessoa selecionar.
+integração com SLM real. A validação original permanece; o piloto debug com fake e sugestões,
+autorizado posteriormente, segue o alcance limitado do ADR 0032.
 
 Respostas brutas das etapas só são registradas nas frases fictícias; casos sensíveis não as
 exportam. Nenhuma conversa ou inferência é enviada a um serviço externo. Erros de categoria,
@@ -94,6 +137,11 @@ derivados desse vocabulário, sem frases privadas como demonstrações. Por isso
 posteriores continuam avaliando um pipeline com regras locais, e não os pesos isolados.
 
 ## Fontes e evidências
+
+Em 26/10/2026, o usuário autorizou o piloto de categorias com interpretador fake. O
+[ADR 0032](0032-piloto-local-de-categorias-com-confirmacao.md) registra o alcance limitado,
+implementação e privacidade. Essa autorização substitui o pré-requisito de motor real apenas
+para o piloto debug; este ADR continua proposto para a interpretação em etapas com SLM.
 
 - [S3 §2–5](../specs/S3-chat-slm-modelo.md), [plano §13–14](../plano-desenvolvimento.md).
 - Pedido do usuário de 25/10/2026: executar/pesquisar/iterar os 11 candidatos até dois ou três

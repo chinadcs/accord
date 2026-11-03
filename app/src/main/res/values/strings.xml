@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="chat_fake_pilot">Piloto · interpretador fake</string>
+    <string name="chat_fake_pilot_help">Este piloto usa uma tabela de demonstração e registra despesas reais no espaço aberto. Frases disponíveis:\n\nração 80 no cartão\ntanque cheio 200 no cartão\ncamiseta 60 no cartão\nAmazon 150 no cartão\n\nA categoria só é aplicada após sua escolha. Outras frases permitem registro manual. Os diagnósticos ficam neste aparelho, sem texto ou valores.</string>
+    <string name="chat_categories_all">Ver todas</string>
+    <string name="chat_categories_close">Fechar</string>
+    <string name="chat_fake_pilot_open">Informações do piloto</string>
+    <string name="chat_fake_pilot_welcome">Piloto com frases de demonstração. Os exemplos abaixo registram despesas reais no espaço aberto. A categoria depende da sua escolha; outras frases permitem registro manual.</string>
+    <string name="chat_pilot_pet">ração 80 no cartão</string>
+    <string name="chat_pilot_fuel">tanque cheio 200 no cartão</string>
+    <string name="chat_pilot_shirt">camiseta 60 no cartão</string>
+    <string name="chat_pilot_amazon">Amazon 150 no cartão</string>
     <string name="app_name">Accord</string>
 
     <!-- Raízes de navegação -->

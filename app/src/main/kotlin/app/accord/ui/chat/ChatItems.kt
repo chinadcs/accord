@@ -33,6 +33,7 @@ sealed interface ChatItem {
         val undoAvailable: Boolean,
         val question: ChatQuestionRecord?,
         val suggestedRef: String? = null,
+        val suggestedRefs: List<String> = listOfNotNull(suggestedRef),
     ) : ChatItem {
         override val key get() = "r-${receipt.id}"
     }
@@ -63,7 +64,8 @@ fun buildChatItems(snapshot: ChatSnapshot): List<ChatItem> {
                 MessageState.Applied, MessageState.ToClassify -> {
                     snapshot.receipts.filter { it.messageId == message.id }.sortedBy { it.createdAtMillis }.forEach { receipt ->
                         val question = openQuestions.firstOrNull { it.link == QuestionLink.Entry(receipt.entryId) }
-                        add(ChatItem.Receipt(receipt, receipt.id == undoable, question, question?.let { suggestedCategoryOption(it, message)?.ref }))
+                        val hints = message.categoryHints.take(3).mapNotNull { id -> question?.options?.firstOrNull { (it.value as? app.accord.core.chat.OptionValue.Category)?.id == id }?.ref }
+                        add(ChatItem.Receipt(receipt, receipt.id == undoable, question, question?.let { suggestedCategoryOption(it, message)?.ref }, hints))
                     }
                 }
                 MessageState.Asked ->

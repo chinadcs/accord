@@ -116,11 +116,14 @@ object EntryCompleter {
         add(QuestionOption("cash", "Dinheiro", OptionValue.Cash))
     }
 
-    /** Categorias principais, as sugeridas pelo modelo primeiro (só as que existem no contexto). */
+    /** Suggestions first; the complete catalog remains available for an explicit manual choice. */
     fun categoryOptions(context: ChatContext, hints: List<String>): List<QuestionOption> {
         val suggested = hints.mapNotNull { context.category(it) }.distinctBy { it.id }
-        val rest = context.mainCategories.filter { main -> suggested.none { it.id == main.id } }
-        return (suggested + rest).map { QuestionOption(it.ref, it.name, OptionValue.Category(it.id)) }
+        val rest = context.categories.filter { category -> suggested.none { it.id == category.id } }
+        return (suggested + rest).map {
+            val parent = it.parentId?.let(context::categoryById)
+            QuestionOption(it.ref, if (parent == null) it.name else "${parent.name} > ${it.name}", OptionValue.Category(it.id))
+        }
     }
 
     fun targetOptions(context: ChatContext) =

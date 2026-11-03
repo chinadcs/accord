@@ -17,7 +17,7 @@ class RoutedVersion18Test {
     private fun decide(text: String, version: Int, category: String? = null): ChatDecision {
         val raw = RoutedInterpreter(Scripted(category?.let { id -> ctx.categories.single { it.id == id }.ref }), PromptStyle.ChatMlNoThink, RoutedOptions(version))
             .interpret(InterpretRequest(text, ctx)).raw
-        return ChatValidator.evaluate(text, raw, ctx)
+        return ChatValidator.evaluate(text, raw, ctx, version = 5)
     }
 
     private fun asksAccount(d: ChatDecision) = d is ChatDecision.Ask && d.question.field == QuestionField.Account

@@ -7,12 +7,14 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 CATALOG = ROOT / "poc" / "assets" / "models.json"
 ACTIVE = [
+    "bonsai-1-7b-q1-0",
+    "bonsai-4b-q1-0",
+    "expense-extraction-0-5b-q4-k-m",
+    "lfm2-5-1-2b-instruct-q4-k-m",
+    "lfm2-5-350m-q4-k-m",
     "pulse-qwen3-0.6b-q4km",
-    "pulse-qwen3-0.6b-q8",
-    "tucano2-qwen-0.5b-finbert-f16",
-    "qwen3-1.7b-q8",
-    "qwen3.5-2b-q4km",
     "qwen3.5-2b-q5km",
+    "tucano2-qwen-0.5b-finbert-f16",
 ]
 # Arquivos com exemplos que o usuário copia e cola. Relatórios de resultado ficam de fora: citam o histórico.
 FILES = [
@@ -31,7 +33,7 @@ def catalog_ids():
 
 
 class CatalogRefsTest(unittest.TestCase):
-    def test_catalogo_e_a_selecao_ativa_de_seis_na_ordem(self):
+    def test_catalogo_e_a_selecao_ativa_da_raiz_na_ordem(self):
         self.assertEqual(ACTIVE, catalog_ids())
 
     def test_cada_candidato_tem_hash_tamanho_e_licenca_e_cabe_em_2_gb(self):
@@ -40,6 +42,7 @@ class CatalogRefsTest(unittest.TestCase):
                 self.assertRegex(m["sha256"], r"^[0-9a-f]{64}$")
                 self.assertTrue(0 < m["bytes"] <= 2_000_000_000)
                 self.assertTrue(m["file"].endswith(".gguf"))
+                self.assertEqual(Path(m['file']).name, m['file'])
                 self.assertTrue(m["license"])
 
     def test_exemplos_do_roteiro_e_dos_scripts_citam_so_ids_do_catalogo(self):

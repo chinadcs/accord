@@ -37,14 +37,14 @@ object PerfectModel {
 
     private val ctx = SemanticRefs.apply(ChatBattery.realisticContext())
 
-    /** Decisão do produto para a frase quando o modelo responde exatamente o gabarito. */
+    /** Historical routed profiles use validator 8; v9 intentionally rejects their shortened descriptions. */
     fun decide(case: GradedCase, version: Int): ChatDecision {
         val expected = case.expected
         val category = (expected as? ChatBattery.Expected.Registers)?.categoryId?.let { id -> ctx.categories.single { it.id == id }.ref }
         return ChatValidator.prefilter(case.text) ?: run {
             val raw = RoutedInterpreter(Scripted(label(expected), category), PromptStyle.ChatMlNoThink, RoutedOptions(version))
                 .interpret(InterpretRequest(case.text, ctx)).raw
-            ChatValidator.evaluate(case.text, raw, ctx)
+            ChatValidator.evaluate(case.text, raw, ctx, version=8)
         }
     }
 }

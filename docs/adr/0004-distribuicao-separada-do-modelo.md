@@ -21,6 +21,9 @@ a atual para instalar a nova, informando a indisponibilidade temporária da infe
 
 ## Consequências
 
+Atualização de 02/11/2026: o download do modelo deixou de fazer parte do P0; o desenho continua válido para a fase
+em que o SLM opcional voltar ([ADR 0036](0036-interpretador-por-regras-no-p0-e-slm-opcional.md)).
+
 Instalar o app não implica modelo pronto. Atualizar/remover pesos preserva lançamentos e
 histórico; hospedar pesos, selecionar modelo/motor e validar integridade/retomada ainda exigem
 trabalho. A meta carregada de até 5 s é separada de download/carga/sync e não é um timeout.

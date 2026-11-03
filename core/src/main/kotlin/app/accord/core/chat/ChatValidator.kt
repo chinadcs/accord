@@ -8,7 +8,9 @@ import app.accord.core.Money
  * Não calcula fatura, mês ou parcelas e não repete regras de domínio: isso é da fachada S1.
  */
 object ChatValidator {
-    const val VERSION = 4
+    const val VERSION = 21
+    const val PREVIOUS_VERSION = 5
+    const val LEGACY_VERSION = 4
     private const val MAX_DESCRIPTION = 40
     private const val MAX_DESCRIPTION_WORDS = 6
     private val numericText = Regex("\\d")
@@ -18,23 +20,49 @@ object ChatValidator {
     fun prefilter(text: String): ChatDecision? =
         if (ChatText.isUndoByText(text)) ChatDecision.Reply(StandardReply.UndoByText) else null
 
-    fun evaluate(text: String, raw: String, context: ChatContext): ChatDecision =
+    fun evaluate(text: String, raw: String, context: ChatContext, version: Int = VERSION): ChatDecision =
         when (val parsed = ProposalCodec.decode(raw)) {
             is ProposalParse.Invalid -> ChatDecision.Refuse(RefuseReason.BadFormat)
-            is ProposalParse.Ok -> evaluate(text, parsed.proposal, context)
+            is ProposalParse.Ok -> evaluate(text, parsed.proposal, context, version)
         }
 
-    fun evaluate(text: String, proposal: Proposal, context: ChatContext): ChatDecision = when (proposal) {
-        is Proposal.Register -> register(text, proposal, context, emptyList())
-        is Proposal.Clarify -> proposal.entry
-            ?.let { register(text, it, context, proposal.options) }
-            ?: ChatDecision.Refuse(RefuseReason.Uninterpretable)
-        is Proposal.Correct -> correct(text, proposal, context)
-        is Proposal.Answer -> answer(text, proposal, context)
-        Proposal.Query -> ChatDecision.Reply(StandardReply.Query)
-        Proposal.Intent -> ChatDecision.Reply(StandardReply.Intent)
-        is Proposal.Unsupported -> ChatDecision.Reply(unsupportedReply(proposal.type))
-        Proposal.Uninterpretable -> ChatDecision.Refuse(RefuseReason.Uninterpretable)
+    fun evaluate(text: String, proposal: Proposal, context: ChatContext, version: Int = VERSION): ChatDecision {
+        require(version in LEGACY_VERSION..VERSION)
+        if (version >= 7 && (text.length > InterpreterPrompt.MAX_MESSAGE || text.any(Char::isISOControl)))
+            return ChatDecision.Refuse(RefuseReason.Uninterpretable)
+        if (version >= 6 && (proposal is Proposal.Register || proposal is Proposal.Correct || proposal is Proposal.Answer || proposal is Proposal.Clarify)) {
+            if (ScopedEvidence.controlDirective(text, version >= 10)) return ChatDecision.Refuse(RefuseReason.Uninterpretable)
+            val evidence = ScopedEvidence(InterpretRequest(text, context), refinedOrigins = version >= 8, refinedAnswers = version >= 9, refinedPeople = version >= 10, refinedVocabulary = version >= 11, refinedFinancialScope = version >= 13, refinedEstablishments = version >= 14, refinedCorrections = version >= 15, refinedBoundaries = version >= 17, refinedForms = version >= 19, refinedNegations = version >= 20, refinedEveryday = version >= 21)
+            // A literal financial amount in a query is evidence to read, never authority to write.
+            if (version >= 12 && evidence.query) return ChatDecision.Refuse(RefuseReason.Uninterpretable)
+            if (!(proposal is Proposal.Correct && context.receipts.isEmpty()) && evidence.guard != null && evidence.guard != "unknown_account")
+                return ChatDecision.Refuse(RefuseReason.Uninterpretable)
+            if (version >= 20 && proposal is Proposal.Correct && evidence.negationResolved && !evidence.followsAffirmedValue(proposal))
+                return ChatDecision.Refuse(RefuseReason.Uninterpretable)
+            if (proposal is Proposal.Correct && context.question != null && !evidence.explicitReceipt)
+                return ChatDecision.Refuse(RefuseReason.Uninterpretable)
+            if (proposal is Proposal.Correct && context.receipts.isNotEmpty() && proposal.field != evidence.correctionField &&
+                !(proposal.field == CorrectionField.Account && evidence.correctionField == CorrectionField.Payment))
+                return ChatDecision.Refuse(RefuseReason.Uninterpretable)
+            val entry = when (proposal) { is Proposal.Register -> proposal; is Proposal.Clarify -> proposal.entry; else -> null }
+            if (entry != null && (evidence.answer != null || evidence.intent ||
+                    (version >= 7 && entry.nature == Nature.Income && !evidence.income) ||
+                    (entry.nature == Nature.Income && evidence.outgoing) ||
+                    (entry.nature != Nature.Income && evidence.income && !evidence.outgoing)))
+                return ChatDecision.Refuse(RefuseReason.Uninterpretable)
+        }
+        return when (proposal) {
+            is Proposal.Register -> register(text, proposal, context, emptyList(), version)
+            is Proposal.Clarify -> proposal.entry
+                ?.let { register(text, it, context, proposal.options, version) }
+                ?: ChatDecision.Refuse(RefuseReason.Uninterpretable)
+            is Proposal.Correct -> correct(text, proposal, context, version)
+            is Proposal.Answer -> answer(text, proposal, context, version)
+            Proposal.Query -> ChatDecision.Reply(StandardReply.Query)
+            Proposal.Intent -> ChatDecision.Reply(StandardReply.Intent)
+            is Proposal.Unsupported -> ChatDecision.Reply(unsupportedReply(proposal.type))
+            Proposal.Uninterpretable -> ChatDecision.Refuse(RefuseReason.Uninterpretable)
+        }
     }
 
     fun unsupportedReply(type: UnsupportedType) = when (type) {
@@ -50,8 +78,8 @@ object ChatValidator {
     /** Campos lidos do texto, mais o que impede de seguir (trecho que não existe, formato inválido). */
     private class Reading(val entry: PartialEntry, val unanchored: Boolean, val badFormat: Boolean)
 
-    private fun register(text: String, p: Proposal.Register, context: ChatContext, hints: List<String>): ChatDecision {
-        val reading = read(text, p, context)
+    private fun register(text: String, p: Proposal.Register, context: ChatContext, hints: List<String>, version: Int): ChatDecision {
+        val reading = read(text, p, context, version)
         ChatText.unsupportedMark(text)?.let { type ->
             return ChatDecision.Reply(unsupportedReply(type), reading.entry.takeIf { reading.entry != PartialEntry() })
         }
@@ -64,7 +92,7 @@ object ChatValidator {
         return decision
     }
 
-    private fun read(text: String, p: Proposal.Register, context: ChatContext): Reading {
+    private fun read(text: String, p: Proposal.Register, context: ChatContext, version: Int): Reading {
         var unanchored = false
         var badFormat = false
         val issues = mutableMapOf<QuestionField, ChatQuestion.Reason>()
@@ -74,6 +102,7 @@ object ChatValidator {
             when {
                 !ChatText.anchored(text, value) -> { unanchored = true; null }
                 value.length > MAX_DESCRIPTION || value.split(Regex("\\s+")).size > MAX_DESCRIPTION_WORDS -> { badFormat = true; null }
+                version >= 9 && PurposeDescriptions(InterpretRequest(text,context),refinedPeople = version >= 10, refinedVocabulary = version >= 11, refinedProcedure = version >= 14, refinedPlaces = version >= 16, refinedNatural = version >= 18, refinedForms = version >= 19, refinedEveryday = version >= 21).rejects(value) -> { unanchored = true; null }
                 else -> value
             }
         }
@@ -140,8 +169,19 @@ object ChatValidator {
             val account = context.account(p.account)
             if (account == null) issues[QuestionField.Account] = ChatQuestion.Reason.Invalid else accountId = account.id
         }
-        val payment = p.payment?.takeIf { nature == Nature.Expense && ChatText.mentionsPayment(text, it) }
-        val spentBy = p.person?.let { context.member(it)?.id }
+        if (version >= 6 && ScopedEvidence(InterpretRequest(text, context), refinedOrigins = version >= 8, refinedAnswers = version >= 9, refinedPeople = version >= 10, refinedVocabulary = version >= 11, refinedEstablishments = version >= 14, refinedCorrections = version >= 15, refinedBoundaries = version >= 17, refinedForms = version >= 19, refinedNegations = version >= 20, refinedEveryday = version >= 21).guard == "unknown_account") {
+            issues[QuestionField.Account] = ChatQuestion.Reason.Invalid
+            accountId = null
+        }
+        val payment = p.payment?.takeIf { nature == Nature.Expense && mentionsPayment(text, it, version) }
+        val people = if (version >= 10) ChatText.spenders(text, context) else context.members.filter { ChatText.named(text, it.name) }
+        val spentBy = if (version == LEGACY_VERSION) p.person?.let { context.member(it)?.id } else {
+            // A missing model field must not silently erase the explicitly named person.
+            // Conflicting, invented or multiple references require clarification without applying.
+            if (people.size > 1 || ChatText.unknownPersonSubject(text, context, version >= 11) ||
+                (p.person != null && p.person != people.singleOrNull()?.ref)) unanchored = true
+            people.singleOrNull()?.id
+        }
 
         val entry = PartialEntry(
             nature = nature,
@@ -161,10 +201,11 @@ object ChatValidator {
 
     // ---- corrigir ----
 
-    private fun correct(text: String, p: Proposal.Correct, context: ChatContext): ChatDecision {
+    private fun correct(text: String, p: Proposal.Correct, context: ChatContext, version: Int): ChatDecision {
         if (context.receipts.isEmpty()) return ChatDecision.Reply(StandardReply.NoRecentReceipt)
         // Ter um recibo recente não autoriza converter uma nova despesa numérica em edição dele.
-        if (numericText.containsMatchIn(text) && !correctionCue.containsMatchIn(ChatText.fold(text))) {
+        if (numericText.containsMatchIn(text) && !correctionCue.containsMatchIn(ChatText.fold(text)) &&
+            !(version >= 5 && ChatText.fold(text).contains("quis dizer"))) {
             return ChatDecision.Refuse(RefuseReason.Uninterpretable)
         }
         val field = p.field ?: return ChatDecision.Refuse(RefuseReason.Uninterpretable)
@@ -195,7 +236,7 @@ object ChatValidator {
             }
             CorrectionField.Payment, CorrectionField.Account -> {
                 val payment = p.payment ?: return ChatDecision.Refuse(RefuseReason.Uninterpretable)
-                if (!ChatText.mentionsPayment(text, payment)) return ChatDecision.Refuse(RefuseReason.Unanchored)
+                if (!mentionsPayment(text, payment, version)) return ChatDecision.Refuse(RefuseReason.Unanchored)
                 val account = p.account?.let { ref -> context.account(ref) ?: return ChatDecision.Refuse(RefuseReason.InvalidReference) }
                 EntryChange.Payment(payment, account?.id)
             }
@@ -206,7 +247,7 @@ object ChatValidator {
 
     // ---- responder ----
 
-    private fun answer(text: String, p: Proposal.Answer, context: ChatContext): ChatDecision {
+    private fun answer(text: String, p: Proposal.Answer, context: ChatContext, version: Int): ChatDecision {
         val open = context.question ?: return ChatDecision.Refuse(RefuseReason.InvalidReference)
         if (p.question != open.ref) return ChatDecision.Refuse(RefuseReason.InvalidReference)
         val value: AnswerValue = when (open.field) {
@@ -228,6 +269,16 @@ object ChatValidator {
             }
             else -> optionOf(p.choice, open, context) ?: return ChatDecision.Refuse(RefuseReason.InvalidReference)
         }
+        if (version >= 6) {
+            val grounded = ScopedEvidence(InterpretRequest(text, context), refinedOrigins = version >= 8, refinedAnswers = version >= 9, refinedPeople = version >= 10, refinedVocabulary = version >= 11, refinedFinancialScope = version >= 13, refinedEstablishments = version >= 14, refinedCorrections = version >= 15, refinedBoundaries = version >= 17, refinedForms = version >= 19, refinedNegations = version >= 20, refinedEveryday = version >= 21).answer ?: return ChatDecision.Refuse(RefuseReason.Unanchored)
+            val groundedValue = when (open.field) {
+                QuestionField.Amount -> grounded.text?.let { (ChatText.readAmount(it) as? AmountRead.Ok)?.money }?.let(AnswerValue::Amount)
+                QuestionField.Date -> grounded.date?.let { (ChatText.resolveDate(it, context.today) as? DateRead.Ok)?.date }?.let(AnswerValue::Day)
+                    ?: optionOf(grounded.choice, open, context)
+                else -> optionOf(grounded.choice, open, context)
+            }
+            if (value != groundedValue) return ChatDecision.Refuse(RefuseReason.Unanchored)
+        }
         return ChatDecision.Answer(open.questionId, value)
     }
 
@@ -241,4 +292,7 @@ object ChatValidator {
             else -> null
         }
     }
+
+    private fun mentionsPayment(text: String, payment: ChatPayment, version: Int) =
+        if (version == LEGACY_VERSION) ChatText.legacyMentionsPayment(text, payment) else ChatText.mentionsPayment(text, payment)
 }

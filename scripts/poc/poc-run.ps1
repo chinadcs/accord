@@ -9,7 +9,7 @@
 # -Routed liga o perfil em etapas (classificar a ação, ligar trechos, classificar a categoria) com referências semânticas:
 # o mesmo que deu os resultados do PC (routed-v14). Sem -Routed vale o prompt único, que acerta bem menos nos modelos pequenos.
 param(
-    [Parameter(Mandatory)][ValidateSet('info', 'verify', 'cold', 'battery', 'session', 'stop')][string]$Stage,
+    [Parameter(Mandatory)][ValidateSet('info', 'verify', 'cold', 'battery', 'session', 'reduced', 'stop')][string]$Stage,
     [string]$Model,
     [Parameter(Mandatory)][string]$Label,
     [string]$Tag,
@@ -26,12 +26,28 @@ param(
     [switch]$Routed,
     [ValidateSet(14, 15, 16, 17, 18, 19)][int]$RoutedVersion = 14,
     [string]$Only,
+    [ValidateSet('screen', 'full', 'additional', 'qualification-v5', 'selector-v1', 'financial-contract-v1', 'financial-contract-v2')][string]$ReducedSuite = 'screen',
+    [ValidateSet(1, 2, 3, 4, 7, 9, 10)][int]$ReducedVersion = 1,
+    [switch]$ReducedSingle,
+    [switch]$ReducedControl,
     [switch]$ProcessFresh,
     [switch]$NoWait,
     [switch]$Force,
     [string]$Serial
 )
 . "$PSScriptRoot\_common.ps1"
+if ($Stage -eq 'reduced') {
+    if ($ReducedSuite -in 'financial-contract-v1', 'financial-contract-v2') {
+        $financialProfile = if ($ReducedSuite -eq 'financial-contract-v2') { 10 } else { 9 }
+        if ($ReducedVersion -ne $financialProfile -or $ReducedSingle -or $Model -ne 'qwen3.5-2b-q5km' -or $Ctx -ne 4096 -or $NoGrammar) {
+            throw 'A suíte financeira exige seu perfil fixado, Qwen Q5, contexto 4096 e gramática; sem chamada única histórica.'
+        }
+    } elseif ($ReducedSuite -in 'qualification-v5', 'selector-v1') {
+        if ($ReducedVersion -ne 7 -or $ReducedSingle -or $Model -ne 'qwen3.5-2b-q5km' -or $Ctx -ne 4096 -or $NoGrammar) {
+            throw 'qualification-v5/selector-v1 exige Qwen Q5, -ReducedVersion 7, contexto 4096 e gramática; sem -ReducedSingle.'
+        }
+    } elseif ($ReducedVersion -in 7, 9, 10 -or $ReducedControl) { throw 'Este perfil/controle exige sua suíte explícita de diagnóstico.' }
+}
 $null = Initialize-Poc -Serial $Serial
 if ($Stage -notin 'info', 'stop' -and -not $Model) { throw '-Model é obrigatório (ids em poc\assets\models.json).' }
 if ($Model) { $null = Find-PocModel $Model }
@@ -60,6 +76,13 @@ function Start-Stage {
         '--ez', 'namedcat', $(if ($NamedCategories) { 'true' } else { 'false' }),
         '--ez', 'routed', $(if ($Routed) { 'true' } else { 'false' }), '--ei', 'rv', "$RoutedVersion"
     )
+    if ($StageName -eq 'reduced') {
+        if ($Routed -or $NoGrammar) { throw 'O perfil reduced exige gramática e não usa -Routed.' }
+        if ($ReducedSingle -and $ReducedVersion -eq 1) { throw 'O controle de chamada única existe a partir do perfil reduced v2.' }
+        $amArgs += @('--es', 'reducedSuite', $ReducedSuite, '--ei', 'reducedVersion', "$ReducedVersion",
+            '--ez', 'reducedSingle', $(if ($ReducedSingle) { 'true' } else { 'false' }),
+            '--ez', 'reducedControl', $(if ($ReducedControl) { 'true' } else { 'false' }))
+    }
     if ($Model) { $amArgs += @('--es', 'model', $Model) }
     if ($Only) { $amArgs += @('--es', 'only', $Only) }
     Invoke-Adb @amArgs | Out-Null

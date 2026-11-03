@@ -17,6 +17,8 @@ import app.accord.core.chat.QuestionOption
 import app.accord.core.chat.UndoResult
 import app.accord.core.model.ModelInstall
 import app.accord.core.model.ModelStatus
+import app.accord.core.space.CategoryNode
+import app.accord.core.space.QueryResult
 import app.accord.ui.register.FormCodec
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,11 +27,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 /** Situação do modelo no cabeçalho do Chat (tela 04 §4): discreta, abre a tela 25. */
 sealed interface ModelBadge {
+    data object FakePilot : ModelBadge
+    data object LocalRules : ModelBadge
     data object NotInstalled : ModelBadge
     data class Downloading(val percent: Int?) : ModelBadge
     data object Working : ModelBadge
@@ -47,6 +52,8 @@ data class ChatUiState(
     val badge: ModelBadge = ModelBadge.NotInstalled,
     /** Há modelo pronto para "Interpretar agora" nas mensagens guardadas sem modelo. */
     val canInterpretNow: Boolean = false,
+    /** Categorias do espaço, para as sugestões e o seletor de categoria do recibo "a classificar". */
+    val categories: Map<String, CategoryNode> = emptyMap(),
 )
 
 /**
@@ -65,13 +72,30 @@ class ChatViewModel(
         .flatMapLatest { coordinator -> coordinator?.snapshot ?: emptyFlow() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
-    val state: StateFlow<ChatUiState> = combine(snapshot, container.models.manager.status, composer) { snap, model, text ->
+    /** Catálogo do espaço aberto, recarregado a cada mudança da conversa (o catálogo muda raramente). */
+    private val categories: StateFlow<Map<String, CategoryNode>> = snapshot.mapLatest { snap ->
+        if (snap == null) emptyMap() else try {
+            (container.space().categories() as? QueryResult.Data)?.value?.associateBy { it.id }.orEmpty()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            emptyMap()
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    val state: StateFlow<ChatUiState> = combine(snapshot, container.models.manager.status, composer, categories) { snap, model, text, categoryMap ->
+        // ADR 0036: com regras locais não há modelo a instalar nem aviso de modelo.
         ChatUiState(
             loaded = snap != null,
             items = snap?.let(::buildChatItems).orEmpty(),
             composer = text,
-            badge = badgeOf(model, container.models.engineAvailable),
-            canInterpretNow = model.active != null && container.models.engineAvailable,
+            badge = when {
+                container.categoryPilot.replacesInterpreter -> ModelBadge.FakePilot
+                container.usesRuleInterpreter -> ModelBadge.LocalRules
+                else -> badgeOf(model, container.models.engineAvailable)
+            },
+            categories = categoryMap,
+            canInterpretNow = container.categoryPilot.enabled || container.usesRuleInterpreter || (model.active != null && container.models.engineAvailable),
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ChatUiState())
 

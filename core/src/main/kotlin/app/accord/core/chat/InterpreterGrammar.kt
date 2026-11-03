@@ -16,7 +16,7 @@ package app.accord.core.chat
  * padrão e não tem campo de natureza; renda é uma produção à parte, escolhida logo depois da ação.
  */
 object InterpreterGrammar {
-    const val VERSION = 3
+    const val VERSION = 4
     private const val MAX_SPAN_WORDS = 4
     private const val MAX_SPAN_CHARS = 40
     private const val MAX_PHRASES = 160
@@ -32,7 +32,8 @@ object InterpreterGrammar {
     private val nextMonth = Regex("""^(mes que vem|proximo mes|mes seguinte)$""")
 
     /** Alavancas da gramática que mudam o que o modelo pode dizer; entram no registro de cada rodada. */
-    data class Options(val namedCategoriesOnly: Boolean = false, val anchoredFields: Boolean = false)
+    data class Options(val namedCategoriesOnly: Boolean = false, val anchoredFields: Boolean = false,
+        val legacyPaymentWords: Boolean = false)
 
     private val nameStopwords = setOf("conta", "cartao", "banco", "de", "da", "do", "dos", "das", "e", "outros", "outras")
 
@@ -152,7 +153,9 @@ object InterpreterGrammar {
         if (date != null) rules += "date" to dateAlternatives.joinToString(" | ")
 
         val payment = if (options.anchoredFields) {
-            val mentioned = ChatPayment.entries.filter { ChatText.mentionsPayment(message, it) }.map { paymentNames[it.ordinal] }
+            val mentioned = ChatPayment.entries.filter {
+                if (options.legacyPaymentWords) ChatText.legacyMentionsPayment(message, it) else ChatText.mentionsPayment(message, it)
+            }.map { paymentNames[it.ordinal] }
             mentioned.takeIf { it.isNotEmpty() }?.let(::jsonEnum)
         } else jsonEnum(paymentNames)
         val role = jsonEnum(roleNames)

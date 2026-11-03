@@ -5,7 +5,7 @@
     <string name="chat_composer_label">Mensagem do Chat</string>
     <string name="chat_send">Enviar</string>
     <string name="chat_empty_title">Registre escrevendo uma frase curta</string>
-    <string name="chat_empty_body">O celular interpreta a frase e o aplicativo confere tudo antes de salvar. Toque em um exemplo para começar:</string>
+    <string name="chat_empty_body">Escreva o que gastou ou recebeu, com o valor e, se quiser, a forma de pagamento. O aplicativo confere tudo antes de salvar. Toque em um exemplo para começar:</string>
     <string name="chat_example_expense">delivery 68 no cartão</string>
     <string name="chat_example_pix">mercado 35 no pix</string>
     <string name="chat_example_income">salário 6.000</string>
@@ -96,7 +96,7 @@
     <string name="reply_action_edit">Abrir edição</string>
 
     <!-- Recusas, falhas e modelo ausente -->
-    <string name="refuse_unclear">Não consegui entender com segurança. Nada foi salvo e sua mensagem foi mantida.</string>
+    <string name="refuse_unclear">Não entendi esta frase com segurança. Nada foi salvo e sua mensagem foi mantida. Tente escrever o valor e a forma de pagamento, como em mercado 35 no pix, ou use o registro manual.</string>
     <string name="refuse_reference">Não encontrei isso entre as suas categorias, contas ou registros. Nada foi salvo.</string>
     <string name="refuse_no_card">Não há cartão configurado para este registro. Nada foi salvo.</string>
     <string name="refuse_no_accounts">Não há conta cadastrada para este registro. Cadastre uma conta ou use o registro manual. Nada foi salvo.</string>

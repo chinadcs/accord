@@ -10,6 +10,6 @@
     <string name="review_category_accept_desc">Aceitar a categoria %1$s para %2$s</string>
     <string name="review_category_choose">Escolher no Chat</string>
     <string name="chat_category_suggested_tag">Sugerida</string>
-    <string name="chat_category_suggested_note">O modelo sugeriu uma categoria. Ela só vale depois que você tocar nela.</string>
-    <string name="chat_category_suggested_desc">%1$s, categoria sugerida pelo modelo</string>
+    <string name="chat_category_suggested_note">Sugerimos uma categoria. Ela só vale depois que você tocar nela.</string>
+    <string name="chat_category_suggested_desc">%1$s, categoria sugerida</string>
 </resources>

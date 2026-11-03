@@ -3,11 +3,15 @@ package app.accord
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.printToLog
 import androidx.test.core.app.ActivityScenario
@@ -26,6 +30,8 @@ import app.accord.core.space.Envelope
 import app.accord.core.space.QueryResult
 import app.accord.core.space.SetMyDefaultAccount
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
 import org.junit.After
 import org.junit.Before
 import org.junit.Rule
@@ -46,6 +52,7 @@ class ChatFlowTest {
     @Before
     fun prepare() = runBlocking {
         TestModel.install(container)
+        container.chat.filterNotNull().first()
         val space = container.space()
         val account = (space.execute(Envelope(CommandId("chat-account")), AddAccount(BankRef.Other("Banco"), "Conta")) as? CommandResult.Applied)
             ?.receipt?.changes?.single()?.id
@@ -110,7 +117,9 @@ class ChatFlowTest {
         waitForText("A classificar")
         waitForText("Amazon $tag R$")
         waitForText("qual categoria?")
-        compose.onNodeWithText("Pet").performScrollTo().assertIsDisplayed().performClick()
+        compose.onNodeWithText("Ver todas").performScrollTo().performClick()
+        compose.onNodeWithTag("chat-category-catalog").performScrollToNode(hasText("Pet"))
+        compose.onNodeWithText("Pet").assertIsDisplayed().performClick()
         // A pergunta some e o recibo mostra a categoria escolhida, no mesmo lançamento.
         compose.waitUntil(10_000) { compose.onAllNodesWithText("qual categoria?", substring = true).fetchSemanticsNodes().isEmpty() }
         waitForText("Alterado depois")
@@ -169,9 +178,8 @@ class ChatFlowTest {
         TestModel.interpreter.on(text, Proposal.Register(description = "ração $tag"))
         send(text)
         waitForText("Não salvo no orçamento")
-        // O cartão da pergunta vem antes do botão fixo do campo de mensagem.
-        val buttons = compose.onAllNodesWithText("Registrar manualmente")
-        buttons[buttons.fetchSemanticsNodes().size - 2].performClick()
+        // O campo de mensagem não tem mais atalho manual: o único botão é o do cartão da pergunta.
+        compose.onAllNodesWithText("Registrar manualmente").onLast().performClick()
         waitForText("ração $tag")
     }
 }

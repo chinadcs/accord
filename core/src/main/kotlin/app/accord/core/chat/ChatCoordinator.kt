@@ -15,6 +15,9 @@ import app.accord.core.space.Undo
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
@@ -56,6 +59,8 @@ class ChatCoordinator(
     private val nowMillis: () -> Long = System::currentTimeMillis,
     /** Avisado depois de qualquer gravação financeira (agenda o envio da fila de sincronização). */
     private val onFinanceChanged: () -> Unit = {},
+    private val categorySuggester: CategorySuggester? = null,
+    private val onCategoryPilotEvent: (CategoryPilotEvent) -> Unit = {},
 ) {
     val snapshot: Flow<ChatSnapshot> get() = store.observe()
 
@@ -70,6 +75,12 @@ class ChatCoordinator(
     }
 
     init {
+        if (categorySuggester != null) scope.launch(Dispatchers.Default) {
+            try {
+                val loadMillis = categorySuggester.prepare()
+                pilotEvent(CategoryPilotEvent(UUID.randomUUID().toString(), CategoryPilotEventKind.Loaded, loadMillis = loadMillis))
+            } catch (e: CancellationException) { throw e } catch (_: Exception) { }
+        }
         scope.launch {
             for (id in queue) {
                 try {
@@ -418,7 +429,59 @@ class ChatCoordinator(
                     createdAtMillis = nowMillis(),
                 ),
             )
+            startCategorySuggestion(message, entryId, context)
         }
+    }
+
+    /** Capture under stateLock, infer outside it, then check again before publishing local hints. */
+    private suspend fun startCategorySuggestion(message: ChatMessage, entryId: String, context: ChatContext) {
+        val suggester = categorySuggester ?: return
+        val question = store.openQuestions().firstOrNull { it.link == QuestionLink.Entry(entryId) } ?: return
+        val captured = try {
+            (space.entry(entryId).get()?.revision ?: return) to space.categories().get()
+        } catch (e: CancellationException) { throw e } catch (_: Exception) { return }
+        scope.launch {
+            try {
+                val result = try {
+                    withContext(Dispatchers.Default) { suggester.suggest(CategorySuggestionRequest(question.id, message.text, context)) }
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (_: Exception) {
+                    CategorySuggestion()
+                }
+                ensureActive()
+                pilotEvent(CategoryPilotEvent(question.id, CategoryPilotEventKind.Evaluated, result.reason, result.loadMillis, result.inferenceMillis))
+                stateLock.withLock {
+                    ensureActive()
+                    val fresh = space.entry(entryId).get()
+                    val currentMessage = store.message(message.id)
+                    if (store.question(question.id) != question || currentMessage?.state != MessageState.ToClassify ||
+                        currentMessage.text != message.text || fresh == null || fresh.voided || fresh.revision != captured.first ||
+                        fresh.classification != app.accord.core.space.Classification.ToClassify || space.categories().get() != captured.second
+                    ) {
+                        pilotEvent(CategoryPilotEvent(question.id, CategoryPilotEventKind.Stale))
+                        return@withLock
+                    }
+                    val hints = result.categoryIds.distinct().take(3)
+                    if (result.reason != CategorySuggestionReason.Suggested || hints.isEmpty() ||
+                        hints.any { context.categoryById(it) == null }
+                    ) return@withLock
+                    store.saveMessage(currentMessage.copy(categoryHints = hints))
+                    store.saveQuestion(question.copy(options = EntryCompleter.categoryOptions(context, hints.mapNotNull { context.categoryById(it)?.ref })))
+                    pilotEvent(CategoryPilotEvent(question.id, CategoryPilotEventKind.Published))
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                // The space/store may have closed during sign-out; never revive a previous session.
+                pilotEvent(CategoryPilotEvent(question.id, CategoryPilotEventKind.Stale))
+            }
+        }
+    }
+
+    private fun pilotEvent(event: CategoryPilotEvent) {
+        // Diagnostics can never interrupt a financial operation. No exception details are logged.
+        try { onCategoryPilotEvent(event) } catch (_: Exception) { }
     }
 
     private suspend fun closeQuestionsOf(messageId: String, state: QuestionState) {
@@ -550,6 +613,10 @@ class ChatCoordinator(
                     kind = ReceiptKind.Classified, scope = null,
                 )
                 store.saveMessage(message.copy(state = MessageState.Applied))
+                if (categorySuggester != null) {
+                    pilotEvent(CategoryPilotEvent(question.id, if (message.categoryHints.firstOrNull() == category.id)
+                        CategoryPilotEventKind.Accepted else CategoryPilotEventKind.OtherChoice))
+                }
             }
             is CommandResult.StaleVersion -> {
                 val fresh = space.entry(link.entryId).get()
