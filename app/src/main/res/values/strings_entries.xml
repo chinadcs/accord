@@ -114,6 +114,7 @@
     <string name="origin_manual">manual</string>
     <string name="origin_chat">conversa</string>
     <string name="origin_import">importação</string>
+    <string name="origin_system">automático</string>
     <string name="sync_saved_on_device">salvo no aparelho</string>
     <string name="sync_awaiting">aguardando envio</string>
     <string name="sync_acknowledged">reconhecido pelo serviço</string>

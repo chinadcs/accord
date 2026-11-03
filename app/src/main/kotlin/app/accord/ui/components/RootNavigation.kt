@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -46,6 +47,9 @@ import app.accord.ui.theme.AccordSpacing
 fun RootNavigationBar(selected: Root?, onSelect: (Root) -> Unit) {
     val colors = MaterialTheme.colorScheme
     val enlarged = LocalDensity.current.fontScale >= 1.5f
+    // With large text and the IME open, retain all five destinations as labelled accessibility tabs.
+    // Their visual captions would consume the conversation's entire viewport.
+    val compact = enlarged && WindowInsets.ime.getBottom(LocalDensity.current) > 0
     val labelStyle = MaterialTheme.typography.labelSmall.copy(
         localeList = LocaleList("pt-BR"),
         lineBreak = LineBreak.Paragraph,
@@ -58,7 +62,7 @@ fun RootNavigationBar(selected: Root?, onSelect: (Root) -> Unit) {
             .padding(start = AccordSpacing.s2, end = AccordSpacing.s2, top = AccordSpacing.s1, bottom = AccordSpacing.s2),
     ) {
         Box(
-            Modifier.fillMaxWidth().height(if (enlarged) 168.dp else 112.dp).testTag("root-navigation"),
+            Modifier.fillMaxWidth().heightIn(min = if (compact) 80.dp else if (enlarged) 168.dp else 112.dp).testTag("root-navigation"),
         ) {
             Surface(
                 color = colors.surfaceContainerLow,
@@ -77,7 +81,7 @@ fun RootNavigationBar(selected: Root?, onSelect: (Root) -> Unit) {
                                     selected = active,
                                     role = Role.Tab,
                                     onClick = { onSelect(root) },
-                                ),
+                                ).then(if (compact) Modifier.semantics { contentDescription = rootLabel } else Modifier),
                                 shape = MaterialTheme.shapes.medium,
                                 color = colors.surfaceContainerLow,
                             ) {
@@ -96,7 +100,7 @@ fun RootNavigationBar(selected: Root?, onSelect: (Root) -> Unit) {
                                             modifier = Modifier.size(20.dp),
                                         )
                                     }
-                                    Text(
+                                    if (!compact) Text(
                                         rootLabel,
                                         style = labelStyle,
                                         color = if (active) colors.primary else colors.onSurfaceVariant,

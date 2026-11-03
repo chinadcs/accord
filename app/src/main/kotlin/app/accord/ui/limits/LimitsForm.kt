@@ -22,6 +22,8 @@ data class LimitRow(
     /** Meses posteriores que já têm configuração própria. */
     val laterChanges: List<YearMonth>,
     val iconKey: String = "tag",
+    /** Chave da cor da categoria principal; as subcategorias herdam a mesma cor. */
+    val colorKey: String = "",
 )
 
 data class LimitSub(val id: String, val name: String, val iconKey: String = "tag")

@@ -75,6 +75,7 @@ fun Origin.label(): String = stringResource(
         Origin.Manual -> R.string.origin_manual
         Origin.Chat -> R.string.origin_chat
         Origin.Import -> R.string.origin_import
+        Origin.System -> R.string.origin_system
     },
 )
 

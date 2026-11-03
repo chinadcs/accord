@@ -64,10 +64,9 @@ class KeyboardLayoutUiTest {
         }
         compose.onNodeWithText("Mensagem do Chat").assertIsDisplayed()
         compose.onNodeWithText("Enviar").assertIsDisplayed()
-        compose.onNodeWithText("Registrar manualmente").assertIsDisplayed()
-        val manual = compose.onNodeWithText("Registrar manualmente").fetchSemanticsNode().boundsInRoot
+        val send = compose.onNodeWithText("Enviar").fetchSemanticsNode().boundsInRoot
         val navigation = compose.onNodeWithTag("root-navigation", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
-        assertTrue("A ação manual deve manter 56 dp completos (atual: ${manual.height / pixelsPerDp})", manual.height >= 56f * pixelsPerDp - 1f)
-        assertTrue("A navegação não pode cobrir a ação manual", manual.bottom <= navigation.top)
+        assertTrue("Enviar deve manter 48 dp completos (atual: ${send.height / pixelsPerDp})", send.height >= 48f * pixelsPerDp - 1f)
+        assertTrue("A navegação não pode cobrir o envio", send.bottom <= navigation.top)
     }
 }

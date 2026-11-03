@@ -1,5 +1,6 @@
 package app.accord.ui.limits
 
+import app.accord.ui.categoryColor
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -181,7 +182,7 @@ private fun CategoryLimit(row: LimitRow, state: LimitsUiState, onTotal: (String,
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
                 Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = CircleShape) {
                     Box(Modifier.size(AccordSpacing.touchMin), contentAlignment = Alignment.Center) {
-                        DecorativeIcon(lucideRes(row.iconKey))
+                        DecorativeIcon(lucideRes(row.iconKey), tint = categoryColor(row.colorKey.ifEmpty { row.categoryId }))
                     }
                 }
                 Column(Modifier.weight(1f)) {
@@ -224,7 +225,7 @@ private fun SplitFields(row: LimitRow, parts: Map<String, String>, state: Limits
             value = parts[sub.id].orEmpty(), onValueChange = { onPart(row.categoryId, sub.id, it) }, singleLine = true,
             label = { Text(sub.name) }, placeholder = { Text(stringResource(R.string.limits_no_split)) },
             isError = error != null, supportingText = errorText(error)?.let { { Text(it) } },
-            leadingIcon = { DecorativeIcon(lucideRes(sub.iconKey)) },
+            leadingIcon = { DecorativeIcon(lucideRes(sub.iconKey), tint = categoryColor(row.colorKey.ifEmpty { row.categoryId })) },
             textStyle = Accord.typography.amountRow,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth(),
         )

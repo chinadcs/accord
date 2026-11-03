@@ -335,14 +335,14 @@ class VisualReviewS1eTest {
             ),
         )
         both("s1f_categorias") {
-            app.accord.ui.categories.CategoriesScreen(content, null, setOf("eletro"), true, PaddingValues(), {}, {}, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, { _, _, _ -> }, {}, {})
+            app.accord.ui.categories.CategoriesScreen(content, null, setOf("eletro"), true, PaddingValues(), {}, {}, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, { _, _, _ -> }, {}, {}, {})
         }
         val review = app.accord.ui.categories.CategoryDialog.ReviewParts(
             categories.getValue("cons"), "eletro",
             listOf(app.accord.ui.categories.PartAnswer(nov, brl(200), app.accord.ui.categories.PartChoice.Carry), app.accord.ui.categories.PartAnswer(nov.plusMonths(1), brl(250))),
         )
         capture("s1f_categorias_partes", ThemePreference.Light, window = true) {
-            app.accord.ui.categories.CategoriesScreen(content, review, emptySet(), false, PaddingValues(), {}, {}, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, { _, _, _ -> }, {}, {})
+            app.accord.ui.categories.CategoriesScreen(content, review, emptySet(), false, PaddingValues(), {}, {}, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, { _, _, _ -> }, {}, {}, {})
         }
     }
 

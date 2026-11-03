@@ -1,5 +1,6 @@
 package app.accord.ui.limits
 
+import app.accord.ui.ownColorKey
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -128,6 +129,7 @@ class LimitsViewModel(
                     spent = budget?.categories?.firstOrNull { it.categoryId == main.id }?.net ?: Money.ZERO,
                     laterChanges = limit?.laterChanges.orEmpty(),
                     iconKey = main.iconKey,
+                    colorKey = main.ownColorKey(),
                 )
             }
             commandId = CommandId(UUID.randomUUID().toString())

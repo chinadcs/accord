@@ -1,5 +1,6 @@
 package app.accord.ui.detail
 
+import app.accord.ui.categoryColor
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -160,7 +161,7 @@ private fun ReadyDetail(
 
             val category = (d.classification as? app.accord.core.space.Classification.Category)?.id?.let(data.categories::get)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                DecorativeIcon(lucideRes(category?.iconKey ?: "tag"))
+                DecorativeIcon(lucideRes(category?.iconKey ?: "tag"), tint = categoryColor(data.categories, category?.id))
                 Text(category?.name ?: stringResource(R.string.detail_category_unset), style = MaterialTheme.typography.bodyLarge)
             }
             d.method?.let { Text(it.label(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }

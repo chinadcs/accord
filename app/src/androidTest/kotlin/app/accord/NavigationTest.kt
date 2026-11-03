@@ -22,7 +22,7 @@ class NavigationTest {
 
     @Test
     fun chatEhATelaInicialEAsCincoRaizesEstaoNaBarra() {
-        compose.onNodeWithText("Registrar manualmente").assertIsDisplayed()
+        compose.onNodeWithText("Mensagem do Chat").assertIsDisplayed()
         listOf("Chat", "Orçamento", "Lançamentos", "Revisar", "Mais").forEach {
             compose.onAllNodesWithText(it).fetchSemanticsNodes().also { nodes ->
                 assert(nodes.isNotEmpty()) { "falta a raiz $it" }

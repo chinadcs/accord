@@ -107,7 +107,7 @@ class CharcoalVisualReviewTest {
     @Test
     fun chatIniciaECincoRaizesCompartilhamTemaEscuroETextoAmpliado() {
         showApp(seed = true)
-        compose.onNodeWithText("Registrar manualmente").assertIsDisplayed()
+        compose.onNodeWithText("Mensagem do Chat").assertIsDisplayed()
         compose.onNodeWithTag("root-navigation", useUnmergedTree = true).assertIsDisplayed()
         capture("chat-escuro")
 

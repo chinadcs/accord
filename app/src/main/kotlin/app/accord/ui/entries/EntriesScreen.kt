@@ -1,5 +1,6 @@
 package app.accord.ui.entries
 
+import app.accord.ui.categoryColor
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.selection.selectable
@@ -448,6 +449,7 @@ private fun EntryItem(row: EntryRow, categories: Map<String, CategoryNode>, onOp
                             DecorativeIcon(
                                 lucideRes(category.iconKey),
                                 modifier = Modifier.size(16.dp),
+                                tint = categoryColor(categories, category.id),
                             )
                             Text(category.name, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
