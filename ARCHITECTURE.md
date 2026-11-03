@@ -28,18 +28,20 @@ exigem registrar a questão no Beads e esclarecer a decisão afetada.
 | --- | --- | --- |
 | Aplicativo | Android nativo, Kotlin e Jetpack Compose | Módulos/build existem; desenho concreto da fachada proposto no ADR 0022 e validação nos aparelhos pendente |
 | Aparelhos | Galaxy S20 FE como referência mínima e Galaxy S23 FE; S20 FE com 6 GB de RAM total informados | Variantes, Android, espaço livre, RAM do S23 FE e consumo real |
-| Inferência | SLM no aparelho, sem fallback automático para IA remota | Modelo, motor, quantização e qualidade em português |
+| Inferência | P0: interpretador local por regras ([ADR 0036](docs/adr/0036-interpretador-por-regras-no-p0-e-slm-opcional.md)); SLM no aparelho é candidato opcional adiado, sem fallback automático para IA remota | Promoção das regras ao produto; se o SLM voltar: modelo, motor, quantização, qualidade em português e medição nos aparelhos |
 | Distribuição | Download separado no primeiro uso, até 2 GB decimais por celular | Hospedagem, tamanho efetivo, retomada e espaço instalado |
-| Desempenho | Meta de até 5 s do envio ao resultado visível de frase curta, com modelo carregado | Medições nos dois celulares; carga inicial, RAM, bateria e aquecimento |
+| Desempenho | Meta desejada de até 5 s do envio ao resultado visível de frase curta, com modelo carregado; sem corte eliminatório (31/10/2026) | Medições nos dois celulares; carga inicial, RAM, bateria e aquecimento |
 | Compartilhamento | Supabase hospedado no plano Free, Auth e PostgreSQL | Esquema, RPC, RLS e protocolo locais existem; decisões aceitas nos ADRs 0023/0024; hospedagem e validações finais não comprovadas aqui |
 | Dados locais | Banco/fila persistidos; Room com BundledSQLiteDriver; Chat local | Room implementado (ADR 0016); política detalhada de acesso local e Chat de S3 pendentes |
-| Importação | OFX estruturado e PDF bancário com texto selecionável, processados localmente | Bibliotecas e compatibilidade com fatura/extrato Itaú em BRL |
+| Importação | OFX estruturado e PDF bancário com texto selecionável, processados localmente. Leitor OFX próprio em `:core` (`core.importing.OfxReader`, S4.1) e leitor do CSV do Accord, formato nosso e não de banco (`core.importing.CsvReader`, [ADR 0042](docs/adr/0042-csv-no-formato-proprio-do-accord.md), proposto), verificado com testes sintéticos e com quatro exemplos do usuário (Bradesco, Itaú conta, Nubank cartão e conta). Reconciliação e regras de cobrança em `:core` (S4.2/S4.2b). Sessão de importação na fachada (`ImportSession`, Room esquema 6, comando `ConfirmImportBatch` e agregado sincronizado `ImportBatch`, S4.3; [ADR 0040](docs/adr/0040-lote-de-importacao-confirmado-e-confirmacao-atomica.md), proposto), testada em JVM e no pgTAP local. Seleção de arquivo pelo Android (somente leitura, formato pelo conteúdo) e telas 15, 16 e 17 com a parte da 14 em Revisar (S4.4). Fila única de pendências (tela 18) e resolução das dúvidas de importação (tela 19, comando `ResolveImportItem`, S4.5), testadas no emulador. Leitor de PDF por layout (S4.6, [ADR 0041](docs/adr/0041-leitura-de-pdf-por-layout-sobre-pdfbox-android.md), aceito): só a fatura do cartão Itaú, validada com **um** exemplo real do usuário | Extrato Itaú em PDF e outros layouts, tela 19 para fatura/parcelas/estorno, aceite do ADR 0040, validação nos dois celulares e compatibilidade com fatura/extrato Itaú em BRL (sem amostra real) |
 | Interface | Lucide e catálogo/logotipos locais de logos-bancos-br, versão estável fixada; [tokens](docs/design-tokens.md) e [ícones](docs/icones-categorias.md) decididos | Ativos incorporados; revisão visual nos temas e aparelhos pendente |
 
 Qwen3-0.6B quantizado, llama.cpp/GGUF e LiteRT-LM são candidatos do plano §13.3, sem aprovação
 por benchmark. Formato de um candidato não implica compatibilidade com outro motor. Download
 máximo: 2.000.000.000 bytes para o conjunto necessário; não define RAM ou espaço instalado.
 A meta de 5 s exclui download, carga inicial e sincronização e não impõe cancelamento automático.
+Conforme o [ADR 0035](docs/adr/0035-meta-de-latencia-desejada-sem-corte-eliminatorio.md), excedê-la
+isoladamente não reprova candidato nem bloqueia integração; os critérios de segurança/qualidade permanecem.
 
 ## Mapa atual do repositório
 
@@ -68,7 +70,13 @@ accord/
   poc/                       bancada de medição da Etapa 0 (S3 §2): app debug separado app.accord.poc, sem
                              INTERNET, com o llama.cpp fixado em poc/llama-cpp.pin e uma ponte JNI mínima;
                              roda o prompt, o contrato e o validador do produto. Não é produto nem escolhe
-                             motor; exercitada só no emulador (docs/poc/etapa-0.md)
+                             motor. Entrada separada de classificação sem SLM medida no S20 FE em 26/10,
+                             aceita pelo usuário como validação suficiente também para o S23 FE;
+                             não comprova desempenho conjunto do Chat (docs/poc/auditoria-categorias-e-s20fe.md)
+  pocpc/                     bancada JVM de qualidade e classificação de categoria, fora do produto
+  categorybench/             núcleo experimental de categoria compartilhado por :pocpc/:poc;
+                             :app depende dele apenas em debug para o piloto opt-in com fake,
+                             sugestões e confirmação (ADR 0032); sem pesos/adaptador no release
   scripts/poc/               scripts da bancada (preparar, enviar modelos, rodar, coletar) e report.py
   gradle/libs.versions.toml  versões fixadas; wrapper Gradle 9.8.2 (gradlew)
   docs/
@@ -82,14 +90,84 @@ accord/
   .codex/                   adaptadores de agentes, configuração e hooks
 ```
 
-Existem `:core`, `:persistence`, `:remote`, `:app` e `:poc` (comandos em AGENTS.md). Detalhes implementados
+Existem `:core`, `:persistence`, `:remote`, `:app`, `:poc`, `:pocpc` e `:categorybench`
+(comandos da classificação em docs/poc/auditoria-categorias-e-s20fe.md). Detalhes implementados
 da fachada, RPC e protocolo estão nos ADRs 0022–0024, aceitos em 24/10/2026. Projeções financeiras
 assumidas em S1 estão no ADR 0025. O contrato do Chat e o histórico local (0027), a distribuição e o
 ciclo de vida do modelo (0028) e a troca de forma de pagamento (0029) foram aceitos pelo usuário em 24/10/2026
 e estão implementados no S3 (aceite registrado em `accord-awb`; implantação e medições nos aparelhos seguem pendentes).
 Esta revisão documenta o estado; não aprova as demais propostas nem escolhe framework de DI, modelo/motor,
-hospedagem dos pesos ou leitor bancário. Nenhuma medição de modelo foi feita nos aparelhos (Etapa 0)
-e o download real, o motor e o download em segundo plano pelo sistema não existem.
+hospedagem dos pesos ou leitor bancário. A medição isolada de categorias no S20 FE não aprova o motor
+nem o desempenho do Chat nos dois aparelhos. O adaptador de motor do produto e a fonte hospedada
+de pesos/download em segundo plano continuam pendentes.
+
+O [desenho de frases livres de 26/10](docs/poc/pipeline-frases-livres.md) propõe reduzir o SLM
+a intenção/ligação de trechos, reutilizar o validador/fachada e manter classificação assistida
+na porta separada já usada pelo piloto. [ADR 0033](docs/adr/0033-pipeline-reduzido-de-frases-livres.md)
+está proposto; o fake permanece disponível e o adaptador real não foi integrado nesta entrega.
+Triagem começa no S20 FE, sem estender ao novo fluxo a dispensa do S23 FE para o classificador.
+
+A [triagem reduzida de 26/10](docs/poc/triagem-frases-livres-s20fe-2026-10-26.md) foi executada
+no S20 FE, somente na bancada: seis candidatos na amostra inicial e dois nos 60 casos completos.
+O perfil atual não foi recomendado para integração por erros aceitos e falhas de resposta a
+perguntas. `accord-nsu.15` mantém a próxima iteração; o piloto do Chat continua com fake.
+
+A [qualificação de frases novas](docs/poc/qualificacao-frases-novas-2026-10-26.md), `accord-nsu.16`,
+congela 120 casos e compara os seis candidatos em duas variantes e dois controles sem SLM,
+incluindo descrição e decomposição dos campos. O avanço autorizado depende de segurança e
+ganho sobre o melhor controle, seguido da triagem física. O S20 FE não está disponível nesta
+sessão; a rodada interrompida ainda precisa ser recuperada. Feedback com retenção local de
+30 dias e sete dias de uso natural continuam condicionados à integração real, ainda ausente.
+Na matriz PC completa, nenhum perfil qualificou: o melhor modelo teve 69/120 casos completos
+contra 67/120 do controle mais forte, mas quatro propostas divergentes aceitas. Correções
+de fronteira/pessoa e ação/resposta/descrição estão em `accord-nsu.17`/`.18`, antes de nova escolha.
+
+As [correções v4/v5](docs/poc/correcoes-preparacao-v4-2026-10-26.md) dessas tarefas foram
+verificadas sem modelos, preservando corpus/snapshots e replay do validador v4. A próxima
+qualificação (`accord-nsu.21`) usa Qwen3.5-2B Q5_K_M como referência e mantém os oito candidatos;
+segurança e ganho completo sobre controle forte continuam bloqueando a integração `accord-q12`.
+
+A [qualificação v2](docs/poc/qualificacao-v2-resultados-2026-10-26.md) já executou 120 frases
+novas: Qwen Q5 em chamada única 96/120 completos contra controle forte 98/120, ambos com dois
+efeitos errados. Nenhum perfil qualifica. `.21` permanece aberto, dependente de `.22`/`.23`;
+sem integração ou medição física nesta rodada, mantendo os oito candidatos registrados.
+
+As [correções de escopo e a qualificação v3](docs/poc/escopo-v5-e-qualificacao-v3-2026-10-27.md)
+separam pergunta/recibo/mensagem nova na bancada e no validador. A medição primária usou
+v5/validador6: controle forte 93/96 completos, Qwen Q5 shared30/single24,
+zero efeito indevido em todos. Nenhum ganho do modelo; `.24` passa a bloquear a qualificação
+`.21` e a integração. Não altera contrato, persistência ou escolha de modelo/motor; fake mantido.
+
+A [continuação v6/validador8](docs/poc/descricao-v6-e-origem-v8-2026-10-27.md) mantém respostas,
+correções e decisões ancoradas no caminho local e limita o SLM experimental à seleção literal
+de descrição. Corrige a falsa instituição em “banco de jardim”, preservando a barreira para
+origem desconhecida. Essa entrega foi verificada deterministicamente, antes da inferência v6.
+
+A [qualificação v4](docs/poc/qualificacao-v4-resultados-2026-10-27.md) posterior congelou 64
+frases novas e comparou um controle forte ao Qwen Q5: 58/64 completos contra 52/64, zero ganhos
+e seis perdas de descrição; zero erro financeiro/efeito indevido. As 128 notas e 200 hashes
+foram conferidos. Não qualifica para triagem física ou integração. `.24`/`.21` seguem abertas,
+com revisão de candidatos/proteção da descrição em `.27` e resposta de data em `.26`.
+
+As [correções v7/validador9](docs/poc/correcoes-descricao-v7-data-v9-2026-10-27.md) dessas
+duas tarefas reconhecem a resposta de data e restringem descrições a frases completas,
+com validação independente de trechos periféricos/truncados. São 400 casos de regressão,
+sem inferência nova; 397 completos, zero efeito indevido. Não demonstram contribuição do
+SLM nem qualificam a integração: `.24`/`.21` permanecem abertas; fake e oito candidatos mantidos.
+
+A [qualificação v5](docs/poc/qualificacao-v5-resultados-2026-10-27.md) posterior ao ajuste
+congelou 64 frases novas: Qwen Q5 59/64 completos, controle58/64, um ganho de descrição e
+nenhuma perda, zero erro financeiro/efeito indevido. É elegível apenas à triagem física;
+persistem cinco descrições erradas aceitas e limites de autoria/amostra. `.24` conclui a
+etapa PC, `.21` depende da [triagem `.28`](docs/poc/triagem-v7-aparelhos-2026-10-27.md).
+Bancada Android preparada e controle sem SLM exercitado só no emulador, sem Galaxy medido,
+integração ou escolha definitiva de modelo/motor.
+
+O usuário limitou depois a [validação `.28` ao emulador](docs/poc/validacao-v7-emulador-2026-10-27.md).
+Qwen v7/validador9 empatou com o controle58/64; o ganho PC não se repetiu no Android/CPU.
+Três repetições estáveis, zero erro financeiro aceito/efeito indevido; chamadas curtas após
+a primeira com mediana7,65s, cancelamento e retomada exercitados. `.28` conclui esse escopo,
+`.21` continua aberta com revisão de utilidade/custo em `.29`; sem integração ou medição Galaxy.
 
 ## Responsabilidades e fluxo local
 

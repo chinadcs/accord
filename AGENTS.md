@@ -18,8 +18,10 @@ validação nos dois celulares; os ADRs 0022–0025 e 0027–0029 foram aceitos 
 Não apresentar requisitos, wireframes, fornecedor escolhido ou metas como funcionalidades
 implementadas, configurações executadas ou resultados medidos.
 
-Confirmados: **Kotlin e Jetpack Compose**, **SLM no aparelho**, **Supabase Auth e PostgreSQL
-hospedados no plano Free**, com **banco e fila locais**. **Room com BundledSQLiteDriver** foi
+Confirmados: **Kotlin e Jetpack Compose**, **Supabase Auth e PostgreSQL
+hospedados no plano Free**, com **banco e fila locais**. Desde 02/11/2026 o Chat do P0 usa
+**interpretador local por regras**; o **SLM no aparelho** é candidato opcional adiado, sem modelo
+escolhido ([ADR 0036](docs/adr/0036-interpretador-por-regras-no-p0-e-slm-opcional.md)). **Room com BundledSQLiteDriver** foi
 confirmado em 24/10/2026. Módulos, adaptador, esquema e protocolo concretos já têm implementação;
 seu aceite e pendências estão diferenciados nos ADRs. Modelo/motor de inferência e leitores
 bancários continuam abertos. Não introduzir outra plataforma ou backend por herança de outro projeto.
@@ -60,8 +62,8 @@ curtas com links; ADRs preservam justificativas. O papel `adr-writer` não autor
   magic link ou convite por e-mail, SMTP ou compra de domínio. E-mail identifica login sem
   comprovar posse. Ajuda orienta atendimento manual fora do app; credenciais administrativas
   ficam em ambiente confiável, nunca no aplicativo.
-- **IA:** SLM propõe ações estruturadas; app valida campos, referências, alvo e ambiguidade e
-  calcula valores. Sem SQL livre do modelo, confiança só na sua autoavaliação ou IA externa
+- **IA:** o interpretador (regras no P0; SLM opcional e adiado, ADR 0036) propõe ações estruturadas;
+  app valida campos, referências, alvo e ambiguidade e calcula valores. Sem SQL livre do modelo, confiança só na sua autoavaliação ou IA externa
   automática. Ações claras válidas salvam com editar/desfazer; dúvidas são recuperáveis.
 - **Dinheiro:** centavos ou decimal exato. Categoria/subcategoria, compra/parcelas e quitação
   da fatura não duplicam despesas. Renda prevista não é saldo confirmado; pago não se soma ao
@@ -69,7 +71,7 @@ curtas com links; ADRs preservam justificativas. O papel `adr-writer` não autor
   compras variadas usam categoria predominante.
 - **Datas:** cartão/parcelas usam vencimento da fatura atribuída; Pix usa movimentação. Boleto
   não pago é previsto pelo vencimento; pago ocupa só o mês do pagamento efetivo, removendo a
-  previsão e preservando ambas as datas. Fechamento 8/vencimento 15 são configuração inicial,
+  previsão e preservando ambas as datas. Importação de cartão sem fatura declarada atribui cada compra pela data (ADR 0043, proposto). Fechamento 8/vencimento 15 são configuração inicial,
   sem garantir atribuição. Dúvida só de fatura permite salvar na estimada como “a conferir”.
   Um cartão é o escopo inicial; não adicionar gestão de múltiplos cartões por suposição.
 - **Créditos e pagamentos:** estorno confirmado abate categoria original no período do crédito,
@@ -96,12 +98,13 @@ curtas com links; ADRs preservam justificativas. O papel `adr-writer` não autor
 - **Privacidade:** Chat só no aparelho de origem; dados financeiros compartilhados. Não
   sincronizar mensagens/transcrições ou PDFs/OFX completos. Não incluir senhas, tokens, chaves
   administrativas, conversas ou conteúdo bancário em logs ou fixtures compartilhadas.
-- **Importação:** OFX estruturado e PDF bancário com texto selecionável, processados localmente;
+- **Importação:** OFX estruturado, PDF bancário com texto selecionável e o CSV no modelo próprio do Accord (`docs/importacao-csv.md`, ADR 0042 proposto; não lê CSV de banco; único formato cuja coluna de categoria vira escolha do lote), processados localmente;
   sem OCR no P0. Prévia/revisão antes de efetivar. Guardar extraídos, campos originais dos
   movimentos, metadados e decisões, sem cópia permanente do arquivo. Descartar temporários sem
   alterar arquivo externo. Retomar usa dados persistidos; reler exige seleção. Reimportar não
   duplica; valor/data iguais não fundem compras legítimas; FITID divergente exige revisão.
-- **Compatibilidade:** Itaú é prioridade de fatura/extrato BRL, sem suporte comprovado. Inspeção
+- **Compatibilidade:** Itaú é prioridade de fatura/extrato BRL. Há evidência limitada: um OFX de conta e uma fatura de cartão em PDF, reais e do usuário, lidos
+  localmente (a do PDF só por um layout validado com esse exemplo); sem suporte geral comprovado. Inspeção
   de `example.ofx`: dez movimentos EUR e FITID repetido, sem origem Itaú comprovada. Moeda não
   suportada bloqueia efetivação sem conversão automática; preservar moeda da prévia.
 - **Alertas:** até um evento por categoria principal por semana, destinado aos dois e respeitando
@@ -124,9 +127,12 @@ Candidatos do plano §13.3 são hipóteses de prova de conceito, não decisões 
 
 Download separado no primeiro uso, até **2 GB decimais** por celular para o conjunto necessário,
 com tamanho real/progresso e alternativa manual. Distinguir download, espaço instalado e RAM.
-Meta: **até 5 s** do envio ao resultado visível de frase curta com modelo carregado; carga,
-download e sync são medidos separadamente. Sem medição concluída ou cancelamento automático
-pela meta. Preservar mensagem/registro manual em demora/falha; inferência fora da thread da UI.
+Meta desejada: **até 5 s** do envio ao resultado visível de frase curta com modelo carregado,
+**sem caráter eliminatório** (usuário, 31/10/2026; [ADR 0035](docs/adr/0035-meta-de-latencia-desejada-sem-corte-eliminatorio.md)).
+Registrar tempos e excedentes; avaliar qualificação por seus critérios de segurança/qualidade,
+sem reprovar ou pedir nova autorização só por exceder 5 s. Carga, download e sync são medidos
+separadamente. Preservar mensagem, cancelar e registro manual em demora/falha; sem cancelamento
+automático pela meta, com inferência fora da thread da UI. Relatórios congelados mantêm seus critérios históricos.
 
 Chat inicia o uso. Barra inferior: Lançamentos, Orçamento, Chat (ícone Astroid, sem rótulo visual), Revisar e Mais. Seguir estados/recuperação
 de cada spec e preservar rascunhos/contexto ao voltar. Texto pt-BR claro e sem julgamento,
@@ -196,6 +202,8 @@ Testes: `fun x() = runBlocking { ... }` cujo último comando devolve valor é ig
 pelo JUnit; usar `runBlocking<Unit>` e conferir a contagem de `@Test` contra `build/test-results`.
 Nos testes instrumentados, rodar uma classe por vez
 (`-Pandroid.testInstrumentationRunnerArguments.class=app.accord.X`; lista com vírgula só executa a primeira).
+`CategoryPilotFlowTest` exige `-Paccord.categoryPilot=true`: sem a flag o modelo do piloto não entra no APK e a sugestão volta `Unavailable`
+([ADR 0032](docs/adr/0032-piloto-local-de-categorias-com-confirmacao.md)).
 A suíte de contrato do serviço (`:remote:test`) roda contra o fake sempre e contra o Supabase local
 quando `supabase start` está ativo (`ACCORD_REQUIRE_SUPABASE=1` transforma a ausência em falha).
 

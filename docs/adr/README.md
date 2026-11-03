@@ -137,6 +137,20 @@ observada em 24/10/2026. Os estados abaixo são de decisão, não de conclusão 
 | [0029](0029-troca-de-forma-de-pagamento-como-comando.md) | Troca da forma de pagamento como comando | accepted |
 | [0030](0030-interpretacao-local-em-etapas-na-poc.md) | Interpretação local em etapas e ligação de trechos na PoC | proposed |
 | [0031](0031-limite-de-credito-com-alerta.md) | Limite de crédito com alerta de excesso | accepted |
+| [0032](0032-piloto-local-de-categorias-com-confirmacao.md) | Piloto local de categorias com confirmação e interpretador fake | accepted |
+| [0033](0033-pipeline-reduzido-de-frases-livres.md) | Pipeline reduzido de frases livres com categoria separada | proposed |
+| [0034](0034-ato-alvo-e-capacidade-na-avaliacao-do-interpretador.md) | Ato, alvo e capacidade na avaliação do interpretador | proposed |
+| [0035](0035-meta-de-latencia-desejada-sem-corte-eliminatorio.md) | Meta de latência desejada, sem corte eliminatório | accepted |
+| [0036](0036-interpretador-por-regras-no-p0-e-slm-opcional.md) | Interpretador por regras no P0 e SLM como candidato opcional adiado | accepted |
+| [0037](0037-credito-de-investimento-e-renda-na-importacao.md) | Crédito vindo de investimento é renda na importação | accepted |
+| [0038](0038-categorias-de-renda.md) | Categorias de renda: agregado sincronizado, lista plana, sementes e opcional na renda | accepted |
+| [0039](0039-edicao-movimentacao-e-remocao-de-categorias.md) | Edição, movimentação de lançamentos e remoção de categorias | accepted |
+| [0040](0040-lote-de-importacao-confirmado-e-confirmacao-atomica.md) | Lote de importação confirmado como agregado sincronizado e confirmação atômica por comando composto | accepted |
+| [0041](0041-leitura-de-pdf-por-layout-sobre-pdfbox-android.md) | Leitura de PDF por layout validado, sobre PdfBox-Android | accepted |
+| [0042](0042-csv-no-formato-proprio-do-accord.md) | Importação de CSV no formato próprio do Accord | proposed |
+| [0043](0043-fatura-do-cartao-importado-pela-data-da-compra.md) | Fatura do cartão importado atribuída pela data da compra | proposed |
+| [0044](0044-evento-de-aviso-imutavel-e-criacao-por-chave.md) | Evento de aviso imutável, criação por chave natural e avaliação interna | accepted |
+| [0045](0045-marca-de-encargo-no-movimento-e-cobertura-derivada.md) | Marca de encargo no pagamento direto e cobertura do período derivada dos lotes | proposed |
 
 Questões ainda sem decisão, como modelo/motor, leitores bancários, acesso local, retenção de
 idempotência e validação financeira no serviço, permanecem nos Beads/specs S2–S4. Suas tarefas
