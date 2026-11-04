@@ -34,7 +34,6 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -321,10 +320,13 @@ private fun MainApp(container: AppContainer, startRoute: String) {
     // O aviso da ação anterior não cobre o botão Salvar do formulário que abre em seguida.
     val formRoute = destination?.route?.substringBefore('?')?.substringBefore('/')
     val inForm = formRoute in setOf(ROUTE_REGISTER, ROUTE_EDIT, ROUTE_CARD, ROUTE_ACCOUNTS, ROUTE_CATEGORIES, ROUTE_CATEGORY_EDIT, ROUTE_CATEGORY_MOVE, ROUTE_LIMITS, ROUTE_FIRST_STEPS, ROUTE_ALERT_PREFS)
-    // Só ao entrar num formulário vindo de fora: voltar de uma tela de edição para a lista (também formulário) não apaga o aviso da ação que acabou de salvar.
+    // Ao abrir um formulário novo (de fora ou de outro formulário) o aviso some; voltar de uma tela de edição para a lista
+    // (também formulário, já aberta antes) não apaga o aviso da ação que acabou de salvar.
     var cameFromForm by remember { mutableStateOf(false) }
-    LaunchedEffect(destination?.route) {
-        if (inForm && !cameFromForm) snackbar.currentSnackbarData?.dismiss()
+    val seenEntries = remember { mutableSetOf<String>() }
+    LaunchedEffect(entry?.id) {
+        val opened = entry?.id?.let(seenEntries::add) == true
+        if (inForm && (!cameFromForm || opened)) snackbar.currentSnackbarData?.dismiss()
         cameFromForm = inForm
     }
     LaunchedEffect(container) {
@@ -797,7 +799,13 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                         onLimits = { navController.navigate("$ROUTE_LIMITS?initialSetup=true") },
                         onSpace = { navController.navigate(ROUTE_SPACE) },
                         onStart = { viewModel.start(goToChat) },
-                        onRegisterManually = { viewModel.start { navController.navigate(ROUTE_REGISTER) { popUpTo(ROUTE_FIRST_STEPS) { inclusive = true } } } },
+                        onRegisterManually = {
+                            viewModel.start {
+                                // O Chat fica embaixo do formulário: ao sair do registro há uma raiz para onde voltar (accord-6hu).
+                                navController.navigate(Root.Chat.graph) { popUpTo(ROUTE_FIRST_STEPS) { inclusive = true } }
+                                navController.navigate(ROUTE_REGISTER)
+                            }
+                        },
                         onBack = if (navController.previousBackStackEntry != null) ({ navController.popBackStack() }) else null,
                     ),
                 )
@@ -1017,8 +1025,10 @@ private fun SpeedDialAction(label: String, icon: Int, onClick: () -> Unit) {
     }
 }
 
+// A tela inicial do Chat é a base da pilha das raízes. Não usar findStartDestination(): numa sessão iniciada nos Primeiros
+// passos o início do grafo é essa tela, já removida da pilha, e o popUpTo deixaria de ter alvo (accord-6hu).
 private fun NavHostController.openRoot(root: Root) = navigate(root.graph) {
-    popUpTo(graph.findStartDestination().id) { saveState = true }
+    popUpTo(Root.Chat.start) { saveState = true }
     launchSingleTop = true
     restoreState = true
 }

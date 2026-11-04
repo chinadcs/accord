@@ -1,12 +1,16 @@
 package app.accord
 
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -81,6 +85,13 @@ class AccessFlowTest {
             for (i in 0 until roots.fetchSemanticsNodes().size) roots[i].printToLog("TREE")
             throw e
         }
+    }
+
+    /** Dispensa o aviso de recibo (snackbar) que ficou sobre o rodapé, como a pessoa faria. */
+    private fun dismissReceipt(text: String) {
+        waitForText(text)
+        compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsActions.Dismiss)).performSemanticsAction(SemanticsActions.Dismiss)
+        compose.waitUntil(5_000) { compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isEmpty() }
     }
 
     private fun scrollTo(text: String) {
@@ -175,7 +186,10 @@ class AccessFlowTest {
             val previous = (space.limits(month.minusMonths(1)) as app.accord.core.space.QueryResult.Data).value
             assertTrue(previous.none { it.setting.total != null })
         }
+        // O aviso "Limite atualizado" volta com a tela e cobre os botões do rodapé até ser dispensado.
+        dismissReceipt("Limite atualizado")
         tap("Começar a registrar")
+        waitForText("Mensagem do Chat")
         waitForText("Orçamento")
         compose.onNodeWithText("Mais").performClick()
         waitForText("Categorias e subcategorias")
@@ -211,8 +225,41 @@ class AccessFlowTest {
         waitForText("10 categorias, editáveis.")
         waitForText("Sem ele, cada registro pede o pagamento.")
         tap("Começar a registrar")
-        waitForText("Registrar manualmente")
+        // O Chat inicia o uso (sem rótulo na barra): o campo de mensagem e a raiz Orçamento confirmam a chegada.
+        waitForText("Mensagem do Chat")
         waitForText("Orçamento")
+    }
+
+    @Test
+    fun barraInferiorFuncionaDepoisDeRegistrarManualmenteNosPrimeirosPassos() {
+        // accord-6hu: "Registrar manualmente" remove os Primeiros passos (início do grafo); sair do formulário e usar a barra tem de funcionar.
+        runBlocking { container.access.signUp(email, "senha-1234", "senha-1234") }
+        waitForText("Espaço da casa")
+        runBlocking { container.access.createSpace("Casa") }
+        waitForText("Você: conectado")
+        tap("Continuar para primeiros passos")
+        waitForText("Vamos começar")
+        waitForText("10 categorias, editáveis.")
+        tap("Registrar manualmente")
+        waitForText("Salvar")
+        scenario!!.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        compose.waitForIdle()
+
+        waitForText("Mensagem do Chat")
+        compose.onNodeWithText("Lançamentos").performClick()
+        waitForText("Saldo total")
+        compose.onNodeWithText("Orçamento").performClick()
+        waitForText("Quando houver registros, o orçamento aparece aqui.")
+        assertTrue(compose.onAllNodesWithText("Saldo total").fetchSemanticsNodes().isEmpty())
+        compose.onNodeWithContentDescription("Chat").performClick()
+        waitForText("Mensagem do Chat")
+        compose.onNodeWithText("Mais").performClick()
+        waitForText("Categorias e subcategorias")
+        // Em Mais "Orçamento" também é título de grupo: a aba é o último nó.
+        compose.onAllNodesWithText("Orçamento").onLast().performClick()
+        waitForText("Quando houver registros, o orçamento aparece aqui.")
+        compose.onNodeWithContentDescription("Chat").performClick()
+        waitForText("Mensagem do Chat")
     }
 
     @Test
@@ -261,7 +308,7 @@ class AccessFlowTest {
             container.access.createSpace("Casa")
             container.access.dismissFirstSteps()
         }
-        waitForText("Registrar manualmente")
+        waitForText("Mensagem do Chat")
         compose.onNodeWithText("Mais").performClick()
         waitForText("Conectado como $email")
         tap("Sair")
