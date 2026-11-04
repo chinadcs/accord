@@ -261,12 +261,16 @@ internal class EntryQueries(
         )
     }
 
-    /** Acumulado até o fim do mês atual e o mês atual; reaproveita a lista para valer a mesma regra de cada tipo. */
+    /**
+     * Acumulado até o fim do mês atual (no critério escolhido) e o mês atual; reaproveita a lista para valer a mesma regra de cada tipo.
+     * Receita e Despesa do mês seguem sempre o mês do orçamento, como o Comprometido (decisão do usuário, accord-jy5): uma compra
+     * parcelada entra pela parcela da fatura, não inteira, mesmo com a lista na data da compra.
+     */
     suspend fun totalBalance(criterion: DateCriterion): TotalBalance {
         val current = YearMonth.from(today())
         return TotalBalance(
             total = entries(EntryFilter(EARLIEST_MONTH, current, criterion), 0, 1).summary,
-            month = entries(EntryFilter(current, current, criterion), 0, 1).summary,
+            month = entries(EntryFilter(current, current, DateCriterion.BudgetMonth), 0, 1).summary,
         )
     }
 

@@ -289,6 +289,26 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
+    fun `despesa do mês do cabeçalho segue o mês do orçamento mesmo com a data da compra, e o saldo total não muda`() = runBlocking<Unit> {
+        val h = open()
+        h.withDefaultAccount()
+        // accord-jy5: notebook de R$ 2.400 em 6x comprado em outubro cai na fatura de novembro; Pix R$ 320 + R$ 185,50 em outubro
+        h.card("Notebook", 2400, 6, date = d(2026, 10, 20), invoice = ym(2026, 11))
+        h.pix("Mercado", 320, date = d(2026, 10, 3))
+        h.pix("Farmácia", 185, date = d(2026, 10, 9))
+
+        val byPurchase = h.space.totalBalance(DateCriterion.PurchaseDate).value()
+        val byBudget = h.space.totalBalance(DateCriterion.BudgetMonth).value()
+        // Despesa do mês = Comprometido do Orçamento de outubro, qualquer que seja o critério da lista
+        assertEquals(brl(505), byPurchase.month.committedExpenses)
+        assertEquals(byBudget.month, byPurchase.month)
+        assertEquals(h.space.entries(filter()).value().summary.committedExpenses, byPurchase.month.committedExpenses)
+        // o Saldo total continua no critério escolhido: a data da compra desconta os R$ 2.400 inteiros
+        assertEquals(brl(2905), byPurchase.total.committedExpenses)
+        assertEquals(brl(505), byBudget.total.committedExpenses)
+    }
+
+    @Test
     fun `saldo total desconta estorno confirmado e não soma quitação de fatura`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
