@@ -55,6 +55,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.accord.R
@@ -166,7 +167,7 @@ fun EntriesScreen(
             OutlinedTextField(
                 value = searchText,
                 onValueChange = { searchText = it; onSearch(it) },
-                label = { Text(stringResource(R.string.entries_search_label), style = MaterialTheme.typography.bodyMedium) },
+                label = { Text(stringResource(R.string.entries_search_label), style = MaterialTheme.typography.bodyMedium, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 singleLine = true,
                 shape = MaterialTheme.shapes.large,
                 leadingIcon = { DecorativeIcon(Lucide.drawable.lucide_ic_search) },

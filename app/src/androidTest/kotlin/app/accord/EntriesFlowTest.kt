@@ -18,6 +18,8 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -52,6 +54,8 @@ class EntriesFlowTest {
     val compose = createEmptyComposeRule()
 
     private var scenario: ActivityScenario<MainActivity>? = null
+    // Só a lista rola na vertical: o campo de busca, com texto longo, também tem ação de rolagem (horizontal).
+    private val listScroll = hasScrollAction() and SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange)
     private var auditPreviousTheme: ThemePreference? = null
     private var previousCriterion = DateCriterion.PurchaseDate
     private val tag = UUID.randomUUID().toString().take(6)
@@ -106,14 +110,14 @@ class EntriesFlowTest {
     /** A lista e LazyColumn: um item fora da janela nao aparece em onAllNodesWithText. */
     private fun bringEntry(text: String) = compose.waitUntil(15_000) {
         runCatching {
-            compose.onNode(hasScrollAction()).performScrollToNode(hasText(text, substring = true))
+            compose.onNode(listScroll).performScrollToNode(hasText(text, substring = true))
             compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty()
         }.getOrDefault(false)
     }
 
     /** Controles do cabeçalho saem da composição quando a lista lazy alcança os itens. */
     private fun bringListHeader(matcher: androidx.compose.ui.test.SemanticsMatcher) {
-        compose.onNode(hasScrollAction()).performScrollToNode(matcher)
+        compose.onNode(listScroll).performScrollToNode(matcher)
     }
 
     private fun auditCapture(name: String) {
@@ -134,14 +138,14 @@ class EntriesFlowTest {
     }
 
     private fun tap(text: String) {
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText(text, substring = true))
+        compose.onNode(listScroll).performScrollToNode(hasText(text, substring = true))
         compose.onAllNodes(hasText(text, substring = true)).onFirst().performSemanticsAction(SemanticsActions.OnClick)
     }
 
     @Test
     fun listaMostraOsRegistrosDoMesComParcelaIdentificada() {
         openEntries()
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText(gear))
+        compose.onNode(listScroll).performScrollToNode(hasText(gear))
         compose.onNodeWithText(gear).assertIsDisplayed()
         assert(compose.onAllNodesWithText("Parcela 1/6", substring = true).fetchSemanticsNodes().isNotEmpty())
         assert(compose.onAllNodesWithText("Cartão", substring = true).fetchSemanticsNodes().isNotEmpty())
@@ -160,6 +164,7 @@ class EntriesFlowTest {
         bringListHeader(hasText("Buscar descrição ou estabelecimento", substring = true))
         compose.onNodeWithText("Buscar descrição ou estabelecimento").performTextReplacement(gear.lowercase())
         waitGone(grocery)
+        auditCapture("07_busca_resultado")
         bringEntry(gear)
         compose.onNodeWithText(gear).assertIsDisplayed()
         auditCapture("07_busca_teclado")
@@ -212,12 +217,12 @@ class EntriesFlowTest {
         // a categoria acumula lançamentos de outros testes; o item deste pode estar abaixo da dobra
         compose.waitUntil(8_000) { compose.onAllNodes(hasContentDescription("Filtros (1)")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNode(hasContentDescription("Filtros (1)")).assertIsDisplayed()
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText(grocery))
+        compose.onNode(listScroll).performScrollToNode(hasText(grocery))
         waitForText(grocery)
         assert(compose.onAllNodesWithText(gear, substring = true).fetchSemanticsNodes().isEmpty())
 
         // o cabeçalho com o Voltar é o primeiro item da lista e sai da composição ao rolar
-        compose.onNode(hasScrollAction()).performScrollToIndex(0)
+        compose.onNode(listScroll).performScrollToIndex(0)
         compose.onNode(hasContentDescription("Voltar")).performClick()
         waitForText("Conferir lançamentos")
     }
