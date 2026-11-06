@@ -19,11 +19,11 @@
   <color name="midnightdusk_light_secondary">#BB0054</color>
   <color name="midnightdusk_light_on_secondary">#FFFFFF</color>
   <color name="midnightdusk_light_secondary_container">#EFBAD4</color>
-  <color name="midnightdusk_light_on_secondary_container">#D1377C</color>
+  <color name="midnightdusk_light_on_secondary_container">#524346</color>
   <color name="midnightdusk_light_tertiary">#006638</color>
   <color name="midnightdusk_light_on_tertiary">#FFFFFF</color>
   <color name="midnightdusk_light_tertiary_container">#00894b</color>
-  <color name="midnightdusk_light_on_tertiary_container">#2D1600</color>
+  <color name="midnightdusk_light_on_tertiary_container">#000000</color>
   <color name="midnightdusk_light_background">#FFFBFF</color>
   <color name="midnightdusk_light_on_background">#1C1B1F</color>
   <color name="midnightdusk_light_surface">#FFFBFF</color>

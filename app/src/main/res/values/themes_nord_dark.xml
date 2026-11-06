@@ -9,7 +9,7 @@
   <color name="nord_dark_secondary">#81A1C1</color>
   <color name="nord_dark_on_secondary">#2E3440</color>
   <color name="nord_dark_secondary_container">#506275</color>
-  <color name="nord_dark_on_secondary_container">#88C0D0</color>
+  <color name="nord_dark_on_secondary_container">#ECEFF4</color>
   <color name="nord_dark_tertiary">#5E81AC</color>
   <color name="nord_dark_on_tertiary">#000000</color>
   <color name="nord_dark_tertiary_container">#5E81AC</color>

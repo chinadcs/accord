@@ -12,14 +12,14 @@
 -->
 <resources>
   <color name="tako_light_primary">#66577E</color>
-  <color name="tako_light_on_primary">#F3B375</color>
+  <color name="tako_light_on_primary">#F3EFF4</color>
   <color name="tako_light_primary_container">#66577E</color>
-  <color name="tako_light_on_primary_container">#F3B375</color>
+  <color name="tako_light_on_primary_container">#F3EFF4</color>
   <color name="tako_light_inverse_primary">#D6BAFF</color>
   <color name="tako_light_secondary">#66577E</color>
-  <color name="tako_light_on_secondary">#F3B375</color>
+  <color name="tako_light_on_secondary">#F3EFF4</color>
   <color name="tako_light_secondary_container">#C8BED0</color>
-  <color name="tako_light_on_secondary_container">#66577E</color>
+  <color name="tako_light_on_secondary_container">#49454E</color>
   <color name="tako_light_tertiary">#F3B375</color>
   <color name="tako_light_on_tertiary">#574360</color>
   <color name="tako_light_tertiary_container">#FDD6B0</color>

@@ -12,14 +12,14 @@
 -->
 <resources>
   <color name="midnightdusk_dark_primary">#F02475</color>
-  <color name="midnightdusk_dark_on_primary">#FFFFFF</color>
+  <color name="midnightdusk_dark_on_primary">#000000</color>
   <color name="midnightdusk_dark_primary_container">#BD1C5C</color>
   <color name="midnightdusk_dark_on_primary_container">#FFFFFF</color>
   <color name="midnightdusk_dark_inverse_primary">#F02475</color>
   <color name="midnightdusk_dark_secondary">#F02475</color>
-  <color name="midnightdusk_dark_on_secondary">#16151D</color>
+  <color name="midnightdusk_dark_on_secondary">#000000</color>
   <color name="midnightdusk_dark_secondary_container">#66183C</color>
-  <color name="midnightdusk_dark_on_secondary_container">#F02475</color>
+  <color name="midnightdusk_dark_on_secondary_container">#D6C1C4</color>
   <color name="midnightdusk_dark_tertiary">#55971C</color>
   <color name="midnightdusk_dark_on_tertiary">#16151D</color>
   <color name="midnightdusk_dark_tertiary_container">#386412</color>

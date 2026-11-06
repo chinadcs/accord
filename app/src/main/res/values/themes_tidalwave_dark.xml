@@ -22,7 +22,7 @@
   <color name="tidalwave_dark_tertiary">#92f7bc</color>
   <color name="tidalwave_dark_on_tertiary">#001c3b</color>
   <color name="tidalwave_dark_tertiary_container">#c3fada</color>
-  <color name="tidalwave_dark_on_tertiary_container">#78ffd6</color>
+  <color name="tidalwave_dark_on_tertiary_container">#001c3b</color>
   <color name="tidalwave_dark_background">#001c3b</color>
   <color name="tidalwave_dark_on_background">#d5e3ff</color>
   <color name="tidalwave_dark_surface">#001c3b</color>

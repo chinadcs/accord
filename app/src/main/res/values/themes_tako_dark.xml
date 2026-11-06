@@ -19,9 +19,9 @@
   <color name="tako_dark_secondary">#F3B375</color>
   <color name="tako_dark_on_secondary">#38294E</color>
   <color name="tako_dark_secondary_container">#5C4D4B</color>
-  <color name="tako_dark_on_secondary_container">#F3B375</color>
+  <color name="tako_dark_on_secondary_container">#CBC4CE</color>
   <color name="tako_dark_tertiary">#66577E</color>
-  <color name="tako_dark_on_tertiary">#F3B375</color>
+  <color name="tako_dark_on_tertiary">#E3E0F2</color>
   <color name="tako_dark_tertiary_container">#4E4065</color>
   <color name="tako_dark_on_tertiary_container">#EDDCFF</color>
   <color name="tako_dark_background">#21212E</color>

@@ -28,7 +28,7 @@
   <color name="catppuccin_dark_error">#F38BA8</color>
   <color name="catppuccin_dark_on_error">#11111B</color>
   <color name="catppuccin_dark_error_container">#FFFF0558</color>
-  <color name="catppuccin_dark_on_error_container">#EF9FB4</color>
+  <color name="catppuccin_dark_on_error_container">#11111B</color>
   <color name="catppuccin_dark_background">#181825</color>
   <color name="catppuccin_dark_on_background">#CDD6F4</color>
   <color name="catppuccin_dark_surface">#181825</color>

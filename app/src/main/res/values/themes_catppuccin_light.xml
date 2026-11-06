@@ -14,21 +14,21 @@
 -->
 <resources>
   <color name="catppuccin_light_primary">#8839EF</color>
-  <color name="catppuccin_light_on_primary">#DCE0E8</color>
+  <color name="catppuccin_light_on_primary">#FFFFFF</color>
   <color name="catppuccin_light_primary_container">#8839EF</color>
-  <color name="catppuccin_light_on_primary_container">#DCE0E8</color>
+  <color name="catppuccin_light_on_primary_container">#FFFFFF</color>
   <color name="catppuccin_light_secondary">#8839EF</color>
-  <color name="catppuccin_light_on_secondary">#DCE0E8</color>
+  <color name="catppuccin_light_on_secondary">#FFFFFF</color>
   <color name="catppuccin_light_secondary_container">#CDD0DA</color>
-  <color name="catppuccin_light_on_secondary_container">#8839EF</color>
+  <color name="catppuccin_light_on_secondary_container">#4C4F69</color>
   <color name="catppuccin_light_tertiary">#8839EF</color>
-  <color name="catppuccin_light_on_tertiary">#DCE0E8</color>
+  <color name="catppuccin_light_on_tertiary">#FFFFFF</color>
   <color name="catppuccin_light_tertiary_container">#EFF1F5</color>
-  <color name="catppuccin_light_on_tertiary_container">#CDD6F4</color>
+  <color name="catppuccin_light_on_tertiary_container">#4C4F69</color>
   <color name="catppuccin_light_error">#D20F39</color>
-  <color name="catppuccin_light_on_error">#DCE0E8</color>
+  <color name="catppuccin_light_on_error">#FFFFFF</color>
   <color name="catppuccin_light_error_container">#FF68001C</color>
-  <color name="catppuccin_light_on_error_container">#D61C41</color>
+  <color name="catppuccin_light_on_error_container">#CDD6F4</color>
   <color name="catppuccin_light_background">#E6E9EF</color>
   <color name="catppuccin_light_on_background">#4C4F69</color>
   <color name="catppuccin_light_surface">#E6E9EF</color>

@@ -6,27 +6,27 @@
 -->
 <resources>
   <color name="tokyonight_light_primary">#2e7de9</color>
-  <color name="tokyonight_light_on_primary">#ffffff</color>
+  <color name="tokyonight_light_on_primary">#000000</color>
   <color name="tokyonight_light_primary_container">#92a6d5</color>
   <color name="tokyonight_light_on_primary_container">#15386a</color>
   <color name="tokyonight_light_secondary">#007197</color>
   <color name="tokyonight_light_on_secondary">#ffffff</color>
   <color name="tokyonight_light_secondary_container">#a9c6d3</color>
-  <color name="tokyonight_light_on_secondary_container">#006a83</color>
+  <color name="tokyonight_light_on_secondary_container">#15386a</color>
   <color name="tokyonight_light_tertiary">#9854f1</color>
-  <color name="tokyonight_light_on_tertiary">#ffffff</color>
+  <color name="tokyonight_light_on_tertiary">#000000</color>
   <color name="tokyonight_light_tertiary_container">#cfbfea</color>
-  <color name="tokyonight_light_on_tertiary_container">#7847bd</color>
+  <color name="tokyonight_light_on_tertiary_container">#15386a</color>
   <color name="tokyonight_light_error">#f52a65</color>
-  <color name="tokyonight_light_on_error">#ffffff</color>
+  <color name="tokyonight_light_on_error">#000000</color>
   <color name="tokyonight_light_error_container">#e6b4c7</color>
   <color name="tokyonight_light_on_error_container">#6e132d</color>
   <color name="tokyonight_light_background">#e1e2e7</color>
   <color name="tokyonight_light_on_background">#3760bf</color>
   <color name="tokyonight_light_surface">#e1e2e7</color>
-  <color name="tokyonight_light_on_surface">#3760bf</color>
+  <color name="tokyonight_light_on_surface">#222436</color>
   <color name="tokyonight_light_surface_variant">#c4c8da</color>
-  <color name="tokyonight_light_on_surface_variant">#6172b0</color>
+  <color name="tokyonight_light_on_surface_variant">#15386a</color>
   <color name="tokyonight_light_outline">#68709a</color>
   <color name="tokyonight_light_outline_variant">#a8aecb</color>
   <color name="tokyonight_light_scrim">#000000</color>
