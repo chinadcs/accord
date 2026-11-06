@@ -134,6 +134,7 @@ import app.accord.ui.nav.ROUTE_SPACE
 import app.accord.ui.space.SpaceRoute
 import app.accord.ui.space.SpaceViewModel
 import app.accord.ui.theme.AccordSpacing
+import app.accord.ui.theme.isCompactHeight
 import app.accord.ui.budget.BudgetRoute
 import app.accord.ui.budget.BudgetViewModel
 import app.accord.ui.category.CategoryRoute
@@ -301,7 +302,8 @@ private fun MainApp(container: AppContainer, startRoute: String) {
     val selectedRoot = Root.entries.firstOrNull { root -> destination?.hierarchy?.any { it.route == root.graph } == true }
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     // O Chat já oferece registro manual abaixo do campo; ali um FAB cobriria o compositor.
-    val largeFont = LocalDensity.current.fontScale >= 1.5f
+    // Fonte grande ou paisagem (altura < 480 dp): o registro vai para o fluxo da raiz Lançamentos, sem FAB (spec 07).
+    val largeFont = LocalDensity.current.fontScale >= 1.5f || isCompactHeight()
     val showAdd = !imeVisible && onRoot && selectedRoot in setOf(Root.Budget, Root.Entries) &&
         !(selectedRoot == Root.Entries && largeFont)
     var registerSpeedDialOpen by rememberSaveable { mutableStateOf(false) }

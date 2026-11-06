@@ -88,6 +88,7 @@ import app.accord.ui.fullLabel
 import app.accord.ui.sync.SyncIndicator
 import app.accord.ui.theme.Accord
 import app.accord.ui.theme.AccordSpacing
+import app.accord.ui.theme.isCompactHeight
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
@@ -175,6 +176,19 @@ fun ChatScreen(
 @Composable
 private fun ChatHeader(badge: ModelBadge, onOpenModel: () -> Unit, onSearch: () -> Unit, modifier: Modifier = Modifier) {
     val keyboardOpen = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    // Paisagem (spec 04): marca, título, estado do modelo, sincronização e pesquisa numa só linha.
+    if (isCompactHeight() && !keyboardOpen) {
+        Row(modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
+            AccordMark()
+            Text(stringResource(R.string.chat_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+            ModelBadgeButton(badge, onOpenModel, wrap = true)
+            Box(Modifier.weight(1f)) { SyncIndicator() }
+            IconButton(onClick = onSearch, modifier = Modifier.size(AccordSpacing.touchMin)) {
+                Icon(painterResource(Lucide.drawable.lucide_ic_search), contentDescription = stringResource(R.string.search_entries))
+            }
+        }
+        return
+    }
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             if (!keyboardOpen) AccordMark()
@@ -193,7 +207,7 @@ private fun ChatHeader(badge: ModelBadge, onOpenModel: () -> Unit, onSearch: () 
 }
 
 @Composable
-private fun ModelBadgeButton(badge: ModelBadge, onClick: () -> Unit) {
+private fun ModelBadgeButton(badge: ModelBadge, onClick: () -> Unit, wrap: Boolean = false) {
     // ADR 0036: sem modelo no P0, não há aviso nem caminho para a tela do modelo.
     if (badge == ModelBadge.LocalRules) return
     val text = when (badge) {
@@ -218,14 +232,14 @@ private fun ModelBadgeButton(badge: ModelBadge, onClick: () -> Unit) {
     }
     TextButton(
         onClick = { if (badge == ModelBadge.FakePilot) showPilot = true else onClick() },
-        modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).semantics { contentDescription = description },
+        modifier = (if (wrap) Modifier else Modifier.fillMaxWidth()).heightIn(min = AccordSpacing.touchMin).semantics { contentDescription = description },
     ) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Row(if (wrap) Modifier else Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             DecorativeIcon(
                 if (badge == ModelBadge.Installed) Lucide.drawable.lucide_ic_circle_check else Lucide.drawable.lucide_ic_cpu,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Text(text, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = AccordSpacing.s1).weight(1f))
+            Text(text, style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(start = AccordSpacing.s1).then(if (wrap) Modifier else Modifier.weight(1f)))
         }
     }
 }

@@ -6,6 +6,8 @@ import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
@@ -43,6 +45,15 @@ class UiAuditChatLandscapeTest {
     @After fun finish() { scenario?.close() }
 
     @Test fun boasVindasAlcancaveisComCompositorVisivel() {
+        // Primeira dobra (spec 04): cabeçalho de uma linha deixa a pergunta de boas-vindas visível sem rolar.
+        compose.waitForIdle()
+        val welcome = compose.onAllNodesWithText("O que você quer registrar?").fetchSemanticsNodes()
+        assertTrue(
+            "Boas-vindas fora da primeira dobra: nós=${welcome.size} bounds=${welcome.map { it.boundsInRoot }} " +
+                "scroll=${compose.onAllNodes(hasScrollAction()).fetchSemanticsNodes().map { it.boundsInRoot }}",
+            welcome.size == 1 && welcome[0].boundsInRoot.height > 1f,
+        )
+        compose.onNodeWithText("O que você quer registrar?").assertIsDisplayed()
         val content = compose.onAllNodes(hasScrollAction()).onFirst()
         val before = content.fetchSemanticsNode()
         val range = requireNotNull(before.config.getOrNull(SemanticsProperties.VerticalScrollAxisRange))
@@ -58,7 +69,9 @@ class UiAuditChatLandscapeTest {
             "Rolagem do Chat não avançou: antes=$startValue/${range.maxValue()} depois=${after?.value()}/${after?.maxValue()} altura=${before.boundsInRoot.height}",
             after != null && after.value() > startValue,
         )
-        compose.onNodeWithText("O que você quer registrar?").assertIsDisplayed()
+        // Depois de rolar, a pergunta pode ter saído da tela; os exemplos continuam alcançáveis e o compositor fixo.
+        content.performScrollToNode(hasText("salário 6.000"))
+        compose.onNodeWithText("salário 6.000").assertIsDisplayed()
         compose.onNodeWithText("Mensagem do Chat").assertIsDisplayed()
     }
 }

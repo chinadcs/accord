@@ -79,6 +79,7 @@ import app.accord.ui.label
 import app.accord.ui.shortLabel
 import app.accord.ui.theme.Accord
 import app.accord.ui.theme.AccordSpacing
+import app.accord.ui.theme.isCompactHeight
 import com.composables.icons.lucide.R as Lucide
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -98,7 +99,7 @@ fun EntriesRoute(
         state, padding,
         onSearch = viewModel::setSearch, onApplyFilter = viewModel::applyFilter, onClear = viewModel::clearFilters,
         onRetry = viewModel::retry, onLoadMore = viewModel::loadMore, onOpenEntry = onOpenEntry, onNew = onNew, onBack = onBack,
-        showInlineNew = onBack != null || LocalDensity.current.fontScale >= 1.5f,
+        showInlineNew = onBack != null || LocalDensity.current.fontScale >= 1.5f || isCompactHeight(),
     )
 }
 
@@ -148,7 +149,7 @@ fun EntriesScreen(
                     }
                 }
                 ScreenTitle(stringResource(R.string.entries_title), Modifier.weight(1f))
-                if (showInlineNew && !enlarged) Button(onClick = onNew, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                if (showInlineNew && !enlarged) Button(onClick = onNew, modifier = Modifier.heightIn(min = AccordSpacing.touchMin).testTag("entries-title-new")) {
                     DecorativeIcon(Lucide.drawable.lucide_ic_plus, tint = MaterialTheme.colorScheme.onPrimary)
                     Text(stringResource(R.string.entries_new), modifier = Modifier.padding(start = AccordSpacing.s1))
                 }
