@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
@@ -31,6 +32,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.accord.ui.components.DetailHeader
@@ -243,6 +245,7 @@ private fun SyncNowButton(status: SyncStatus, ui: SyncUi, onSyncNow: () -> Unit)
 
 @Composable
 private fun ConflictsCard(ui: SyncUi, onOpenConflict: (String) -> Unit) {
+    val stackConflictAction = LocalDensity.current.fontScale >= 1.5f
     Surface(color = Accord.colors.attentionContainer, contentColor = Accord.colors.onAttentionContainer, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             Text(
@@ -250,19 +253,38 @@ private fun ConflictsCard(ui: SyncUi, onOpenConflict: (String) -> Unit) {
                 style = MaterialTheme.typography.titleSmall, modifier = Modifier.semantics { heading() },
             )
             ui.conflicts.forEach { row ->
-                Row(
-                    Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).clickable(role = Role.Button) { onOpenConflict(row.operationId) },
-                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(listOfNotNull(stringResource(row.kind), row.subject).joinToString(" · "), style = MaterialTheme.typography.bodyLarge)
-                        if (row.deferred) Text(stringResource(R.string.sync_conflict_deferred), style = MaterialTheme.typography.bodySmall)
+                val itemModifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)
+                    .clickable(role = Role.Button) { onOpenConflict(row.operationId) }
+                if (stackConflictAction) {
+                    Column(itemModifier, verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                        ConflictDescription(row)
+                        Text(
+                            stringResource(R.string.sync_conflict_review),
+                            style = MaterialTheme.typography.labelLarge,
+                            textAlign = TextAlign.End,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                     }
-                    Text(stringResource(R.string.sync_conflict_review), style = MaterialTheme.typography.labelLarge)
+                } else {
+                    Row(
+                        itemModifier,
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+                    ) {
+                        ConflictDescription(row, Modifier.weight(1f))
+                        Text(stringResource(R.string.sync_conflict_review), style = MaterialTheme.typography.labelLarge)
+                    }
                 }
             }
             Text(stringResource(R.string.sync_conflicts_note), style = MaterialTheme.typography.bodySmall)
         }
+    }
+}
+
+@Composable
+private fun ConflictDescription(row: ConflictRowUi, modifier: Modifier = Modifier) {
+    Column(modifier) {
+        Text(listOfNotNull(stringResource(row.kind), row.subject).joinToString(" · "), style = MaterialTheme.typography.bodyLarge)
+        if (row.deferred) Text(stringResource(R.string.sync_conflict_deferred), style = MaterialTheme.typography.bodySmall)
     }
 }
 

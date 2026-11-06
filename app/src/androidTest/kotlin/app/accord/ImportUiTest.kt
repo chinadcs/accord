@@ -95,8 +95,8 @@ class ImportUiTest {
 
     @Test fun revisaoMostraContagensExatasEAcaoPrincipal() {
         setReview(ImportReviewUiState(content = ReviewContent.Ready(review(items = threeItems))))
-        compose.onNodeWithText("3 movimentos: 1 novos · 1 vínculos · 1 dúvidas").assertIsDisplayed()
-        compose.onNodeWithText("2 itens conferidos · 1 pendências preservadas").assertIsDisplayed()
+        compose.onNodeWithText("3 movimentos: 1 novo · 1 vínculo · 1 dúvida").assertIsDisplayed()
+        compose.onNodeWithText("2 itens conferidos · 1 pendência preservada").assertIsDisplayed()
         compose.onNodeWithText("Confirmar itens conferidos").assertIsEnabled()
     }
 
@@ -307,7 +307,7 @@ class ImportUiTest {
             ),
         )
         compose.onNodeWithText("Importação concluída parcialmente").assertIsDisplayed()
-        compose.onNodeWithText("1 novos · 1 vinculados · 1 pendentes").assertIsDisplayed()
+        compose.onNodeWithText("1 novo · 1 vínculo · 1 pendente").assertIsDisplayed()
         compose.onNodeWithText("Conferência do arquivo: parcial").assertIsDisplayed()
         compose.onNodeWithText("Salvo neste aparelho. Será enviado ao outro aparelho quando houver conexão.").assertIsDisplayed()
         compose.onNodeWithText("Ver lançamentos").assertIsDisplayed()

@@ -146,21 +146,23 @@ fun ChatScreen(
     val hasViewport by remember { derivedStateOf { listState.layoutInfo.viewportSize.height > 0 } }
     // A conversa acompanha o fim quando chega algo novo, sem mover o foco do campo de mensagem.
     LaunchedEffect(state.items.lastOrNull()?.key, hasViewport) {
-        if (state.items.isNotEmpty() && hasViewport) listState.animateScrollToItem(state.items.lastIndex)
+        if (state.items.isNotEmpty() && hasViewport) listState.animateScrollToItem(state.items.size)
     }
     Column(
         Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding(),
     ) {
-        ChatHeader(state.badge, actions.onOpenModel, actions.onOpenEntries, Modifier.padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2))
-        if (state.loaded && state.items.isEmpty()) {
-            EmptyChat(onExample, Modifier.weight(1f), state.badge == ModelBadge.FakePilot)
-        } else {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2),
-                verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
-            ) {
+        LazyColumn(
+            state = listState,
+            modifier = Modifier.weight(1f).fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2),
+            verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
+        ) {
+            item(key = "chat-header") {
+                ChatHeader(state.badge, actions.onOpenModel, actions.onOpenEntries, Modifier.padding(vertical = AccordSpacing.s2))
+            }
+            if (state.loaded && state.items.isEmpty()) {
+                item(key = "chat-welcome") { EmptyChat(onExample, pilot = state.badge == ModelBadge.FakePilot) }
+            } else {
                 items(state.items, key = { it.key }) { item ->
                     ChatItemView(item, today, state, actions, onCancel, onRetry, onAnswer, onAnswerAmount, onUndo, onDiscard, onManual)
                 }
@@ -231,7 +233,7 @@ private fun ModelBadgeButton(badge: ModelBadge, onClick: () -> Unit) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun EmptyChat(onExample: (String) -> Unit, modifier: Modifier = Modifier, pilot: Boolean = false) {
-    Column(modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s5)) {
+    Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s5)) {
         Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             Text(stringResource(R.string.chat_welcome_title), style = MaterialTheme.typography.titleLarge)
             Text(stringResource(if (pilot) R.string.chat_fake_pilot_welcome else R.string.chat_welcome_body), style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)

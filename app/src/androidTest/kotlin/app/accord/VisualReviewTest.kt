@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
@@ -101,10 +103,10 @@ class VisualReviewTest {
     ) {
         compose.setContent {
             val density = LocalDensity.current
-            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
-                AccordTheme(theme) {
+            CompositionLocalProvider(LocalDensity provides if (UiAuditSyntheticEvidence.enabled) density else Density(density.density, fontScale)) {
+                AccordTheme(UiAuditSyntheticEvidence.theme ?: theme) {
                     // Como no aplicativo, o Scaffold pinta o fundo; aqui a Surface faz esse papel.
-                    Surface(color = MaterialTheme.colorScheme.background) { content() }
+                    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { content() }
                 }
             }
         }
@@ -113,7 +115,8 @@ class VisualReviewTest {
             compose.onNode(hasScrollAction()).performScrollToNode(hasText(scrollTo, substring = true))
             compose.waitForIdle()
         }
-        save(name, compose.onRoot().captureToImage().asAndroidBitmap())
+        if (UiAuditSyntheticEvidence.enabled) UiAuditSyntheticEvidence.capture(compose, name, UiAuditSyntheticEvidence.theme ?: theme)
+        else save(name, compose.onRoot().captureToImage().asAndroidBitmap())
     }
 
     private fun budgetScreen(state: BudgetUiState) = @Composable {

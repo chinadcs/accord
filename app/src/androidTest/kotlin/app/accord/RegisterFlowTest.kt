@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.printToLog
 import androidx.compose.ui.test.performClick
@@ -27,6 +28,7 @@ import app.accord.core.space.CommandId
 import app.accord.core.space.CommandResult
 import app.accord.core.space.Envelope
 import app.accord.core.space.SetMyDefaultAccount
+import app.accord.ui.theme.ThemePreference
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Before
@@ -42,6 +44,7 @@ class RegisterFlowTest {
     val compose = createEmptyComposeRule()
 
     private var scenario: ActivityScenario<MainActivity>? = null
+    private var auditPreviousTheme: ThemePreference? = null
     private val tag = UUID.randomUUID().toString().take(6)
 
     @Before
@@ -52,6 +55,11 @@ class RegisterFlowTest {
         if (account != null) space.execute(Envelope(CommandId("register-default")), SetMyDefaultAccount(account))
         // O rascunho de um teste não pode vazar para o seguinte.
         (space.drafts() as? app.accord.core.space.QueryResult.Data)?.value?.forEach { space.discardDraft(it.id) }
+        if (UiAuditSyntheticEvidence.enabled) {
+            val themeStore = ApplicationProvider.getApplicationContext<AccordApplication>().container.theme
+            auditPreviousTheme = themeStore.preference.value
+            themeStore.set(UiAuditSyntheticEvidence.theme ?: ThemePreference.Light)
+        }
         scenario = ActivityScenario.launch(MainActivity::class.java)
         Unit
     }
@@ -59,6 +67,7 @@ class RegisterFlowTest {
     @After
     fun close() {
         scenario?.close()
+        auditPreviousTheme?.let { ApplicationProvider.getApplicationContext<AccordApplication>().container.theme.set(it) }
     }
 
     private fun waitForText(text: String) {
@@ -69,6 +78,12 @@ class RegisterFlowTest {
             compose.onRoot().printToLog("TREE")
             throw e
         }
+    }
+
+    private fun auditCapture(name: String) {
+        if (UiAuditSyntheticEvidence.enabled) UiAuditSyntheticEvidence.capture(
+            compose, name, UiAuditSyntheticEvidence.theme ?: ThemePreference.Light, "window",
+        )
     }
 
     private fun waitGone(text: String) {
@@ -92,7 +107,14 @@ class RegisterFlowTest {
     }
 
     private fun openForm() {
-        compose.onNodeWithText("Registrar manualmente").performClick()
+        compose.onAllNodes(hasText("Lançamentos") and hasClickAction()).onFirst().performClick()
+        waitForText("Buscar descrição ou estabelecimento")
+        val manual = compose.onAllNodes(hasText("Registrar manualmente") and hasClickAction())
+        if (manual.fetchSemanticsNodes().isNotEmpty()) {
+            manual.onFirst().performClick()
+            compose.onNodeWithTag("register-choice-expense").performClick()
+        }
+        else compose.onAllNodes(hasText("Novo") and hasClickAction()).onFirst().performClick()
         waitForText("Novo lançamento")
     }
 
@@ -182,6 +204,7 @@ class RegisterFlowTest {
         compose.onNodeWithText("Informe o valor.", substring = true).assertExists()
         scrollTo("Escolha a categoria.")
         compose.onNodeWithText("Escolha a categoria.", substring = true).assertExists()
+        auditCapture("09_registro_erros_campos")
         compose.onNodeWithText("Salvar lançamento").assertExists()
     }
 

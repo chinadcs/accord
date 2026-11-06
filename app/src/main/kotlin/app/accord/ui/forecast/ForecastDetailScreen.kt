@@ -22,6 +22,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
@@ -122,12 +123,26 @@ private fun Body(data: ForecastDetailData, showHow: Boolean, onToggleHow: () -> 
     val detail = data.detail
     data.event?.let { EventBanner(it, detail.forecast.totalCents) }
     Summary(detail)
-    Row(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), modifier = Modifier.fillMaxWidth()) {
-        Button(onClick = actions.onCheckEntries, modifier = Modifier.weight(1f).heightIn(min = AccordSpacing.touchMin)) {
+    val stackActions = LocalDensity.current.fontScale >= 1.5f
+    val checkButton: @Composable (Modifier) -> Unit = { modifier ->
+        Button(onClick = actions.onCheckEntries, modifier = modifier.heightIn(min = AccordSpacing.touchMin)) {
             Text(stringResource(R.string.forecast_detail_check_entries))
         }
-        OutlinedButton(onClick = onToggleHow, modifier = Modifier.weight(1f).heightIn(min = AccordSpacing.touchMin)) {
+    }
+    val howButton: @Composable (Modifier) -> Unit = { modifier ->
+        OutlinedButton(onClick = onToggleHow, modifier = modifier.heightIn(min = AccordSpacing.touchMin)) {
             Text(stringResource(if (showHow) R.string.forecast_detail_how_hide else R.string.forecast_detail_how), textAlign = TextAlign.Center)
+        }
+    }
+    if (stackActions) {
+        Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2), modifier = Modifier.fillMaxWidth()) {
+            checkButton(Modifier.fillMaxWidth())
+            howButton(Modifier.fillMaxWidth())
+        }
+    } else {
+        Row(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), modifier = Modifier.fillMaxWidth()) {
+            checkButton(Modifier.weight(1f))
+            howButton(Modifier.weight(1f))
         }
     }
     if (showHow) HowEstimated(detail)

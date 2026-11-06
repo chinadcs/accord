@@ -45,6 +45,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -96,7 +98,7 @@ fun EntriesRoute(
         state, padding,
         onSearch = viewModel::setSearch, onApplyFilter = viewModel::applyFilter, onClear = viewModel::clearFilters,
         onRetry = viewModel::retry, onLoadMore = viewModel::loadMore, onOpenEntry = onOpenEntry, onNew = onNew, onBack = onBack,
-        showInlineNew = onBack != null,
+        showInlineNew = onBack != null || LocalDensity.current.fontScale >= 1.5f,
     )
 }
 
@@ -116,6 +118,7 @@ fun EntriesScreen(
     listState: LazyListState = rememberLazyListState(),
     showInlineNew: Boolean = true,
 ) {
+    val enlarged = LocalDensity.current.fontScale >= 1.5f
     var showFilters by rememberSaveable { mutableStateOf(false) }
     var showMonthPicker by rememberSaveable { mutableStateOf(false) }
     var searchText by rememberSaveable(state.filter.search) { mutableStateOf(state.filter.search) }
@@ -129,11 +132,11 @@ fun EntriesScreen(
 
     LazyColumn(
         state = listState,
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().padding(padding),
         contentPadding = PaddingValues(
             start = AccordSpacing.s4, end = AccordSpacing.s4,
-            top = padding.calculateTopPadding() + AccordSpacing.s4,
-            bottom = padding.calculateBottomPadding() + AccordSpacing.s4 + if (!showInlineNew) 80.dp else 0.dp,
+            top = AccordSpacing.s4,
+            bottom = AccordSpacing.s4 + if (!showInlineNew) 80.dp else 0.dp,
         ),
         verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
     ) {
@@ -145,10 +148,16 @@ fun EntriesScreen(
                     }
                 }
                 ScreenTitle(stringResource(R.string.entries_title), Modifier.weight(1f))
-                if (showInlineNew) Button(onClick = onNew, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                if (showInlineNew && !enlarged) Button(onClick = onNew, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
                     DecorativeIcon(Lucide.drawable.lucide_ic_plus, tint = MaterialTheme.colorScheme.onPrimary)
                     Text(stringResource(R.string.entries_new), modifier = Modifier.padding(start = AccordSpacing.s1))
                 }
+            }
+        }
+        if (showInlineNew && enlarged) item {
+            Button(onClick = onNew, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).testTag("entries-inline-new")) {
+                DecorativeIcon(Lucide.drawable.lucide_ic_plus, tint = MaterialTheme.colorScheme.onPrimary)
+                Text(stringResource(R.string.action_register_manually), modifier = Modifier.padding(start = AccordSpacing.s1))
             }
         }
         item { BalanceHeader(state.filter, state.balance, onOpenFilters = { showFilters = true }) }
@@ -535,7 +544,10 @@ fun FilterPanel(
             }
 
             Text(stringResource(R.string.filter_method), style = MaterialTheme.typography.titleMedium)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+                verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+            ) {
                 ALL_METHODS.forEach { method ->
                     val on = method in draft.methods
                     FilterChip(
@@ -548,7 +560,10 @@ fun FilterPanel(
             }
 
             Text(stringResource(R.string.filter_situation), style = MaterialTheme.typography.titleMedium)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+                verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+            ) {
                 ALL_SITUATIONS.forEach { situation ->
                     val on = situation in draft.situations
                     FilterChip(

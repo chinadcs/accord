@@ -85,7 +85,10 @@ fun CommitmentsScreen(
         }
         item { MonthSelector(state.month, onPrevious, onNext) }
         item {
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+                verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+            ) {
                 CommitmentKind.entries.forEach { kind ->
                     FilterChip(
                         selected = state.kind == kind, onClick = { onKind(kind) },

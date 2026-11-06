@@ -116,14 +116,14 @@ class ImportFlowTest {
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("Revisar importação")).fetchSemanticsNodes().isNotEmpty() }
         // A transição entre telas ainda pode estar terminando: espera o movimento ficar visível.
         compose.waitUntil(5_000) { runCatching { compose.onNodeWithText(description).assertIsDisplayed() }.isSuccess }
-        compose.onNodeWithText("1 movimento: 1 novos · 0 vínculos · 0 dúvidas").assertIsDisplayed()
+        compose.onNodeWithText("1 movimento: 1 novo · 0 vínculos · 0 dúvidas").assertIsDisplayed()
 
         compose.onNodeWithText("Confirmar itens conferidos").performClick()
         compose.onNodeWithText("1 lançamento novo").assertIsDisplayed()
         compose.onNodeWithText("Confirmar").performClick()
 
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("Importação concluída")).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithText("1 novos · 0 vinculados · 0 pendentes").assertIsDisplayed()
+        compose.onNodeWithText("1 novo · 0 vínculos · 0 pendentes").assertIsDisplayed()
         compose.onNodeWithText("Salvo neste aparelho. Será enviado ao outro aparelho quando houver conexão.").assertIsDisplayed()
 
         // O lançamento existe, vindo de uma importação, e o resultado gravado não reaplica nada ao reabrir.

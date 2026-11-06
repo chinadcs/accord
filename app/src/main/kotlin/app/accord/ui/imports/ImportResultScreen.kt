@@ -136,7 +136,14 @@ private fun Counts(result: BatchResult) {
     val linked = result.count(Resolution.Linked) + result.count(Resolution.RefundCreated) + result.count(Resolution.InstallmentLinked) + result.count(Resolution.InvoicePaid) + result.count(Resolution.BoletoPaid)
     val pending = result.count(Resolution.Pending)
     Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
-        Text(stringResource(R.string.import_result_counts, created, linked, pending), style = MaterialTheme.typography.bodyLarge)
+        Text(
+            listOf(
+                pluralStringResource(R.plurals.import_count_new, created, created),
+                pluralStringResource(R.plurals.import_count_links, linked, linked),
+                pluralStringResource(R.plurals.import_count_pending, pending, pending),
+            ).joinToString(" · "),
+            style = MaterialTheme.typography.bodyLarge,
+        )
         val known = result.count(Resolution.AlreadyKnown)
         if (known > 0) {
             Text(pluralStringResource(R.plurals.import_summary_known, known, known), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

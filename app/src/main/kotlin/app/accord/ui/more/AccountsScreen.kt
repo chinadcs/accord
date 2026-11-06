@@ -24,6 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
@@ -113,12 +114,28 @@ private fun AccountRow(account: AccountInfo, isDefault: Boolean, onEdit: () -> U
                     Text(stringResource(R.string.accounts_my_default), style = MaterialTheme.typography.bodyMedium)
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                OutlinedButton(onClick = onEdit, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.accounts_edit)) }
+            val enlarged = LocalDensity.current.fontScale >= 1.5f
+            val editButton: @Composable (Modifier) -> Unit = { modifier ->
+                OutlinedButton(onClick = onEdit, modifier = modifier.heightIn(min = AccordSpacing.touchMin)) {
+                    Text(stringResource(R.string.accounts_edit))
+                }
+            }
+            val setDefaultButton: @Composable (Modifier) -> Unit = { modifier ->
                 if (!isDefault) {
-                    OutlinedButton(onClick = onSetDefault, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                    OutlinedButton(onClick = onSetDefault, modifier = modifier.heightIn(min = AccordSpacing.touchMin)) {
                         Text(stringResource(R.string.accounts_set_default))
                     }
+                }
+            }
+            if (enlarged) {
+                Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                    editButton(Modifier.fillMaxWidth())
+                    setDefaultButton(Modifier.fillMaxWidth())
+                }
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                    editButton(Modifier)
+                    setDefaultButton(Modifier)
                 }
             }
         }
@@ -159,10 +176,25 @@ private fun AccountEditor(form: AccountForm, onChange: (BankRef?, String?) -> Un
             )
             Text(stringResource(R.string.nickname_optional_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             form.message?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
-            Row(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f).heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.edit_cancel)) }
-                Button(onClick = onSave, enabled = !form.working, modifier = Modifier.weight(1f).heightIn(min = AccordSpacing.touchMin)) {
+            val cancelButton: @Composable (Modifier) -> Unit = { modifier ->
+                OutlinedButton(onClick = onCancel, modifier = modifier.heightIn(min = AccordSpacing.touchMin)) {
+                    Text(stringResource(R.string.edit_cancel))
+                }
+            }
+            val saveButton: @Composable (Modifier) -> Unit = { modifier ->
+                Button(onClick = onSave, enabled = !form.working, modifier = modifier.heightIn(min = AccordSpacing.touchMin)) {
                     Text(stringResource(if (form.working) R.string.edit_saving else R.string.accounts_save))
+                }
+            }
+            if (LocalDensity.current.fontScale >= 1.5f) {
+                Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                    saveButton(Modifier.fillMaxWidth())
+                    cancelButton(Modifier.fillMaxWidth())
+                }
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                    cancelButton(Modifier.weight(1f))
+                    saveButton(Modifier.weight(1f))
                 }
             }
         }

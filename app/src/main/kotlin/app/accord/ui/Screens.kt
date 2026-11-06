@@ -12,15 +12,12 @@ import androidx.compose.foundation.verticalScroll
 import app.accord.ui.components.AccordButton as Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import app.accord.R
-import app.accord.ui.components.DecorativeIcon
-import com.composables.icons.lucide.R as Lucide
 import app.accord.ui.theme.AccordSpacing
 
 /** Esqueleto de uma tela raiz: margem de 16 dp, título como cabeçalho para o TalkBack e rolagem. */
@@ -39,23 +36,16 @@ fun RootScaffold(title: String, padding: PaddingValues, content: @Composable () 
     }
 }
 
-/** Conteúdo provisório das raízes que S1 não implementa, sempre com acesso ao registro manual. */
+/** Revisão e importação disponíveis com acesso ao registro manual. */
 @Composable
-fun ProvisionalRoot(
+fun ReviewRoot(
     title: String,
-    message: String,
     padding: PaddingValues,
     onRegister: () -> Unit,
     extra: @Composable () -> Unit = {},
 ) {
     RootScaffold(title, padding) {
         extra()
-        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.large) {
-            Column(Modifier.fillMaxWidth().padding(AccordSpacing.s5), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
-                DecorativeIcon(Lucide.drawable.lucide_ic_info)
-                if (message.isNotEmpty()) Text(message, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
         Button(onClick = onRegister, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
             Text(stringResource(R.string.action_register_manually))
         }

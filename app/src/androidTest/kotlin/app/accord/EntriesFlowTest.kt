@@ -9,9 +9,11 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToIndex
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
@@ -32,6 +34,7 @@ import app.accord.core.space.DirectPaymentKind
 import app.accord.core.space.Envelope
 import app.accord.core.space.RegisterCardPurchase
 import app.accord.core.space.RegisterDirectPayment
+import app.accord.ui.theme.ThemePreference
 import app.accord.core.space.SetMyDefaultAccount
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -49,6 +52,7 @@ class EntriesFlowTest {
     val compose = createEmptyComposeRule()
 
     private var scenario: ActivityScenario<MainActivity>? = null
+    private var auditPreviousTheme: ThemePreference? = null
     private var previousCriterion = DateCriterion.PurchaseDate
     private val tag = UUID.randomUUID().toString().take(6)
     private val grocery get() = "Mercado $tag"
@@ -64,22 +68,27 @@ class EntriesFlowTest {
         val account = (space.execute(Envelope(CommandId("entries-account")), AddAccount(BankRef.Other("Banco"), "Conta")) as? CommandResult.Applied)
             ?.receipt?.changes?.single()?.id
         if (account != null) space.execute(Envelope(CommandId("entries-default")), SetMyDefaultAccount(account))
-        val month = YearMonth.now()
-        space.execute(
+        val month = container.clock.currentMonth()
+        check(space.execute(
             Envelope(CommandId("pix-$tag")),
             RegisterDirectPayment(
                 DirectPaymentKind.Pix, grocery,
                 Classification.Category(DeterministicIds.seedCategory(AppContainer.DEV_SPACE_ID, "alimentacao.mercado")),
                 month.atDay(2), Money(5_000),
             ),
-        )
-        space.execute(
+        ) is CommandResult.Applied) { "Pix de auditoria não foi criado" }
+        check(space.execute(
             Envelope(CommandId("card-$tag")),
             RegisterCardPurchase(
                 gear, Classification.Category(DeterministicIds.seedCategory(AppContainer.DEV_SPACE_ID, "eletronicos.equipamentos")),
                 month.minusMonths(1).atDay(25), Money(120_000), AmountMeaning.Total, 6, invoice = month,
             ),
-        )
+        ) is CommandResult.Applied) { "Compra de auditoria não foi criada" }
+        if (UiAuditSyntheticEvidence.enabled) {
+            val themeStore = ApplicationProvider.getApplicationContext<AccordApplication>().container.theme
+            auditPreviousTheme = themeStore.preference.value
+            themeStore.set(UiAuditSyntheticEvidence.theme ?: ThemePreference.Light)
+        }
         scenario = ActivityScenario.launch(MainActivity::class.java)
         Unit
     }
@@ -87,11 +96,31 @@ class EntriesFlowTest {
     @After
     fun close() {
         scenario?.close()
+        auditPreviousTheme?.let { ApplicationProvider.getApplicationContext<AccordApplication>().container.theme.set(it) }
         ApplicationProvider.getApplicationContext<AccordApplication>().container.theme.setEntriesDateCriterion(previousCriterion)
     }
 
     private fun waitForText(text: String) =
         compose.waitUntil(8_000) { compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty() }
+
+    /** A lista e LazyColumn: um item fora da janela nao aparece em onAllNodesWithText. */
+    private fun bringEntry(text: String) = compose.waitUntil(15_000) {
+        runCatching {
+            compose.onNode(hasScrollAction()).performScrollToNode(hasText(text, substring = true))
+            compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty()
+        }.getOrDefault(false)
+    }
+
+    /** Controles do cabeçalho saem da composição quando a lista lazy alcança os itens. */
+    private fun bringListHeader(matcher: androidx.compose.ui.test.SemanticsMatcher) {
+        compose.onNode(hasScrollAction()).performScrollToNode(matcher)
+    }
+
+    private fun auditCapture(name: String) {
+        if (UiAuditSyntheticEvidence.enabled) UiAuditSyntheticEvidence.capture(
+            compose, name, UiAuditSyntheticEvidence.theme ?: ThemePreference.Light, "window",
+        )
+    }
 
     private fun waitGone(text: String) =
         compose.waitUntil(8_000) { compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isEmpty() }
@@ -100,7 +129,8 @@ class EntriesFlowTest {
     private fun openEntries() {
         compose.onNodeWithText("Lançamentos").performClick()
         compose.onNodeWithText("Buscar descrição ou estabelecimento").performTextInput(tag)
-        waitForText(grocery)
+        auditCapture("07_busca_inicial")
+        bringEntry(grocery)
     }
 
     private fun tap(text: String) {
@@ -120,16 +150,28 @@ class EntriesFlowTest {
     @Test
     fun buscaFiltraEAoVoltarDoDetalheABuscaEAListaSePreservam() {
         openEntries()
+        if (UiAuditSyntheticEvidence.enabled) {
+            bringListHeader(hasContentDescription("Filtros"))
+            compose.onNodeWithContentDescription("Filtros").performClick()
+            waitForText("Período")
+            auditCapture("07_filtros_modal")
+            compose.onNodeWithText("Cancelar").performClick()
+        }
+        bringListHeader(hasText("Buscar descrição ou estabelecimento", substring = true))
         compose.onNodeWithText("Buscar descrição ou estabelecimento").performTextReplacement(gear.lowercase())
         waitGone(grocery)
+        bringEntry(gear)
         compose.onNodeWithText(gear).assertIsDisplayed()
+        auditCapture("07_busca_teclado")
 
         tap(gear)
         waitForText("Parcela neste mês: 1/6")
-        compose.onNode(hasContentDescription("Voltar")).performClick()
+        auditCapture("08_detalhe_parcela")
+        compose.onNode(hasContentDescription("Voltar")).performScrollTo().performClick()
 
-        waitForText(gear)
+        bringListHeader(hasText("Buscar descrição ou estabelecimento", substring = true))
         compose.onNodeWithText(gear.lowercase()).assertIsDisplayed() // o texto da busca continua no campo
+        bringEntry(gear)
         assert(compose.onAllNodesWithText(grocery, substring = true).fetchSemanticsNodes().isEmpty())
     }
 

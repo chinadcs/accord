@@ -64,9 +64,25 @@
     <string name="import_review_missing">Esta revisão não foi encontrada. Ela pode ter sido descartada.</string>
     <string name="import_review_empty">Este arquivo não trouxe movimentos. Volte e escolha outro arquivo.</string>
     <string name="import_review_filter_empty">Nenhum movimento neste filtro.</string>
-    <plurals name="import_review_counts">
-        <item quantity="one">%1$d movimento: %2$d novos · %3$d vínculos · %4$d dúvidas</item>
-        <item quantity="other">%1$d movimentos: %2$d novos · %3$d vínculos · %4$d dúvidas</item>
+    <plurals name="import_count_movements">
+        <item quantity="one">%1$d movimento</item>
+        <item quantity="other">%1$d movimentos</item>
+    </plurals>
+    <plurals name="import_count_new">
+        <item quantity="one">%1$d novo</item>
+        <item quantity="other">%1$d novos</item>
+    </plurals>
+    <plurals name="import_count_links">
+        <item quantity="one">%1$d vínculo</item>
+        <item quantity="other">%1$d vínculos</item>
+    </plurals>
+    <plurals name="import_count_doubts">
+        <item quantity="one">%1$d dúvida</item>
+        <item quantity="other">%1$d dúvidas</item>
+    </plurals>
+    <plurals name="import_count_pending">
+        <item quantity="one">%1$d pendente</item>
+        <item quantity="other">%1$d pendentes</item>
     </plurals>
     <plurals name="import_review_known_count">
         <item quantity="one">%1$d já conhecido de importações anteriores, sem alteração</item>
@@ -94,7 +110,15 @@
     <string name="import_category_prefix_suggested">Sugestão de categoria:</string>
     <string name="import_category_prefix_history">Sugestão pelo seu histórico:</string>
     <string name="import_category_prefix_bank">Sugestão pelo rótulo do banco (só vale se você aceitar):</string>
-    <string name="import_confirm_line">%1$d itens conferidos · %2$d pendências preservadas</string>
+    <plurals name="import_confirm_checked">
+        <item quantity="one">%d item conferido</item>
+        <item quantity="other">%d itens conferidos</item>
+    </plurals>
+    <plurals name="import_confirm_preserved">
+        <item quantity="one">%d pendência preservada</item>
+        <item quantity="other">%d pendências preservadas</item>
+    </plurals>
+    <string name="import_confirm_line">%1$s · %2$s</string>
     <string name="import_confirm">Confirmar itens conferidos</string>
     <string name="import_choose_category">Escolher categoria</string>
     <string name="import_accept_suggestion">Aceitar sugestão: %1$s</string>
@@ -215,7 +239,6 @@
     <string name="import_result_done">Importação concluída</string>
     <string name="import_result_partial">Importação concluída parcialmente</string>
     <string name="import_result_covers">O arquivo cobre %1$s</string>
-    <string name="import_result_counts">%1$d novos · %2$d vinculados · %3$d pendentes</string>
     <string name="import_result_nothing">Nenhum movimento foi aplicado.</string>
     <string name="import_coverage_complete">Conferência do arquivo: concluída</string>
     <string name="import_coverage_partial">Conferência do arquivo: parcial</string>

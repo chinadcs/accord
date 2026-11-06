@@ -4,6 +4,8 @@ import android.graphics.Bitmap
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -67,23 +69,28 @@ class VisualReviewChatTest {
     private var started = false
 
     private fun capture(name: String, theme: ThemePreference, fontScale: Float = 1f, content: @Composable () -> Unit) {
-        spec = Spec(theme, fontScale, content)
+        spec = Spec(UiAuditSyntheticEvidence.theme ?: theme, fontScale, content)
         if (!started) {
             started = true
             compose.setContent {
                 spec?.let { s ->
                     val density = LocalDensity.current
-                    CompositionLocalProvider(LocalDensity provides Density(density.density, s.fontScale)) {
-                        AccordTheme(s.theme) { Surface(color = MaterialTheme.colorScheme.background) { s.content() } }
+                    CompositionLocalProvider(LocalDensity provides if (UiAuditSyntheticEvidence.enabled) density else Density(density.density, s.fontScale)) {
+                        AccordTheme(s.theme) { Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { s.content() } }
                     }
                 }
             }
         }
         compose.waitForIdle()
-        save(name, compose.onRoot().captureToImage().asAndroidBitmap())
+        if (UiAuditSyntheticEvidence.enabled) UiAuditSyntheticEvidence.capture(compose, name, spec!!.theme)
+        else save(name, compose.onRoot().captureToImage().asAndroidBitmap())
     }
 
     private fun both(name: String, fontScale: Float = 1f, content: @Composable () -> Unit) {
+        if (UiAuditSyntheticEvidence.enabled) {
+            capture("${name}_auditoria", UiAuditSyntheticEvidence.theme ?: ThemePreference.Light, fontScale, content)
+            return
+        }
         capture("${name}_claro", ThemePreference.Light, fontScale, content)
         capture("${name}_escuro", ThemePreference.Dark, fontScale, content)
     }

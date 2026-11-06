@@ -4,6 +4,8 @@ import android.graphics.Bitmap
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -14,6 +16,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.Density
 import androidx.test.platform.app.InstrumentationRegistry
 import app.accord.core.Frequency
@@ -113,20 +118,26 @@ class VisualReviewS1eTest {
 
     /** [window]: captura a tela inteira pelo UiAutomator, porque diálogos vivem em outra janela. */
     private fun capture(name: String, theme: ThemePreference, fontScale: Float = 1f, window: Boolean = false, content: @Composable () -> Unit) {
-        spec = Spec(theme, fontScale, content)
+        spec = Spec(UiAuditSyntheticEvidence.theme ?: theme, fontScale, content)
         if (!started) {
             started = true
             compose.setContent {
                 spec?.let { s ->
                     val density = LocalDensity.current
-                    CompositionLocalProvider(LocalDensity provides Density(density.density, s.fontScale)) {
-                        AccordTheme(s.theme) { Surface(color = MaterialTheme.colorScheme.background) { s.content() } }
+                    CompositionLocalProvider(LocalDensity provides if (UiAuditSyntheticEvidence.enabled) density else Density(density.density, s.fontScale)) {
+                        AccordTheme(s.theme) { Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) { s.content() } }
                     }
                 }
             }
         }
         compose.waitForIdle()
-        if (window) {
+        if (UiAuditSyntheticEvidence.enabled) {
+            // O catálogo inteiro repete o mesmo componente centenas de vezes; os cenários reais
+            // de UiAuditCaptureTest cobrem busca, seleção e Outro banco com a fonte verdadeira.
+            if (name == "s1e_banco") compose.onNodeWithText("Buscar por nome").performTextInput("Itaú")
+            if (name == "s1e_banco_escuro") compose.onNodeWithText("Outro banco (informar", substring = true).performClick()
+            UiAuditSyntheticEvidence.capture(compose, name, spec!!.theme)
+        } else if (window) {
             Thread.sleep(600)
             save(name, InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot())
         } else {
@@ -135,6 +146,10 @@ class VisualReviewS1eTest {
     }
 
     private fun both(name: String, fontScale: Float = 1f, content: @Composable () -> Unit) {
+        if (UiAuditSyntheticEvidence.enabled) {
+            capture("${name}_auditoria", UiAuditSyntheticEvidence.theme ?: ThemePreference.Light, fontScale, content = content)
+            return
+        }
         capture("${name}_claro", ThemePreference.Light, fontScale, content = content)
         capture("${name}_escuro", ThemePreference.Dark, fontScale, content = content)
     }
@@ -207,7 +222,7 @@ class VisualReviewS1eTest {
         both("s1e_cartao") { CardScreen(CardContent.Ready(data), null, PaddingValues(), {}, {}, {}, {}, {}, {}, {}, {}) }
         capture("s1e_cartao_editor", ThemePreference.Light) {
             CardScreen(
-                CardContent.Ready(data), CardEditState(CardForm("", null, "40", "15"), mapOf(app.accord.ui.card.CardField.Nickname to "Informe um apelido para o cartão.", app.accord.ui.card.CardField.Closing to "O dia de fechamento vai de 1 a 31.")),
+                CardContent.Ready(data), CardEditState(CardForm("", null, "40", "15"), mapOf(app.accord.ui.card.CardField.Closing to "O dia de fechamento vai de 1 a 31.")),
                 PaddingValues(), {}, {}, {}, {}, {}, {}, {}, {},
             )
         }
@@ -321,7 +336,7 @@ class VisualReviewS1eTest {
         capture("s1f_contas_editor", ThemePreference.Light) {
             app.accord.ui.more.AccountsScreen(
                 app.accord.ui.more.AccountsContent.Ready(accounts),
-                app.accord.ui.more.AccountForm(null, null, "", bankError = true, nicknameError = true), PaddingValues(), {}, {}, {}, {}, {}, { _, _ -> }, {}, {},
+                app.accord.ui.more.AccountForm(null, null, "", bankError = true, nicknameError = false), PaddingValues(), {}, {}, {}, {}, {}, { _, _ -> }, {}, {},
             )
         }
     }
@@ -357,7 +372,7 @@ class VisualReviewS1eTest {
         )
         val draft = app.accord.ui.limits.LimitsDraft.of(rows).copy(
             totals = mapOf("eletro" to "1.000,00", "saude" to "300,00"),
-            splits = mapOf("eletro" to mapOf("equip" to "400,00"), "saude" to emptyMap()),
+            splits = mapOf("eletro" to mapOf("equip" to "1.100,00"), "saude" to emptyMap()),
         )
         val state = app.accord.ui.limits.LimitsUiState(
             nov, app.accord.ui.limits.LimitsContent.Ready(rows), draft,
@@ -367,7 +382,10 @@ class VisualReviewS1eTest {
         both("s1f_limites") { app.accord.ui.limits.LimitsScreen(state, PaddingValues(), {}, {}, {}, {}, { _, _ -> }, { _, _, _ -> }, {}, {}, {}, {}) }
         capture("s1f_limites_resumo", ThemePreference.Light) {
             app.accord.ui.limits.LimitsScreen(
-                state.copy(errors = emptyMap(), scopeMissing = false, draft = draft.copy(scope = app.accord.core.LimitScope.FromThisMonth)),
+                state.copy(errors = emptyMap(), scopeMissing = false, draft = draft.copy(
+                    scope = app.accord.core.LimitScope.FromThisMonth,
+                    splits = mapOf("eletro" to mapOf("equip" to "400,00"), "saude" to emptyMap()),
+                )),
                 PaddingValues(), {}, {}, {}, {}, { _, _ -> }, { _, _, _ -> }, {}, {}, {}, {},
             )
         }

@@ -25,11 +25,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import app.accord.R
 import app.accord.core.space.RefundStatus
 import app.accord.ui.fullLabel
@@ -93,12 +95,16 @@ fun LinkedActionDialog(
     val form = state.form
     var pickingDate by remember { mutableStateOf(false) }
     val bring = remember { BringIntoViewRequester() }
+    val bodyTopPadding = if (LocalDensity.current.fontScale >= 1.5f) AccordSpacing.s4 else 0.dp
 
     AlertDialog(
         onDismissRequest = onClose,
         title = { Text(actionTitle(action)) },
         text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
+            Column(
+                Modifier.verticalScroll(rememberScrollState()).padding(top = bodyTopPadding),
+                verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
+            ) {
                 when (action) {
                     is LinkedAction.Settle -> {
                         DateField(

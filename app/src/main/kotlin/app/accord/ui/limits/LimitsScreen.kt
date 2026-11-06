@@ -206,7 +206,11 @@ private fun CategoryLimit(row: LimitRow, state: LimitsUiState, onTotal: (String,
                 )
             }
             if (row.subs.isNotEmpty()) {
-                Row(Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+                ) {
                     DecorativeIcon(Lucide.drawable.lucide_ic_layers, tint = MaterialTheme.colorScheme.primary)
                     Text(stringResource(R.string.limits_split_toggle), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
                     Switch(checked = splitOpen, onCheckedChange = { splitOpen = it })

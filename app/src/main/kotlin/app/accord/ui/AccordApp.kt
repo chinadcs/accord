@@ -14,7 +14,9 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.runtime.Composable
@@ -299,19 +301,31 @@ private fun MainApp(container: AppContainer, startRoute: String) {
     val selectedRoot = Root.entries.firstOrNull { root -> destination?.hierarchy?.any { it.route == root.graph } == true }
     val imeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
     // O Chat já oferece registro manual abaixo do campo; ali um FAB cobriria o compositor.
-    val showAdd = !imeVisible && onRoot && selectedRoot in setOf(Root.Budget, Root.Entries)
+    val largeFont = LocalDensity.current.fontScale >= 1.5f
+    val showAdd = !imeVisible && onRoot && selectedRoot in setOf(Root.Budget, Root.Entries) &&
+        !(selectedRoot == Root.Entries && largeFont)
     var registerSpeedDialOpen by rememberSaveable { mutableStateOf(false) }
-    LaunchedEffect(selectedRoot) { registerSpeedDialOpen = false }
+    var registerChooserOpen by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(selectedRoot) {
+        registerSpeedDialOpen = false
+        registerChooserOpen = false
+    }
 
     fun openManualRegistration(kind: String, form: String? = null) {
         focusManager.clearFocus(force = true)
         keyboard?.hide()
         registerSpeedDialOpen = false
+        registerChooserOpen = false
         val route = buildString {
             append("$ROUTE_REGISTER?$ARG_REGISTER_KIND=$kind")
             form?.let { append("&$ARG_REGISTER_FORM=$it") }
         }
         navController.navigate(route)
+    }
+    val openEntriesRegistration: () -> Unit = {
+        focusManager.clearFocus(force = true)
+        keyboard?.hide()
+        registerChooserOpen = true
     }
 
     // Avisos depois de salvar, com Desfazer; ficam aqui para sobreviver à troca de tela.
@@ -490,7 +504,8 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             }
                         },
                     )
-                    EntriesRoute(viewModel, padding, onOpenEntry = openEntry, onNew = register)
+                    EntriesRoute(viewModel, padding, onOpenEntry = openEntry,
+                        onNew = if (largeFont) openEntriesRegistration else register)
                 }
             }
             navigation(startDestination = Root.Review.start, route = Root.Review.graph) {
@@ -507,8 +522,8 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     )
                     val queueState by queue.state.collectAsStateWithLifecycle()
                     RefreshOnResume(queue::refresh)
-                    ProvisionalRoot(
-                        stringResource(R.string.review_title), stringResource(R.string.review_placeholder), padding, register,
+                    ReviewRoot(
+                        stringResource(R.string.review_title), padding, register,
                         extra = {
                             PendingHubCard(queueState.items.size, queueState.loading) { navController.navigate(ROUTE_PENDING) }
                             ImportHub(
@@ -1001,6 +1016,65 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 RegisterRoute(viewModel, padding, onExit = { navController.popBackStack() })
             }
         }
+        }
+    }
+    if (registerChooserOpen && onRoot && selectedRoot == Root.Entries) {
+        RegisterTypeChooser(
+            onIncome = { openManualRegistration("income") },
+            onExpense = { openManualRegistration("expense", "pix") },
+            onCardExpense = { openManualRegistration("expense", "card") },
+            onDismiss = { registerChooserOpen = false },
+        )
+    }
+}
+
+@Composable
+private fun RegisterTypeChooser(
+    onIncome: () -> Unit,
+    onExpense: () -> Unit,
+    onCardExpense: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.action_register_manually)) },
+        text = {
+            Column(
+                Modifier.fillMaxWidth().heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+            ) {
+                RegisterTypeAction(stringResource(R.string.register_speed_dial_income), Lucide.drawable.lucide_ic_banknote_arrow_up,
+                    "register-choice-income", onIncome)
+                RegisterTypeAction(stringResource(R.string.register_speed_dial_expense), Lucide.drawable.lucide_ic_arrow_down_left,
+                    "register-choice-expense", onExpense)
+                RegisterTypeAction(stringResource(R.string.register_speed_dial_card_expense), Lucide.drawable.lucide_ic_credit_card,
+                    "register-choice-card", onCardExpense)
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                Text(stringResource(R.string.chat_dialog_cancel))
+            }
+        },
+    )
+}
+
+@Composable
+private fun RegisterTypeAction(label: String, icon: Int, tag: String, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).testTag(tag),
+        shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(AccordSpacing.s3),
+            horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(painterResource(icon), contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+            Text(label, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
         }
     }
 }

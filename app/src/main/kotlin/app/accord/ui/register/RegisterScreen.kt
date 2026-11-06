@@ -170,7 +170,10 @@ fun RegisterScreen(
 
             if (form.kind == FormKind.Expense && form.form != ExpenseForm.Card) {
                 Text(stringResource(R.string.register_payment), style = MaterialTheme.typography.titleLarge)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+                    verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+                ) {
                     ExpenseForm.entries.filter { it != ExpenseForm.Card }.forEach { option ->
                         FilterChip(
                             selected = form.form == option,
@@ -346,7 +349,7 @@ private fun MoreOptionsToggle(expanded: Boolean, onClick: () -> Unit) {
     ) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalAlignment = Alignment.Top,
             horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
         ) {
             Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.medium) {
@@ -498,7 +501,7 @@ private fun DateChoices(
         verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
     ) {
         Text(label, style = MaterialTheme.typography.titleSmall)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             FilterChip(
                 selected = date == today,
                 onClick = { onSelectDate(today) },
@@ -611,7 +614,10 @@ private fun MoreOptions(
             }
 
             OptionHeading(stringResource(R.string.register_repeat), Lucide.drawable.lucide_ic_repeat)
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+                verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+            ) {
                 listOf<Pair<Frequency?, Int>>(
                     null to R.string.register_repeat_none, Frequency.Monthly to R.string.register_repeat_monthly,
                     Frequency.Annual to R.string.register_repeat_annual,

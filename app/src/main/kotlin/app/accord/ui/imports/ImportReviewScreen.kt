@@ -234,7 +234,12 @@ private fun Summary(review: BatchReview, working: Boolean, onOpenSource: () -> U
             Text(stringResource(R.string.import_file_currency, it), style = MaterialTheme.typography.titleSmall)
         }
         Text(
-            pluralStringResource(R.plurals.import_review_counts, c.total, c.total, c.new, c.safeLinks, c.doubts + c.blocked),
+            pluralStringResource(R.plurals.import_count_movements, c.total, c.total) + ": " +
+                listOf(
+                    pluralStringResource(R.plurals.import_count_new, c.new, c.new),
+                    pluralStringResource(R.plurals.import_count_links, c.safeLinks, c.safeLinks),
+                    pluralStringResource(R.plurals.import_count_doubts, c.doubts + c.blocked, c.doubts + c.blocked),
+                ).joinToString(" · "),
             style = MaterialTheme.typography.bodyLarge,
         )
         if (c.alreadyKnown > 0) {
@@ -368,7 +373,11 @@ private fun ConfirmBar(review: BatchReview, working: Boolean, onOpenSummary: () 
     Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             Text(
-                stringResource(R.string.import_confirm_line, c.checked, c.doubts + c.blocked),
+                stringResource(
+                    R.string.import_confirm_line,
+                    pluralStringResource(R.plurals.import_confirm_checked, c.checked, c.checked),
+                    pluralStringResource(R.plurals.import_confirm_preserved, c.doubts + c.blocked, c.doubts + c.blocked),
+                ),
                 style = MaterialTheme.typography.bodyMedium,
             )
             if (review.blockers.isNotEmpty()) {

@@ -11,6 +11,8 @@ import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.printToLog
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -200,6 +202,9 @@ class SyncFlowTest {
         bruno.sync.syncNow()
 
         service.online = false
+        if (UiAuditSyntheticEvidence.enabled) {
+            ana.theme.set(UiAuditSyntheticEvidence.theme ?: app.accord.ui.theme.ThemePreference.Light)
+        }
         launch(ana)
         compose.onNodeWithText("Mais").performClick()
         waitForText("Sincronização")
@@ -209,6 +214,9 @@ class SyncFlowTest {
         tap("Sincronizar agora")
         waitForText("1 conflito de edição")
         waitForText("Operações reconhecidas. O conflito continua aguardando sua escolha.")
+        if (UiAuditSyntheticEvidence.enabled) {
+            UiAuditSyntheticEvidence.capture(compose, "26_sync_conflito", UiAuditSyntheticEvidence.theme ?: app.accord.ui.theme.ThemePreference.Light, "window")
+        }
 
         tap("Revisar conflito")
         waitForText("Escolher versão")
@@ -217,9 +225,14 @@ class SyncFlowTest {
         waitForText(Money(8_000).format())
         waitForText(Money(6_800).format())
         waitForText("Escolha uma versão. Nenhuma está marcada")
+        if (UiAuditSyntheticEvidence.enabled) {
+            UiAuditSyntheticEvidence.capture(compose, "19_conflito_versoes", UiAuditSyntheticEvidence.theme ?: app.accord.ui.theme.ThemePreference.Light, "window")
+        }
         // Nada é escolhido sozinho: Aplicar só vale depois de uma escolha explícita.
         compose.onNodeWithText("Aplicar decisão").assertIsNotEnabled()
-        compose.onAllNodes(hasText("Manter esta versão") and hasClickAction()).onFirst().performClick()
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Manter esta versão"))
+        compose.onAllNodes(hasText("Manter esta versão") and hasClickAction()).onFirst()
+            .performSemanticsAction(SemanticsActions.OnClick)
         waitForText("✓ Mantendo esta versão")
         tap("Aplicar decisão")
         waitForText("Nenhuma operação por enviar neste aparelho")

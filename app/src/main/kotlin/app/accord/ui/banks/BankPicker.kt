@@ -2,25 +2,32 @@ package app.accord.ui.banks
 
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -34,6 +41,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.input.pointer.pointerInput
 import app.accord.R
 import app.accord.core.space.BankRef
 import app.accord.ui.components.DecorativeIcon
@@ -78,31 +88,78 @@ fun BankPickerDialog(initial: BankRef?, onPick: (BankRef) -> Unit, onDismiss: ()
     var otherMode by remember { mutableStateOf(initial is BankRef.Other) }
     val results = remember(query) { catalog.search(query) }
 
-    AlertDialog(
+    val listState = rememberLazyListState()
+    LaunchedEffect(otherMode) { listState.scrollToItem(0) }
+
+    Dialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.bank_picker_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                if (otherMode) {
-                    OutlinedTextField(
-                        value = other, onValueChange = { other = it }, singleLine = true,
-                        label = { Text(stringResource(R.string.bank_other_name)) }, modifier = Modifier.fillMaxWidth(),
-                    )
-                    TextButton(onClick = { otherMode = false }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                        Text(stringResource(R.string.bank_back_to_list))
+        properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+    ) {
+        BoxWithConstraints(
+            Modifier.fillMaxSize().imePadding().systemBarsPadding(),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(Modifier.fillMaxSize().pointerInput(onDismiss) {
+                detectTapGestures(onTap = { onDismiss() })
+            })
+            Surface(
+                modifier = Modifier.widthIn(max = 560.dp).fillMaxWidth(0.9f)
+                    .height(maxHeight.coerceAtMost(560.dp))
+                    .pointerInput(Unit) { detectTapGestures(onTap = {}) },
+                shape = MaterialTheme.shapes.extraLarge,
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                tonalElevation = 6.dp,
+            ) {
+                LazyColumn(
+                    state = listState,
+                    contentPadding = PaddingValues(AccordSpacing.s4),
+                    verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+                ) {
+                    item {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                stringResource(R.string.bank_picker_title),
+                                style = MaterialTheme.typography.headlineSmall,
+                                modifier = Modifier.weight(1f),
+                            )
+                            TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                                Text(stringResource(R.string.edit_cancel))
+                            }
+                        }
                     }
-                } else {
-                    OutlinedTextField(
-                        value = query, onValueChange = { query = it }, singleLine = true,
-                        label = { Text(stringResource(R.string.bank_search)) }, modifier = Modifier.fillMaxWidth(),
-                    )
-                    TextButton(onClick = { otherMode = true }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                        Text(stringResource(R.string.bank_other))
-                    }
-                    if (results.isEmpty()) {
-                        Text(stringResource(R.string.bank_no_results), style = MaterialTheme.typography.bodyMedium)
-                    }
-                    LazyColumn(Modifier.heightIn(max = 360.dp)) {
+                    if (otherMode) {
+                        item {
+                            OutlinedTextField(
+                                value = other, onValueChange = { other = it }, singleLine = true,
+                                label = { Text(stringResource(R.string.bank_other_name)) }, modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                        item {
+                            TextButton(onClick = { otherMode = false }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                                Text(stringResource(R.string.bank_back_to_list))
+                            }
+                        }
+                        item {
+                            TextButton(
+                                onClick = { onPick(BankRef.Other(other.trim())) }, enabled = other.isNotBlank(),
+                                modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin),
+                            ) { Text(stringResource(R.string.bank_use_other)) }
+                        }
+                    } else {
+                        item {
+                            OutlinedTextField(
+                                value = query, onValueChange = { query = it }, singleLine = true,
+                                label = { Text(stringResource(R.string.bank_search)) }, modifier = Modifier.fillMaxWidth(),
+                            )
+                        }
+                        item {
+                            TextButton(onClick = { otherMode = true }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                                Text(stringResource(R.string.bank_other))
+                            }
+                        }
+                        if (results.isEmpty()) {
+                            item { Text(stringResource(R.string.bank_no_results), style = MaterialTheme.typography.bodyMedium) }
+                        }
                         items(results, key = { it.ispb }) { bank ->
                             val selected = (initial as? BankRef.Catalog)?.ispb == bank.ispb
                             Row(
@@ -121,19 +178,6 @@ fun BankPickerDialog(initial: BankRef?, onPick: (BankRef) -> Unit, onDismiss: ()
                     }
                 }
             }
-        },
-        confirmButton = {
-            if (otherMode) {
-                TextButton(
-                    onClick = { onPick(BankRef.Other(other.trim())) }, enabled = other.isNotBlank(),
-                    modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
-                ) { Text(stringResource(R.string.bank_use_other)) }
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                Text(stringResource(R.string.edit_cancel))
-            }
-        },
-    )
+        }
+    }
 }

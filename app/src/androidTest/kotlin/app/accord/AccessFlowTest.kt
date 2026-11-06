@@ -24,6 +24,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.accord.core.sync.AccessSnapshot
 import app.accord.persistence.InMemoryAccessStore
 import app.accord.remote.FakeSpaceService
+import app.accord.ui.theme.ThemePreference
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -64,6 +65,7 @@ class AccessFlowTest {
         val app = ApplicationProvider.getApplicationContext<AccordApplication>()
         container = AppContainer(app, accessStore, service)
         runBlocking { container.awaitReady() }
+        if (UiAuditSyntheticEvidence.enabled) container.theme.set(UiAuditSyntheticEvidence.theme ?: ThemePreference.Light)
         app.container = container
         scenario = ActivityScenario.launch(MainActivity::class.java)
     }
@@ -101,7 +103,8 @@ class AccessFlowTest {
     private fun tap(text: String) {
         waitForText(text)
         scrollTo(text)
-        compose.onAllNodes(hasText(text, substring = true) and hasClickAction()).onFirst().performClick()
+        compose.onAllNodes(hasText(text, substring = true) and hasClickAction()).onFirst()
+            .performSemanticsAction(SemanticsActions.OnClick)
     }
 
     private fun tapLast(text: String) {
@@ -116,6 +119,12 @@ class AccessFlowTest {
         compose.onNodeWithText(label).performTextInput(value)
     }
 
+    private fun auditCapture(name: String) {
+        if (UiAuditSyntheticEvidence.enabled) UiAuditSyntheticEvidence.capture(
+            compose, name, UiAuditSyntheticEvidence.theme ?: ThemePreference.Light, "window",
+        )
+    }
+
     @Test
     fun primeirosPassosTemCartaoVazioApelidosOpcionaisELimitesOpcionais() {
         runBlocking {
@@ -128,6 +137,7 @@ class AccessFlowTest {
         waitForText("Vamos começar")
         tap("Configurar")
         waitForText("Dia de fechamento")
+        auditCapture("03_cartao_configuracao")
         listOf("Dia de fechamento", "Dia de vencimento").forEach { label ->
             assertEquals("", compose.onNodeWithText(label).fetchSemanticsNode().config[androidx.compose.ui.semantics.SemanticsProperties.EditableText].text)
         }
@@ -150,6 +160,7 @@ class AccessFlowTest {
         waitForText("Vamos começar")
         tap("Gerenciar contas")
         waitForText("Adicionar conta")
+        auditCapture("03_contas_configuracao")
         tap("Adicionar conta")
         tap("Selecionar banco")
         compose.onNode(hasText("Outro banco (informar", substring = true) and hasClickAction()).performClick()
@@ -166,6 +177,7 @@ class AccessFlowTest {
         waitForText("Vamos começar")
         tap("Definir limites")
         waitForText("Vale a partir deste mês e nos próximos.")
+        auditCapture("03_limites_configuracao")
         assertTrue(compose.onAllNodesWithText("Somente", substring = true).fetchSemanticsNodes().isEmpty())
         compose.onNodeWithText("Definir depois").performClick()
         waitForText("Vamos começar")
@@ -269,10 +281,12 @@ class AccessFlowTest {
         type("Senha", "senha-errada")
         tapLast("Entrar")
         waitForText("E-mail ou senha incorretos.")
+        auditCapture("01_erro_credencial")
 
         service.online = false
         tapLast("Entrar")
         waitForText("Sem conexão. A entrada não foi concluída e seu e-mail foi mantido.")
+        auditCapture("01_erro_rede")
         compose.onNodeWithText(email).assertExists()
         service.online = true
     }

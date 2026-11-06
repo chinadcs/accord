@@ -125,7 +125,7 @@
     <string name="steps_model_unavailable">Chega em uma etapa futura. Sem ele, use o registro manual.</string>
     <string name="steps_start">Começar a registrar</string>
     <string name="steps_register_manually">Registrar manualmente</string>
-    <string name="steps_note_received">Todos os itens são opcionais. Você pode ajustar depois em Mais. Dados do outro aparelho mostram só o que já chegou aqui.</string>
+    <string name="steps_note_received">Os outros ajustes podem ficar para depois. Para começar, permita as notificações neste aparelho. Dados do outro aparelho mostram só o que já chegou aqui.</string>
     <string name="steps_item_open">%1$s, %2$s. %3$s</string>
 
     <!-- Conta, sair e renovação (Mais) -->

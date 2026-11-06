@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.Icon
@@ -72,7 +73,8 @@ fun RootNavigationBar(selected: Root?, onSelect: (Root) -> Unit) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s1, vertical = AccordSpacing.s1)) {
                     Root.entries.forEach { root ->
                         if (root == Root.Chat) {
-                            Spacer(Modifier.weight(1f).height(64.dp))
+                            // Mesma largura do recorte do FAB: as quatro abas dividem o resto e "Lançamentos" cabe em uma linha.
+                            Spacer(Modifier.width(72.dp).height(64.dp))
                         } else {
                             val active = selected == root
                             val rootLabel = stringResource(root.label)
@@ -86,7 +88,7 @@ fun RootNavigationBar(selected: Root?, onSelect: (Root) -> Unit) {
                                 color = colors.surfaceContainerLow,
                             ) {
                                 Column(
-                                    modifier = Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s1, vertical = AccordSpacing.s1),
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = AccordSpacing.s1),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
                                 ) {
