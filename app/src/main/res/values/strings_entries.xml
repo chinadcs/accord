@@ -33,11 +33,14 @@
         <item quantity="one">%d lançamento</item>
         <item quantity="other">%d lançamentos</item>
     </plurals>
-    <string name="summary_expenses">Despesas</string>
-    <string name="summary_incomes">Rendas</string>
-    <string name="summary_credits_list">Créditos de estorno</string>
-    <string name="summary_invoice_payments">Quitações de fatura</string>
-    <string name="summary_note">Estes totais são só da lista filtrada. O saldo total, no alto, é tudo o que foi recebido menos as despesas até o fim do mês exibido, já abatidos os estornos; a receita e a despesa do cabeçalho são só desse mês. Renda prevista e quitações de fatura não entram.</string>
+    <plurals name="entries_summary_incomes">
+        <item quantity="one">%d receita</item>
+        <item quantity="other">%d receitas</item>
+    </plurals>
+    <plurals name="entries_summary_expenses">
+        <item quantity="one">%d despesa</item>
+        <item quantity="other">%d despesas</item>
+    </plurals>
     <string name="entries_balance_title">Saldo total</string>
     <string name="entries_balance_income">Receita do mês</string>
     <string name="entries_balance_expense">Despesa do mês</string>

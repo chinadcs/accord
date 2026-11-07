@@ -127,17 +127,22 @@ class EntriesUiTest {
     }
 
     @Test
-    fun resumoSeparaTiposEMostraAContagemEExplicaOSaldo() {
-        show(state(sample))
-        compose.onNodeWithText("2 lançamentos").assertIsDisplayed()
-        compose.onNodeWithText("Despesas").assertIsDisplayed()
-        // o mesmo total aparece no resumo por tipo e na Despesa do cabeçalho
-        compose.onAllNodesWithText(brl(250).format()).assertCountEquals(2)
-        compose.onNodeWithText(
-            "Estes totais são só da lista filtrada. O saldo total, no alto, é tudo o que foi recebido menos as despesas até o fim do mês exibido, " +
-                "já abatidos os estornos; a receita e a despesa do cabeçalho são só desse mês. " +
-                "Renda prevista e quitações de fatura não entram.",
-        ).assertIsDisplayed()
+    fun resumoMostraContagemComReceitasEDespesasEOResultadoSemNota() {
+        val summary = EntrySummary(brl(1200), brl(5000), Money.ZERO, Money.ZERO, incomeCount = 19, expenseCount = 3)
+        // sem o resumo do cabeçalho, para o resultado não repetir na Despesa do mês
+        show(state(sample, summary = summary, balance = null))
+        compose.onNodeWithText("2 lançamentos (19/3)").assertIsDisplayed()
+        compose.onNodeWithText(brl(3800).format()).assertIsDisplayed() // 5000 − 1200
+        compose.onAllNodesWithText("Estes totais", substring = true).assertCountEquals(0)
+        compose.onAllNodesWithText("Despesas").assertCountEquals(0)
+    }
+
+    @Test
+    fun resultadoNegativoDoResumoMostraOSinal() {
+        val summary = EntrySummary(brl(900), brl(400), Money.ZERO, Money.ZERO, incomeCount = 1, expenseCount = 4)
+        show(state(sample, summary = summary, balance = null))
+        compose.onNodeWithText("2 lançamentos (1/4)").assertIsDisplayed()
+        compose.onNodeWithText(Money(-50_000).format()).assertIsDisplayed()
     }
 
     private fun header(total: EntrySummary, month: EntrySummary = total) = TotalBalance(total, month)

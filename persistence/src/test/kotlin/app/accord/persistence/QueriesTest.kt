@@ -265,6 +265,22 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
+    fun `resumo da lista conta receitas e despesas e dá o resultado rendas menos despesas`() = runBlocking<Unit> {
+        val h = open()
+        h.withDefaultAccount()
+        h.pix("Mercado", 80)
+        h.pix("Farmácia", 40)
+        h.space.execute(h.env(), RegisterIncome("Salário", brl(300), d(2026, 10, 5))).applied()
+        h.space.execute(h.env(), RegisterIncome("Freela previsto", brl(900), d(2026, 10, 28))).applied()
+        h.space.execute(h.env(), RegisterIncome("Bônus", brl(100), d(2026, 10, 29))).applied()
+
+        val summary = h.space.entries(filter()).value().summary
+        assertEquals(3, summary.incomeCount)
+        assertEquals(2, summary.expenseCount)
+        assertEquals(brl(1180), summary.listResult) // 1300 − 120
+    }
+
+    @Test
     fun `saldo total acumula meses até o exibido, sem renda prevista nem mês seguinte, e ignora filtros`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()

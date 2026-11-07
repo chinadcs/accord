@@ -55,7 +55,10 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -373,41 +376,35 @@ private fun EmptyState(filtered: Boolean, onClear: () -> Unit, onNew: () -> Unit
 
 @Composable
 private fun SummaryBlock(summary: EntrySummary, total: Int) {
-    val lines = listOf(
-        R.string.summary_expenses to summary.expenses,
-        R.string.summary_incomes to summary.incomes,
-        R.string.summary_credits_list to summary.credits,
-        R.string.summary_invoice_payments to summary.invoicePayments,
-    ).filter { it.second.cents != 0L }
+    val incomeColor = Accord.colors.success
+    val expenseColor = MaterialTheme.colorScheme.error
+    val result = summary.listResult
+    val resultColor = when {
+        result.cents > 0 -> incomeColor
+        result.cents < 0 -> expenseColor
+        else -> MaterialTheme.colorScheme.onSurface
+    }
+    val count = pluralStringResource(R.plurals.entries_total, total, total)
+    val description = pluralStringResource(R.plurals.entries_total, total, total) + ", " +
+        pluralStringResource(R.plurals.entries_summary_incomes, summary.incomeCount, summary.incomeCount) + " e " +
+        pluralStringResource(R.plurals.entries_summary_expenses, summary.expenseCount, summary.expenseCount)
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-            Text(pluralStringResource(R.plurals.entries_total, total, total), style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (androidx.compose.ui.platform.LocalDensity.current.fontScale >= 1.3f) {
-                lines.forEach { (label, amount) -> SummaryLine(stringResource(label), amount) }
-            } else {
-                lines.chunked(2).forEach { pair ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
-                        pair.forEach { (label, amount) ->
-                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
-                                Text(stringResource(label), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                Text(amount.format(), style = Accord.typography.amountRow)
-                            }
-                        }
-                    }
-                }
-            }
-            Text(stringResource(R.string.summary_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                buildAnnotatedString {
+                    append("$count (")
+                    withStyle(SpanStyle(color = incomeColor)) { append(summary.incomeCount.toString()) }
+                    append("/")
+                    withStyle(SpanStyle(color = expenseColor)) { append(summary.expenseCount.toString()) }
+                    append(")")
+                },
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.semantics { contentDescription = description },
+            )
+            Text(result.format(), style = Accord.typography.amountRow, color = resultColor)
         }
     }
-}
-
-@Composable
-private fun SummaryLine(label: String, amount: Money) {
-    AdaptiveRow(
-        start = { Text(label, style = MaterialTheme.typography.bodyMedium) },
-        end = { Text(amount.format(), style = Accord.typography.amountRow, textAlign = TextAlign.End) },
-    )
 }
 
 private val NOISY_SITUATIONS = setOf(EntrySituation.Paid, EntrySituation.NotPaid)

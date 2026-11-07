@@ -272,6 +272,8 @@ internal class EntryQueries(
             summary = EntrySummary(
                 total(Bucket.Expense), total(Bucket.Income), total(Bucket.Credit), total(Bucket.InvoicePayment),
                 receivedIncomes,
+                incomeCount = matching.count { it.bucket == Bucket.Income },
+                expenseCount = matching.count { it.bucket == Bucket.Expense },
             ),
         )
     }

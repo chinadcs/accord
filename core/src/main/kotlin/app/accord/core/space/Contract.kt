@@ -1081,7 +1081,13 @@ data class EntrySummary(
     val credits: Money,
     val invoicePayments: Money,
     val receivedIncomes: Money = Money.ZERO,
+    /** Quantos lançamentos de renda e de despesa entram nas somas [incomes] e [expenses]. */
+    val incomeCount: Int = 0,
+    val expenseCount: Int = 0,
 ) {
+    /** Resultado da lista: rendas (recebidas e previstas) menos despesas, como o resumo da lista mostra. */
+    val listResult: Money get() = incomes - expenses
+
     /** Despesa comprometida (paga e a pagar) já abatida dos estornos confirmados; estorno não vira renda. */
     val committedExpenses: Money get() = expenses - credits
 
