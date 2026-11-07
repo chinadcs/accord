@@ -73,6 +73,11 @@ data class ChatContext(
     val receipts: List<ReceiptItem> = emptyList(),
     /** Fase do produto (S6): fora do P1 o validador recusa `consultar` com orientação. O contexto de testes antigos fica no P0. */
     val phase: ProductPhase = ProductPhase.P0,
+    /**
+     * Chave de semente de cada categoria inicial, por id. No app o id é um UUID derivado do espaço; o vocabulário das categorias iniciais só
+     * conhece a chave. Vazio nos contextos de teste, onde id e chave são a mesma coisa.
+     */
+    val seedKeys: Map<String, String> = emptyMap(),
 ) {
     /**
      * Mesmo texto de antes de [phase] existir: os corpora congelados (baterias da Etapa 0) calculam o hash com `context.toString()`, e a

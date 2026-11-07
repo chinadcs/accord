@@ -224,4 +224,64 @@ class ConsultTest {
         }
         assertTrue(ChatText.hasQuestionClause("gastei 50 no mercado, quanto sobrou?"))
     }
+
+    // ---- formas de perguntar vistas nas frases do casal (accord-a8kf) ----
+
+    @Test
+    fun `le parcelas e compromissos em formas sem quanto`() {
+        assertEquals(ConsultType.PurchaseSchedule, read("parcelas do celular")?.type)
+        assertEquals("celular", read("parcelas do celular")?.target)
+        assertEquals("sofa", read("quando termina o sofá")?.target)
+        assertEquals("notebook", read("quantas parcelas do notebook ainda faltam")?.target)
+        assertEquals(ConsultType.PurchaseSchedule, read("qual a última parcela da geladeira")?.type)
+        assertEquals(ConsultType.PurchaseSchedule, read("quanto ficou cada parcela do notebook")?.type)
+        assertEquals(Proposal.Consult(ConsultType.MonthCommitments, month = "dezembro"), read("como estão os compromissos de dezembro"))
+        assertEquals(Proposal.Consult(ConsultType.MonthCommitments), read("compromissos do mês"))
+        assertEquals(Proposal.Consult(ConsultType.MonthCommitments, month = "mes que vem"), read("quais as contas do mês que vem"))
+        assertEquals(Proposal.Consult(ConsultType.MonthCommitments, month = "esse mes"), read("o que tenho pra pagar esse mês"))
+        assertEquals(Proposal.Consult(ConsultType.MonthCommitments, month = "dezembro"), read("quanto tenho de compromisso em dezembro"))
+    }
+
+    @Test
+    fun `gasto sem a palavra quanto e fatura com pesar`() {
+        assertEquals(ConsultType.CategorySpend, read("gasto com lazer em outubro")?.type)
+        val heavy = read("quanto vai pesar na fatura de novembro de lazer")
+        assertEquals(ConsultType.CategorySpend, heavy?.type)
+        assertEquals(ConsultCriterion.Budget, heavy?.criterion)
+    }
+
+    @Test
+    fun `intencao e conselho nao viram consulta`() {
+        assertNull(read("devo comprar notebook agora"))
+        assertNull(read("vale a pena trocar o celular"))
+        assertNull(read("quero comprar uma tv"))
+    }
+
+    @Test
+    fun `pergunta sem numero lida como registro vira consulta ou orientacao, e registro continua registro`() = runBlocking<Unit> {
+        val interpreter = RuleInterpreter()
+        suspend fun proposal(text: String) = (ProposalCodec.decode(interpreter.interpret(InterpretRequest(text, p1))) as ProposalParse.Ok).proposal
+        assertEquals(ConsultType.CategorySpend, assertIs<Proposal.Consult>(proposal("gastei quanto de mercado em setembro")).type)
+        assertEquals(Proposal.Query, proposal("gastei mais com mercado do que mês passado"))
+        assertEquals(Proposal.Query, proposal("em qual estabelecimento eu mais gastei"))
+        // Registro de verdade, com ou sem valor, não pode virar consulta nem orientação.
+        for (text in listOf("gastei com mercado", "gastei 50 no mercado", "paguei a luz", "mercado 50 no pix")) {
+            val p = proposal(text)
+            assertTrue(p !is Proposal.Consult && p != Proposal.Query, "$text -> $p")
+        }
+    }
+
+    @Test
+    fun `no app o id da categoria e um UUID e o vocabulario ainda acha a categoria`() {
+        val uuid = mapOf("alimentacao.delivery" to "u-2", "alimentacao" to "u-1", "transporte" to "u-8", "transporte.aplicativos" to "u-9")
+        val categories = listOf(
+            CategoryItem("c1", "u-1", "Alimentação"), CategoryItem("c2", "u-2", "Delivery", "u-1"),
+            CategoryItem("c3", "u-8", "Transporte"), CategoryItem("c4", "u-9", "Aplicativos", "u-8"),
+        )
+        val context = p1.copy(categories = categories, seedKeys = uuid.entries.associate { (key, id) -> id to key })
+        assertEquals("c2", ConsultReader.read("quanto foi de ifood mês passado", context)?.category)
+        assertEquals("c4", ConsultReader.read("quanto foi de uber esse mês", context)?.category)
+        // Sem a tradução (contexto sem seedKeys), o mesmo texto não acha categoria e vira pergunta de complemento.
+        assertNull(ConsultReader.read("quanto foi de ifood mês passado", context.copy(seedKeys = emptyMap()))?.category)
+    }
 }

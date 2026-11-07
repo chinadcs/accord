@@ -773,6 +773,7 @@ class ChatCoordinator(
             members = members(),
             question = openQuestion?.let { OpenQuestion("q1", it.id, it.field, it.options) },
             phase = phase,
+            seedKeys = categories.mapNotNull { node -> node.seedKey?.let { node.id to it } }.toMap(),
             receipts = receipts.mapIndexed { index, receipt ->
                 ReceiptItem(
                     "r${index + 1}", receipt.id, receipt.entryId, ReceiptSummaries.label(receipt.summary), receipt.summary.installments,

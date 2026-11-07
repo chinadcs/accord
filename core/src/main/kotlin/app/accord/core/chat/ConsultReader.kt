@@ -21,12 +21,25 @@ object ConsultReader {
     private val dateLiteral =Regex("\\d{1,2}/\\d{1,2}(?:/\\d{2,4})?")
     private val purchaseDateCue = Regex("\\b(?:data da compra|data original|pela data|pela compra|quando comprei|quando compramos|comprei|compramos|comprado)\\b")
     private val budgetCue = Regex("\\b(?:orcamento|fatura)\\b")
-    private val spendCue = Regex("\\b(?:gast\\w*|compr\\w*|saiu|sairam|saida|total|quanto foi|quanto ja foi|sobrou|sobra|resta|restam|restou|limite|consumiu|consumimos)\\b")
+    /** Intenção ou conselho ("devo comprar notebook agora", "vale a pena trocar"): não é consulta, mesmo que cite uma categoria. */
+    private val adviceCue = Regex("\\b(?:devo|deveria|devemos|posso|podemos|vale a pena|sera que|quero|queremos|pretendo|vou comprar|vamos comprar|me ajuda|ajuda a)\\b")
+
+    // Só "compras/comprei/comprado": "comprar" é intenção e "compromisso" é outra coisa. "pesar" cobre "quanto vai pesar na fatura".
+    private val spendCue = Regex("\\b(?:gast\\w*|compr(?:ei|amos|ou|as?|ad[oa]s?)|saiu|sairam|saida|total|quanto foi|quanto ja foi|sobrou|sobra|resta|restam|restou|limite|consumiu|consumimos|pes(?:a|ar|ou))\\b")
     private val scheduleCue = Regex(
-        "^(?:quanto falta|quantas parcelas faltam|quantas faltam|quando termina|quando acaba|quais sao as parcelas|quais as parcelas|" +
-            "mostra as parcelas|mostre as parcelas|me mostra as parcelas|parcelas|cronograma|como estao as parcelas|quanto ainda falta)\\b",
+        "^(?:quanto falta|quantas parcelas|quantas faltam|quando termina|quando acaba|quais sao as parcelas|quais as parcelas|" +
+            "mostra as parcelas|mostre as parcelas|me mostra as parcelas|parcelas|cronograma|como estao as parcelas|quanto ainda falta|" +
+            "qual (?:e )?a (?:ultima|proxima) parcela|quanto (?:ficou|fica) (?:cada|a) parcela)\\b",
     )
-    private val commitmentCue = Regex("\\b(?:compromissos?|parcelas|contas a pagar|quanto vou pagar|o que vence|o que falta pagar|quanto tenho que pagar)\\b")
+    private val commitmentCue = Regex(
+        "\\b(?:compromissos?|parcelas|contas a pagar|quanto vou pagar|o que vence|o que falta pagar|quanto tenho que pagar|" +
+            "o que tenho (?:pra|para|que|a) pagar|quais (?:sao )?as contas)\\b",
+    )
+
+    /** "quando termina o sofá": o alvo vem logo depois do verbo, sem "do/da". */
+    private val targetVerb = Regex("\\b(?:termina|acaba) +(?:o +|a +)?(.+)$")
+    private val trailingVerb = Regex("\\b(?:faltam|falta|restam|resta|sobram|sobra)$")
+    private val questionStart = Regex("^(?:(?:gastei|gasto|gastamos|paguei|foi) )?(?:quanto|quantos|quantas|qual|quais)\\b|^(?:em|com|de|por) (?:qual|quais|quanto)\\b")
     private val targetAfter = Regex("\\b(?:d[oae]s?|da compra d[oae]s?|da compra do|da compra da) +(?:compra +d[oae] +)?(?:o +|a +)?(.+)$")
     private val filler = Regex("\\b(?:pra|para|por favor|pfv|ai|ainda|ja|no total|total)\\b")
 
@@ -43,6 +56,7 @@ object ConsultReader {
 
         // Comparação entre períodos está fora do catálogo deste recorte: responder só um dos meses seria enganoso.
         if (comparisonCue.containsMatchIn(folded) || monthPhrase.findAll(folded).count() > 1) return null
+        if (adviceCue.containsMatchIn(folded)) return null
 
         val period = monthPhrase.find(folded)?.value ?: otherPeriod.find(folded)?.value
         val criterion = when {
@@ -52,7 +66,7 @@ object ConsultReader {
         }
 
         val named = sameNameResolved(context.categories.filter { ChatText.named(text, it.name) })
-        val categories = mostSpecific(named.ifEmpty { SeedCategoryVocabulary.candidates(context, text, VOCABULARY_VERSION).orEmpty() })
+        val categories = mostSpecific(named.ifEmpty { vocabularyCandidates(context, text) })
         val schedule = scheduleCue.containsMatchIn(folded)
         val targetText = if (schedule) targetOf(folded, period) else null
 
@@ -70,15 +84,35 @@ object ConsultReader {
         }
     }
 
+    /**
+     * Pergunta sem número que o motor de registro leria como lançamento ("gastei quanto de comida em setembro", "em qual estabelecimento eu
+     * mais gastei", "gastei mais com mercado do que mês passado"). Só serve para impedir o rascunho: quem decide a resposta é [read].
+     */
+    fun looksLikeQuestion(text: String): Boolean {
+        val folded = ChatText.fold(text).trimEnd('?', '!', '.', ' ')
+        if (Regex("\\d").containsMatchIn(folded.replace(monthPhrase, " ").replace(dateLiteral, " "))) return false
+        return questionStart.containsMatchIn(folded) ||
+            (comparisonCue.containsMatchIn(folded) && Regex("^(?:gastei|gasto|gastamos)\\b").containsMatchIn(folded))
+    }
+
+    /** O vocabulário das iniciais conhece a chave da semente, não o id do app: traduz, procura e devolve as categorias do contexto. */
+    private fun vocabularyCandidates(context: ChatContext, text: String): List<CategoryItem> {
+        if (context.seedKeys.isEmpty()) return SeedCategoryVocabulary.candidates(context, text, VOCABULARY_VERSION).orEmpty()
+        fun key(id: String) = context.seedKeys[id] ?: id
+        val translated = context.categories.map { it.copy(id = key(it.id), parentId = it.parentId?.let(::key)) }
+        val byKey = context.categories.associateBy { key(it.id) }
+        return SeedCategoryVocabulary.candidates(context.copy(categories = translated), text, VOCABULARY_VERSION).orEmpty().mapNotNull { byKey[it.id] }
+    }
+
     private fun purchaseDate(folded: String): DateExpression? =
         Regex("\\b(?:de |em )(\\d{1,2}/\\d{1,2}/\\d{4})\\b").find(folded)?.let { DateExpression(DateKind.Explicit, it.groupValues[1]) }
 
     /** Trecho que nomeia a compra: o que vem depois de "do/da/de", sem mês, data nem palavras de apoio. */
     private fun targetOf(folded: String, period: String?): String? {
-        val tail = targetAfter.find(folded)?.groupValues?.get(1) ?: return null
+        val tail = targetAfter.find(folded)?.groupValues?.get(1) ?: targetVerb.find(folded)?.groupValues?.get(1) ?: return null
         var cleaned = tail.replace(monthPhrase, " ").replace(otherPeriod, " ").replace(Regex("\\b(?:de|em) \\d{1,2}/\\d{1,2}/\\d{4}\\b"), " ")
             .replace(filler, " ").replace(Regex("\\s+"), " ").trim()
-        cleaned = cleaned.removePrefix("mes").trim()
+        cleaned = cleaned.replace(trailingVerb, "").trim().removePrefix("mes").trim()
         if (period != null && cleaned == period) return null
         if (cleaned.isEmpty() || cleaned in setOf("mes", "compra", "compras", "parcela", "parcelas", "mes que vem")) return null
         return cleaned

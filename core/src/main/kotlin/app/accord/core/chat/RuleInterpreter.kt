@@ -22,11 +22,19 @@ class RuleInterpreter(private val profile: Int = PROFILE) : Interpreter {
     override suspend fun interpret(request: InterpretRequest): String {
         val raw = engine.interpret(request).raw
         // S6: uma pergunta do catálogo fechado vira `consult`; qualquer outra continua como `query` (resposta padrão com atalhos).
-        val parsed = ProposalCodec.decode(raw)
-        if (parsed is ProposalParse.Ok && parsed.proposal == Proposal.Query && request.context.phase.includes(ProductPhase.P1)) {
-            ConsultReader.read(request.text, request.context)?.let { return ProposalCodec.encode(it) }
+        if (!request.context.phase.includes(ProductPhase.P1)) return raw
+        val proposal = (ProposalCodec.decode(raw) as? ProposalParse.Ok)?.proposal ?: return raw
+        val text = request.text
+        // Registro lido de uma frase que é pergunta ("gastei quanto de comida em setembro"): só conta se parecer pergunta e não tiver número.
+        val asksQuestion = (proposal is Proposal.Register || proposal is Proposal.Clarify) && ConsultReader.looksLikeQuestion(text)
+        val reading = when {
+            proposal == Proposal.Query -> ConsultReader.read(text, request.context)
+            proposal == Proposal.Uninterpretable && !ScopedEvidence.controlDirective(text, true) -> ConsultReader.read(text, request.context)
+            asksQuestion -> ConsultReader.read(text, request.context)
+            else -> null
         }
-        return raw
+        if (reading != null) return ProposalCodec.encode(reading)
+        return if (asksQuestion) ProposalCodec.encode(Proposal.Query) else raw
     }
 
     companion object {
