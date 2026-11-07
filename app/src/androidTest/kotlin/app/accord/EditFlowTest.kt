@@ -27,9 +27,11 @@ import app.accord.core.space.BankRef
 import app.accord.core.space.Classification
 import app.accord.core.space.CommandId
 import app.accord.core.space.CommandResult
+import app.accord.core.space.CorrectEntry
 import app.accord.core.space.CreateRecurrence
 import app.accord.core.space.DeterministicIds
 import app.accord.core.space.DirectPaymentKind
+import app.accord.core.space.EntityType
 import app.accord.core.space.Envelope
 import app.accord.core.space.RecurrenceKind
 import app.accord.core.space.RegisterCardPurchase
@@ -55,6 +57,7 @@ class EditFlowTest {
     private val grocery get() = "Mercado $tag"
     private val gear get() = "Equipamento $tag"
     private val gym get() = "Academia $tag"
+    private var groceryId = ""
 
     @Before
     fun seed() = runBlocking {
@@ -64,10 +67,10 @@ class EditFlowTest {
         if (account != null) space.execute(Envelope(CommandId("edit-default")), SetMyDefaultAccount(account))
         val month = YearMonth.now()
         fun category(key: String) = DeterministicIds.seedCategory(AppContainer.DEV_SPACE_ID, key)
-        space.execute(
+        groceryId = (space.execute(
             Envelope(CommandId("e-pix-$tag")),
             RegisterDirectPayment(DirectPaymentKind.Pix, grocery, Classification.Category(category("alimentacao.mercado")), month.atDay(2), Money(5_000)),
-        )
+        ) as CommandResult.Applied).receipt.changes.first { it.type == EntityType.Movement }.id
         space.execute(
             Envelope(CommandId("e-card-$tag")),
             RegisterCardPurchase(
@@ -207,5 +210,32 @@ class EditFlowTest {
         waitForText("A série continua nas datas seguintes.")
         compose.onAllNodes(hasText("Excluir") and androidx.compose.ui.test.hasClickAction()).onFirst().performSemanticsAction(SemanticsActions.OnClick)
         waitForText("Lançamento excluído.")
+    }
+
+    @Test
+    fun lancamentoAlteradoPorOutroLugarNaoGravaEPedeNovaComparacaoAntesDeSalvarDeNovo() {
+        openEdit(grocery)
+        // outra edição chega depois que esta tela abriu: a versão em mãos ficou velha
+        runBlocking {
+            val space = ApplicationProvider.getApplicationContext<AccordApplication>().container.space()
+            assert(space.execute(Envelope(CommandId("e-ext-$tag")), CorrectEntry(groceryId, description = "Externa $tag")) is CommandResult.Applied)
+        }
+        replace("Descrição", "Feira $tag")
+        save()
+        waitForText("Este lançamento mudou")
+        waitForText("Nada foi salvo.")
+
+        // ver a versão atual recarrega o formulário com o que o outro lugar gravou; a minha mudança não foi aplicada
+        compose.onNodeWithText("Ver versão atual").performClick()
+        waitGone("Este lançamento mudou")
+        waitForText("Externa $tag")
+        assert(compose.onAllNodesWithText("Feira $tag").fetchSemanticsNodes().isEmpty())
+
+        // nova edição sobre a versão atual: compara de novo e agora grava
+        replace("Descrição", "Segunda $tag")
+        save()
+        waitForText("Alteração salva no aparelho.")
+        waitForText("Segunda $tag")
+        assert(compose.onAllNodesWithText("Feira $tag").fetchSemanticsNodes().isEmpty())
     }
 }
