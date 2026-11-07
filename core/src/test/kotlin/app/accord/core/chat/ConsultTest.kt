@@ -197,4 +197,31 @@ class ConsultTest {
             assertTrue(decision !is ChatDecision.Register && decision !is ChatDecision.Ask, text)
         }
     }
+
+    // ---- mensagem mista (decisão 9) ----
+
+    @Test
+    fun `registro com pergunta na mesma mensagem vira esclarecimento e nao grava`() = runBlocking<Unit> {
+        val interpreter = RuleInterpreter()
+        for (text in listOf("gastei 50 no mercado, quanto sobrou?", "recebi 1000, quanto sobra?", "paguei 30 de lanche e quanto gastei com alimentação este mês?", "mercado 50 no pix. Qual o total?")) {
+            val raw = interpreter.interpret(InterpretRequest(text, p1))
+            assertEquals(ChatDecision.Reply(StandardReply.MixedRequest), ChatValidator.evaluate(text, raw, p1), text)
+        }
+    }
+
+    @Test
+    fun `o esclarecimento tambem vale para propostas forjadas e so na versao 22`() {
+        val text = "recebi 1000, quanto sobra?"
+        val forged = Proposal.Register(nature = Nature.Income, description = "salario", amount = "1000")
+        assertEquals(ChatDecision.Reply(StandardReply.MixedRequest), ChatValidator.evaluate(text, forged, p1))
+        assertTrue(ChatValidator.evaluate(text, forged, p1, version = 21) !is ChatDecision.Reply)
+    }
+
+    @Test
+    fun `palavra interrogativa dentro da descricao nao e pergunta`() {
+        for (text in listOf("mercado 50 no pix", "paguei 50 por quanto tempo", "gastei 30, falta 20", "comprei 3 por 20 cada")) {
+            assertTrue(!ChatText.hasQuestionClause(text), text)
+        }
+        assertTrue(ChatText.hasQuestionClause("gastei 50 no mercado, quanto sobrou?"))
+    }
 }

@@ -151,7 +151,7 @@ observada em 24/10/2026. Os estados abaixo são de decisão, não de conclusão 
 | [0043](0043-fatura-do-cartao-importado-pela-data-da-compra.md) | Fatura do cartão importado atribuída pela data da compra | proposed |
 | [0044](0044-evento-de-aviso-imutavel-e-criacao-por-chave.md) | Evento de aviso imutável, criação por chave natural e avaliação interna | accepted |
 | [0045](0045-marca-de-encargo-no-movimento-e-cobertura-derivada.md) | Marca de encargo no pagamento direto e cobertura do período derivada dos lotes | proposed |
-| [0046](0046-acao-consultar-no-chat-com-catalogo-fechado.md) | Ação `consultar` no Chat: catálogo fechado, execução só pela fachada e resposta do app | proposed |
+| [0046](0046-acao-consultar-no-chat-com-catalogo-fechado.md) | Ação `consultar` no Chat: catálogo fechado, execução só pela fachada e resposta do app | accepted |
 
 Questões ainda sem decisão, como modelo/motor, leitores bancários, acesso local, retenção de
 idempotência e validação financeira no serviço, permanecem nos Beads/specs S2–S4. Suas tarefas

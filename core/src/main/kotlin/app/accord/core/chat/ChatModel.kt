@@ -165,6 +165,9 @@ enum class StandardReply {
 
     /** Consulta que precisa de um complemento (categoria, compra): o Chat mostra opções que enviam a pergunta completa. */
     ConsultAsk,
+
+    /** Registro e pergunta na mesma mensagem (decisão 9, 07/11/2026): nada foi salvo; o Chat pede uma coisa por vez. */
+    MixedRequest,
 }
 
 enum class RefuseReason { BadFormat, Unanchored, InvalidReference, Uninterpretable, NoCard, NoAccounts, InstallmentsNeedCard, Rejected }

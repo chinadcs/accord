@@ -54,5 +54,6 @@
     <string name="consult_action_refresh_description">Atualizar a resposta com os dados de agora</string>
 
     <string name="reply_consult_needs_p1">As consultas com número ainda não estão ativas nesta versão. Veja o Orçamento ou a lista de Lançamentos.</string>
+    <string name="reply_mixed_request">Sua mensagem tem um registro e uma pergunta juntos. Não salvei nada. Envie o registro numa mensagem e a pergunta em outra.</string>
     <string name="reply_consult_out_of_catalog">Ainda não consigo responder isso pelo Chat. Sei dizer quanto gastou numa categoria em um mês, as parcelas de uma compra e os compromissos de um mês. Para o resto, veja o Orçamento ou os Lançamentos.</string>
 </resources>

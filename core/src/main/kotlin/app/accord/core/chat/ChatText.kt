@@ -68,6 +68,15 @@ object ChatText {
         return MonthRead.Ok(YearMonth.of(year, MONTH_NAMES.indexOf(named.groupValues[1]) + 1))
     }
 
+    private val questionClause = Regex("(?:[,.;!?]|\\be\\b|\\bmas\\b) ?(?:e )?(?:quanto|quantos|quantas|qual|quais|como (?:esta|estao|ficou|ficaram))\\b")
+
+    /**
+     * Uma segunda oração com pergunta ("..., quanto sobrou?", ". Quanto já gastei?"). Palavra interrogativa no meio de uma
+     * descrição ("paguei 50 por quanto") não conta: só depois de pontuação, "e" ou "mas". Usado para não deixar uma mensagem
+     * de registro com pergunta virar lançamento.
+     */
+    fun hasQuestionClause(text: String): Boolean = questionClause.containsMatchIn(fold(text))
+
     /** Minúsculas, sem acentos e com espaços normalizados, para comparar sem diferenciar a grafia. */
     fun fold(text: String): String =
         Normalizer.normalize(text, Normalizer.Form.NFD)

@@ -11,7 +11,7 @@ import java.time.YearMonth
  * Não calcula fatura, mês ou parcelas e não repete regras de domínio: isso é da fachada S1.
  */
 object ChatValidator {
-    const val VERSION = 21
+    const val VERSION = 22
     const val PREVIOUS_VERSION = 5
     const val LEGACY_VERSION = 4
     private const val MAX_DESCRIPTION = 40
@@ -38,6 +38,8 @@ object ChatValidator {
             val evidence = ScopedEvidence(InterpretRequest(text, context), refinedOrigins = version >= 8, refinedAnswers = version >= 9, refinedPeople = version >= 10, refinedVocabulary = version >= 11, refinedFinancialScope = version >= 13, refinedEstablishments = version >= 14, refinedCorrections = version >= 15, refinedBoundaries = version >= 17, refinedForms = version >= 19, refinedNegations = version >= 20, refinedEveryday = version >= 21)
             // A literal financial amount in a query is evidence to read, never authority to write.
             if (version >= 12 && evidence.query) return ChatDecision.Refuse(RefuseReason.Uninterpretable)
+            // Validator 22 (decisão 9 do S6): registro com pergunta na mesma mensagem não grava nada nem abre rascunho; pede uma coisa por vez.
+            if (version >= 22 && ChatText.hasQuestionClause(text)) return ChatDecision.Reply(StandardReply.MixedRequest)
             if (!(proposal is Proposal.Correct && context.receipts.isEmpty()) && evidence.guard != null && evidence.guard != "unknown_account")
                 return ChatDecision.Refuse(RefuseReason.Uninterpretable)
             if (version >= 20 && proposal is Proposal.Correct && evidence.negationResolved && !evidence.followsAffirmedValue(proposal))

@@ -762,6 +762,7 @@ private fun noticeText(message: ChatMessage, state: ChatUiState): String = when 
                 StandardReply.NoRecentReceipt -> R.string.reply_no_recent_receipt
                 StandardReply.ConsultNeedsP1 -> R.string.reply_consult_needs_p1
                 StandardReply.ConsultOutOfCatalog -> R.string.reply_consult_out_of_catalog
+                StandardReply.MixedRequest -> R.string.reply_mixed_request
                 StandardReply.Consult, StandardReply.ConsultAsk, null -> R.string.reply_query
             }
         },

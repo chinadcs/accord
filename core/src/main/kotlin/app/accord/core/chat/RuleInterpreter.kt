@@ -31,7 +31,7 @@ class RuleInterpreter(private val profile: Int = PROFILE) : Interpreter {
 
     companion object {
         const val PROFILE = 18
-        const val VALIDATOR = 21
+        const val VALIDATOR = 22
 
         /** Fonte do Chat: sempre disponível, sem download. A versão aparece só no diagnóstico local. */
         val source = InterpreterSource { ActiveInterpreter(RuleInterpreter(), modelVersion = "rules-$PROFILE") }

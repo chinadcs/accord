@@ -211,13 +211,19 @@ class ConsultFlowTest : ChatTestBase() {
     }
 
     @Test
-    fun `mensagem com registro e pergunta juntos nao registra nada`() = runBlocking<Unit> {
+    fun `mensagem com registro e pergunta juntos pede uma coisa por vez e nao grava nada`() = runBlocking<Unit> {
         val e = consultEnv()
         val before = e.space.operations().value().size
-        val message = e.say("gastei 50 no mercado, quanto sobrou?")
-        assertTrue(message.state != MessageState.Applied && message.state != MessageState.ToClassify, "estado ${message.state}")
+        for (text in listOf("gastei 50 no mercado, quanto sobrou?", "recebi 1000, quanto sobra?", "gastei 50 no mercado. Quanto já gastei esse mês?")) {
+            val message = e.say(text)
+            assertEquals(MessageState.Replied, message.state, text)
+            assertEquals(StandardReply.MixedRequest, message.reply, text)
+            assertNull(ConsultSnapshot.fromFields(message.fields), text)
+        }
         assertEquals(before, e.space.operations().value().size)
         assertTrue(e.space.entries(EntryFilter(from = oct, to = oct)).value().rows.isEmpty())
+        assertTrue(e.space.drafts().value().isEmpty())
+        assertTrue(e.space.pendings().value().isEmpty())
     }
 
     @Test

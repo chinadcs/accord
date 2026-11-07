@@ -24,7 +24,8 @@ class RuleInterpreterTest {
 
     @Test fun `the chat validator default matches the interpreter profile`() {
         assertEquals(RuleInterpreter.VALIDATOR, ChatValidator.VERSION)
-        assertEquals(RuleInterpreter.VALIDATOR, FinancialContractRegression.V10_VALIDATOR)
+        // A suíte congelada financial-contract-v10 continua no validador 21; o 22 só acrescenta a regra da mensagem mista (ADR 0046).
+        assertEquals(21, FinancialContractRegression.V10_VALIDATOR)
         assertEquals(RuleInterpreter.PROFILE, FinancialContractRegression.V10_PROFILE)
     }
 
