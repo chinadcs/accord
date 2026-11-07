@@ -40,7 +40,7 @@ orçamento e mostra o critério; uma ação por mensagem; explicação do modelo
 - O número exibido vem sempre de uma consulta das telas; o teste de coerência com as telas 05/07/10 é a defesa contra divergência.
 - O leitor por regras (`ConsultReader`) devolve nada na dúvida e frases com número, comparação ou mais de um mês caem na resposta padrão. A taxa de confusão registrar/consultar e o acerto frase → consulta
   não foram medidos nos Galaxy S20 FE e S23 FE (`accord-vn2.7`); limiares ainda não foram definidos com o usuário.
-- Medição no PC (08/11/2026, `accord-a8kf`), com 100 frases escritas pelo casal, interpretador por regras, base real em Room e categorias iniciais mais as citadas na coluna `alvo`: antes dos ajustes, 44 das 65
+- Medição no PC (07/11/2026, `accord-a8kf`), com 100 frases escritas pelo casal, interpretador por regras, base real em Room e categorias iniciais mais as citadas na coluna `alvo`: antes dos ajustes, 44 das 65
   frases esperadas como consulta tinham o tipo certo; depois, 63. Nenhuma consulta respondida errou mês ou critério. Os ajustes foram só no interpretador de produção e no leitor (fora do validador): tentar o
   leitor também quando o motor devolve "não entendi"; perguntas sem número lidas como registro ("gastei quanto de comida em setembro") passam pelo leitor ou viram orientação; "compr…" deixou de pegar
   "compromisso" e "comprar"; intenção e conselho ("devo comprar…") nunca viram consulta. O vocabulário das categorias iniciais comparava a **chave da semente** com o id da categoria, que no app é um UUID;
