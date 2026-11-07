@@ -148,6 +148,7 @@
     <string name="conflict_entity_limit_plan">Limites</string>
     <string name="conflict_entity_category">Categoria</string>
     <string name="conflict_entity_income_category">Categoria de renda</string>
+    <string name="conflict_entity_icon_association">Ícone de lançamento</string>
     <string name="conflict_entity_import_batch">Importação de documento</string>
     <string name="conflict_entity_alert_event">Aviso de possível excesso</string>
     <string name="conflict_entity_account">Conta</string>
@@ -189,6 +190,9 @@
     <string name="field_exceptions">Exceções</string>
     <string name="field_settlements">Pagamentos</string>
     <string name="field_icon">Ícone</string>
+    <string name="field_icon_scope">Vale para</string>
+    <string name="field_icon_target">Lançamento ou nome</string>
+    <string name="field_icon_source">Origem do ícone</string>
     <string name="field_color">Cor</string>
     <string name="field_order">Ordem</string>
     <string name="field_moves">Mudanças de categoria principal</string>

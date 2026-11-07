@@ -43,6 +43,9 @@ interface FinanceSpace {
 
     /** Categorias de renda (receitas): Investimento, Salário e Renda Extra de início, mais as criadas pelo casal. */
     suspend fun incomeCategories(): QueryResult<List<IncomeCategoryNode>>
+
+    /** Ícones escolhidos por lançamento ou por nome de lançamento (ADR 0047), sem os removidos. */
+    suspend fun iconAssociations(): QueryResult<List<IconAssociationView>>
     suspend fun accounts(): QueryResult<AccountsView>
     suspend fun budget(month: YearMonth): QueryResult<MonthBudget>
 
@@ -305,6 +308,17 @@ data class RecordAlertEvent(val event: AlertEvent) : Command
 data class CreateIncomeCategory(val name: String) : Command
 
 data class RenameIncomeCategory(val categoryId: String, val name: String, val expectedRevision: Long? = null) : Command
+
+/**
+ * Escolhe o ícone de um lançamento ([IconScope.Entry], [target] é a identidade do lançamento) ou de todos os lançamentos com o mesmo nome
+ * ([IconScope.Name], [target] é o nome, comparado sem caixa, acento e espaços extras). Substitui a escolha anterior do mesmo alvo. O ícone é só visual:
+ * não muda categoria, valores, datas nem dados importados (ADR 0047). A fachada confere o formato da chave do catálogo da origem e recusa
+ * lançamento inexistente; a pertença ao catálogo embarcado é conferida na exibição. Não é desfazível: escolher de novo ou [ClearIconAssociation] volta.
+ */
+data class SetIconAssociation(val scope: IconScope, val target: String, val icon: IconRef, val expectedRevision: Long? = null) : Command
+
+/** Remove a escolha de ícone do alvo (volta ao reconhecimento automático). Recusa quando não há escolha. */
+data class ClearIconAssociation(val scope: IconScope, val target: String, val expectedRevision: Long? = null) : Command
 
 data class AddAccount(val bank: BankRef, val nickname: String) : Command
 
@@ -805,7 +819,7 @@ data class FieldError(
     val month: YearMonth? = null,
 )
 
-enum class EntityType { Category, Account, Preferences, Movement, Card, CardPurchase, Boleto, Income, Recurrence, Refund, Invoice, InvoicePayment, LimitPlan, IncomeCategory, ImportBatch, AlertEvent }
+enum class EntityType { Category, Account, Preferences, Movement, Card, CardPurchase, Boleto, Income, Recurrence, Refund, Invoice, InvoicePayment, LimitPlan, IncomeCategory, ImportBatch, AlertEvent, IconAssociation }
 
 data class EntityRef(val type: EntityType, val id: String)
 
@@ -852,6 +866,15 @@ data class CategoryNode(
     /** Cor escolhida na categoria principal (índice da paleta); nulo vale a cor derivada. Subcategoria usa a do pai. */
     val colorIndex: Int? = null,
     val revision: Long = 0,
+)
+
+/** Escolha de ícone ativa: [target] é a chave normalizada do nome ([IconScope.Name]) ou a identidade do lançamento ([IconScope.Entry]). */
+data class IconAssociationView(
+    val id: String,
+    val scope: IconScope,
+    val target: String,
+    val icon: IconRef,
+    val revision: Long,
 )
 
 data class IncomeCategoryNode(

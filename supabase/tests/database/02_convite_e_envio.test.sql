@@ -1,7 +1,7 @@
 -- Convite (prazo, substituição, normalização, tentativas) e envio/recebimento no banco.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(22);
+select plan(23);
 
 create schema tests;
 grant usage on schema tests to authenticated;
@@ -106,6 +106,11 @@ select is((public.push_operations('00000000-0000-0000-0000-0000000000e1',
   '[{"operationId":"op-ib","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":1,"installationId":"i1","localTimeMillis":1,
      "changes":[{"type":"ImportBatch","id":"ib1","baseVersion":null,"state":"{}","tombstone":false}]}]')) -> 'results' -> 0 ->> 'result',
   'applied', 'lote de importação confirmado é um tipo sincronizável');
+-- ---- ícone escolhido por lançamento ou nome (ADR 0047): tipo aceito ----
+select is((public.push_operations('00000000-0000-0000-0000-0000000000e1',
+  '[{"operationId":"op-ia","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":1,"installationId":"i1","localTimeMillis":1,
+     "changes":[{"type":"IconAssociation","id":"ia1","baseVersion":null,"state":"{}","tombstone":false}]}]')) -> 'results' -> 0 ->> 'result',
+  'applied', 'ícone escolhido é um tipo sincronizável');
 select is((public.push_operations('00000000-0000-0000-0000-0000000000e1',
   '[{"operationId":"op-xx","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":1,"installationId":"i1","localTimeMillis":1,
      "changes":[{"type":"Inexistente","id":"x1","baseVersion":null,"state":"{}","tombstone":false}]}]')) -> 'results' -> 0 ->> 'result',

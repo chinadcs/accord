@@ -74,6 +74,11 @@ object ConflictFormat {
             Spec("name", R.string.field_name, Kind.Text), Spec("iconKey", R.string.field_icon, Kind.Text),
             Spec("sortOrder", R.string.field_order, Kind.Text),
         ),
+        EntityType.IconAssociation to listOf(
+            Spec("scope", R.string.field_icon_scope, Kind.Text), Spec("target", R.string.field_icon_target, Kind.Text),
+            Spec("iconSource", R.string.field_icon_source, Kind.Text), Spec("iconKey", R.string.field_icon, Kind.Text),
+            Spec("voided", R.string.field_status, Kind.Deleted),
+        ),
         EntityType.Recurrence to listOf(
             Spec("kind", R.string.field_kind, Kind.Text), Spec("frequency", R.string.field_frequency, Kind.Text),
             Spec("anchorEpochDay", R.string.field_first_occurrence, Kind.Day), Spec("segments", R.string.field_segments, Kind.Count),
@@ -125,6 +130,7 @@ object ConflictFormat {
         EntityType.IncomeCategory -> R.string.conflict_entity_income_category
         EntityType.ImportBatch -> R.string.conflict_entity_import_batch
         EntityType.AlertEvent -> R.string.conflict_entity_alert_event
+        EntityType.IconAssociation -> R.string.conflict_entity_icon_association
         EntityType.Account -> R.string.conflict_entity_account
         EntityType.Card -> R.string.conflict_entity_card
         EntityType.Preferences -> R.string.conflict_entity_preferences

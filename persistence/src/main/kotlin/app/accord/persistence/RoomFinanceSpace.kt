@@ -60,7 +60,10 @@ import app.accord.core.space.ChangePaymentMethod
 import app.accord.core.space.CorrectEntry
 import app.accord.core.space.CorrectInvoiceAssignment
 import app.accord.core.space.CreateCategory
+import app.accord.core.space.ClearIconAssociation
 import app.accord.core.space.CreateIncomeCategory
+import app.accord.core.space.IconAssociationView
+import app.accord.core.space.SetIconAssociation
 import app.accord.core.space.CreateRecurrence
 import app.accord.core.space.Decision
 import app.accord.core.space.DefineLimits
@@ -247,6 +250,7 @@ class RoomFinanceSpace private constructor(
 
     private suspend fun alertsRecorded() = onAlertRecorded()
     private val importPlanner = ImportPlanner(dao, importEvaluator, { session, envelope, command -> applyInTransaction(session, envelope, command) }, nowMillis)
+    private val iconPlanner = IconPlanner(dao) { entryDetail(it) != null }
     private val categoryPlanner = CategoryPlanner(dao, limitsPlanner, { tree() }) { clock.currentMonth() }
     private val invoicePlanner = InvoicePlanner(
         dao,
@@ -260,6 +264,8 @@ class RoomFinanceSpace private constructor(
         is CreateCategory -> planCreateCategory(command)
         is CreateIncomeCategory -> planCreateIncomeCategory(command)
         is RenameIncomeCategory -> planRenameIncomeCategory(command)
+        is SetIconAssociation -> iconPlanner.planSet(session, command)
+        is ClearIconAssociation -> iconPlanner.planClear(session, command)
         is AddAccount -> planAddAccount(command)
         is SetMyDefaultAccount -> planSetDefaultAccount(session, command)
         is RegisterDirectPayment -> planDirectPayment(session, origin, command)
@@ -309,7 +315,7 @@ class RoomFinanceSpace private constructor(
 
     /** Cadastros de conta e de categoria de renda não mudam número nenhum do orçamento; o próprio registro do evento nunca dispara avaliação. */
     private fun changesBudgetNumbers(command: Command) = command !is RecordAlertEvent && command !is AddAccount && command !is SetMyDefaultAccount &&
-        command !is CreateIncomeCategory && command !is RenameIncomeCategory
+        command !is CreateIncomeCategory && command !is RenameIncomeCategory && command !is SetIconAssociation && command !is ClearIconAssociation
 
     /**
      * Avaliação dos avisos de possível excesso (S5, ADR 0044). Só mudança nos dados avalia: a fachada a chama depois dos comandos confirmados e o motor de
@@ -1544,6 +1550,8 @@ class RoomFinanceSpace private constructor(
             CategoryNode(it.id, categories.parentAt(it.id, now), it.name, it.sortOrder, it.iconKey, it.seedKey, it.colorIndex, it.revision)
         }
     }
+
+    override suspend fun iconAssociations(): QueryResult<List<IconAssociationView>> = query { iconPlanner.viewsOf(dao.iconAssociations()) }
 
     override suspend fun incomeCategories(): QueryResult<List<IncomeCategoryNode>> = query {
         dao.incomeCategories().map { IncomeCategoryNode(it.id, it.name, it.sortOrder, it.iconKey, it.seedKey, it.revision) }

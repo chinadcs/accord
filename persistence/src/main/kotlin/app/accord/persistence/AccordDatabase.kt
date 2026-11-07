@@ -51,6 +51,22 @@ data class IncomeCategoryRow(
     val revision: Long,
 )
 
+/**
+ * Ícone escolhido para um lançamento (`Entry`, [target] é a identidade) ou para todos com o mesmo nome (`Name`, [target] é o nome normalizado), ADR 0047.
+ * A identidade é determinística por escopo e alvo, então os dois aparelhos chegam à mesma linha; remover marca [voided] e preserva a linha.
+ */
+@Entity(tableName = "icon_association", indices = [Index(value = ["scope", "target"], unique = true)])
+@Serializable
+data class IconAssociationRow(
+    @PrimaryKey val id: String,
+    val scope: String,
+    val target: String,
+    val iconSource: String,
+    val iconKey: String,
+    val voided: Boolean,
+    val revision: Long,
+)
+
 @Entity(tableName = "account")
 @Serializable
 data class AccountRow(
@@ -397,6 +413,9 @@ interface SpaceDao {
     @Upsert suspend fun upsertIncomeCategory(row: IncomeCategoryRow)
     @Query("SELECT * FROM income_category ORDER BY sortOrder, name") suspend fun incomeCategories(): List<IncomeCategoryRow>
     @Query("SELECT * FROM income_category WHERE id = :id") suspend fun incomeCategory(id: String): IncomeCategoryRow?
+    @Upsert suspend fun upsertIconAssociation(row: IconAssociationRow)
+    @Query("SELECT * FROM icon_association WHERE id = :id") suspend fun iconAssociation(id: String): IconAssociationRow?
+    @Query("SELECT * FROM icon_association WHERE voided = 0 ORDER BY scope, target") suspend fun iconAssociations(): List<IconAssociationRow>
     @Insert suspend fun insertCategory(row: CategoryRow)
     @Query("SELECT * FROM category ORDER BY sortOrder, name") suspend fun categories(): List<CategoryRow>
     @Query("SELECT * FROM category WHERE id = :id") suspend fun category(id: String): CategoryRow?
@@ -689,9 +708,9 @@ interface SpaceDao {
         SyncStateRow::class, ConflictRow::class, ConflictEntityRow::class,
         ChatMessageRow::class, ChatAttemptRow::class, ChatQuestionRow::class, ChatReceiptRow::class,
         ImportBatchRow::class, ImportMovementRow::class, ImportDecisionRow::class, ImportPairRow::class,
-        AlertEventRow::class, AlertDisplayRow::class, AlertPreferenceRow::class,
+        AlertEventRow::class, AlertDisplayRow::class, AlertPreferenceRow::class, IconAssociationRow::class,
     ],
-    version = 11,
+    version = 12,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2, spec = Migration1To2::class),
@@ -711,6 +730,8 @@ interface SpaceDao {
         AutoMigration(from = 9, to = 10),
         // S5.7: marca de encargo no movimento (pagamento direto).
         AutoMigration(from = 10, to = 11),
+        // ADR 0047: ícone escolhido por lançamento ou por nome (compartilhado).
+        AutoMigration(from = 11, to = 12),
     ],
 )
 abstract class AccordDatabase : RoomDatabase() {

@@ -25,7 +25,9 @@ do pedido original (accord-nq8) passa a ser reconhecimento determinístico por r
    **este e os próximos com o mesmo nome**. A segunda vale para **todos** os lançamentos com o nome, passados e futuros, e é aplicada na exibição, sem gravar nada em cada lançamento.
 4. **Agregado `IconAssociation`, sincronizado** (ADR 0024, modelo do [ADR 0038](0038-categorias-de-renda.md)): escopo `Name` (nome normalizado por `NameKey`) ou `Entry` (identidade do lançamento), origem
    (`brand`, `bank`, `generic`), chave do ícone e remoção lógica. Identidade determinística por escopo e chave; edição concorrente vira conflito de versão com as duas versões, sem última edição vence.
-   Comandos `SetIconAssociation` e `ClearIconAssociation` desfazíveis, com versão esperada; a fachada aceita só chave presente no catálogo (sem URL, caminho ou imagem vindos de fora) e recusa lançamento inexistente.
+   Comandos `SetIconAssociation` e `ClearIconAssociation`, com versão esperada. **Não entram no Desfazer** (decidido na implementação): escolher de novo ou remover já é o caminho de volta, e o aviso de
+   Desfazer ficaria sobre uma escolha puramente visual. A fachada confere só o **formato** da chave de cada origem (slug, ISPB de 8 dígitos ou nome Lucide; sem URL, caminho ou texto livre) e recusa lançamento
+   inexistente; a pertença ao catálogo embarcado é conferida na exibição, e uma chave que o aparelho não conhece (de uma versão mais nova) cai no ícone padrão.
 5. **Precedência na exibição:** escolha do lançamento > regra por nome > reconhecimento automático > ícone padrão. O ícone é visual: não muda categoria, valores, datas, identidade nem dados importados.
 6. **Direitos de marca.** Aviso único (uso nominativo para identificar o estabelecimento citado, sem parceria ou suporte de importação) e, no catálogo, a origem de licença/diretrizes que o Simple Icons
    informar para cada marca. A licença CC0 do projeto não concede direitos sobre cada marca.
