@@ -57,6 +57,7 @@ data class ActivityActions(
     /** Abre Lançamentos no [month], critério data da compra, com a categoria opcional e, se for "a classificar", essa situação. */
     val onOpenEntries: (month: YearMonth, categoryId: String?, toClassify: Boolean) -> Unit,
     val onOpenBudget: () -> Unit,
+    val onOpenComparison: () -> Unit = {},
 )
 
 @Composable
@@ -108,6 +109,11 @@ fun PurchaseActivityScreen(
         item {
             OutlinedButton(onClick = actions.onOpenBudget, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
                 Text(stringResource(R.string.activity_see_budget))
+            }
+        }
+        item {
+            OutlinedButton(onClick = actions.onOpenComparison, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+                Text(stringResource(R.string.activity_compare))
             }
         }
     }

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Comparações históricas (tela 33) -->
+    <string name="comparison_title">Comparações</string>
+    <string name="more_comparison">Comparações históricas</string>
+    <string name="activity_compare">Comparar períodos</string>
+    <string name="comparison_criterion_label">Critério de data</string>
+    <string name="comparison_criterion_budget">Orçamento</string>
+    <string name="comparison_criterion_purchase">Data da compra</string>
+    <string name="comparison_criterion_budget_note">Critério: mês do orçamento. A compra parcelada entra pelas parcelas, no mês de cada fatura.</string>
+    <string name="comparison_criterion_purchase_note">Critério: data original da compra. A compra parcelada entra uma vez, pelo total.</string>
+    <string name="comparison_period_a">Período A</string>
+    <string name="comparison_period_b">Período B</string>
+    <string name="comparison_grouping_label">Agrupar por</string>
+    <string name="comparison_grouping_category">Categoria</string>
+    <string name="comparison_grouping_subcategory">Subcategoria</string>
+
+    <string name="comparison_before_title">Antes de interpretar</string>
+    <string name="comparison_duration">%1$s: %2$d dias · %3$s: %4$d dias</string>
+    <string name="comparison_different_duration">Os períodos têm durações diferentes; a variação compara tamanhos diferentes.</string>
+    <string name="comparison_in_progress">%1$s inclui dias que ainda não aconteceram; parte dos valores é prevista.</string>
+    <plurals name="comparison_provisional">
+        <item quantity="one">%2$s tem %1$d vínculo de fatura a conferir; o valor entra provisoriamente.</item>
+        <item quantity="other">%2$s tem %1$d vínculos de fatura a conferir; os valores entram provisoriamente.</item>
+    </plurals>
+    <string name="comparison_to_classify">%1$s tem %2$s a classificar, fora de qualquer categoria. A variação pode refletir classificação pendente.</string>
+    <string name="comparison_side_failed">Não foi possível calcular o %1$s. Os valores dele não são zero.</string>
+    <string name="comparison_coverage_note">A variação pode refletir registros faltantes em um dos períodos.</string>
+
+    <string name="comparison_total">Total</string>
+    <string name="comparison_row_values">%1$s: %2$s → %3$s</string>
+    <string name="comparison_cell_no_data">sem dados</string>
+    <string name="comparison_cell_failed">falha</string>
+    <string name="comparison_change">Variação: %1$s</string>
+    <string name="comparison_change_percent">%1$s (%2$s)</string>
+    <string name="comparison_change_no_base">%1$s · sem base para percentual</string>
+    <string name="comparison_change_negative_base">%1$s · sem base para percentual (créditos maiores que gastos)</string>
+    <string name="comparison_change_out_of_range">%1$s · sem percentual</string>
+    <string name="comparison_change_unavailable">indisponível, %1$s</string>
+    <string name="comparison_unavailable_a_no_data">período A sem dados</string>
+    <string name="comparison_unavailable_b_no_data">período B sem dados</string>
+    <string name="comparison_unavailable_a_failed">falha ao calcular o período A</string>
+    <string name="comparison_unavailable_b_failed">falha ao calcular o período B</string>
+    <string name="comparison_unavailable_both">sem dados ou falha nos dois períodos</string>
+    <string name="comparison_group_to_classify">A classificar</string>
+    <string name="comparison_group_no_subcategory">%1$s · sem subcategoria</string>
+    <string name="comparison_open_period">Ver %1$s</string>
+    <string name="comparison_list_hint">Barras comparáveis: a de cima é o período A e a de baixo é o período B.</string>
+
+    <string name="comparison_empty_title">Sem dados comparáveis</string>
+    <string name="comparison_empty_body">Escolha outros períodos ou confira se os registros desses meses estão completos. Nenhuma explicação é gerada sem dados.</string>
+    <string name="comparison_open_pendings">Ver pendências</string>
+    <string name="comparison_failed">Não foi possível ler as comparações deste aparelho.</string>
+</resources>

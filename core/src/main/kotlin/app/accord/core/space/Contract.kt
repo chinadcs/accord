@@ -2,6 +2,9 @@ package app.accord.core.space
 
 import app.accord.core.Frequency
 import app.accord.core.analysis.ChargeComparison
+import app.accord.core.analysis.ComparisonRow
+import app.accord.core.analysis.Measure
+import app.accord.core.analysis.PeriodChange
 import app.accord.core.analysis.SubscriptionCharge
 import app.accord.core.LimitEdit
 import app.accord.core.LimitScope
@@ -111,6 +114,18 @@ interface FinanceSpace {
      * Leitura apenas: nada é criado nem alterado, e o orçamento do mês continua sendo calculado por outra consulta.
      */
     suspend fun purchaseActivity(from: LocalDate, untilExclusive: LocalDate, categoryId: String? = null): QueryResult<PurchaseActivity>
+
+    /**
+     * Comparação histórica (S6, tela 33): os mesmos grupos em dois períodos, com um critério de data comum. No critério [DateCriterion.BudgetMonth]
+     * os períodos são meses inteiros (início no dia 1 e fim exclusivo no dia 1) e os valores são os mesmos comprometidos do orçamento; em
+     * [DateCriterion.PurchaseDate] valem as datas originais da atividade de compras. Um período que falhar vira falha nas suas células, nunca zero.
+     */
+    suspend fun comparePeriods(
+        criterion: DateCriterion,
+        grouping: ComparisonGrouping,
+        a: ComparisonPeriod,
+        b: ComparisonPeriod,
+    ): QueryResult<PeriodComparison>
 
     /** Detalhe de uma assinatura (S6, tela 32); nulo se a série não existe, foi anulada ou não está em Assinaturas. */
     suspend fun subscription(recurrenceId: String): QueryResult<SubscriptionDetail?>
@@ -1327,4 +1342,43 @@ data class PurchaseActivity(
     val gaps: ActivityLine?,
     /** Compras do período com cancelamento solicitado ou confirmado (o total já desconta as parcelas canceladas confirmadas). */
     val withCancellation: Int,
+)
+
+// ---- comparações históricas (S6, tela 33) ----
+
+enum class ComparisonGrouping { Category, Subcategory }
+
+data class ComparisonPeriod(val from: LocalDate, val untilExclusive: LocalDate) {
+    init {
+        require(from.isBefore(untilExclusive)) { "O período precisa ter ao menos um dia" }
+    }
+
+    val days: Int get() = java.time.temporal.ChronoUnit.DAYS.between(from, untilExclusive).toInt()
+}
+
+/**
+ * O que o período tem de limitação, mostrado antes da interpretação (tela 33 §4). [inProgressOrFuture]: o período inclui hoje ou dias futuros,
+ * então tem valores previstos ou ainda por acontecer. [provisionalLinks]: vínculos de fatura "a conferir" que entram provisoriamente (só no
+ * critério do orçamento). [toClassify]: compras sem categoria, que não pertencem a nenhum grupo. [failed]: a leitura deste período falhou.
+ */
+data class ComparisonSide(
+    val period: ComparisonPeriod,
+    val failed: Boolean,
+    val inProgressOrFuture: Boolean,
+    val provisionalLinks: Int,
+    val toClassify: Money?,
+)
+
+data class PeriodComparison(
+    val criterion: DateCriterion,
+    val grouping: ComparisonGrouping,
+    val a: ComparisonSide,
+    val b: ComparisonSide,
+    /** Os períodos têm números de dias diferentes (por exemplo fevereiro e março): a variação compara tamanhos diferentes. */
+    val differentDuration: Boolean,
+    val rows: List<ComparisonRow>,
+    /** Soma das linhas de cada período (incluindo "a classificar"), para o total fechar com a lista. */
+    val totalA: Measure,
+    val totalB: Measure,
+    val totalChange: PeriodChange,
 )

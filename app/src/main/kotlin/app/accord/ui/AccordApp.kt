@@ -191,6 +191,10 @@ import app.accord.ui.nav.ROUTE_COMMITMENT
 import app.accord.ui.nav.ROUTE_COMMITMENTS
 import app.accord.ui.nav.ARG_FILTER_CRITERION
 import app.accord.ui.nav.ROUTE_ACTIVITY
+import app.accord.ui.nav.ROUTE_COMPARISON
+import app.accord.ui.comparison.ComparisonActions
+import app.accord.ui.comparison.ComparisonRoute
+import app.accord.ui.comparison.ComparisonViewModel
 import app.accord.ui.nav.ROUTE_SUBSCRIPTION
 import app.accord.ui.activity.ActivityActions
 import app.accord.ui.activity.PurchaseActivityRoute
@@ -600,6 +604,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             onCommitments = { navController.navigate(ROUTE_COMMITMENTS) },
                             onSubscriptions = { navController.navigate(ROUTE_SUBSCRIPTIONS) },
                             onActivity = { navController.navigate(ROUTE_ACTIVITY) },
+                            onComparison = { navController.navigate(ROUTE_COMPARISON) },
                             onRegister = register,
                             onSpace = { navController.navigate(ROUTE_SPACE) },
                             onAppearance = { navController.navigate("appearance") },
@@ -781,6 +786,22 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             )
                         },
                         onOpenBudget = { navController.openRoot(Root.Budget) },
+                        onOpenComparison = { navController.navigate(ROUTE_COMPARISON) },
+                    ),
+                )
+            }
+            composable(ROUTE_COMPARISON) {
+                val viewModel: ComparisonViewModel = viewModel(
+                    factory = viewModelFactory { initializer { ComparisonViewModel(container, createSavedStateHandle()) } },
+                )
+                ComparisonRoute(
+                    viewModel, padding,
+                    ComparisonActions(
+                        onBack = { navController.popBackStack() },
+                        onOpenEntries = { month, categoryId, criterion, toClassify ->
+                            navController.openFilteredEntries(month, categoryId, EntrySituation.ToClassify.takeIf { toClassify }, criterion)
+                        },
+                        onOpenPendings = { navController.openRoot(Root.Review) },
                     ),
                 )
             }

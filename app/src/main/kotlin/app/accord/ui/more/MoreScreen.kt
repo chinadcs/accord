@@ -61,6 +61,7 @@ data class MoreActions(
     val onForecasts: () -> Unit = {},
     val onSubscriptions: () -> Unit = {},
     val onActivity: () -> Unit = {},
+    val onComparison: () -> Unit = {},
     /** Liga ou desliga os avisos neste aparelho (salva na hora). */
     val onAlertsToggle: (Boolean) -> Unit = {},
     /** "Permitir notificações" (ou abrir os ajustes do sistema), quando falta a permissão ou o canal está desativado. */
@@ -113,6 +114,7 @@ fun MoreScreen(
             MoreRow(R.string.more_commitments, Lucide.drawable.lucide_ic_calendar, actions.onCommitments)
             MoreRow(R.string.more_subscriptions, Lucide.drawable.lucide_ic_repeat, actions.onSubscriptions)
             MoreRow(R.string.more_activity, Lucide.drawable.lucide_ic_shopping_bag, actions.onActivity)
+            MoreRow(R.string.more_comparison, Lucide.drawable.lucide_ic_chart_column, actions.onComparison)
             MoreRow(R.string.forecast_title, Lucide.drawable.lucide_ic_trending_up, actions.onForecasts)
         }
 

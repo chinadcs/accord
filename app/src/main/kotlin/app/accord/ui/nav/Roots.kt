@@ -100,3 +100,6 @@ const val ARG_FILTER_CRITERION = "filterCriterion"
 
 /** Atividade de compras (tela 30): compras pela data original. */
 const val ROUTE_ACTIVITY = "activity"
+
+/** Comparações históricas (tela 33). */
+const val ROUTE_COMPARISON = "comparison"

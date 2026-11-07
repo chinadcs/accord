@@ -110,6 +110,9 @@ import app.accord.core.space.Origin
 import app.accord.core.space.PayBoleto
 import app.accord.core.space.PayInvoice
 import app.accord.core.space.PayOccurrence
+import app.accord.core.space.ComparisonGrouping
+import app.accord.core.space.ComparisonPeriod
+import app.accord.core.space.PeriodComparison
 import app.accord.core.space.PurchaseActivity
 import app.accord.core.space.SubscriptionDetail
 import app.accord.core.space.SubscriptionList
@@ -214,6 +217,11 @@ class RoomFinanceSpace private constructor(
         load = { loadSeries(it) },
         place = { loaded, number -> place(loaded, number, cycleOf(sessions.current().spaceId)) },
         month = { clock.currentMonth() },
+    )
+    private val comparisonQueries = ComparisonQueries(
+        budget = { (budget(it) as QueryResult.Data).value },
+        activity = { from, until -> entryQueries.purchaseActivity(from, until, null) },
+        today = { clock.today() },
     )
     private val alertCenter = AlertCenter(
         db, clock, sessions,
@@ -1287,6 +1295,13 @@ class RoomFinanceSpace private constructor(
 
     override suspend fun purchaseActivity(from: LocalDate, untilExclusive: LocalDate, categoryId: String?): QueryResult<PurchaseActivity> =
         query { entryQueries.purchaseActivity(from, untilExclusive, categoryId) }
+
+    override suspend fun comparePeriods(
+        criterion: DateCriterion,
+        grouping: ComparisonGrouping,
+        a: ComparisonPeriod,
+        b: ComparisonPeriod,
+    ): QueryResult<PeriodComparison> = query { comparisonQueries.compare(criterion, grouping, a, b) }
 
     override suspend fun subscription(recurrenceId: String): QueryResult<SubscriptionDetail?> =
         query { subscriptionQueries.detail(recurrenceId, clock.today()) }
