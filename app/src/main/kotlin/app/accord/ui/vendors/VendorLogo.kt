@@ -2,6 +2,7 @@ package app.accord.ui.vendors
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,9 +22,12 @@ import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import app.accord.R
 import app.accord.core.space.BankRef
 import app.accord.core.space.IconRef
 import app.accord.core.space.IconSource
@@ -87,30 +91,42 @@ fun EntryIdentityIcon(
     description: String,
     allowVendor: Boolean = true,
     modifier: Modifier = Modifier,
-    chosen: IconRef? = null,
+    entryId: String? = null,
+    /** Abre a escolha de ícone; só vale onde a marca é permitida e a tela tem fachada ([LocalIconActions]). */
+    onChange: (() -> Unit)? = null,
 ) {
     val library by rememberIconLibrary()
-    val ref = remember(description, allowVendor, chosen, library) {
-        library?.let { lib -> (chosen ?: if (allowVendor) lib.matcher.match(description) else null)?.takeIf(lib::isKnown) }
+    val choices = LocalIconChoices.current
+    val ref = remember(description, allowVendor, entryId, choices, library) {
+        library?.let { lib -> (if (allowVendor) choices.forEntry(entryId, description) ?: lib.matcher.match(description) else null)?.takeIf(lib::isKnown) }
     }
     val initials = remember(description) { entryInitials(description) }
     val lib = library
-    if (ref != null && lib != null) {
-        IconRefLogo(ref, lib, modifier)
+    val tapLabel = stringResource(R.string.icon_action_change)
+    // A etiqueta e o toque ficam num invólucro: duas etiquetas no mesmo nó se sobrepõem, e a do logo precisa continuar visível.
+    val tapModifier = if (onChange != null && allowVendor) {
+        Modifier.testTag("entry-icon").clickable(onClickLabel = tapLabel, role = Role.Button) { onChange() }
     } else {
-        Surface(
-            modifier = modifier.size(48.dp),
-            color = MaterialTheme.colorScheme.surfaceContainerHighest,
-            shape = CircleShape,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-        ) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                androidx.compose.material3.Text(
-                    initials,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+        Modifier
+    }
+    Box(tapModifier) {
+        if (ref != null && lib != null) {
+            IconRefLogo(ref, lib, modifier)
+        } else {
+            Surface(
+                modifier = modifier.size(48.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                shape = CircleShape,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+            ) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    androidx.compose.material3.Text(
+                        initials,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
     }

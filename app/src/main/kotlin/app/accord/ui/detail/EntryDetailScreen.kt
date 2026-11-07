@@ -22,6 +22,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.stringResource
@@ -32,7 +35,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.accord.ui.components.DetailHeader
 import app.accord.R
+import app.accord.ui.vendors.ChooseIconFlow
 import app.accord.ui.vendors.EntryIdentityIcon
+import app.accord.ui.vendors.LocalIconActions
 import app.accord.ui.banks.BankLogo
 import app.accord.core.label
 import app.accord.core.space.EntryDetail
@@ -133,12 +138,16 @@ private fun ReadyDetail(
     onOpenCommitment: (String) -> Unit,
 ) {
     val d = data.detail
+    var choosingIcon by remember { mutableStateOf(false) }
+    if (choosingIcon) ChooseIconFlow(d.id, d.description) { choosingIcon = false }
     Surface(color = Accord.colors.financeSurface, contentColor = Accord.colors.onFinanceSurface, shape = MaterialTheme.shapes.large) {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
                 EntryIdentityIcon(
                     d.description,
                     allowVendor = d.kind != EntryKind.Income && d.kind != EntryKind.InvoicePayment,
+                    entryId = d.id,
+                    onChange = if (LocalIconActions.current != null) ({ choosingIcon = true }) else null,
                 )
                 Text(d.description, style = MaterialTheme.typography.titleLarge,
                     color = Accord.colors.onFinanceSurface, modifier = Modifier.weight(1f).semantics { heading() })

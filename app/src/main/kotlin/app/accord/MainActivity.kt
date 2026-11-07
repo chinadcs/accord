@@ -5,6 +5,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.CompositionLocalProvider
+import app.accord.ui.vendors.LocalIconActions
+import app.accord.ui.vendors.LocalIconChoices
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -48,7 +51,10 @@ class MainActivity : ComponentActivity() {
             }
             LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { container.onForeground() }
             AccordTheme(preference, corners, palette) {
-                AccordApp(container)
+                val iconChoices by container.icons.choices.collectAsStateWithLifecycle()
+                CompositionLocalProvider(LocalIconChoices provides iconChoices, LocalIconActions provides container.iconActions) {
+                    AccordApp(container)
+                }
             }
         }
     }

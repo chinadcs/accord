@@ -455,6 +455,7 @@ private fun EntryItem(row: EntryRow, categories: Map<String, CategoryNode>, onOp
                 EntryIdentityIcon(
                     description = row.description,
                     allowVendor = row.kind != EntryKind.Income && row.kind != EntryKind.InvoicePayment,
+                    entryId = row.id,
                 )
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
                     AdaptiveRow(

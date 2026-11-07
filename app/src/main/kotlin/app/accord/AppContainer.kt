@@ -131,6 +131,10 @@ class AppContainer(
     /** Estado, "Sincronizar agora", conflitos e problemas do espaço aberto (tela 26 e indicadores). */
     val sync = SyncController(access, appScope)
 
+    /** Escolhas de ícone dos lançamentos (ADR 0047): lidas da fachada e atualizadas a cada gravação, desfazer ou sincronização. */
+    val icons = app.accord.ui.vendors.IconChoicesStore(this, appScope, sync.status.map { })
+    val iconActions = app.accord.ui.vendors.FacadeIconActions(this, icons)
+
     /** Envio em segundo plano quando houver conexão, com espera crescente entre tentativas. */
     val scheduler = SyncScheduler(context)
 

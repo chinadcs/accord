@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Escolha de ícone do lançamento (ADR 0047). -->
+    <string name="icon_picker_title">Escolher ícone</string>
+    <string name="icon_picker_for">Para o lançamento “%1$s”</string>
+    <string name="icon_picker_search">Buscar ícone</string>
+    <string name="icon_picker_close">Fechar</string>
+    <string name="icon_tab_brands">Marcas</string>
+    <string name="icon_tab_banks">Bancos</string>
+    <string name="icon_tab_generic">Genéricos</string>
+    <string name="icon_picker_empty">Nenhum ícone encontrado. Tente outro nome.</string>
+    <string name="icon_picker_automatic">Voltar ao ícone automático</string>
+    <string name="icon_picker_loading">Carregando os ícones…</string>
+    <string name="icon_action_change">Alterar ícone</string>
+    <string name="icon_receipt_action">Ícone</string>
+    <string name="icon_scope_title">Usar este ícone nos próximos?</string>
+    <string name="icon_scope_body">Usar este ícone também nos próximos lançamentos chamados “%1$s”? Os lançamentos antigos com esse nome também passam a mostrá-lo.</string>
+    <string name="icon_scope_all">Este e os próximos</string>
+    <string name="icon_scope_one">Só este lançamento</string>
+    <string name="icon_scope_cancel">Cancelar</string>
+    <string name="feedback_icon_saved">Ícone salvo.</string>
+    <string name="feedback_icon_removed">Voltou ao ícone automático.</string>
+    <string name="feedback_icon_failed">Não foi possível salvar o ícone agora. Tente de novo.</string>
+</resources>

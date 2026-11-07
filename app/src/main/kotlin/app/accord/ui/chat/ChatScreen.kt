@@ -66,7 +66,10 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.accord.R
+import app.accord.ui.vendors.ChooseIconFlow
 import app.accord.ui.vendors.IconRefLogo
+import app.accord.ui.vendors.LocalIconActions
+import app.accord.ui.vendors.LocalIconChoices
 import app.accord.ui.vendors.rememberIconLibrary
 import app.accord.ui.components.AccordMark
 import app.accord.core.Money
@@ -414,9 +417,14 @@ private fun ReceiptCard(
     val summary = receipt.summary
     val active = receipt.state == ReceiptState.Active
     val library by rememberIconLibrary()
-    val icon = remember(summary.description, summary.nature, library) {
-        library?.takeIf { summary.nature == Nature.Expense }?.let { lib -> lib.matcher.match(summary.description)?.takeIf(lib::isKnown)?.let { it to lib } }
+    val choices = LocalIconChoices.current
+    val icon = remember(summary.description, summary.nature, receipt.entryId, choices, library) {
+        library?.takeIf { summary.nature == Nature.Expense }?.let { lib ->
+            (choices.forEntry(receipt.entryId, summary.description) ?: lib.matcher.match(summary.description))?.takeIf(lib::isKnown)?.let { it to lib }
+        }
     }
+    var choosingIcon by remember { mutableStateOf(false) }
+    if (choosingIcon) ChooseIconFlow(receipt.entryId, summary.description) { choosingIcon = false }
     // Atualização anunciada de forma educada: o foco continua no campo de mensagem.
     CardSurface(Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
         Column(Modifier.padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
@@ -446,6 +454,11 @@ private fun ReceiptCard(
                     if (active) {
                         TextButton(onClick = { actions.onEditEntry(receipt.entryId) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
                             Text(stringResource(R.string.receipt_action_edit))
+                        }
+                    }
+                    if (active && summary.nature == Nature.Expense && LocalIconActions.current != null) {
+                        TextButton(onClick = { choosingIcon = true }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                            Text(stringResource(R.string.icon_receipt_action))
                         }
                     }
                     if (item.undoAvailable) {

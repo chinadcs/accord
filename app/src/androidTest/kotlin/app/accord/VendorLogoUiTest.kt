@@ -28,6 +28,10 @@ import app.accord.core.chat.ReceiptKind
 import app.accord.core.chat.ReceiptState
 import app.accord.core.chat.ReceiptSummary
 import app.accord.core.space.Classification
+import app.accord.core.space.IconAssociationView
+import app.accord.core.space.IconRef
+import app.accord.core.space.IconScope
+import app.accord.core.space.IconSource
 import app.accord.core.space.EntryDetail
 import app.accord.core.space.EntryKind
 import app.accord.core.space.EntryRow
@@ -49,7 +53,9 @@ import app.accord.ui.entries.EntriesScreen
 import app.accord.ui.entries.EntriesStatus
 import app.accord.ui.entries.EntriesUiState
 import app.accord.ui.theme.AccordTheme
+import app.accord.ui.vendors.IconChoices
 import app.accord.ui.vendors.IconLibrary
+import app.accord.ui.vendors.LocalIconChoices
 import app.accord.ui.theme.ThemePreference
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -215,5 +221,35 @@ class VendorLogoUiTest {
         current = ChatUiState(loaded = true, items = listOf(receipt("income", "Spotify", Nature.Income)))
         show(content = screen)
         assertEquals(0, logoCount("spotify"))
+    }
+
+    /** ADR 0047: a escolha do lançamento vence a regra pelo nome, que vence o reconhecimento automático; sem nada, as iniciais. */
+    @Test
+    fun listaMostraOIconeEscolhidoPorLancamentoPorNomeEOAutomaticoNestaOrdem() {
+        val rows = listOf(
+            row("a", "Padaria do Zé"), row("b", "padaria do ze"), row("c", "Mercearia"), row("d", "UBER *TRIP"), row("e", "Uber + Spotify"),
+        )
+        val month = YearMonth.of(2026, 10)
+        val state = EntriesUiState(
+            filter = EntriesFilterState(month, month), rows = rows, total = rows.size,
+            summary = EntrySummary(Money(12_500), Money(2_500), Money.ZERO, Money(2_500)),
+            status = EntriesStatus.Ready,
+        )
+        val choices = IconChoices(
+            listOf(
+                IconAssociationView("r1", IconScope.Name, "padaria do ze", IconRef(IconSource.Generic, "pizza"), 1),
+                IconAssociationView("r2", IconScope.Entry, "b", IconRef(IconSource.Generic, "coffee"), 1),
+                IconAssociationView("r3", IconScope.Name, "uber *trip", IconRef(IconSource.Generic, "car"), 1),
+            ),
+        )
+        show {
+            CompositionLocalProvider(LocalIconChoices provides choices) {
+                EntriesScreen(state, PaddingValues(), {}, {}, {}, {}, {}, {}, {})
+            }
+        }
+        assertEquals("a regra pelo nome vale para a", 1, logoCount("generic-pizza"))
+        assertEquals("a escolha do lançamento vence a regra para b", 1, logoCount("generic-coffee"))
+        assertEquals("a regra vence o reconhecimento automático de Uber", 1, logoCount("generic-car"))
+        assertEquals("duas marcas continuam sem logo", 0, logoCount("uber") + logoCount("spotify"))
     }
 }
