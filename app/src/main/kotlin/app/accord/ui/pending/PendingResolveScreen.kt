@@ -14,7 +14,9 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -43,6 +45,7 @@ import app.accord.ui.imports.movementAmount
 import app.accord.ui.register.CategoryDialog
 import app.accord.ui.shortLabel
 import app.accord.ui.theme.AccordSpacing
+import app.accord.ui.theme.isCompactHeight
 
 private val REPETITION_DOUBTS = setOf(DoubtReason.FitidDivergent, DoubtReason.PossibleRepetition, DoubtReason.RemovedPreviously)
 
@@ -114,12 +117,24 @@ fun PendingResolveScreen(
                     Consequence(detail, state.categories, onReset, state.working)
                 }
                 Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                        Button(onClick = onApply, enabled = detail.pending.ready && !state.working, modifier = Modifier.fillMaxWidth()) {
-                            Text(stringResource(R.string.pending_apply))
+                    if (isCompactHeight()) {
+                        // Paisagem (spec 19): ação principal e Revisar depois lado a lado.
+                        Row(Modifier.padding(AccordSpacing.s4), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                            Button(onClick = onApply, enabled = detail.pending.ready && !state.working, modifier = Modifier.weight(1f)) {
+                                Text(stringResource(R.string.pending_apply))
+                            }
+                            TextButton(onClick = onBack, modifier = Modifier.weight(1f).heightIn(min = AccordSpacing.touchMin)) {
+                                Text(stringResource(R.string.pending_later))
+                            }
                         }
-                        TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
-                            Text(stringResource(R.string.pending_later))
+                    } else {
+                        Column(Modifier.padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                            Button(onClick = onApply, enabled = detail.pending.ready && !state.working, modifier = Modifier.fillMaxWidth()) {
+                                Text(stringResource(R.string.pending_apply))
+                            }
+                            TextButton(onClick = onBack, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+                                Text(stringResource(R.string.pending_later))
+                            }
                         }
                     }
                 }

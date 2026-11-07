@@ -44,6 +44,7 @@ import app.accord.ui.imports.movementAmount
 import app.accord.ui.shortLabel
 import app.accord.ui.sync.commandLabel
 import app.accord.ui.theme.AccordSpacing
+import app.accord.ui.theme.isCompactHeight
 import com.composables.icons.lucide.R as Lucide
 import java.time.YearMonth
 
@@ -131,9 +132,17 @@ fun PendingQueueScreen(
         }
         if (!state.loading && !state.failed && shown.isNotEmpty()) {
             Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                    Button(onClick = { onOpen(shown.first()) }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.pending_review_first)) }
-                    Text(stringResource(R.string.pending_continue_later), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (isCompactHeight()) {
+                    // Paisagem (spec 18): frase à esquerda, ação à direita.
+                    Row(Modifier.padding(AccordSpacing.s4), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
+                        Text(stringResource(R.string.pending_continue_later), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                        Button(onClick = { onOpen(shown.first()) }) { Text(stringResource(R.string.pending_review_first)) }
+                    }
+                } else {
+                    Column(Modifier.padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                        Button(onClick = { onOpen(shown.first()) }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.pending_review_first)) }
+                        Text(stringResource(R.string.pending_continue_later), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
         }

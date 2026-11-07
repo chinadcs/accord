@@ -58,6 +58,7 @@ import app.accord.ui.register.CategoryDialog
 import app.accord.ui.shortLabel
 import app.accord.ui.theme.Accord
 import app.accord.ui.theme.AccordSpacing
+import app.accord.ui.theme.isCompactHeight
 import com.composables.icons.lucide.R as Lucide
 import java.time.YearMonth
 
@@ -371,7 +372,7 @@ private fun classIcon(c: Classification): Int = when (c) {
 private fun ConfirmBar(review: BatchReview, working: Boolean, onOpenSummary: () -> Unit) {
     val c = review.preview.counts
     Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+        val line: @Composable (Modifier) -> Unit = { modifier ->
             Text(
                 stringResource(
                     R.string.import_confirm_line,
@@ -379,12 +380,26 @@ private fun ConfirmBar(review: BatchReview, working: Boolean, onOpenSummary: () 
                     pluralStringResource(R.plurals.import_confirm_preserved, c.doubts + c.blocked, c.doubts + c.blocked),
                 ),
                 style = MaterialTheme.typography.bodyMedium,
+                modifier = modifier,
             )
-            if (review.blockers.isNotEmpty()) {
-                MessageBanner(ImportReviewViewModel.blockedMessage(review.blockers))
-            }
-            Button(onClick = onOpenSummary, enabled = review.blockers.isEmpty() && !working, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.import_confirm))
+        }
+        val enabled = review.blockers.isEmpty() && !working
+        Column(Modifier.padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+            if (isCompactHeight()) {
+                // Paisagem (spec 16): resumo à esquerda, Confirmar à direita; o aviso de bloqueio continua em largura total.
+                if (review.blockers.isNotEmpty()) MessageBanner(ImportReviewViewModel.blockedMessage(review.blockers))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
+                    line(Modifier.weight(1f))
+                    Button(onClick = onOpenSummary, enabled = enabled) { Text(stringResource(R.string.import_confirm)) }
+                }
+            } else {
+                line(Modifier)
+                if (review.blockers.isNotEmpty()) {
+                    MessageBanner(ImportReviewViewModel.blockedMessage(review.blockers))
+                }
+                Button(onClick = onOpenSummary, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.import_confirm))
+                }
             }
         }
     }

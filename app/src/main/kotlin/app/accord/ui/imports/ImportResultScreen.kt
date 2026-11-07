@@ -42,6 +42,7 @@ import app.accord.ui.components.RefreshOnResume
 import app.accord.ui.shortLabel
 import app.accord.ui.theme.Accord
 import app.accord.ui.theme.AccordSpacing
+import app.accord.ui.theme.isCompactHeight
 import com.composables.icons.lucide.R as Lucide
 
 @Composable
@@ -97,18 +98,26 @@ fun ImportResultScreen(
                     item { Text(stringResource(R.string.import_result_originals), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 }
                 Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                        val pending = result.count(Resolution.Pending)
+                    val pending = result.count(Resolution.Pending)
+                    // Paisagem (spec 17): as ações lado a lado devolvem altura à lista.
+                    val compact = isCompactHeight()
+                    val fill = if (compact) Modifier.weight(1f) else Modifier.fillMaxWidth()
+                    val actions: @Composable () -> Unit = {
                         // Com dúvidas guardadas, a ação principal é resolvê-las (fila filtrada pelo lote); sem elas, ver os lançamentos.
                         if (pending > 0) {
-                            Button(onClick = onResolvePending, modifier = Modifier.fillMaxWidth()) {
+                            Button(onClick = onResolvePending, modifier = fill) {
                                 Text(pluralStringResource(R.plurals.import_result_resolve, pending, pending))
                             }
-                            OutlinedButton(onClick = onSeeEntries, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.import_result_see_entries)) }
+                            OutlinedButton(onClick = onSeeEntries, modifier = fill) { Text(stringResource(R.string.import_result_see_entries)) }
                         } else {
-                            Button(onClick = onSeeEntries, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.import_result_see_entries)) }
+                            Button(onClick = onSeeEntries, modifier = fill) { Text(stringResource(R.string.import_result_see_entries)) }
                         }
-                        OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.import_result_back_review)) }
+                        OutlinedButton(onClick = onBack, modifier = fill) { Text(stringResource(R.string.import_result_back_review)) }
+                    }
+                    if (compact) {
+                        Row(Modifier.padding(AccordSpacing.s4), horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) { actions() }
+                    } else {
+                        Column(Modifier.padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) { actions() }
                     }
                 }
             }

@@ -92,6 +92,7 @@ class ImportVisualReviewTest {
 
     private var spec by mutableStateOf<Spec?>(null)
     private var started = false
+    private var firstCapture = true
 
     private fun capture(name: String, theme: ThemePreference, fontScale: Float = 1f, window: Boolean = false, content: @Composable () -> Unit) {
         spec = Spec(UiAuditSyntheticEvidence.theme ?: theme, fontScale, content)
@@ -107,6 +108,8 @@ class ImportVisualReviewTest {
             }
         }
         compose.waitForIdle()
+        // A primeira janela às vezes é fotografada antes do primeiro quadro desenhado (print em branco).
+        if (firstCapture) { firstCapture = false; Thread.sleep(800); compose.waitForIdle() }
         if (UiAuditSyntheticEvidence.enabled) {
             UiAuditSyntheticEvidence.capture(compose, name, spec!!.theme)
         } else if (window) {
