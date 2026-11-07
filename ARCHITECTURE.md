@@ -66,7 +66,7 @@ accord/
                              entendido; Modelo no aparelho (25); histórico do Chat em Mais (limpar, exportar,
                              importar). Sem motor integrado o Chat guarda a mensagem ("sem modelo").
                              Revisar só lista os conflitos de edição.
-                             Assets locais: catálogo de bancos e logos (assets/banks, logos-bancos-br)
+                             Assets locais: catálogo de bancos e logos (assets/banks, logos-bancos-br) e marcas (assets/vendors, Simple Icons)
   poc/                       bancada de medição da Etapa 0 (S3 §2): app debug separado app.accord.poc, sem
                              INTERNET, com o llama.cpp fixado em poc/llama-cpp.pin e uma ponte JNI mínima;
                              roda o prompt, o contrato e o validador do produto. Não é produto nem escolhe
@@ -327,7 +327,10 @@ retrato/paisagem e movimento reduzido; toque 48 × 48 dp, contraste de texto 4,5
 
 Lucide usa adaptação comunitária Compose Icons Android, versão a verificar. Catálogo/ativos de
 logos-bancos-br ficam locais, com origem e ISPB/COMPE, cores/proporção preservadas e fallback
-genérico com nome. Sem CDN no uso ou JavaScript executado no celular. Catálogo não comprova
+genérico com nome. As marcas de estabelecimentos usam o Simple Icons 16.35.0 completo
+(`assets/vendors/simple-icons.tsv`, desenhado por caminho no Compose), reconhecido pelo nome do lançamento
+e escolhido num seletor com busca; a escolha é o agregado sincronizado `IconAssociation`
+([ADR 0047](docs/adr/0047-associacao-de-icone-de-marca-ao-lancamento.md)). Sem CDN no uso ou JavaScript executado no celular. Catálogo não comprova
 importação compatível nem integração bancária.
 
 Antes de aprovar a implementação, verificar regras de dinheiro/datas com exemplos independentes,

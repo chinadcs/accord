@@ -142,7 +142,9 @@ e teclado sem esconder ações. Referências adaptáveis: corpo 16 sp, títulos 
 16 dp, ritmo 4/8 dp; toque 48 × 48 dp, contraste texto 4,5:1 e gráficos essenciais 3:1.
 
 Lucide para interface via adaptação comunitária Compose Icons Android (`icons-lucide-android`);
-logos-bancos-br para catálogo/logos locais com origem e ISPB/COMPE. Sem CDN em uso ou JS no
+logos-bancos-br para catálogo/logos locais com origem e ISPB/COMPE; Simple Icons 16.35.0 completo
+para marcas de estabelecimentos, reconhecidas pelo nome do lançamento ou escolhidas num seletor
+([ADR 0047](docs/adr/0047-associacao-de-icone-de-marca-ao-lancamento.md)). Sem CDN em uso ou JS no
 celular. Ausência de logo usa símbolo genérico com nome; preservar cores/proporção nos temas.
 Catálogo não prova importação compatível ou conexão bancária. Skills genéricas não substituem
 as escolhas de plataforma, navegação, ícones ou acessibilidade.
