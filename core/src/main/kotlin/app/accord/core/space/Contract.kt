@@ -1,6 +1,8 @@
 package app.accord.core.space
 
 import app.accord.core.Frequency
+import app.accord.core.analysis.ChargeComparison
+import app.accord.core.analysis.SubscriptionCharge
 import app.accord.core.LimitEdit
 import app.accord.core.LimitScope
 import app.accord.core.LimitSetting
@@ -96,6 +98,15 @@ interface FinanceSpace {
 
     /** Pendências compartilhadas de S1 (tela 18), derivadas do estado dos lançamentos e faturas. */
     suspend fun pendings(): QueryResult<List<PendingItem>>
+
+    /**
+     * Assinaturas (S6, tela 31): séries de despesa recorrente cuja categoria atual está em Assinaturas, com a próxima cobrança a partir de
+     * [from] e o que vence em [[from], [untilExclusive]). Leitura apenas: nada é criado, alterado nem classificado.
+     */
+    suspend fun subscriptions(from: LocalDate, untilExclusive: LocalDate): QueryResult<SubscriptionList>
+
+    /** Detalhe de uma assinatura (S6, tela 32); nulo se a série não existe, foi anulada ou não está em Assinaturas. */
+    suspend fun subscription(recurrenceId: String): QueryResult<SubscriptionDetail?>
 
     /** Operações locais em ordem de sequência, a partir de [afterSequence] (exclusive). */
     suspend fun operations(afterSequence: Long = 0, limit: Int = 100): QueryResult<List<LocalOperation>>
@@ -1230,4 +1241,48 @@ data class MonthBudget(
     val invoiceLinksToConfirm: Int,
     val income: IncomeTotals,
     val categories: List<CategoryBudget>,
+)
+
+// ---- assinaturas (S6, telas 31 e 32) ----
+
+/** Ativa tem próxima cobrança; encerrada é série que já terminou (esta e as próximas excluídas) e mantém o histórico. */
+enum class SubscriptionStatus { Active, Ended }
+
+data class SubscriptionRow(
+    val recurrenceId: String,
+    val description: String,
+    val categoryId: String?,
+    val frequency: Frequency,
+    val form: RecurrenceForm,
+    val status: SubscriptionStatus,
+    /** Próxima cobrança prevista a partir do início do período consultado; nula se a série terminou. */
+    val next: OccurrenceView?,
+    val comparison: ChargeComparison,
+)
+
+/** Soma dos valores esperados das próximas cobranças de assinaturas ativas com a mesma frequência. Frequências nunca são convertidas nem somadas entre si. */
+data class FrequencySubtotal(val frequency: Frequency, val count: Int, val expected: Money)
+
+data class SubscriptionList(
+    val from: LocalDate,
+    val untilExclusive: LocalDate,
+    /** Ativas pela próxima cobrança, depois as encerradas por descrição. */
+    val items: List<SubscriptionRow>,
+    val subtotals: List<FrequencySubtotal>,
+    /** Soma das ocorrências que vencem no intervalo (valor efetivo se já paga): soma de cobranças do período, não conversão de frequência. */
+    val dueInPeriod: Money,
+    val dueCount: Int,
+)
+
+data class SubscriptionDetail(
+    val recurrence: RecurrenceView,
+    val description: String,
+    val categoryId: String?,
+    val status: SubscriptionStatus,
+    val next: OccurrenceView?,
+    /** Cobranças realizadas (efetivadas), da mais antiga para a mais nova. */
+    val charges: List<SubscriptionCharge>,
+    val comparison: ChargeComparison,
+    /** Esperado da próxima cobrança menos a última realizada: divergência mostrada como tal, sem reescrever a expectativa. Nulo sem uma das duas. */
+    val nextVersusLastCharge: Money?,
 )

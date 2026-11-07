@@ -93,6 +93,31 @@ class RecurrenceSeries private constructor(
         return Occurrence(number, recurrence.dateOf(number), template)
     }
 
+    /** Modelo vigente da última ocorrência cadastrada (o mais recente dos segmentos). */
+    val latestTemplate: Template get() = segments.getValue(segments.keys.max())
+
+    /** Ocorrências existentes com data prevista em [[from], [untilExclusive]), em ordem; as excluídas e as após o fim não aparecem. */
+    fun occurrencesBetween(from: LocalDate, untilExclusive: LocalDate): List<Occurrence> {
+        val result = mutableListOf<Occurrence>()
+        var number = recurrence.firstNumberOnOrAfter(from)
+        while (recurrence.dateOf(number).isBefore(untilExclusive)) {
+            if (endsBefore != null && number >= endsBefore) break
+            occurrence(number)?.let(result::add)
+            number++
+        }
+        return result
+    }
+
+    /** Primeira ocorrência existente com data prevista igual ou posterior a [date]; nula se a série já terminou. */
+    fun nextOnOrAfter(date: LocalDate): Occurrence? {
+        var number = recurrence.firstNumberOnOrAfter(date)
+        while (endsBefore == null || number < endsBefore) {
+            occurrence(number)?.let { return it }
+            number++
+        }
+        return null
+    }
+
     fun edit(
         number: Int,
         fields: RecurrenceFields,

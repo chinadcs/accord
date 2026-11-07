@@ -56,6 +56,20 @@ data class Recurrence(val anchor: LocalDate, val frequency: Frequency) {
         return month.atDay(minOf(anchor.dayOfMonth, month.lengthOfMonth()))
     }
 
+    /** Menor número de ocorrência cuja data prevista é igual ou posterior a [date] (1 se [date] é anterior à âncora). */
+    fun firstNumberOnOrAfter(date: LocalDate): Int {
+        if (!date.isAfter(anchor)) return 1
+        val months = anchorMonth.until(YearMonth.from(date), java.time.temporal.ChronoUnit.MONTHS)
+        val estimate = when (frequency) {
+            Frequency.Monthly -> months + 1
+            Frequency.Annual -> months / 12 + 1
+        }
+        // Começa uma ocorrência antes da estimativa: o dia do mês pode ficar antes ou depois de [date].
+        var number = maxOf(1L, estimate - 1).toInt()
+        while (dateOf(number).isBefore(date)) number++
+        return number
+    }
+
     /** Número da ocorrência que cai em [month] segundo a data prevista, ou null se não houver. */
     fun numberIn(month: YearMonth): Int? {
         val monthsBetween = anchorMonth.until(month, java.time.temporal.ChronoUnit.MONTHS)

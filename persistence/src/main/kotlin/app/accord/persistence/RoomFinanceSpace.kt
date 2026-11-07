@@ -110,6 +110,8 @@ import app.accord.core.space.Origin
 import app.accord.core.space.PayBoleto
 import app.accord.core.space.PayInvoice
 import app.accord.core.space.PayOccurrence
+import app.accord.core.space.SubscriptionDetail
+import app.accord.core.space.SubscriptionList
 import app.accord.core.space.PreviewResult
 import app.accord.core.space.PurchaseDetail
 import app.accord.core.space.QueryResult
@@ -203,6 +205,14 @@ class RoomFinanceSpace private constructor(
         pendings = { entryQueries.pendings() },
         feesCategoryId = { DeterministicIds.seedCategory(sessions.current().spaceId, CategorySeed.FEES_AND_INTEREST) },
         invoiceConferredClosed = { invoiceView(it).let { view -> view.conferred || view.paid } },
+    )
+    private val subscriptionQueries = SubscriptionQueries(
+        dao,
+        tree = { tree() },
+        subscriptionsMainId = { DeterministicIds.seedCategory(sessions.current().spaceId, "assinaturas") },
+        load = { loadSeries(it) },
+        place = { loaded, number -> place(loaded, number, cycleOf(sessions.current().spaceId)) },
+        month = { clock.currentMonth() },
     )
     private val alertCenter = AlertCenter(
         db, clock, sessions,
@@ -896,13 +906,13 @@ class RoomFinanceSpace private constructor(
 
     // ---- recorrência ----
 
-    private data class LoadedSeries(
+    internal data class LoadedSeries(
         val row: RecurrenceRow,
         val series: RecurrenceSeries,
         val settlements: Map<Int, RecurrenceSettlementRow>,
     )
 
-    private suspend fun loadSeries(row: RecurrenceRow): LoadedSeries {
+    internal suspend fun loadSeries(row: RecurrenceRow): LoadedSeries {
         val segments = dao.segments(row.id).associate {
             it.fromNumber to Template(it.description, it.classificationId, Money(it.amountCents), it.accountId)
         }
@@ -1270,6 +1280,12 @@ class RoomFinanceSpace private constructor(
         query { entryQueries.commitments(month, kind) }
 
     override suspend fun pendings(): QueryResult<List<PendingItem>> = query { entryQueries.pendings() }
+
+    override suspend fun subscriptions(from: LocalDate, untilExclusive: LocalDate): QueryResult<SubscriptionList> =
+        query { subscriptionQueries.list(from, untilExclusive) }
+
+    override suspend fun subscription(recurrenceId: String): QueryResult<SubscriptionDetail?> =
+        query { subscriptionQueries.detail(recurrenceId, clock.today()) }
 
     private fun directMethod(kind: String) = when (DirectPaymentKind.valueOf(kind)) {
         DirectPaymentKind.Pix -> PaymentMethod.Pix
@@ -1643,7 +1659,7 @@ class RoomFinanceSpace private constructor(
     }
 
     /** Ocorrência de [series] já posicionada no orçamento; nula se a ocorrência não existe. */
-    private fun place(loaded: LoadedSeries, number: Int, cycle: CardCycle): OccurrenceView? {
+    internal fun place(loaded: LoadedSeries, number: Int, cycle: CardCycle): OccurrenceView? {
         val occurrence = loaded.series.occurrence(number) ?: return null
         val settled = loaded.settlements[number]
         val kind = RecurrenceKind.valueOf(loaded.row.kind)
