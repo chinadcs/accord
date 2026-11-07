@@ -105,6 +105,13 @@ interface FinanceSpace {
      */
     suspend fun subscriptions(from: LocalDate, untilExclusive: LocalDate): QueryResult<SubscriptionList>
 
+    /**
+     * Atividade de compras (S6, tela 30): as compras pela data original, em [[from], [untilExclusive]). A compra parcelada entra uma vez, pelo
+     * total, na data da compra; renda e quitação de fatura ficam fora. [categoryId] restringe a uma categoria principal ou subcategoria.
+     * Leitura apenas: nada é criado nem alterado, e o orçamento do mês continua sendo calculado por outra consulta.
+     */
+    suspend fun purchaseActivity(from: LocalDate, untilExclusive: LocalDate, categoryId: String? = null): QueryResult<PurchaseActivity>
+
     /** Detalhe de uma assinatura (S6, tela 32); nulo se a série não existe, foi anulada ou não está em Assinaturas. */
     suspend fun subscription(recurrenceId: String): QueryResult<SubscriptionDetail?>
 
@@ -1285,4 +1292,39 @@ data class SubscriptionDetail(
     val comparison: ChargeComparison,
     /** Esperado da próxima cobrança menos a última realizada: divergência mostrada como tal, sem reescrever a expectativa. Nulo sem uma das duas. */
     val nextVersusLastCharge: Money?,
+)
+
+// ---- atividade de compras (S6, tela 30) ----
+
+/** Soma e quantidade de um grupo da atividade. */
+data class ActivityLine(val total: Money, val count: Int)
+
+/** [subcategoryId] nulo é "Sem subcategoria": compras classificadas direto na categoria principal. */
+data class ActivitySubgroup(val subcategoryId: String?, val line: ActivityLine)
+
+data class ActivityGroup(val categoryId: String, val line: ActivityLine, val subgroups: List<ActivitySubgroup>)
+
+/** Compras da semana que começa em [weekStart] (segunda-feira), dentro do período; semanas sem compras conhecidas não aparecem. */
+data class ActivityWeek(val weekStart: LocalDate, val line: ActivityLine)
+
+/**
+ * Atividade de compras pela **data original**, não pelo mês do orçamento. Soma por categoria mais [toClassify] fecha o [total]. Créditos e
+ * lacunas ficam em linhas próprias e não entram no total: estorno não é descontado em silêncio e boleto sem data de compra não ganha uma data
+ * emprestada do vencimento (o vencimento só localiza o aviso no período).
+ */
+data class PurchaseActivity(
+    val from: LocalDate,
+    val untilExclusive: LocalDate,
+    val categoryId: String?,
+    val total: ActivityLine,
+    val groups: List<ActivityGroup>,
+    /** Compras sem categoria ("a classificar"): grupo próprio, fora de qualquer categoria. Nulo se não houver. */
+    val toClassify: ActivityLine?,
+    val weeks: List<ActivityWeek>,
+    /** Estornos confirmados com data de devolução no período; nulo se não houver. */
+    val credits: ActivityLine?,
+    /** Boletos sem data de compra com vencimento no período: ficam fora do total. Nulo se não houver. */
+    val gaps: ActivityLine?,
+    /** Compras do período com cancelamento solicitado ou confirmado (o total já desconta as parcelas canceladas confirmadas). */
+    val withCancellation: Int,
 )

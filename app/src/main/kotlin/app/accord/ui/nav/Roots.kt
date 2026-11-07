@@ -96,3 +96,7 @@ const val ROUTE_ENTRIES_FILTERED = "entries_filtered"
 const val ARG_FILTER_MONTH = "filterMonth"
 const val ARG_FILTER_CATEGORY = "filterCategory"
 const val ARG_FILTER_SITUATION = "filterSituation"
+const val ARG_FILTER_CRITERION = "filterCriterion"
+
+/** Atividade de compras (tela 30): compras pela data original. */
+const val ROUTE_ACTIVITY = "activity"

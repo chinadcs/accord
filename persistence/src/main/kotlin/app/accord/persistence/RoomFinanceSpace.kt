@@ -110,6 +110,7 @@ import app.accord.core.space.Origin
 import app.accord.core.space.PayBoleto
 import app.accord.core.space.PayInvoice
 import app.accord.core.space.PayOccurrence
+import app.accord.core.space.PurchaseActivity
 import app.accord.core.space.SubscriptionDetail
 import app.accord.core.space.SubscriptionList
 import app.accord.core.space.PreviewResult
@@ -1283,6 +1284,9 @@ class RoomFinanceSpace private constructor(
 
     override suspend fun subscriptions(from: LocalDate, untilExclusive: LocalDate): QueryResult<SubscriptionList> =
         query { subscriptionQueries.list(from, untilExclusive) }
+
+    override suspend fun purchaseActivity(from: LocalDate, untilExclusive: LocalDate, categoryId: String?): QueryResult<PurchaseActivity> =
+        query { entryQueries.purchaseActivity(from, untilExclusive, categoryId) }
 
     override suspend fun subscription(recurrenceId: String): QueryResult<SubscriptionDetail?> =
         query { subscriptionQueries.detail(recurrenceId, clock.today()) }

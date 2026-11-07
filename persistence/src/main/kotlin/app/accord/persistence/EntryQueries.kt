@@ -2,7 +2,12 @@ package app.accord.persistence
 
 import app.accord.core.CardCycle
 import app.accord.core.Money
+import app.accord.core.space.ActivityGroup
+import app.accord.core.space.ActivityLine
+import app.accord.core.space.ActivitySubgroup
+import app.accord.core.space.ActivityWeek
 import app.accord.core.space.AssignmentState
+import app.accord.core.space.PurchaseActivity
 import app.accord.core.space.Commitment
 import app.accord.core.space.CommitmentKind
 import app.accord.core.space.CommitmentNature
@@ -24,8 +29,10 @@ import app.accord.core.space.RecurrenceForm
 import app.accord.core.space.RecurrenceKind
 import app.accord.core.label
 import app.accord.core.sum
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.temporal.TemporalAdjusters
 
 /**
  * Consultas de leitura sobre os dados locais: lista de Lançamentos (07), compromissos do mês (10)
@@ -60,9 +67,11 @@ internal class EntryQueries(
 
     // ---------------------------------------------------------------- lista (tela 07)
 
-    suspend fun entries(f: EntryFilter, cursor: Int, pageSize: Int): EntryPage {
-        require(cursor >= 0 && pageSize > 0) { "Cursor e tamanho da página precisam ser positivos" }
-        val tree = tree()
+    /**
+     * Linhas de todos os tipos no critério de [f], antes dos filtros de categoria, forma de pagamento, situação, pessoa e busca. A lista de
+     * Lançamentos (07) e a atividade de compras (30) usam esta mesma construção, para nunca divergirem nas regras de data.
+     */
+    private suspend fun build(f: EntryFilter): List<Built> {
         val card = cycle()
         val byBudget = f.criterion == DateCriterion.BudgetMonth
         val fromDay = f.from.atDay(1).toEpochDay()
@@ -241,7 +250,13 @@ internal class EntryQueries(
                 )
             }
         }
+        return built
+    }
 
+    suspend fun entries(f: EntryFilter, cursor: Int, pageSize: Int): EntryPage {
+        require(cursor >= 0 && pageSize > 0) { "Cursor e tamanho da página precisam ser positivos" }
+        val tree = tree()
+        val built = build(f)
         val matching = built.filter { matches(it, f, tree) }
             .sortedWith(compareByDescending<Built> { it.row.date }.thenBy { it.row.id })
         val page = matching.drop(cursor).take(pageSize)
@@ -258,6 +273,48 @@ internal class EntryQueries(
                 total(Bucket.Expense), total(Bucket.Income), total(Bucket.Credit), total(Bucket.InvoicePayment),
                 receivedIncomes,
             ),
+        )
+    }
+
+    // ---------------------------------------------------------------- atividade de compras (tela 30)
+
+    /**
+     * Compras pela data original. Usa as linhas do critério "data da compra" da lista de Lançamentos e as agrega; só despesas de compra entram
+     * no total (Pix, débito, dinheiro, cartão e ocorrência de despesa recorrente). Boleto não tem data de compra: vira lacuna.
+     */
+    suspend fun purchaseActivity(from: LocalDate, untilExclusive: LocalDate, categoryId: String?): PurchaseActivity {
+        require(from.isBefore(untilExclusive)) { "O período precisa ter ao menos um dia" }
+        val tree = tree()
+        val f = EntryFilter(YearMonth.from(from), YearMonth.from(untilExclusive.minusDays(1)), DateCriterion.PurchaseDate, categoryId = categoryId)
+        val rows = build(f).filter { b -> !b.row.date.isBefore(from) && b.row.date.isBefore(untilExclusive) && matches(b, f, tree) }
+
+        fun line(items: List<Built>) = ActivityLine(items.map { it.row.amount }.sum(), items.size)
+        fun nullable(items: List<Built>) = if (items.isEmpty()) null else line(items)
+
+        val purchases = rows.filter { it.bucket == Bucket.Expense && it.row.kind != EntryKind.Boleto }
+        val classified = purchases.filter { it.row.categoryId != null }
+        val groups = classified.groupBy { tree.mainAt(it.row.categoryId!!, YearMonth.from(it.row.date)) }
+            .map { (main, items) ->
+                val subgroups = items.groupBy { tree.subAt(it.row.categoryId!!, YearMonth.from(it.row.date)) }
+                    .map { (sub, subItems) -> ActivitySubgroup(sub, line(subItems)) }
+                    .sortedWith(compareByDescending<ActivitySubgroup> { it.line.total }.thenBy { it.subcategoryId ?: "" })
+                ActivityGroup(main, line(items), subgroups)
+            }
+            .sortedWith(compareByDescending<ActivityGroup> { it.line.total }.thenBy { it.categoryId })
+
+        val weeks = purchases.groupBy { it.row.date.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)) }
+            .map { (monday, items) -> ActivityWeek(monday, line(items)) }
+            .sortedBy { it.weekStart }
+
+        return PurchaseActivity(
+            from = from, untilExclusive = untilExclusive, categoryId = categoryId,
+            total = line(purchases),
+            groups = groups,
+            toClassify = nullable(purchases.filter { it.row.categoryId == null }),
+            weeks = weeks,
+            credits = nullable(rows.filter { it.bucket == Bucket.Credit }),
+            gaps = nullable(rows.filter { it.bucket == Bucket.Expense && it.row.kind == EntryKind.Boleto }),
+            withCancellation = purchases.count { r -> r.row.situations.any { it == EntrySituation.CancelRequested || it == EntrySituation.Cancelled } },
         )
     }
 

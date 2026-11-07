@@ -189,7 +189,12 @@ import app.accord.ui.chat.ChatViewModel
 import app.accord.ui.nav.ROUTE_CARD
 import app.accord.ui.nav.ROUTE_COMMITMENT
 import app.accord.ui.nav.ROUTE_COMMITMENTS
+import app.accord.ui.nav.ARG_FILTER_CRITERION
+import app.accord.ui.nav.ROUTE_ACTIVITY
 import app.accord.ui.nav.ROUTE_SUBSCRIPTION
+import app.accord.ui.activity.ActivityActions
+import app.accord.ui.activity.PurchaseActivityRoute
+import app.accord.ui.activity.PurchaseActivityViewModel
 import app.accord.ui.nav.ROUTE_SUBSCRIPTIONS
 import app.accord.ui.subscriptions.SubscriptionDetailRoute
 import app.accord.ui.subscriptions.SubscriptionDetailViewModel
@@ -594,6 +599,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             onIncomes = { navController.navigate(ROUTE_INCOMES) },
                             onCommitments = { navController.navigate(ROUTE_COMMITMENTS) },
                             onSubscriptions = { navController.navigate(ROUTE_SUBSCRIPTIONS) },
+                            onActivity = { navController.navigate(ROUTE_ACTIVITY) },
                             onRegister = register,
                             onSpace = { navController.navigate(ROUTE_SPACE) },
                             onAppearance = { navController.navigate("appearance") },
@@ -654,8 +660,9 @@ private fun MainApp(container: AppContainer, startRoute: String) {
 
             // Lista aberta por outra tela: filtros já aplicados e voltar retorna à origem; a aba mantém a sua lista.
             composable(
-                "$ROUTE_ENTRIES_FILTERED?$ARG_FILTER_MONTH={$ARG_FILTER_MONTH}&$ARG_FILTER_CATEGORY={$ARG_FILTER_CATEGORY}&$ARG_FILTER_SITUATION={$ARG_FILTER_SITUATION}",
+                "$ROUTE_ENTRIES_FILTERED?$ARG_FILTER_MONTH={$ARG_FILTER_MONTH}&$ARG_FILTER_CATEGORY={$ARG_FILTER_CATEGORY}&$ARG_FILTER_SITUATION={$ARG_FILTER_SITUATION}&$ARG_FILTER_CRITERION={$ARG_FILTER_CRITERION}",
                 arguments = listOf(
+                    navArgument(ARG_FILTER_CRITERION) { type = NavType.StringType; nullable = true; defaultValue = null },
                     navArgument(ARG_FILTER_MONTH) { type = NavType.StringType; nullable = true; defaultValue = null },
                     navArgument(ARG_FILTER_CATEGORY) { type = NavType.StringType; nullable = true; defaultValue = null },
                     navArgument(ARG_FILTER_SITUATION) { type = NavType.StringType; nullable = true; defaultValue = null },
@@ -758,6 +765,23 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     onRegister = register,
                     onOpenCard = { navController.navigate(ROUTE_CARD) },
                     onOpenSubscriptions = { navController.navigate(ROUTE_SUBSCRIPTIONS) },
+                )
+            }
+            composable(ROUTE_ACTIVITY) {
+                val viewModel: PurchaseActivityViewModel = viewModel(
+                    factory = viewModelFactory { initializer { PurchaseActivityViewModel(container, createSavedStateHandle()) } },
+                )
+                PurchaseActivityRoute(
+                    viewModel, padding,
+                    ActivityActions(
+                        onBack = { navController.popBackStack() },
+                        onOpenEntries = { month, categoryId, toClassify ->
+                            navController.openFilteredEntries(
+                                month, categoryId, EntrySituation.ToClassify.takeIf { toClassify }, DateCriterion.PurchaseDate,
+                            )
+                        },
+                        onOpenBudget = { navController.openRoot(Root.Budget) },
+                    ),
                 )
             }
             composable(ROUTE_SUBSCRIPTIONS) {
@@ -1139,9 +1163,10 @@ private fun NavHostController.openRoot(root: Root) = navigate(root.graph) {
     restoreState = true
 }
 
-private fun NavHostController.openFilteredEntries(month: YearMonth, categoryId: String?, situation: EntrySituation?) {
+private fun NavHostController.openFilteredEntries(month: YearMonth, categoryId: String?, situation: EntrySituation?, criterion: DateCriterion? = null) {
     val query = buildList {
         add("$ARG_FILTER_MONTH=$month")
+        criterion?.let { add("$ARG_FILTER_CRITERION=${it.name}") }
         categoryId?.let { add("$ARG_FILTER_CATEGORY=${Uri.encode(it)}") }
         situation?.let { add("$ARG_FILTER_SITUATION=${it.name}") }
     }.joinToString("&")
@@ -1151,7 +1176,8 @@ private fun NavHostController.openFilteredEntries(month: YearMonth, categoryId: 
 private fun NavBackStackEntry.initialFilter(default: YearMonth): EntriesFilterState {
     val month = arguments?.getString(ARG_FILTER_MONTH)?.let(YearMonth::parse) ?: default
     return EntriesFilterState(
-        from = month, to = month, criterion = DateCriterion.BudgetMonth,
+        from = month, to = month,
+        criterion = arguments?.getString(ARG_FILTER_CRITERION)?.let { DateCriterion.valueOf(it) } ?: DateCriterion.BudgetMonth,
         categoryId = arguments?.getString(ARG_FILTER_CATEGORY),
         situations = arguments?.getString(ARG_FILTER_SITUATION)?.let { setOf(EntrySituation.valueOf(it)) }.orEmpty(),
     )

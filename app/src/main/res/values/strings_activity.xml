@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Atividade de compras (tela 30) -->
+    <string name="activity_title">Atividade de compras</string>
+    <string name="more_activity">Atividade de compras</string>
+    <string name="activity_period">Período: %1$s</string>
+    <string name="activity_criterion">Critério: data original da compra</string>
+    <string name="activity_total_title">Compras no período</string>
+    <plurals name="activity_purchases">
+        <item quantity="one">%d compra</item>
+        <item quantity="other">%d compras</item>
+    </plurals>
+    <string name="activity_total_note">Compra parcelada aparece uma vez, pelo total, na data da compra. As parcelas exigíveis são consultadas no orçamento.</string>
+    <string name="activity_filter_all">Todas as categorias</string>
+    <string name="activity_categories">Categorias</string>
+    <string name="activity_no_subcategory">Sem subcategoria</string>
+    <string name="activity_to_classify">A classificar</string>
+    <string name="activity_weeks">Por semana</string>
+    <string name="activity_week_line">Semana de %1$s</string>
+    <string name="activity_credits">Estornos confirmados no período: %1$s (%2$s). Não são descontados do total de compras.</string>
+    <plurals name="activity_credit_count">
+        <item quantity="one">%d estorno</item>
+        <item quantity="other">%d estornos</item>
+    </plurals>
+    <plurals name="activity_gaps">
+        <item quantity="one">%1$d boleto sem data de compra, %2$s, fica fora deste total.</item>
+        <item quantity="other">%1$d boletos sem data de compra, %2$s, ficam fora deste total.</item>
+    </plurals>
+    <plurals name="activity_cancellations">
+        <item quantity="one">%d compra com cancelamento solicitado ou confirmado; o total já desconta as parcelas canceladas confirmadas.</item>
+        <item quantity="other">%d compras com cancelamento solicitado ou confirmado; o total já desconta as parcelas canceladas confirmadas.</item>
+    </plurals>
+    <string name="activity_empty_title">Nenhuma compra conhecida neste período</string>
+    <string name="activity_empty_body">Isso mostra só o que foi registrado ou importado. Não significa que não houve consumo.</string>
+    <string name="activity_check">Conferir compras</string>
+    <string name="activity_see_budget">Ver orçamento mensal</string>
+    <string name="activity_failed">Não foi possível ler as compras deste aparelho.</string>
+</resources>

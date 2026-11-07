@@ -55,7 +55,7 @@ sealed interface PercentChange {
 
         /**
          * (B − A) / A em decimal exato; arredondado só aqui, para uma casa, meio-para-cima (empate afasta do zero, nos dois sentidos).
-         * Proposta da spec (pergunta aberta 12): ainda não aceita pelo usuário.
+         * Aceita pelo usuário em 07/11/2026 (spec S6, pergunta aberta 12).
          */
         fun of(a: Money, b: Money): PercentChange {
             if (a.cents == 0L) return NoBase(Reason.ZeroBase)
