@@ -53,6 +53,7 @@ import app.accord.ui.components.lucideRes
 import app.accord.ui.components.MonthSelector
 import app.accord.ui.theme.Accord
 import app.accord.ui.theme.AccordSpacing
+import app.accord.ui.theme.isCompactHeight
 import com.composables.icons.lucide.R as Lucide
 
 @Composable
@@ -136,15 +137,28 @@ fun LimitsScreen(
         }
         if (state.content is LimitsContent.Ready) {
             Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
-                Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                    if (state.nothingChanged) Text(stringResource(R.string.limits_nothing_changed), style = MaterialTheme.typography.bodyMedium)
-                    Button(onClick = onSave, enabled = !state.saving, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+                val compact = isCompactHeight()
+                // Paisagem (spec 24): Salvar e Definir depois lado a lado devolvem altura ao formulário.
+                val saveButton: @Composable (Modifier) -> Unit = { modifier ->
+                    Button(onClick = onSave, enabled = !state.saving, modifier = modifier.heightIn(min = AccordSpacing.touchMin)) {
                         Text(stringResource(if (state.saving) R.string.edit_saving else R.string.limits_save))
                     }
-                    if (state.initialSetup) {
-                        TextButton(onClick = onBack, enabled = !state.saving, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
-                            Text(stringResource(R.string.limits_setup_later))
+                }
+                val laterButton: @Composable (Modifier) -> Unit = { modifier ->
+                    TextButton(onClick = onBack, enabled = !state.saving, modifier = modifier.heightIn(min = AccordSpacing.touchMin)) {
+                        Text(stringResource(R.string.limits_setup_later))
+                    }
+                }
+                Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                    if (state.nothingChanged) Text(stringResource(R.string.limits_nothing_changed), style = MaterialTheme.typography.bodyMedium)
+                    if (compact) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalAlignment = Alignment.CenterVertically) {
+                            saveButton(Modifier.weight(1f))
+                            if (state.initialSetup) laterButton(Modifier.weight(1f))
                         }
+                    } else {
+                        saveButton(Modifier.fillMaxWidth())
+                        if (state.initialSetup) laterButton(Modifier.fillMaxWidth())
                     }
                 }
             }

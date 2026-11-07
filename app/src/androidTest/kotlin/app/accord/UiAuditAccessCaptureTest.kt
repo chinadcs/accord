@@ -7,6 +7,7 @@ import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onAllNodesWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.SemanticsActions
@@ -130,5 +131,25 @@ class UiAuditAccessCaptureTest {
                 compose.onAllNodesWithContentDescription("Categorias iniciais", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
         pages("03_primeiros_passos")
+    }
+
+    /** Limites no modo primeiros passos (Salvar limites + Definir depois), o caso de barra fixa mais alta da tela 24. */
+    @Test fun limitesNosPrimeirosPassos() {
+        waitFor("Controle financeiro do casal")
+        compose.onNodeWithText("Criar acesso").performScrollTo().performClick()
+        waitFor("Nenhum e-mail de confirmação")
+        val email = "auditoria-${UUID.randomUUID()}@x.test"
+        runBlocking { container.access.signUp(email, "senha-1234", "senha-1234") }
+        waitFor("Espaço da casa")
+        runBlocking { container.access.createSpace("Casa de teste") }
+        waitFor("Você: conectado")
+        compose.onNodeWithText("Continuar para primeiros passos").performScrollTo().performClick()
+        waitFor("Vamos começar")
+        compose.waitUntil(15_000) {
+            compose.onAllNodesWithText("Carregando", substring = true).fetchSemanticsNodes().isEmpty()
+        }
+        compose.onNodeWithText("Definir limites").performScrollTo().performClick()
+        waitFor("Defina os limites que vão valer")
+        pages("03_limites_configuracao")
     }
 }
