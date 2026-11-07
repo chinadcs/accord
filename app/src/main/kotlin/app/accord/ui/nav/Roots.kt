@@ -55,6 +55,10 @@ const val ARG_MONTH = "month"
 /** Detalhe de um compromisso: `commitment/{id}`; o ID pode ter `#` ou `:`, por isso vai codificado. */
 const val ROUTE_COMMITMENT = "commitment"
 
+/** Assinaturas (tela 31) e detalhe (tela 32): `subscription/{recurrenceId}`. */
+const val ROUTE_SUBSCRIPTIONS = "subscriptions"
+const val ROUTE_SUBSCRIPTION = "subscription"
+
 /** Cartão e faturas (tela 12) e detalhe da fatura: `invoice/{yyyy-MM}`. */
 const val ROUTE_CARD = "card"
 const val ROUTE_INVOICE = "invoice"

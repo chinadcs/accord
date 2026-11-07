@@ -52,12 +52,13 @@ fun CommitmentsRoute(
     onOpen: (String) -> Unit,
     onRegister: () -> Unit,
     onOpenCard: () -> Unit,
+    onOpenSubscriptions: (() -> Unit)? = null,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     RefreshOnResume(viewModel::refresh)
     CommitmentsScreen(
         state, padding, onBack, viewModel::previousMonth, viewModel::nextMonth, viewModel::setKind, viewModel::retry,
-        onOpen, onRegister, onOpenCard,
+        onOpen, onRegister, onOpenCard, onOpenSubscriptions,
     )
 }
 
@@ -74,6 +75,7 @@ fun CommitmentsScreen(
     onOpen: (String) -> Unit,
     onRegister: () -> Unit,
     onOpenCard: () -> Unit,
+    onOpenSubscriptions: (() -> Unit)? = null,
 ) {
     LazyColumn(
         Modifier.fillMaxSize().padding(padding),
@@ -104,6 +106,13 @@ fun CommitmentsScreen(
                 content.last?.let { commitmentItems(it, onOpen, onRegister, onOpenCard) }
             }
             is CommitmentsContent.Ready -> commitmentItems(content.data, onOpen, onRegister, onOpenCard)
+        }
+        onOpenSubscriptions?.let { open ->
+            item {
+                OutlinedButton(onClick = open, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+                    Text(stringResource(R.string.commitments_subscriptions_link))
+                }
+            }
         }
         item {
             Text(

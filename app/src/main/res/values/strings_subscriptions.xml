@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Assinaturas (tela 31) -->
+    <string name="subscriptions_title">Assinaturas</string>
+    <string name="more_subscriptions">Assinaturas</string>
+    <string name="commitments_subscriptions_link">Ver assinaturas</string>
+    <string name="subscriptions_period">Próximas cobranças de %1$s a %2$s</string>
+    <string name="subscriptions_filter_all">Todas</string>
+    <string name="subscriptions_filter_active">Ativas</string>
+    <string name="subscriptions_filter_ended">Encerradas</string>
+    <string name="subscriptions_due_title">Vence no período</string>
+    <string name="subscriptions_due_count">%1$d cobranças previstas ou pagas neste período</string>
+    <string name="subscriptions_subtotal_monthly">Mensais: %1$d · esperado %2$s</string>
+    <string name="subscriptions_subtotal_annual">Anuais: %1$d · esperado %2$s</string>
+    <string name="subscriptions_subtotals_note">Valores de frequências diferentes não são somados nem convertidos.</string>
+    <string name="subscriptions_frequency_monthly">mensal</string>
+    <string name="subscriptions_frequency_annual">anual</string>
+    <string name="subscriptions_row_next">%1$s · próxima em %2$s</string>
+    <string name="subscriptions_row_ended">%1$s · encerrada</string>
+    <string name="subscriptions_observed_tag">diferença observada %1$s</string>
+    <string name="subscriptions_empty_title">Nenhuma assinatura identificada</string>
+    <string name="subscriptions_empty_body">Aparecem aqui as recorrências cadastradas na categoria Assinaturas. Nada é classificado automaticamente.</string>
+    <string name="subscriptions_register">Adicionar recorrência</string>
+    <string name="subscriptions_filtered_empty">Nenhuma assinatura com essa situação neste período.</string>
+    <string name="subscriptions_failed">Não foi possível ler as assinaturas deste aparelho.</string>
+    <string name="subscriptions_note">Manter ou não uma assinatura é uma escolha de vocês. Os dados vêm dos registros deste aparelho.</string>
+
+    <!-- Detalhe da assinatura (tela 32) -->
+    <string name="subscription_title">Assinatura</string>
+    <string name="subscription_category_line">%1$s · frequência %2$s</string>
+    <string name="subscription_next">Próxima cobrança prevista: %1$s · %2$s</string>
+    <string name="subscription_no_next">Sem próxima cobrança prevista: a série foi encerrada.</string>
+    <string name="subscription_history">Histórico comparável</string>
+    <string name="subscription_history_empty">Nenhuma cobrança paga registrada nesta assinatura.</string>
+    <string name="subscription_charge_see_description">Ver a cobrança de %1$s, %2$s</string>
+    <string name="subscription_observed">Diferença observada: %1$s</string>
+    <string name="subscription_observed_between">Entre %1$s (%2$s) e %3$s (%4$s).</string>
+    <string name="subscription_observed_note">É uma informação para avaliar, não uma conclusão sobre a cobrança. Promoções ou mudanças de plano não aparecem nos dados.</string>
+    <plurals name="subscription_missing_cycles">
+        <item quantity="one">Há %d ciclo sem cobrança registrada entre elas; a diferença pode refletir registros faltantes.</item>
+        <item quantity="other">Há %d ciclos sem cobrança registrada entre elas; a diferença pode refletir registros faltantes.</item>
+    </plurals>
+    <string name="subscription_insufficient_title">Sem histórico comparável</string>
+    <string name="subscription_insufficient_body">Mostramos só a previsão. Para comparar preços são necessárias ao menos duas cobranças pagas e registradas nesta assinatura; o valor esperado sozinho não prova uma mudança de preço.</string>
+    <string name="subscription_versus_last">A próxima prevista difere da última cobrança paga em %1$s. A previsão não foi alterada.</string>
+    <string name="subscription_check_charge">Conferir cobrança</string>
+    <string name="subscription_edit">Editar recorrência</string>
+    <string name="subscription_not_found_title">Assinatura não encontrada</string>
+    <string name="subscription_not_found_body">Ela pode ter sido removida ou deixado de estar na categoria Assinaturas.</string>
+</resources>

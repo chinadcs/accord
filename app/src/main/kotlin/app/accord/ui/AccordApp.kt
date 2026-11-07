@@ -189,6 +189,12 @@ import app.accord.ui.chat.ChatViewModel
 import app.accord.ui.nav.ROUTE_CARD
 import app.accord.ui.nav.ROUTE_COMMITMENT
 import app.accord.ui.nav.ROUTE_COMMITMENTS
+import app.accord.ui.nav.ROUTE_SUBSCRIPTION
+import app.accord.ui.nav.ROUTE_SUBSCRIPTIONS
+import app.accord.ui.subscriptions.SubscriptionDetailRoute
+import app.accord.ui.subscriptions.SubscriptionDetailViewModel
+import app.accord.ui.subscriptions.SubscriptionsRoute
+import app.accord.ui.subscriptions.SubscriptionsViewModel
 import app.accord.ui.nav.ROUTE_EDIT
 import app.accord.ui.nav.ROUTE_PENDING
 import app.accord.ui.nav.ROUTE_PENDING_ITEM
@@ -587,6 +593,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             onCard = { navController.navigate(ROUTE_CARD) },
                             onIncomes = { navController.navigate(ROUTE_INCOMES) },
                             onCommitments = { navController.navigate(ROUTE_COMMITMENTS) },
+                            onSubscriptions = { navController.navigate(ROUTE_SUBSCRIPTIONS) },
                             onRegister = register,
                             onSpace = { navController.navigate(ROUTE_SPACE) },
                             onAppearance = { navController.navigate("appearance") },
@@ -750,6 +757,29 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     onOpen = { id -> navController.navigate("$ROUTE_COMMITMENT/${Uri.encode(id)}") },
                     onRegister = register,
                     onOpenCard = { navController.navigate(ROUTE_CARD) },
+                    onOpenSubscriptions = { navController.navigate(ROUTE_SUBSCRIPTIONS) },
+                )
+            }
+            composable(ROUTE_SUBSCRIPTIONS) {
+                val viewModel: SubscriptionsViewModel = viewModel(
+                    factory = viewModelFactory { initializer { SubscriptionsViewModel(container, createSavedStateHandle()) } },
+                )
+                SubscriptionsRoute(
+                    viewModel, padding, onBack = { navController.popBackStack() },
+                    onOpen = { id -> navController.navigate("$ROUTE_SUBSCRIPTION/${Uri.encode(id)}") },
+                    onRegister = register,
+                )
+            }
+            composable(
+                "$ROUTE_SUBSCRIPTION/{${SubscriptionDetailViewModel.ARG_ID}}",
+                arguments = listOf(navArgument(SubscriptionDetailViewModel.ARG_ID) { type = NavType.StringType }),
+            ) {
+                val viewModel: SubscriptionDetailViewModel = viewModel(
+                    factory = viewModelFactory { initializer { SubscriptionDetailViewModel(container, createSavedStateHandle()) } },
+                )
+                SubscriptionDetailRoute(
+                    viewModel, padding, onBack = { navController.popBackStack() }, onOpenEntry = openEntry,
+                    onEdit = { id -> navController.navigate("$ROUTE_EDIT/${Uri.encode(id)}") },
                 )
             }
             composable(
