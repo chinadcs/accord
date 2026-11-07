@@ -192,6 +192,11 @@ import app.accord.ui.nav.ROUTE_COMMITMENTS
 import app.accord.ui.nav.ARG_FILTER_CRITERION
 import app.accord.ui.nav.ROUTE_ACTIVITY
 import app.accord.ui.nav.ROUTE_COMPARISON
+import app.accord.ui.nav.ROUTE_WEEKLY_REVIEW
+import app.accord.ui.weekly.PrefsWeeklyReviewStore
+import app.accord.ui.weekly.WeeklyReviewActions
+import app.accord.ui.weekly.WeeklyReviewRoute
+import app.accord.ui.weekly.WeeklyReviewViewModel
 import app.accord.ui.comparison.ComparisonActions
 import app.accord.ui.comparison.ComparisonRoute
 import app.accord.ui.comparison.ComparisonViewModel
@@ -605,6 +610,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             onSubscriptions = { navController.navigate(ROUTE_SUBSCRIPTIONS) },
                             onActivity = { navController.navigate(ROUTE_ACTIVITY) },
                             onComparison = { navController.navigate(ROUTE_COMPARISON) },
+                            onWeeklyReview = { navController.navigate(ROUTE_WEEKLY_REVIEW) },
                             onRegister = register,
                             onSpace = { navController.navigate(ROUTE_SPACE) },
                             onAppearance = { navController.navigate("appearance") },
@@ -787,6 +793,26 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                         },
                         onOpenBudget = { navController.openRoot(Root.Budget) },
                         onOpenComparison = { navController.navigate(ROUTE_COMPARISON) },
+                    ),
+                )
+            }
+            composable(ROUTE_WEEKLY_REVIEW) {
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val viewModel: WeeklyReviewViewModel = viewModel(
+                    factory = viewModelFactory {
+                        initializer { WeeklyReviewViewModel(container, PrefsWeeklyReviewStore(context, container.personId)) }
+                    },
+                )
+                WeeklyReviewRoute(
+                    viewModel, padding,
+                    WeeklyReviewActions(
+                        onBack = { navController.popBackStack() },
+                        onOpenCategory = { categoryId, month -> navController.navigate("$ROUTE_FORECAST/${Uri.encode(categoryId)}/$month") },
+                        onOpenPendings = { navController.openRoot(Root.Review) },
+                        onOpenCommitment = { id -> navController.navigate("$ROUTE_COMMITMENT/${Uri.encode(id)}") },
+                        onOpenActivity = { navController.navigate(ROUTE_ACTIVITY) },
+                        onOpenCommitments = { navController.navigate(ROUTE_COMMITMENTS) },
+                        onOpenBudget = { navController.openRoot(Root.Budget) },
                     ),
                 )
             }

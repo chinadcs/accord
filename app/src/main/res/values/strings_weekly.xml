@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Revisão semanal (tela 29) -->
+    <string name="weekly_title">Revisão semanal</string>
+    <string name="more_weekly">Revisão semanal</string>
+    <string name="weekly_period">Última semana completa: %1$s</string>
+    <string name="weekly_period_other">Semana revisada: %1$s</string>
+    <string name="weekly_reference">Referência da consulta: %1$s</string>
+    <string name="weekly_previous">Semana anterior</string>
+    <string name="weekly_next">Semana seguinte</string>
+    <string name="weekly_period_label">Período da revisão</string>
+    <string name="weekly_offer_title">Há uma revisão guardada de outra semana</string>
+    <string name="weekly_offer_resume">Retomar revisão de %1$s</string>
+    <string name="weekly_offer_new">Nova revisão (%1$s)</string>
+    <string name="weekly_progress">Pontos vistos: %1$d de %2$d. Ver um ponto não resolve nada.</string>
+    <string name="weekly_progress_all">Revisão visitada. As dúvidas financeiras continuam ativas até serem resolvidas.</string>
+    <string name="weekly_visited">visto</string>
+    <string name="weekly_continue">Continuar revisão</string>
+    <string name="weekly_conclude">Concluir por agora</string>
+    <string name="weekly_concluded_title">Revisão guardada por agora</string>
+    <string name="weekly_concluded_body">Nada foi marcado como conferido e as dúvidas continuam ativas. Vocês retomam quando quiserem, no mesmo período.</string>
+    <string name="weekly_resume">Retomar revisão</string>
+    <string name="weekly_local_note">A revisão usa os dados deste aparelho. A visão compartilhada pode não incluir movimentos do outro aparelho.</string>
+    <string name="weekly_block_failed">Não foi possível ler este bloco.</string>
+    <string name="weekly_open_origin">Abrir os dados de origem</string>
+
+    <string name="weekly_movements_title">Movimentos do período</string>
+    <string name="weekly_movements_ref">Pela data original da compra, de %1$s a %2$s</string>
+    <string name="weekly_movements_total">%1$s em %2$s</string>
+    <string name="weekly_movements_empty">Nenhuma compra conhecida neste período. Isso não significa ausência de consumo.</string>
+    <string name="weekly_movements_open">Ver atividade de compras</string>
+
+    <string name="weekly_attention_title">Categorias que merecem atenção</string>
+    <string name="weekly_attention_ref">Situação atual de %1$s, com os limites mensais</string>
+    <string name="weekly_attention_empty">Nenhuma categoria acima do limite ou com risco de excesso agora.</string>
+    <string name="weekly_attention_occurred">Excesso de %1$s</string>
+    <string name="weekly_attention_possible">Possível excesso de %1$s</string>
+    <string name="weekly_attention_see">Ver %1$s</string>
+
+    <string name="weekly_pendings_title">Pendências</string>
+    <string name="weekly_pendings_ref">Situação atual na data da consulta</string>
+    <plurals name="weekly_pendings_count">
+        <item quantity="one">%d pendência</item>
+        <item quantity="other">%d pendências</item>
+    </plurals>
+    <string name="weekly_pendings_empty">Nenhuma pendência no momento.</string>
+    <string name="weekly_pendings_resolve">Resolver pendências</string>
+
+    <string name="weekly_upcoming_title">Próximos compromissos</string>
+    <string name="weekly_upcoming_ref">Vencimentos de %1$s a %2$s, a partir da consulta</string>
+    <string name="weekly_upcoming_empty">Nenhum compromisso a vencer neste período.</string>
+    <string name="weekly_upcoming_due">Vence em %1$s</string>
+    <string name="weekly_upcoming_check">Conferir</string>
+</resources>

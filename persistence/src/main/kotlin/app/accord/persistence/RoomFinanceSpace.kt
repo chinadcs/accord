@@ -114,6 +114,8 @@ import app.accord.core.space.ComparisonGrouping
 import app.accord.core.space.ComparisonPeriod
 import app.accord.core.space.PeriodComparison
 import app.accord.core.space.PurchaseActivity
+import app.accord.core.space.WeeklyReviewSummary
+import app.accord.core.analysis.ReviewPeriod
 import app.accord.core.space.SubscriptionDetail
 import app.accord.core.space.SubscriptionList
 import app.accord.core.space.PreviewResult
@@ -222,6 +224,12 @@ class RoomFinanceSpace private constructor(
         budget = { (budget(it) as QueryResult.Data).value },
         activity = { from, until -> entryQueries.purchaseActivity(from, until, null) },
         today = { clock.today() },
+    )
+    private val weeklyReviewQueries = WeeklyReviewQueries(
+        activity = { from, until -> entryQueries.purchaseActivity(from, until, null) },
+        forecast = { forecastQueries.forecasts(it) },
+        pendings = { entryQueries.pendings() },
+        commitments = { entryQueries.commitments(it, CommitmentKind.All) },
     )
     private val alertCenter = AlertCenter(
         db, clock, sessions,
@@ -1302,6 +1310,9 @@ class RoomFinanceSpace private constructor(
         a: ComparisonPeriod,
         b: ComparisonPeriod,
     ): QueryResult<PeriodComparison> = query { comparisonQueries.compare(criterion, grouping, a, b) }
+
+    override suspend fun weeklyReview(period: ReviewPeriod, reference: LocalDate): QueryResult<WeeklyReviewSummary> =
+        query { weeklyReviewQueries.review(period, reference) }
 
     override suspend fun subscription(recurrenceId: String): QueryResult<SubscriptionDetail?> =
         query { subscriptionQueries.detail(recurrenceId, clock.today()) }

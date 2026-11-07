@@ -4,6 +4,8 @@ import app.accord.core.Frequency
 import app.accord.core.analysis.ChargeComparison
 import app.accord.core.analysis.ComparisonRow
 import app.accord.core.analysis.Measure
+import app.accord.core.analysis.ReviewPeriod
+import app.accord.core.analysis.ReviewPoint
 import app.accord.core.analysis.PeriodChange
 import app.accord.core.analysis.SubscriptionCharge
 import app.accord.core.LimitEdit
@@ -21,6 +23,7 @@ import app.accord.core.alerts.AlertSnapshot
 import app.accord.core.alerts.DisplayState
 import app.accord.core.alerts.NotificationAccess
 import app.accord.core.forecast.CategoryForecast
+import app.accord.core.forecast.Excess
 import app.accord.core.forecast.InvoiceClosure
 import app.accord.core.forecast.MonthForecast
 import java.time.LocalDate
@@ -126,6 +129,13 @@ interface FinanceSpace {
         a: ComparisonPeriod,
         b: ComparisonPeriod,
     ): QueryResult<PeriodComparison>
+
+    /**
+     * Revisão semanal (S6, tela 29): quatro blocos independentes, cada um com a sua referência temporal e a sua falha isolada. [period] é a
+     * semana revisada (segunda a segunda) e [reference] é a data da consulta. Leitura apenas: consultar outro período não altera limites,
+     * lançamentos nem a janela ou a cota dos alertas, e nada é marcado como conferido.
+     */
+    suspend fun weeklyReview(period: ReviewPeriod, reference: LocalDate): QueryResult<WeeklyReviewSummary>
 
     /** Detalhe de uma assinatura (S6, tela 32); nulo se a série não existe, foi anulada ou não está em Assinaturas. */
     suspend fun subscription(recurrenceId: String): QueryResult<SubscriptionDetail?>
@@ -1382,3 +1392,47 @@ data class PeriodComparison(
     val totalB: Measure,
     val totalChange: PeriodChange,
 )
+
+// ---- revisão semanal (S6, tela 29) ----
+
+/** Um bloco da revisão: a falha de um não esconde os outros e pode ser repetida. */
+sealed interface ReviewBlock<out T> {
+    data class Ready<T>(val value: T) : ReviewBlock<T>
+    data object Failed : ReviewBlock<Nothing>
+}
+
+/** Categoria com possível excesso ou excesso já ocorrido, pela previsão do S5 no mês da consulta (situação atual, não a do fim da semana). */
+data class ReviewAttentionItem(val categoryId: String, val excess: Excess)
+
+data class ReviewAttention(val month: YearMonth, val items: List<ReviewAttentionItem>)
+
+/** Compromissos ainda não pagos que vencem de [from] (a consulta) até [untilExclusive], 7 dias depois. */
+data class ReviewUpcoming(val from: LocalDate, val untilExclusive: LocalDate, val items: List<Commitment>)
+
+data class WeeklyReviewSummary(
+    val period: ReviewPeriod,
+    val reference: LocalDate,
+    /** Movimentos do período pela data original da compra. */
+    val movements: ReviewBlock<PurchaseActivity>,
+    val attention: ReviewBlock<ReviewAttention>,
+    /** Situação atual das pendências na data da consulta, não a da semana revisada. */
+    val pendings: ReviewBlock<List<PendingItem>>,
+    val upcoming: ReviewBlock<ReviewUpcoming>,
+) {
+    /** Pontos de leitura na ordem da tela: categorias, pendências e compromissos. Blocos com falha não têm pontos. */
+    val points: List<ReviewPoint>
+        get() = buildList {
+            (attention as? ReviewBlock.Ready)?.value?.items?.forEach { add(ReviewPoint(ReviewPoint.Kind.Category, it.categoryId)) }
+            (pendings as? ReviewBlock.Ready)?.value?.forEach { add(ReviewPoint(ReviewPoint.Kind.Pending, it.reviewId)) }
+            (upcoming as? ReviewBlock.Ready)?.value?.items?.forEach { add(ReviewPoint(ReviewPoint.Kind.Commitment, it.id)) }
+        }
+}
+
+/** Identidade estável de uma pendência para o progresso de leitura da revisão. */
+val PendingItem.reviewId: String
+    get() = when (this) {
+        is PendingItem.CategoryToClarify -> "classify:$entryId"
+        is PendingItem.InvoiceLink -> "link:$purchaseId"
+        is PendingItem.DivergentInvoicePayment -> "payment:$paymentId"
+        is PendingItem.InvoiceTotalDifference -> "difference:$month"
+    }

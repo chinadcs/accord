@@ -103,3 +103,6 @@ const val ROUTE_ACTIVITY = "activity"
 
 /** Comparações históricas (tela 33). */
 const val ROUTE_COMPARISON = "comparison"
+
+/** Revisão semanal (tela 29). */
+const val ROUTE_WEEKLY_REVIEW = "weekly_review"
