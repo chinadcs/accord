@@ -106,14 +106,20 @@ object SeedCategoryVocabulary {
         listOf(terms, extra, brands, common).flatMap { it.values }.flatten()
             .map { normalized(it, version) }.filter { it.isNotBlank() }.toSet()
 
-    fun matches(category: CategoryItem, subject: String, version: Int = 11): List<String> {
-        val seed = CategorySeed.items.firstOrNull { it.key == category.id } ?: return emptyList()
-        if (ChatText.fold(seed.name) != ChatText.fold(category.name) || seed.parentKey != category.parentId) return emptyList()
+    /**
+     * [context] liga o id de cada categoria à sua chave de semente (`ChatContext.seedKeys`). No app o id é um UUID e o vocabulário só conhece a chave; sem
+     * o contexto, ou nos contextos de bateria, id e chave são a mesma coisa.
+     */
+    fun matches(category: CategoryItem, subject: String, version: Int = 11, context: ChatContext? = null): List<String> {
+        fun keyOf(id: String) = context?.seedKeys?.get(id) ?: id
+        val key = keyOf(category.id)
+        val seed = CategorySeed.items.firstOrNull { it.key == key } ?: return emptyList()
+        if (ChatText.fold(seed.name) != ChatText.fold(category.name) || seed.parentKey != category.parentId?.let(::keyOf)) return emptyList()
         val folded = normalized(subject, version)
-        val vocabulary = terms[category.id].orEmpty() +
-            (if (version >= 12) extra[category.id].orEmpty() else emptyList()) +
-            (if (version >= 15) brands[category.id].orEmpty() else emptyList()) +
-            (if (version >= 17) common[category.id].orEmpty() else emptyList())
+        val vocabulary = terms[key].orEmpty() +
+            (if (version >= 12) extra[key].orEmpty() else emptyList()) +
+            (if (version >= 15) brands[key].orEmpty() else emptyList()) +
+            (if (version >= 17) common[key].orEmpty() else emptyList())
         return vocabulary.filter { term ->
             Regex("(?<![a-z0-9])${Regex.escape(normalized(term, version))}(?![a-z0-9])").containsMatchIn(folded)
         }
@@ -121,13 +127,13 @@ object SeedCategoryVocabulary {
 
     /** v15: a única categoria cujo vocabulário bateu com o maior número de palavras, quando é filha (a pai não entra na escolha). */
     fun soleChild(context: ChatContext, subject: String, version: Int): CategoryItem? {
-        val scored = context.categories.map { c -> c to matches(c, subject, version).maxOfOrNull { normalized(it, version).split(' ').size } }
+        val scored = context.categories.map { c -> c to matches(c, subject, version, context).maxOfOrNull { normalized(it, version).split(' ').size } }
         val best = scored.mapNotNull { it.second }.maxOrNull() ?: return null
         return scored.filter { it.second == best }.singleOrNull()?.first?.takeIf { it.parentId != null }
     }
 
     fun candidates(context: ChatContext, subject: String, version: Int = 11): List<CategoryItem>? {
-        val scored = context.categories.map { c -> c to matches(c, subject, version).maxOfOrNull { normalized(it, version).split(' ').size } }
+        val scored = context.categories.map { c -> c to matches(c, subject, version, context).maxOfOrNull { normalized(it, version).split(' ').size } }
         val best = scored.mapNotNull { it.second }.maxOrNull() ?: return null
         val ids = scored.filter { it.second == best }.map { it.first.id }.toMutableSet()
         context.categories.filter { it.id in ids }.forEach { it.parentId?.let(ids::add) }

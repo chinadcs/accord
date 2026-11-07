@@ -66,7 +66,7 @@ object ConsultReader {
         }
 
         val named = sameNameResolved(context.categories.filter { ChatText.named(text, it.name) })
-        val categories = mostSpecific(named.ifEmpty { vocabularyCandidates(context, text) })
+        val categories = mostSpecific(named.ifEmpty { SeedCategoryVocabulary.candidates(context, text, VOCABULARY_VERSION).orEmpty() })
         val schedule = scheduleCue.containsMatchIn(folded)
         val targetText = if (schedule) targetOf(folded, period) else null
 
@@ -93,15 +93,6 @@ object ConsultReader {
         if (Regex("\\d").containsMatchIn(folded.replace(monthPhrase, " ").replace(dateLiteral, " "))) return false
         return questionStart.containsMatchIn(folded) ||
             (comparisonCue.containsMatchIn(folded) && Regex("^(?:gastei|gasto|gastamos)\\b").containsMatchIn(folded))
-    }
-
-    /** O vocabulário das iniciais conhece a chave da semente, não o id do app: traduz, procura e devolve as categorias do contexto. */
-    private fun vocabularyCandidates(context: ChatContext, text: String): List<CategoryItem> {
-        if (context.seedKeys.isEmpty()) return SeedCategoryVocabulary.candidates(context, text, VOCABULARY_VERSION).orEmpty()
-        fun key(id: String) = context.seedKeys[id] ?: id
-        val translated = context.categories.map { it.copy(id = key(it.id), parentId = it.parentId?.let(::key)) }
-        val byKey = context.categories.associateBy { key(it.id) }
-        return SeedCategoryVocabulary.candidates(context.copy(categories = translated), text, VOCABULARY_VERSION).orEmpty().mapNotNull { byKey[it.id] }
     }
 
     private fun purchaseDate(folded: String): DateExpression? =

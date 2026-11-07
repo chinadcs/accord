@@ -184,7 +184,7 @@ class RoutedInterpreter(private val model: StepModel, private val style: PromptS
             example("gasto sem finalidade informada", null)
             if (options.version in 8..VERSION && context.categories.size < request.context.categories.size) {
                 context.categories.forEach { c ->
-                    if (options.version >= 11) SeedCategoryVocabulary.matches(c, subject, options.version).take(4).forEach { example(it, c.id) }
+                    if (options.version >= 11) SeedCategoryVocabulary.matches(c, subject, options.version, request.context).take(4).forEach { example(it, c.id) }
                     if (friendly) example(if (context.categories.count { it.name == c.name } > 1) c.ref else c.name, c.id)
                     c.hint?.substringBefore(',')?.takeIf { it.isNotBlank() }?.let { example(it, c.id) }
                 }
