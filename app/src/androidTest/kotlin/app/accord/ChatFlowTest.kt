@@ -11,7 +11,9 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.printToLog
 import androidx.test.core.app.ActivityScenario
@@ -37,7 +39,6 @@ import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
-import java.util.UUID
 
 /** O Chat de ponta a ponta no banco do aparelho, com modelo e motor de teste (S3 §"Decisões de teste"). */
 @RunWith(AndroidJUnit4::class)
@@ -46,7 +47,9 @@ class ChatFlowTest {
     val compose = createEmptyComposeRule()
 
     private var scenario: ActivityScenario<MainActivity>? = null
-    private val tag = UUID.randomUUID().toString().take(6)
+    // Só consoantes: o validador lê dígitos soltos como valor, e um identificador numérico sorteado ("195976") fazia a frase ser recusada
+    // ("Não entendi") em cerca de uma de cada dez execuções (accord-3xs5).
+    private val tag = (1..6).map { "bcdfghjklmnpqrstvwxz".random() }.joinToString("")
     private val container get() = ApplicationProvider.getApplicationContext<AccordApplication>().container
 
     @Before
@@ -118,8 +121,11 @@ class ChatFlowTest {
         waitForText("Amazon $tag R$")
         waitForText("qual categoria?")
         compose.onNodeWithText("Ver todas").performScrollTo().performClick()
-        compose.onNodeWithTag("chat-category-catalog").performScrollToNode(hasText("Pet"))
-        compose.onNodeWithText("Pet").assertIsDisplayed().performClick()
+        // Seletor em duas etapas (o mesmo do registro manual): primeiro o grupo; Pet tem subcategorias, então abre "Usar Pet".
+        waitForText("Escolha um grupo")
+        compose.onNode(hasText("Pet") and hasAnyAncestor(isDialog())).performClick()
+        waitForText("Usar Pet")
+        compose.onNodeWithText("Usar Pet").performClick()
         // A pergunta some e o recibo mostra a categoria escolhida, no mesmo lançamento.
         compose.waitUntil(10_000) { compose.onAllNodesWithText("qual categoria?", substring = true).fetchSemanticsNodes().isEmpty() }
         waitForText("Alterado depois")
