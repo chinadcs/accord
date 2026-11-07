@@ -17,6 +17,13 @@ sealed interface AmountRead {
     data object Invalid : AmountRead
 }
 
+sealed interface MonthRead {
+    data class Ok(val month: YearMonth) : MonthRead
+
+    /** Mês que o app não resolve (nome desconhecido, mês 13, semana, intervalo): não vira número. */
+    data object Invalid : MonthRead
+}
+
 sealed interface DateRead {
     data class Ok(val date: LocalDate) : DateRead
 
@@ -33,6 +40,33 @@ data class InstallmentMarker(val role: AmountRole, val installments: Int)
  */
 object ChatText {
     private const val MAX_INSTALLMENTS = 120
+
+    private val MONTH_NAMES = listOf("janeiro", "fevereiro", "marco", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro")
+    private val relativeMonths = mapOf(
+        "este mes" to 0, "esse mes" to 0, "neste mes" to 0, "nesse mes" to 0, "mes atual" to 0, "mes corrente" to 0, "no mes" to 0,
+        "mes passado" to -1, "mes anterior" to -1, "ultimo mes" to -1, "no mes passado" to -1, "do mes passado" to -1,
+        "proximo mes" to 1, "mes que vem" to 1, "no proximo mes" to 1, "no mes que vem" to 1,
+    )
+    private val namedMonth = Regex("""^(?:em |de |no mes de |do mes de )?(janeiro|fevereiro|marco|abril|maio|junho|julho|agosto|setembro|outubro|novembro|dezembro)(?: ?(?:de |/) ?(\d{4}))?$""")
+    private val numericMonth = Regex("""^(\d{1,2})/(\d{4})$""")
+
+    /**
+     * Mês-calendário de um trecho da mensagem ("este mês", "mês passado", "outubro", "outubro de 2026", "10/2026"). Mês sem ano é o do
+     * ano de [today]. Semanas, intervalos e dias não são meses: [MonthRead.Invalid], e o Chat orienta em vez de inventar um período.
+     */
+    fun resolveMonth(excerpt: String, today: LocalDate): MonthRead {
+        val text = fold(excerpt).trim(' ', '.', '?', '!', ',')
+        relativeMonths[text]?.let { return MonthRead.Ok(YearMonth.from(today).plusMonths(it.toLong())) }
+        numericMonth.matchEntire(text)?.let { match ->
+            val month = match.groupValues[1].toInt()
+            val year = match.groupValues[2].toInt()
+            return if (month in 1..12 && year in 2000..2100) MonthRead.Ok(YearMonth.of(year, month)) else MonthRead.Invalid
+        }
+        val named = namedMonth.matchEntire(text) ?: return MonthRead.Invalid
+        val year = named.groupValues[2].takeIf { it.isNotEmpty() }?.toInt() ?: today.year
+        if (year !in 2000..2100) return MonthRead.Invalid
+        return MonthRead.Ok(YearMonth.of(year, MONTH_NAMES.indexOf(named.groupValues[1]) + 1))
+    }
 
     /** Minúsculas, sem acentos e com espaços normalizados, para comparar sem diferenciar a grafia. */
     fun fold(text: String): String =

@@ -175,6 +175,8 @@ class AppContainer(
                     onFinanceChanged = feedback::notifyChanged,
                     categorySuggester = categoryPilot.suggester(runtime.identity.spaceId),
                     onCategoryPilotEvent = categoryPilot::record,
+                    // S6: o aplicativo expõe as telas 29–33, então o Chat responde as consultas do catálogo (fase P1).
+                    phase = app.accord.core.analysis.ProductPhase.P1,
                 )
                 coordinator.recover()
                 chatState.value = coordinator

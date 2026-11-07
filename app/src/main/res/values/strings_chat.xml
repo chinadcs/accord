@@ -81,7 +81,7 @@
 
     <!-- Respostas padrão do app -->
     <string name="reply_intent">Ideias de compra não entram como gasto. Se foi uma compra que você fez, use o registro manual.</string>
-    <string name="reply_query">No Chat eu ainda não respondo consultas com números. Veja o Orçamento ou a lista de Lançamentos.</string>
+    <string name="reply_query">Não consegui entender isso como uma pergunta que eu saiba responder. Veja o Orçamento ou a lista de Lançamentos.</string>
     <string name="reply_recurrence">Recorrências ainda não são registradas pelo Chat. Use o registro manual, que já leva o que entendi.</string>
     <string name="reply_boleto">Boletos ainda não são registrados pelo Chat. Use o registro manual, que já leva o que entendi.</string>
     <string name="reply_refund">Estornos ainda não são registrados pelo Chat. Abra o lançamento original ou use o registro manual.</string>

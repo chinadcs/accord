@@ -19,6 +19,12 @@ enum class CorrectionField { Amount, Date, Description, Category, Payment, Accou
 
 enum class UnsupportedType { Recurrence, Boleto, Refund, InvoicePayment, Cancellation }
 
+/** Catálogo fechado das consultas do Chat (S6). Pedido fora dele é rejeitado, nunca respondido por aproximação. */
+enum class ConsultType { CategorySpend, PurchaseSchedule, MonthCommitments }
+
+/** Critério de data pedido: mês do orçamento ou data original da compra. Ausente, o app assume o orçamento e diz isso. */
+enum class ConsultCriterion { Budget, PurchaseDate }
+
 /**
  * Conjunto limitado de ações que o interpretador pode propor (S3 §4). Tudo que é texto é um
  * Trecho (parte literal da mensagem) e tudo que é referência é uma `ref` curta do contexto.
@@ -65,6 +71,20 @@ sealed interface Proposal {
         val entry: Register? = null,
     ) : Proposal
 
+    /**
+     * Consulta de leitura do catálogo fechado (S6 §"Consulta pelo Chat"). [month] e [target] são trechos literais
+     * da mensagem, [category] é uma `ref` do contexto e [date] só desambigua a compra-alvo. O número vem da
+     * fachada, nunca da proposta.
+     */
+    data class Consult(
+        val type: ConsultType,
+        val month: String? = null,
+        val criterion: ConsultCriterion? = null,
+        val category: String? = null,
+        val target: String? = null,
+        val date: DateExpression? = null,
+    ) : Proposal
+
     data object Query : Proposal
     data object Intent : Proposal
     data class Unsupported(val type: UnsupportedType) : Proposal
@@ -93,6 +113,7 @@ object ProposalCodec {
         "correct" to setOf("target", "field", "text", "date", "category", "payment", "account"),
         "answer" to setOf("question", "choice", "text", "date"),
         "clarify" to setOf("field", "options", "entry"),
+        "consult" to setOf("type", "month", "criterion", "category", "target", "date"),
         "query" to emptySet(),
         "intent" to emptySet(),
         "unsupported" to setOf("type"),
@@ -173,6 +194,14 @@ object ProposalCodec {
             date = obj.dateExpression("date"),
         )
         "clarify" -> Proposal.Clarify(field = obj.enum("field", QUESTION_FIELDS), options = options(obj), entry = nestedEntry(obj))
+        "consult" -> Proposal.Consult(
+            type = obj.enum("type", CONSULT_TYPES) ?: throw BadField("type"),
+            month = obj.text("month"),
+            criterion = obj.enum("criterion", CONSULT_CRITERIA),
+            category = obj.text("category"),
+            target = obj.text("target"),
+            date = obj.dateExpression("date"),
+        )
         "query" -> Proposal.Query
         "intent" -> Proposal.Intent
         "unsupported" -> Proposal.Unsupported(obj.enum("type", UNSUPPORTED) ?: throw BadField("type"))
@@ -244,6 +273,15 @@ object ProposalCodec {
                 put("options", buildJsonArray { proposal.options.forEach { add(JsonPrimitive(it)) } })
                 proposal.entry?.let { entry -> put("entry", buildJsonObject { putRegister(entry) }) }
             }
+            is Proposal.Consult -> {
+                put("action", "consult")
+                put("type", CONSULT_TYPES.keyOf(proposal.type))
+                proposal.month?.let { put("month", it) }
+                proposal.criterion?.let { put("criterion", CONSULT_CRITERIA.keyOf(it)) }
+                proposal.category?.let { put("category", it) }
+                proposal.target?.let { put("target", it) }
+                proposal.date?.let { put("date", dateElement(it)) }
+            }
             Proposal.Query -> put("action", "query")
             Proposal.Intent -> put("action", "intent")
             is Proposal.Unsupported -> {
@@ -261,6 +299,12 @@ object ProposalCodec {
 
     private fun <E : Enum<E>> Map<String, E>.keyOf(value: E) = entries.first { it.value == value }.key
 
+    private val CONSULT_TYPES = mapOf(
+        "category_spend" to ConsultType.CategorySpend,
+        "purchase_schedule" to ConsultType.PurchaseSchedule,
+        "month_commitments" to ConsultType.MonthCommitments,
+    )
+    private val CONSULT_CRITERIA = mapOf("budget" to ConsultCriterion.Budget, "purchase_date" to ConsultCriterion.PurchaseDate)
     private val NATURES = mapOf("expense" to Nature.Expense, "income" to Nature.Income)
     private val ROLES = mapOf("single" to AmountRole.Single, "total" to AmountRole.Total, "installment" to AmountRole.PerInstallment)
     private val PAYMENTS = mapOf("card" to ChatPayment.Card, "pix" to ChatPayment.Pix, "debit" to ChatPayment.Debit, "cash" to ChatPayment.Cash)

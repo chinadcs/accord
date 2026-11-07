@@ -474,6 +474,11 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             onOpenBudget = { openRoot(Root.Budget) },
                             onOpenEntries = { openRoot(Root.Entries) },
                             onOpenCard = { navController.navigate(ROUTE_CARD) },
+                            onOpenFilteredEntries = { month, categoryId, criterion -> navController.openFilteredEntries(month, categoryId, null, criterion) },
+                            onOpenCommitments = { month -> navController.navigate("$ROUTE_COMMITMENTS?$ARG_MONTH=$month") },
+                            onOpenCommitment = { id -> navController.navigate("$ROUTE_COMMITMENT/${Uri.encode(id)}") },
+                            onRefreshQuery = viewModel::refreshQuery,
+                            onSendQuestion = viewModel::sendQuestion,
                         ),
                     )
                 }

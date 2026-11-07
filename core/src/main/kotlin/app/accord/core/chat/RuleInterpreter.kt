@@ -1,5 +1,7 @@
 package app.accord.core.chat
 
+import app.accord.core.analysis.ProductPhase
+
 /**
  * Interpretador local por regras do Chat do P0 (ADR 0036). Sem modelo, sem rede e sem arquivos: lê a mensagem e o
  * contexto curto, decide ação, campos e escopo por evidência do texto e devolve uma proposta como saída bruta,
@@ -17,7 +19,15 @@ class RuleInterpreter(private val profile: Int = PROFILE) : Interpreter {
         refinedCorrections = profile >= 12, refinedPlaces = profile >= 13, refinedBoundaries = profile >= 14, refinedNatural = profile >= 15, refinedForms = profile >= 16, refinedNegations = profile >= 17, refinedEveryday = profile >= 18,
     )
 
-    override suspend fun interpret(request: InterpretRequest): String = engine.interpret(request).raw
+    override suspend fun interpret(request: InterpretRequest): String {
+        val raw = engine.interpret(request).raw
+        // S6: uma pergunta do catálogo fechado vira `consult`; qualquer outra continua como `query` (resposta padrão com atalhos).
+        val parsed = ProposalCodec.decode(raw)
+        if (parsed is ProposalParse.Ok && parsed.proposal == Proposal.Query && request.context.phase.includes(ProductPhase.P1)) {
+            ConsultReader.read(request.text, request.context)?.let { return ProposalCodec.encode(it) }
+        }
+        return raw
+    }
 
     companion object {
         const val PROFILE = 18

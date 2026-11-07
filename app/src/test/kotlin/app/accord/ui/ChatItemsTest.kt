@@ -7,7 +7,15 @@ import app.accord.core.chat.ChatPayment
 import app.accord.core.chat.ChatQuestion
 import app.accord.core.chat.ChatQuestionRecord
 import app.accord.core.chat.ChatReceiptRecord
+import app.accord.core.chat.ChatQueryResult
 import app.accord.core.chat.ChatSnapshot
+import app.accord.core.chat.ConsultOutcome
+import app.accord.core.chat.ConsultRequest
+import app.accord.core.chat.ConsultSnapshot
+import app.accord.core.chat.ConsultType
+import app.accord.core.chat.StandardReply
+import app.accord.core.space.DateCriterion
+import java.time.YearMonth
 import app.accord.core.chat.MessageState
 import app.accord.core.chat.Nature
 import app.accord.core.chat.PartialEntry
@@ -174,5 +182,37 @@ class ChatItemsTest {
         val noHint = withHint.copy(categoryHints = emptyList())
         val items2 = buildChatItems(ChatSnapshot(listOf(noHint), listOf(q), listOf(receipt("r1", "a", 11))))
         assertNull((items2.filterIsInstance<ChatItem.Receipt>().single()).suggestedRef)
+    }
+
+    private fun consultMessage(id: String, reply: StandardReply?, fields: Map<String, String>) =
+        ChatMessage(id, "texto $id", 10, MessageState.Replied, reply = reply, fields = fields)
+
+    private fun spendSnapshot(totalCents: Long, at: Long): ConsultSnapshot {
+        val request = ConsultRequest(ConsultType.CategorySpend, YearMonth.of(2026, 10), false, DateCriterion.BudgetMonth, true, categoryId = "alimentacao")
+        val result = ChatQueryResult(
+            ChatQueryResult.Kind.Spend, "2026-10", false, DateCriterion.BudgetMonth.name, true, label = "Alimentação",
+            categoryId = "alimentacao", totalCents = totalCents,
+        )
+        return ConsultSnapshot.of(request, ConsultOutcome.Result(result), at)
+    }
+
+    @Test
+    fun `resposta de consulta vira cartao proprio e mantem a mesma chave ao atualizar`() {
+        val first = ConsultSnapshot.toFields(spendSnapshot(98_000, 1))
+        val refreshed = ConsultSnapshot.toFields(spendSnapshot(103_000, 2))
+        val before = buildChatItems(ChatSnapshot(listOf(consultMessage("a", StandardReply.Consult, first)), emptyList(), emptyList()))
+        val after = buildChatItems(ChatSnapshot(listOf(consultMessage("a", StandardReply.Consult, refreshed)), emptyList(), emptyList()))
+        val query = assertIs<ChatItem.Query>(before.last())
+        assertEquals(98_000L, query.snapshot.result?.totalCents)
+        assertEquals(103_000L, assertIs<ChatItem.Query>(after.last()).snapshot.result?.totalCents)
+        assertEquals(before.last().key, after.last().key)
+    }
+
+    @Test
+    fun `resposta de consulta sem dados legiveis cai no aviso padrao e nunca mostra numero`() {
+        val items = buildChatItems(ChatSnapshot(listOf(consultMessage("a", StandardReply.Consult, mapOf("consult" to "{quebrado"))), emptyList(), emptyList()))
+        assertIs<ChatItem.Notice>(items.last())
+        val query = buildChatItems(ChatSnapshot(listOf(consultMessage("b", StandardReply.Query, emptyMap())), emptyList(), emptyList()))
+        assertIs<ChatItem.Notice>(query.last())
     }
 }

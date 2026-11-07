@@ -104,6 +104,15 @@ class ChatActions(
     val onOpenBudget: () -> Unit,
     val onOpenEntries: () -> Unit,
     val onOpenCard: () -> Unit,
+    /** Lista de Lançamentos (tela 07) com os mesmos filtros da consulta. */
+    val onOpenFilteredEntries: (YearMonth, String?, app.accord.core.space.DateCriterion) -> Unit = { _, _, _ -> },
+    /** Compromissos do mês (tela 10) e cronograma de uma compra (tela 11). */
+    val onOpenCommitments: (YearMonth) -> Unit = {},
+    val onOpenCommitment: (String) -> Unit = {},
+    /** Recalcula a resposta de uma consulta pela fachada, sem chamar o interpretador. */
+    val onRefreshQuery: (String) -> Unit = {},
+    /** Envia como mensagem a pergunta completa de uma opção (categoria ou compra). */
+    val onSendQuestion: (String) -> Unit = {},
 )
 
 @Composable
@@ -327,6 +336,7 @@ private fun ChatItemView(
         is ChatItem.Working -> WorkingCard(item.message, onCancel = { onCancel(item.message) }, onManual = { onManual(item.message) })
         is ChatItem.Receipt -> ReceiptCard(item, today, actions, state.categories, onAnswer, onUndo)
         is ChatItem.Question -> QuestionCard(item, onAnswer, onAnswerAmount, onDiscard, onManual = { onManual(item.message) })
+        is ChatItem.Query -> QueryCard(item, actions, onChoose = actions.onSendQuestion)
         is ChatItem.Notice -> NoticeCard(item.message, state, actions, onRetry = { onRetry(item.message) }, onManual = { onManual(item.message) })
     }
 }
@@ -345,7 +355,7 @@ private fun UserBubble(text: String) {
 }
 
 @Composable
-private fun CardSurface(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+internal fun CardSurface(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerLow, contentColor = MaterialTheme.colorScheme.onSurface,
         shape = MaterialTheme.shapes.medium, modifier = modifier.fillMaxWidth(),
@@ -385,7 +395,7 @@ private fun WorkingCard(message: ChatMessage, onCancel: () -> Unit, onManual: ()
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ActionRow(content: @Composable () -> Unit) {
+internal fun ActionRow(content: @Composable () -> Unit) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) { content() }
 }
 
@@ -750,7 +760,9 @@ private fun noticeText(message: ChatMessage, state: ChatUiState): String = when 
                 StandardReply.UnsupportedCancellation -> R.string.reply_cancellation
                 StandardReply.UndoByText -> R.string.reply_undo_text
                 StandardReply.NoRecentReceipt -> R.string.reply_no_recent_receipt
-                null -> R.string.reply_query
+                StandardReply.ConsultNeedsP1 -> R.string.reply_consult_needs_p1
+                StandardReply.ConsultOutOfCatalog -> R.string.reply_consult_out_of_catalog
+                StandardReply.Consult, StandardReply.ConsultAsk, null -> R.string.reply_query
             }
         },
     )
@@ -785,7 +797,7 @@ private fun NoticeActions(message: ChatMessage, state: ChatUiState, actions: Cha
             val edit = message.editEntryId
             when {
                 edit != null -> OutlinedButton(onClick = { actions.onEditEntry(edit) }, modifier = min) { Text(stringResource(R.string.reply_action_edit)) }
-                message.reply == StandardReply.Query -> {
+                message.reply == StandardReply.Query || message.reply == StandardReply.ConsultNeedsP1 || message.reply == StandardReply.ConsultOutOfCatalog -> {
                     OutlinedButton(onClick = actions.onOpenBudget, modifier = min) { Text(stringResource(R.string.reply_action_budget)) }
                     OutlinedButton(onClick = actions.onOpenEntries, modifier = min) { Text(stringResource(R.string.reply_action_entries)) }
                 }

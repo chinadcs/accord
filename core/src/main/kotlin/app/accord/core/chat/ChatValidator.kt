@@ -1,6 +1,9 @@
 package app.accord.core.chat
 
 import app.accord.core.Money
+import app.accord.core.analysis.ProductPhase
+import app.accord.core.space.DateCriterion
+import java.time.YearMonth
 
 /**
  * Validador e tradutor (S3 §3, §5): trata toda saída do interpretador como não confiável. Formato,
@@ -58,6 +61,7 @@ object ChatValidator {
                 ?: ChatDecision.Refuse(RefuseReason.Uninterpretable)
             is Proposal.Correct -> correct(text, proposal, context, version)
             is Proposal.Answer -> answer(text, proposal, context, version)
+            is Proposal.Consult -> consult(text, proposal, context)
             Proposal.Query -> ChatDecision.Reply(StandardReply.Query)
             Proposal.Intent -> ChatDecision.Reply(StandardReply.Intent)
             is Proposal.Unsupported -> ChatDecision.Reply(unsupportedReply(proposal.type))
@@ -72,6 +76,89 @@ object ChatValidator {
         UnsupportedType.InvoicePayment -> StandardReply.UnsupportedInvoicePayment
         UnsupportedType.Cancellation -> StandardReply.UnsupportedCancellation
     }
+
+    // ---- consultar (S6) ----
+
+    private const val MAX_CATEGORY_OPTIONS = 12
+
+    /**
+     * Consulta de leitura: tipo no catálogo, parâmetros compatíveis com o tipo, referências existentes, período resolvível e
+     * trechos presentes na mensagem. Não calcula nada: o número vem do executor pela fachada. Nunca cria lançamento, pendência
+     * nem operação, e fora do P1 só orienta.
+     */
+    private fun consult(text: String, p: Proposal.Consult, context: ChatContext): ChatDecision {
+        if (!context.phase.includes(ProductPhase.P1)) return ChatDecision.Reply(StandardReply.ConsultNeedsP1)
+        if (listOfNotNull(p.month, p.target).any { !ChatText.anchored(text, it) }) return ChatDecision.Refuse(RefuseReason.Unanchored)
+        val compatible = when (p.type) {
+            ConsultType.CategorySpend -> p.target == null && p.date == null
+            ConsultType.PurchaseSchedule -> p.category == null && p.criterion == null && p.month == null
+            ConsultType.MonthCommitments -> p.category == null && p.target == null && p.date == null && p.criterion == null
+        }
+        if (!compatible) return ChatDecision.Reply(StandardReply.ConsultOutOfCatalog)
+
+        val monthText = p.month
+        val month = if (monthText == null) null else when (val read = ChatText.resolveMonth(monthText, context.today)) {
+            is MonthRead.Ok -> read.month
+            MonthRead.Invalid -> return ChatDecision.Reply(StandardReply.ConsultOutOfCatalog)
+        }
+        val targetDate = p.date?.let {
+            if (!ChatText.anchored(text, it.text)) return ChatDecision.Refuse(RefuseReason.Unanchored)
+            when (val read = ChatText.resolveDate(it, context.today)) {
+                is DateRead.Ok -> read.date
+                DateRead.Invalid -> return ChatDecision.Reply(StandardReply.ConsultOutOfCatalog)
+            }
+        }
+        val phrase = month?.let { "em ${MONTH_LABELS[it.monthValue - 1]} de ${it.year}" } ?: "este mês"
+
+        var categoryId: String? = null
+        if (p.type == ConsultType.CategorySpend) {
+            val refs = p.category?.split(',')?.map(String::trim)?.filter(String::isNotEmpty).orEmpty()
+            when {
+                refs.isEmpty() -> return ChatDecision.ConsultAsk(askCategory(ConsultAskNotice.Reason.MissingCategory, context.mainCategories, phrase, context))
+                refs.size > 1 -> {
+                    val found = refs.map { context.category(it) ?: return ChatDecision.ConsultAsk(askCategory(ConsultAskNotice.Reason.UnknownCategory, context.mainCategories, phrase, context)) }
+                    return ChatDecision.ConsultAsk(askCategory(ConsultAskNotice.Reason.AmbiguousCategory, found, phrase, context))
+                }
+                else -> {
+                    val category = context.category(refs.single())
+                        ?: return ChatDecision.ConsultAsk(askCategory(ConsultAskNotice.Reason.UnknownCategory, context.mainCategories, phrase, context))
+                    categoryId = category.id
+                }
+            }
+        }
+        if (p.type == ConsultType.PurchaseSchedule && p.target == null) {
+            return ChatDecision.ConsultAsk(ConsultAskNotice(ConsultAskNotice.Reason.MissingPurchase))
+        }
+        val criterion = when (p.criterion) {
+            ConsultCriterion.PurchaseDate -> DateCriterion.PurchaseDate
+            else -> DateCriterion.BudgetMonth
+        }
+        return ChatDecision.Consult(
+            ConsultRequest(
+                type = p.type,
+                month = month ?: YearMonth.from(context.today),
+                periodAssumed = month == null,
+                criterion = criterion,
+                criterionAssumed = p.criterion == null,
+                categoryId = categoryId,
+                target = p.target,
+                targetDate = targetDate,
+            ),
+        )
+    }
+
+    private val MONTH_LABELS = listOf("janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro")
+
+    /** Cada opção é uma pergunta completa (categoria, e o pai quando a subcategoria repete o nome, mais o mês) que o Chat reenvia ao tocar. */
+    private fun askCategory(reason: ConsultAskNotice.Reason, options: List<CategoryItem>, phrase: String, context: ChatContext) =
+        ConsultAskNotice(
+            reason,
+            options.take(MAX_CATEGORY_OPTIONS).map { item ->
+                val parent = item.parentId?.let { context.categoryById(it) }
+                val named = if (parent == null) item.name else "${item.name} de ${parent.name}"
+                ConsultOption(if (parent == null) item.name else "${item.name} (${parent.name})", "quanto gastei com $named $phrase")
+            },
+        )
 
     // ---- registrar ----
 

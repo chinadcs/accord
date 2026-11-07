@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Consulta pelo Chat (S6.6). Os números vêm da fachada; o texto é todo do app. -->
+    <string name="consult_card_description">Resposta da consulta</string>
+
+    <string name="consult_criterion_budget">Mês do orçamento: a parcela conta no mês de vencimento da fatura.</string>
+    <string name="consult_criterion_purchase">Data da compra: a compra parcelada conta uma vez, pelo total.</string>
+    <string name="consult_period_assumed">Você não disse o período, então usei o mês atual.</string>
+
+    <string name="consult_spend_budget_title">%1$s em %2$s (mês do orçamento)</string>
+    <string name="consult_spend_purchase_title">%1$s em %2$s (data da compra)</string>
+    <string name="consult_spend_committed">%1$s comprometidos</string>
+    <string name="consult_spend_committed_paid">%1$s comprometidos, dos quais %2$s pagos</string>
+    <string name="consult_spend_limit_left">Limite %1$s; restam %2$s.</string>
+    <string name="consult_spend_limit_over">Limite %1$s; passou %2$s.</string>
+    <string name="consult_spend_limit_none">Sem limite definido para este mês.</string>
+    <plurals name="consult_spend_purchases">
+        <item quantity="one">%1$s em %2$d compra</item>
+        <item quantity="other">%1$s em %2$d compras</item>
+    </plurals>
+    <string name="consult_provisional">Parte do valor ainda está a conferir (fatura a conferir ou boleto sem data de compra); veja os lançamentos.</string>
+
+    <string name="consult_schedule_title">%1$s (compra de %2$s)</string>
+    <string name="consult_schedule_total">%1$s em %2$d parcelas, de %3$s a %4$s.</string>
+    <string name="consult_schedule_total_each">%1$s em %2$d × %3$s, de %4$s a %5$s.</string>
+    <string name="consult_schedule_later">Depois de %1$s: %2$d parcelas, %3$s no total.</string>
+    <string name="consult_schedule_later_none">Não há parcelas depois de %1$s.</string>
+    <string name="consult_schedule_payment_note">A situação de pagamento depende da quitação das faturas; confira no cronograma.</string>
+
+    <string name="consult_commitments_title">Compromissos de %1$s</string>
+    <string name="consult_commitments_total">%1$s em %2$d itens conhecidos.</string>
+    <string name="consult_commitments_none">Nenhum compromisso conhecido em %1$s.</string>
+    <string name="consult_commitment_line">%1$s: %2$s (vence em %3$s)</string>
+    <string name="consult_commitments_more">e mais %1$d no mês</string>
+
+    <string name="consult_calculated_at">Calculado em %1$s</string>
+    <string name="consult_sync_never">Sem sincronização concluída: a resposta usa só os registros deste aparelho.</string>
+    <string name="consult_sync_until">Dados sincronizados até %1$s; o outro celular pode ter registros mais novos.</string>
+    <string name="consult_sync_awaiting">%1$d registros salvos aqui ainda não foram enviados e já estão contados.</string>
+
+    <string name="consult_failed">Não consegui calcular agora. Nada foi alterado; toque em Atualizar para tentar de novo.</string>
+
+    <string name="consult_ask_missing_category">Sobre qual categoria? Toque numa opção ou escreva a pergunta com o nome dela.</string>
+    <string name="consult_ask_unknown_category">Não encontrei essa categoria. Escolha uma destas ou escreva o nome de outra.</string>
+    <string name="consult_ask_ambiguous_category">Encontrei mais de uma categoria com esse nome. Qual delas?</string>
+    <string name="consult_ask_missing_purchase">Sobre qual compra parcelada? Escreva o nome dela, por exemplo: quais são as parcelas do notebook?</string>
+    <string name="consult_ask_unknown_purchase">Não encontrei uma compra parcelada com esse nome. Veja os compromissos do mês ou os lançamentos.</string>
+    <string name="consult_ask_ambiguous_purchase">Há mais de uma compra com esse nome. Qual delas?</string>
+
+    <string name="consult_action_entries">Ver lançamentos</string>
+    <string name="consult_action_purchase">Ver cronograma</string>
+    <string name="consult_action_commitments">Ver compromissos</string>
+    <string name="consult_action_refresh">Atualizar</string>
+    <string name="consult_action_refresh_description">Atualizar a resposta com os dados de agora</string>
+
+    <string name="reply_consult_needs_p1">As consultas com número ainda não estão ativas nesta versão. Veja o Orçamento ou a lista de Lançamentos.</string>
+    <string name="reply_consult_out_of_catalog">Ainda não consigo responder isso pelo Chat. Sei dizer quanto gastou numa categoria em um mês, as parcelas de uma compra e os compromissos de um mês. Para o resto, veja o Orçamento ou os Lançamentos.</string>
+</resources>

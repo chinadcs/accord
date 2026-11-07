@@ -40,6 +40,7 @@ abstract class ChatTestBase : SpaceTestBase() {
         val fake: FakeInterpreter,
         instant: Instant,
         val suggester: app.accord.core.chat.CategorySuggester? = null,
+        val phase: app.accord.core.analysis.ProductPhase = app.accord.core.analysis.ProductPhase.P0,
     ) {
         val store = RoomChatStore(database.db)
         val budgetClock = BudgetClock.of(Clock.fixed(instant, ZoneOffset.UTC))
@@ -66,6 +67,7 @@ abstract class ChatTestBase : SpaceTestBase() {
                 members = { memberItems },
                 categorySuggester = suggester,
                 onCategoryPilotEvent = eventSink ?: { pilotEvents.trySend(it); Unit },
+                phase = phase,
             )
         }
 
@@ -90,10 +92,10 @@ abstract class ChatTestBase : SpaceTestBase() {
         }
     }
 
-    protected fun env(instant: Instant = oct22, person: String = "ana", withAccounts: Boolean = true, defaultAccount: Boolean = true, suggester: app.accord.core.chat.CategorySuggester? = null): Env {
+    protected fun env(instant: Instant = oct22, person: String = "ana", withAccounts: Boolean = true, defaultAccount: Boolean = true, suggester: app.accord.core.chat.CategorySuggester? = null, phase: app.accord.core.analysis.ProductPhase = app.accord.core.analysis.ProductPhase.P0): Env {
         val database = newDatabase()
         val handle = open(person = person, database = database, now = instant)
-        val env = Env(handle, database, FakeInterpreter(), instant, suggester)
+        val env = Env(handle, database, FakeInterpreter(), instant, suggester, phase)
         if (withAccounts) runBlocking {
             val a = handle.space.execute(handle.env(), AddAccount(BankRef.Other("Nubank"), "Conta")).applied().changes.single().id
             handle.space.execute(handle.env(), AddAccount(BankRef.Other("Itaú"), "Salário")).applied()

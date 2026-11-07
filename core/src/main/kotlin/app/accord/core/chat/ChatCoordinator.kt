@@ -1,6 +1,7 @@
 package app.accord.core.chat
 
 import app.accord.core.BudgetClock
+import app.accord.core.analysis.ProductPhase
 import app.accord.core.space.CommandId
 import app.accord.core.space.CommandResult
 import app.accord.core.space.DraftSource
@@ -61,8 +62,12 @@ class ChatCoordinator(
     private val onFinanceChanged: () -> Unit = {},
     private val categorySuggester: CategorySuggester? = null,
     private val onCategoryPilotEvent: (CategoryPilotEvent) -> Unit = {},
+    /** Fase do produto (S6): no P1 o Chat responde as consultas do catálogo; no P0 só orienta. */
+    private val phase: ProductPhase = ProductPhase.P0,
 ) {
     val snapshot: Flow<ChatSnapshot> get() = store.observe()
+
+    private val queryRunner = ChatQueryRunner(space, clock)
 
     private val queue = Channel<String>(Channel.UNLIMITED)
     private val stateLock = Mutex()
@@ -284,6 +289,28 @@ class ChatCoordinator(
         store.addAttempt(ChatAttempt(attemptId, messageId, modelVersion, started, nowMillis() - started, outcome))
     }
 
+    private suspend fun saveConsult(message: ChatMessage, snapshot: ConsultSnapshot) {
+        store.saveMessage(
+            message.copy(
+                state = MessageState.Replied,
+                reply = if (snapshot.status == ConsultSnapshot.Status.Ask) StandardReply.ConsultAsk else StandardReply.Consult,
+                fields = ConsultSnapshot.toFields(snapshot),
+            ),
+        )
+    }
+
+    /**
+     * "Atualizar" numa resposta de consulta: recalcula pela fachada com os parâmetros já validados, sem chamar o interpretador, e troca o
+     * instante do cálculo. Não cria operação nem pendência.
+     */
+    suspend fun refreshQuery(id: String) {
+        val message = store.message(id) ?: return
+        val snapshot = ConsultSnapshot.fromFields(message.fields) ?: return
+        if (snapshot.status == ConsultSnapshot.Status.Ask) return
+        val request = snapshot.request()
+        saveConsult(message, ConsultSnapshot.of(request, queryRunner.run(request), nowMillis()))
+    }
+
     private suspend fun requireMessage(id: String) = checkNotNull(store.message(id)) { "Mensagem $id sumiu" }
 
     // ---- decisões ----
@@ -336,6 +363,18 @@ class ChatCoordinator(
             }
             is ChatDecision.OpenEdit -> {
                 store.saveMessage(message.copy(state = MessageState.Replied, editEntryId = decision.entryId))
+                "replied"
+            }
+            is ChatDecision.Consult -> {
+                // S6: leitura pela fachada. Sem operação na fila, sem pendência, sem lançamento; só o histórico local muda.
+                closeUndo()
+                val outcome = queryRunner.run(decision.request)
+                saveConsult(message, ConsultSnapshot.of(decision.request, outcome, nowMillis()))
+                "replied"
+            }
+            is ChatDecision.ConsultAsk -> {
+                closeUndo()
+                saveConsult(message, ConsultSnapshot.ofAsk(null, decision.ask, nowMillis()))
                 "replied"
             }
             is ChatDecision.Refuse -> {
@@ -733,6 +772,7 @@ class ChatCoordinator(
             myDefaultAccountId = accounts.myDefaultAccountId,
             members = members(),
             question = openQuestion?.let { OpenQuestion("q1", it.id, it.field, it.options) },
+            phase = phase,
             receipts = receipts.mapIndexed { index, receipt ->
                 ReceiptItem(
                     "r${index + 1}", receipt.id, receipt.entryId, ReceiptSummaries.label(receipt.summary), receipt.summary.installments,

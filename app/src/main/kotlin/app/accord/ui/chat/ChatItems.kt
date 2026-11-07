@@ -4,6 +4,8 @@ import app.accord.core.chat.ChatMessage
 import app.accord.core.chat.ChatQuestionRecord
 import app.accord.core.chat.ChatReceiptRecord
 import app.accord.core.chat.ChatSnapshot
+import app.accord.core.chat.ConsultSnapshot
+import app.accord.core.chat.StandardReply
 import app.accord.core.chat.MessageState
 import app.accord.core.chat.QuestionLink
 import app.accord.core.chat.QuestionState
@@ -47,6 +49,14 @@ sealed interface ChatItem {
     data class Notice(val message: ChatMessage) : ChatItem {
         override val key get() = "n-${message.id}-${message.state}"
     }
+
+    /**
+     * Resposta de consulta (S6.6): parâmetros validados, instante do cálculo e a resposta calculada pela fachada. A chave não muda quando a
+     * resposta é atualizada, para o cartão não ser recriado.
+     */
+    data class Query(val message: ChatMessage, val snapshot: ConsultSnapshot) : ChatItem {
+        override val key get() = "k-${message.id}"
+    }
 }
 
 /**
@@ -73,8 +83,13 @@ fun buildChatItems(snapshot: ChatSnapshot): List<ChatItem> {
                         .forEach { add(ChatItem.Question(it, message)) }
                 MessageState.Replied, MessageState.Refused, MessageState.Failed, MessageState.Canceled,
                 MessageState.Interrupted, MessageState.NoModel, MessageState.ResolvedManually,
-                -> add(ChatItem.Notice(message))
+                -> add(consultItem(message) ?: ChatItem.Notice(message))
             }
         }
     }
+}
+
+private fun consultItem(message: ChatMessage): ChatItem.Query? {
+    if (message.state != MessageState.Replied || (message.reply != StandardReply.Consult && message.reply != StandardReply.ConsultAsk)) return null
+    return ConsultSnapshot.fromFields(message.fields)?.let { ChatItem.Query(message, it) }
 }

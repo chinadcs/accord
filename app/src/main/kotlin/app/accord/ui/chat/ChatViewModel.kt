@@ -117,6 +117,16 @@ class ChatViewModel(
         }
     }
 
+    /** "Atualizar" numa resposta de consulta: recalcula pela fachada, sem chamar o interpretador. */
+    fun refreshQuery(messageId: String) {
+        viewModelScope.launch { coordinator?.refreshQuery(messageId) }
+    }
+
+    /** Opção de uma consulta (categoria ou compra): envia a pergunta completa como mensagem, sem tocar no campo de texto. */
+    fun sendQuestion(text: String) {
+        viewModelScope.launch { coordinator?.send(text) }
+    }
+
     fun cancel(message: ChatMessage) {
         coordinator?.cancel(message.id)
     }

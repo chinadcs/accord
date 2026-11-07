@@ -1,7 +1,10 @@
 package app.accord.core.chat
 
 import app.accord.core.Money
+import app.accord.core.analysis.ProductPhase
+import app.accord.core.space.DateCriterion
 import java.time.LocalDate
+import java.time.YearMonth
 
 /** Meios de pagamento que o Chat entende no P0. Boleto fica fora (S3 §4). */
 enum class ChatPayment { Card, Pix, Debit, Cash }
@@ -68,7 +71,16 @@ data class ChatContext(
     val members: List<MemberItem> = emptyList(),
     val question: OpenQuestion? = null,
     val receipts: List<ReceiptItem> = emptyList(),
+    /** Fase do produto (S6): fora do P1 o validador recusa `consultar` com orientação. O contexto de testes antigos fica no P0. */
+    val phase: ProductPhase = ProductPhase.P0,
 ) {
+    /**
+     * Mesmo texto de antes de [phase] existir: os corpora congelados (baterias da Etapa 0) calculam o hash com `context.toString()`, e a
+     * fase não faz parte do que eles congelaram.
+     */
+    override fun toString() = "ChatContext(today=$today, categories=$categories, hasCard=$hasCard, cardLabel=$cardLabel, accounts=$accounts, " +
+        "myDefaultAccountId=$myDefaultAccountId, members=$members, question=$question, receipts=$receipts)"
+
     private val categoryById = categories.associateBy { it.id }
     private val categoryByRef = categories.associateBy { it.ref }
     private val accountByRef = accounts.associateBy { it.ref }
@@ -145,6 +157,14 @@ enum class StandardReply {
     UnsupportedCancellation,
     UndoByText,
     NoRecentReceipt,
+
+    /** Consulta com número (S6): a resposta vem do histórico local, calculada pela fachada. */
+    Consult,
+    ConsultNeedsP1,
+    ConsultOutOfCatalog,
+
+    /** Consulta que precisa de um complemento (categoria, compra): o Chat mostra opções que enviam a pergunta completa. */
+    ConsultAsk,
 }
 
 enum class RefuseReason { BadFormat, Unanchored, InvalidReference, Uninterpretable, NoCard, NoAccounts, InstallmentsNeedCard, Rejected }
@@ -182,4 +202,33 @@ sealed interface ChatDecision {
     data class OpenEdit(val entryId: String) : ChatDecision
 
     data class Refuse(val reason: RefuseReason, val prefill: PartialEntry? = null) : ChatDecision
+
+    /** Consulta validada (S6): sem efeito financeiro, sem operação na fila, sem pendência. O número vem do [ChatQueryRunner]. */
+    data class Consult(val request: ConsultRequest) : ChatDecision
+
+    /** Consulta ambígua ou sem referência existente: nunca um número, só orientação e opções. */
+    data class ConsultAsk(val ask: ConsultAskNotice) : ChatDecision
 }
+
+/**
+ * Consulta já normalizada pelo app. [month] e [criterion] saem da mensagem ou do padrão (mês do orçamento corrente,
+ * critério orçamento); [periodAssumed] e [criterionAssumed] fazem a resposta dizer o que foi assumido.
+ */
+data class ConsultRequest(
+    val type: ConsultType,
+    val month: YearMonth,
+    val periodAssumed: Boolean,
+    val criterion: DateCriterion,
+    val criterionAssumed: Boolean,
+    val categoryId: String? = null,
+    /** Trecho que nomeia a compra; o executor resolve contra os dados locais. */
+    val target: String? = null,
+    val targetDate: LocalDate? = null,
+)
+
+/** Complemento pedido por uma consulta. Cada opção é uma pergunta completa que o Chat reenvia ao tocar. */
+data class ConsultAskNotice(val reason: Reason, val options: List<ConsultOption> = emptyList()) {
+    enum class Reason { MissingCategory, UnknownCategory, AmbiguousCategory, MissingPurchase, UnknownPurchase, AmbiguousPurchase }
+}
+
+data class ConsultOption(val label: String, val text: String)

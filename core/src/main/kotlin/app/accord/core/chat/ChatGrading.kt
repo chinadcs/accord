@@ -212,6 +212,7 @@ object ChatGrading {
         is ChatDecision.Reply -> "reply:${decision.reply.name}"
         is ChatDecision.Refuse -> "refuse"
         is ChatDecision.Answer -> "answer"
+        is ChatDecision.Consult, is ChatDecision.ConsultAsk -> "consult"
     }
 
     /** Rótulo categórico da decisão, sem texto da conversa: serve para registrar casos sensíveis. */
@@ -224,6 +225,8 @@ object ChatGrading {
         is ChatDecision.Reply -> "reply:${decision.reply.name}"
         is ChatDecision.OpenEdit -> "open_edit"
         is ChatDecision.Refuse -> "refuse:${decision.reason.name}"
+        is ChatDecision.Consult -> "consult:${decision.request.type.name}"
+        is ChatDecision.ConsultAsk -> "consult_ask:${decision.ask.reason.name}"
     }
 
     fun summarize(cases: List<GradedCase>, grades: List<CaseGrade>): QualitySummary {
