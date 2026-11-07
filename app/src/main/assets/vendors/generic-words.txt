@@ -1,0 +1,20 @@
+# Palavras que são nome de marca no Simple Icons 16.35.0 mas, num lançamento, quase sempre querem dizer outra coisa
+# ou outra empresa. O reconhecimento automático (ADR 0047) nunca as usa sozinhas; continuam buscáveis no seletor.
+# Uma por linha, sem acento e em minúsculas; frases também valem. Revisar a cada atualização do catálogo.
+academia
+black
+ghost
+line
+medium
+meta
+metro
+rapid
+signal
+square
+target
+vivo
+# Instituições do catálogo de bancos que são palavras comuns.
+acesso
+caixa
+original
+rede

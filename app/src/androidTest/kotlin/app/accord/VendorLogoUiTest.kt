@@ -49,8 +49,10 @@ import app.accord.ui.entries.EntriesScreen
 import app.accord.ui.entries.EntriesStatus
 import app.accord.ui.entries.EntriesUiState
 import app.accord.ui.theme.AccordTheme
+import app.accord.ui.vendors.IconLibrary
 import app.accord.ui.theme.ThemePreference
 import org.junit.Assert.assertEquals
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import java.io.File
@@ -60,6 +62,11 @@ import java.time.YearMonth
 /** Logos são decorativos: texto e ações do lançamento continuam a carregar o significado. */
 class VendorLogoUiTest {
     @get:Rule val compose = createComposeRule()
+
+    /** Catálogos já em memória: as telas sintéticas mostram o logo na primeira composição, sem esperar a carga em segundo plano. */
+    @Before fun preloadIcons() {
+        IconLibrary.load(InstrumentationRegistry.getInstrumentation().targetContext)
+    }
 
     private data class Frame(val theme: ThemePreference, val fontScale: Float, val content: @Composable () -> Unit)
     private var frame by mutableStateOf<Frame?>(null)

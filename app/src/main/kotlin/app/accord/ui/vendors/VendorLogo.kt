@@ -1,62 +1,102 @@
 package app.accord.ui.vendors
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
-import app.accord.R
-import app.accord.ui.theme.AccordLogoPlate
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import app.accord.core.space.BankRef
+import app.accord.core.space.IconRef
+import app.accord.core.space.IconSource
+import app.accord.ui.banks.BankLogo
+import app.accord.ui.components.DecorativeIcon
+import app.accord.ui.components.lucideRes
+import app.accord.ui.theme.AccordLogoPlate
 import java.util.Locale
 
-/** Logo nominativo, sempre com descrição textual ao lado. Sem tintura, rede ou parser SVG. */
+/** Placa branca com borda discreta nos dois temas: preserva as cores da marca (ADR 0047, mesma regra dos logos de banco). */
 @Composable
-fun VendorLogo(vendor: Vendor, modifier: Modifier = Modifier) {
-    val drawable = when (vendor) {
-        Vendor.Uber -> R.drawable.vendor_uber
-        Vendor.Spotify -> R.drawable.vendor_spotify
-    }
+fun IconPlate(modifier: Modifier = Modifier, size: Dp = 48.dp, content: @Composable BoxScope.() -> Unit) {
     Surface(
-        modifier = modifier.size(48.dp).testTag("vendor-logo-${vendor.key}"),
+        modifier = modifier.size(size),
         color = AccordLogoPlate.surface,
         shape = MaterialTheme.shapes.small,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
-        Image(
-            painter = painterResource(drawable),
-            contentDescription = null,
-            contentScale = ContentScale.Fit,
-            modifier = Modifier.fillMaxSize().padding(8.dp),
-        )
+        Box(Modifier.fillMaxSize().padding(size / 6), contentAlignment = Alignment.Center, content = content)
     }
 }
 
-/** A marca só substitui o desenho; categoria, tipo e dados financeiros continuam nos textos. */
+/** Desenho da marca pelo caminho do Simple Icons (24 × 24), sem tintura além da cor oficial. Cores claras demais para a placa usam a tinta escura dela. */
+@Composable
+fun BrandGlyph(brand: Brand, modifier: Modifier = Modifier) {
+    val path = remember(brand.slug) { PathParser().parsePathString(brand.pathData).toPath() }
+    val color = remember(brand.slug) {
+        val official = Color(0xFF000000.toInt() or brand.color)
+        if (1.05f / (official.luminance() + 0.05f) >= 3f) official else AccordLogoPlate.glyph
+    }
+    Canvas(modifier.fillMaxSize()) {
+        val scale = size.minDimension / 24f
+        withTransform({ scale(scale, scale, Offset.Zero) }) { drawPath(path, color) }
+    }
+}
+
+/** Ícone de uma referência dos catálogos locais, sempre sobre a placa; decorativo: o nome do lançamento fica ao lado, no texto. */
+@Composable
+fun IconRefLogo(ref: IconRef, library: IconLibrary, modifier: Modifier = Modifier, size: Dp = 48.dp) {
+    when (ref.source) {
+        IconSource.Brand -> {
+            val brand = library.brands.find(ref.key) ?: return
+            IconPlate(modifier.testTag("vendor-logo-${ref.key}"), size) { BrandGlyph(brand) }
+        }
+        IconSource.Bank -> {
+            val bank = library.banks.find(ref.key) ?: return
+            BankLogo(BankRef.Catalog(bank.ispb, bank.name), modifier.testTag("vendor-logo-bank-${ref.key}"), size)
+        }
+        IconSource.Generic -> IconPlate(modifier.testTag("vendor-logo-generic-${ref.key}"), size) {
+            DecorativeIcon(lucideRes(ref.key), tint = AccordLogoPlate.glyph)
+        }
+    }
+}
+
+/**
+ * Ícone do lançamento: o escolhido ([chosen]) ou, se permitido, o reconhecido pelo nome; sem nenhum, as iniciais.
+ * Só substitui o desenho; categoria, tipo e dados financeiros continuam nos textos.
+ */
 @Composable
 fun EntryIdentityIcon(
     description: String,
     allowVendor: Boolean = true,
     modifier: Modifier = Modifier,
+    chosen: IconRef? = null,
 ) {
-    val vendor = remember(description, allowVendor) {
-        if (allowVendor) VendorCatalog.matchExplicitDescription(description) else null
+    val library by rememberIconLibrary()
+    val ref = remember(description, allowVendor, chosen, library) {
+        library?.let { lib -> (chosen ?: if (allowVendor) lib.matcher.match(description) else null)?.takeIf(lib::isKnown) }
     }
     val initials = remember(description) { entryInitials(description) }
-    if (vendor != null) {
-        VendorLogo(vendor, modifier)
+    val lib = library
+    if (ref != null && lib != null) {
+        IconRefLogo(ref, lib, modifier)
     } else {
         Surface(
             modifier = modifier.size(48.dp),

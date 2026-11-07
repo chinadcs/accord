@@ -66,8 +66,8 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.accord.R
-import app.accord.ui.vendors.VendorCatalog
-import app.accord.ui.vendors.VendorLogo
+import app.accord.ui.vendors.IconRefLogo
+import app.accord.ui.vendors.rememberIconLibrary
 import app.accord.ui.components.AccordMark
 import app.accord.core.Money
 import app.accord.core.chat.ChatMessage
@@ -413,15 +413,16 @@ private fun ReceiptCard(
     val receipt = item.receipt
     val summary = receipt.summary
     val active = receipt.state == ReceiptState.Active
-    val vendor = remember(summary.description, summary.nature) {
-        if (summary.nature == Nature.Expense) VendorCatalog.matchExplicitDescription(summary.description) else null
+    val library by rememberIconLibrary()
+    val icon = remember(summary.description, summary.nature, library) {
+        library?.takeIf { summary.nature == Nature.Expense }?.let { lib -> lib.matcher.match(summary.description)?.takeIf(lib::isKnown)?.let { it to lib } }
     }
     // Atualização anunciada de forma educada: o foco continua no campo de mensagem.
     CardSurface(Modifier.semantics { liveRegion = LiveRegionMode.Polite }) {
         Column(Modifier.padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-            vendor?.let {
+            icon?.let { (ref, lib) ->
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
-                    VendorLogo(it)
+                    IconRefLogo(ref, lib)
                     Text(summary.description, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                 }
             }

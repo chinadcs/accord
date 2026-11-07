@@ -1,0 +1,4 @@
+# Ativos de texto do catalogo de icones: LF fixo para os hashes do manifesto serem estaveis.
+app/src/main/assets/vendors/*.tsv text eol=lf
+app/src/main/assets/vendors/*.json text eol=lf
+app/src/main/assets/vendors/*.txt text eol=lf

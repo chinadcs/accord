@@ -1,30 +1,20 @@
 {
   "library": "Simple Icons",
   "version": "16.35.0",
-  "icons": [
-    {
-      "key": "uber",
-      "name": "Uber",
-      "hex": "000000",
-      "source": "https://assets.uber.com/d/k4nuxdZ8MC7E/logos/collection/151",
-      "guidelines": "https://assets.uber.com/d/k4nuxdZ8MC7E/user-guide#/user-guide/terms-of-use",
-      "individualLicense": null,
-      "upstreamSvg": "https://raw.githubusercontent.com/simple-icons/simple-icons/16.35.0/icons/uber.svg",
-      "upstreamSha256": "8e580232236d43c715637618ce31621f2afc802a22af9b12706dc153c6a52002",
-      "drawable": "vendor_uber",
-      "drawableSha256": "7437970d8eb3d1e27b8f8084069dfc09133f737ec2283d9e16bc14775aaa6b12"
-    },
-    {
-      "key": "spotify",
-      "name": "Spotify",
-      "hex": "1ED760",
-      "source": "https://developer.spotify.com/documentation/general/design-and-branding/#using-our-logo",
-      "guidelines": "https://developer.spotify.com/documentation/general/design-and-branding/#using-our-logo",
-      "individualLicense": null,
-      "upstreamSvg": "https://raw.githubusercontent.com/simple-icons/simple-icons/16.35.0/icons/spotify.svg",
-      "upstreamSha256": "b9ec9bec7769c35643981586d6ea0d675aaf3871b32f8a291bcac7a87fff0bc1",
-      "drawable": "vendor_spotify",
-      "drawableSha256": "f9cc00a3d50c640e0d486f8b331f8ee81f0705b46e97984bdad9337409ea228c"
-    }
-  ]
+  "tarball": "https://registry.npmjs.org/simple-icons/-/simple-icons-16.35.0.tgz",
+  "tarballSha256": "20ebead4f6bc93464812a5e260d19fc4d84772e5eeff69a6fbea263ca2441c5f",
+  "asset": "simple-icons.tsv",
+  "assetSha256": "37db35b60e417220535218ef780287bf81d222fadfd37033229e8288443b5c11",
+  "count": 3466,
+  "columns": [
+    "slug",
+    "title",
+    "hex",
+    "aliases",
+    "license",
+    "guidelines",
+    "source",
+    "path"
+  ],
+  "generator": "scripts/vendors/build-simple-icons.py"
 }

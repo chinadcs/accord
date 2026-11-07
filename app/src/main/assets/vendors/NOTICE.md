@@ -1,34 +1,35 @@
-# Logos de estabelecimentos
+# Ícones de marcas
 
-Subconjunto local do **Simple Icons 16.35.0**, conferido em 25/10/2026:
-[release](https://github.com/simple-icons/simple-icons/releases/tag/16.35.0).
-Inclui somente Uber e Spotify. Lucide permanece responsável pelos ícones da interface;
-[não oferece logos de marcas](https://lucide.dev/guide/version-1).
+Conjunto completo do **Simple Icons 16.35.0** ([release](https://github.com/simple-icons/simple-icons/releases/tag/16.35.0),
+pacote npm [simple-icons@16.35.0](https://registry.npmjs.org/simple-icons/-/simple-icons-16.35.0.tgz)), embarcado em 07/11/2026
+conforme o [ADR 0047](../../../../../docs/adr/0047-associacao-de-icone-de-marca-ao-lancamento.md) e o
+[ADR 0021](../../../../../docs/adr/0021-recursos-visuais-locais-e-versoes-fixadas.md). Lucide permanece responsável pelos ícones da
+interface e pelos genéricos do seletor; [não oferece logos de marcas](https://lucide.dev/guide/version-1).
 
-Os SVGs da versão fixada foram convertidos para VectorDrawable Android, preservando o
-viewport 24 × 24, o caminho e a cor indicados no catálogo. Não há biblioteca adicional em
-runtime, parser SVG, JavaScript, CDN ou busca de imagem no uso do app.
+## Como o ativo é feito
 
-[catalog.json](catalog.json) registra origem, diretrizes, cor, SHA-256 do SVG original e do
-drawable convertido (UTF-8, quebras LF). Os recursos estão em [res/drawable](../../res/drawable/).
+- [simple-icons.tsv](simple-icons.tsv) tem uma linha por marca, ordenada pelo slug: slug, título, cor oficial, apelidos, licença individual,
+  diretrizes, origem e o caminho do desenho (`d` do SVG, quadro 24 × 24). Todos os SVGs da versão têm um único caminho.
+- [catalog.json](catalog.json) registra a origem, a versão, o SHA-256 do pacote de origem, o SHA-256 do ativo, a contagem e as colunas.
+- O ativo é gerado por [scripts/vendors/build-simple-icons.py](../../../../../scripts/vendors/build-simple-icons.py), que confere o SHA-256 e
+  a versão fixados, lê só os membros esperados do pacote e não extrai nada em disco. Rodar duas vezes dá o mesmo arquivo.
+- O app desenha o caminho com o `PathParser` do Compose, sobre uma placa branca, na cor oficial (ou na tinta escura da placa quando a cor
+  tem menos de 3:1 de contraste com o branco). Não há biblioteca nova em execução, parser SVG completo, JavaScript, CDN nem busca de imagem.
+- [generic-words.txt](generic-words.txt) lista palavras que são nome de marca mas, num lançamento, costumam querer dizer outra coisa; o
+  reconhecimento automático nunca as usa sozinhas. Revisar a cada atualização do catálogo.
 
 ## Licença e marcas
 
-A distribuição do Simple Icons acompanha [CC0](LICENSE-simple-icons.txt) e seu
-[disclaimer](DISCLAIMER-simple-icons.md). A licença do projeto **não concede automaticamente
-direitos sobre cada marca**. Os dois itens não informam licença individual no catálogo
-upstream; `individualLicense: null` preserva essa ausência.
+A distribuição do Simple Icons acompanha [CC0](LICENSE-simple-icons.txt) e seu [disclaimer](DISCLAIMER-simple-icons.md). A licença do projeto
+**não concede automaticamente direitos sobre cada marca**: marcas e logotipos pertencem aos seus donos. Para cada marca, o TSV preserva o que o
+Simple Icons informa (licença individual quando existe, página de diretrizes e origem do desenho); campos vazios significam que o projeto não informa.
 
-- Uber: [origem](https://assets.uber.com/d/k4nuxdZ8MC7E/logos/collection/151) e
-  [termos](https://assets.uber.com/d/k4nuxdZ8MC7E/user-guide#/user-guide/terms-of-use).
-- Spotify: [diretrizes atuais](https://developer.spotify.com/documentation/design#using-our-logo).
-  O ícone verde usa fundo branco, sem tintura ou distorção, com desenho de 32 dp dentro de
-  placa de 48 dp. As diretrizes indicam mínimo digital de 21 px.
+O app usa os ícones para identificar nominalmente o estabelecimento citado no lançamento. Isso não indica parceria, conexão com o serviço ou
+suporte de importação. A placa mantém fundo branco nos dois temas, o nome do lançamento continua visível e o ícone é decorativo para o TalkBack
+(no seletor, o nome da marca é o texto de cada opção).
 
-O app usa os logos para identificar nominalmente o estabelecimento citado no lançamento.
-Isso não indica parceria, conexão com o serviço ou suporte de importação. Nos dois temas,
-a placa mantém fundo branco e o nome continua visível. O logo é decorativo para TalkBack.
+## Atualizar
 
-Ao ampliar o catálogo, conferir versão estável, proveniência, diretrizes de cada marca,
-proporção, contraste e tamanho; incluir somente ativos necessários. Não recolorir com tokens
-financeiros nem transformar nomes fornecidos pelo modelo em URLs ou caminhos de recursos.
+Conferir a versão estável, atualizar `VERSION` e `TARBALL_SHA256` no script, gerar de novo, rever a lista de palavras comuns e rodar
+`:app:testDebugUnitTest` (integridade do ativo e do reconhecimento). Não recolorir com tokens financeiros nem transformar nomes vindos de fora
+em URLs ou caminhos de recursos: a chave de uma marca é o slug exato do catálogo.
