@@ -88,8 +88,9 @@ class SubscriptionsUiTest {
 
     private fun show(state: SubscriptionsUiState, onOpen: (String) -> Unit = {}, onFilter: (SubscriptionFilter) -> Unit = {}) {
         compose.setContent {
-            AccordTheme { SubscriptionsScreen(state, padding, {}, {}, {}, onFilter, {}, onOpen, {}) }
+            UiAuditS6.Host { SubscriptionsScreen(state, padding, {}, {}, {}, onFilter, {}, onOpen, {}) }
         }
+        UiAuditS6.shoot(compose, "assinaturas")
     }
 
     @Test
@@ -144,8 +145,9 @@ class SubscriptionsUiTest {
 
     private fun showDetail(content: SubscriptionDetailContent, onOpenEntry: (String) -> Unit = {}, onEdit: (String) -> Unit = {}) {
         compose.setContent {
-            AccordTheme { SubscriptionDetailScreen(content, padding, {}, {}, onOpenEntry, onEdit) }
+            UiAuditS6.Host { SubscriptionDetailScreen(content, padding, {}, {}, onOpenEntry, onEdit) }
         }
+        UiAuditS6.shoot(compose, "assinatura_detalhe")
     }
 
     @Test

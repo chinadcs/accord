@@ -57,7 +57,8 @@ class ConsultUiTest {
             onRefreshQuery = { calls.refreshed = it },
             onSendQuestion = { calls.sent = it },
         )
-        compose.setContent { AccordTheme { QueryCard(item, actions, onChoose = actions.onSendQuestion) } }
+        compose.setContent { UiAuditS6.Host { QueryCard(item, actions, onChoose = actions.onSendQuestion) } }
+        UiAuditS6.shoot(compose, "consulta_chat")
     }
 
     @Test

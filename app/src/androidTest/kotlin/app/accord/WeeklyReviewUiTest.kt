@@ -88,7 +88,8 @@ class WeeklyReviewUiTest {
     private val noControls = WeeklyReviewControls({}, {}, {}, {}, {}, {}, { null }, {}, {}, {})
 
     private fun show(state: WeeklyReviewUiState, actions: WeeklyReviewActions = this.actions, controls: WeeklyReviewControls = noControls) {
-        compose.setContent { AccordTheme { WeeklyReviewScreen(state, padding, actions, controls) } }
+        compose.setContent { UiAuditS6.Host { WeeklyReviewScreen(state, padding, actions, controls) } }
+        UiAuditS6.shoot(compose, "revisao")
     }
 
     private fun see(text: String) {

@@ -63,8 +63,9 @@ class PurchaseActivityUiTest {
     ) {
         val state = ActivityUiState(sep, categoryId, ActivityContent.Ready(ActivityData(activity, categories)))
         compose.setContent {
-            AccordTheme { PurchaseActivityScreen(state, padding, actions, {}, {}, onCategory, {}) }
+            UiAuditS6.Host { PurchaseActivityScreen(state, padding, actions, {}, {}, onCategory, {}) }
         }
+        UiAuditS6.shoot(compose, "atividade")
     }
 
     @Test

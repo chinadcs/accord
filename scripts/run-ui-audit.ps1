@@ -1,7 +1,7 @@
-﻿# Captura no pacote isolado de validação. O AVD deve estar iniciado; não altera recursos do Windows.
+﻿# Captura no pacote isolado de validação (app.accord.uivalidation, dados sintéticos). Aceita AVD ou aparelho conectado; fonte, rotação e política de rotação são salvas e restauradas. Não altera recursos do Windows.
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)][ValidatePattern('^emulator-[0-9]+$')][string]$Serial,
+    [Parameter(Mandatory = $true)][ValidatePattern('^[A-Za-z0-9._:-]+$')][string]$Serial,
     [ValidateSet('before', 'after')][string]$Round = 'before',
     [ValidateSet('light', 'dark')][string[]]$Themes = @('light', 'dark'),
     [ValidateSet('1', '2')][string[]]$FontScales = @('1', '2'),
@@ -90,7 +90,7 @@ try {
             apkSha256 = $apkHash; testApkSha256 = $testApkHash
             fontScale = $scale; rotation = $rotation; testClass = $class
             started = (Get-Date).ToString('o'); status = 'running'; synthetic = $true
-            avd = (Invoke-Adb -Arguments @('emu', 'avd', 'name') | Out-String).Trim()
+            avd = $(try { (Invoke-Adb -Arguments @('emu', 'avd', 'name') | Out-String).Trim() } catch { 'dispositivo físico' })
             size = (Invoke-Adb -Arguments @('shell', 'wm', 'size') | Out-String).Trim()
             density = (Invoke-Adb -Arguments @('shell', 'wm', 'density') | Out-String).Trim()
             graphicsRenderer = ((Invoke-Adb -Arguments @('shell', 'dumpsys', 'SurfaceFlinger') | Select-String 'GLES:' | ForEach-Object { $_.Line.Trim() }) -join "`n")

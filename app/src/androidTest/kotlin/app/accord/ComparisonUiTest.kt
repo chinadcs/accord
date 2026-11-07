@@ -82,7 +82,8 @@ class ComparisonUiTest {
         controls: ComparisonControls = noControls,
     ) {
         val state = ComparisonUiState(comparison.criterion, comparison.grouping, sep, oct, ComparisonContent.Ready(ComparisonData(comparison, categories)))
-        compose.setContent { AccordTheme { ComparisonScreen(state, padding, actions, controls) } }
+        compose.setContent { UiAuditS6.Host { ComparisonScreen(state, padding, actions, controls) } }
+        UiAuditS6.shoot(compose, "comparacoes")
     }
 
     private fun see(text: String) {
