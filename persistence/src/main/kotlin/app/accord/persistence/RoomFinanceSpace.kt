@@ -1290,8 +1290,8 @@ class RoomFinanceSpace private constructor(
     override suspend fun entries(filter: EntryFilter, cursor: Int, pageSize: Int): QueryResult<EntryPage> =
         query { entryQueries.entries(filter, cursor, pageSize) }
 
-    override suspend fun totalBalance(criterion: DateCriterion): QueryResult<TotalBalance> =
-        query { entryQueries.totalBalance(criterion) }
+    override suspend fun totalBalance(criterion: DateCriterion, month: YearMonth): QueryResult<TotalBalance> =
+        query { entryQueries.totalBalance(criterion, month) }
 
     override suspend fun commitments(month: YearMonth, kind: CommitmentKind): QueryResult<MonthCommitments> =
         query { entryQueries.commitments(month, kind) }

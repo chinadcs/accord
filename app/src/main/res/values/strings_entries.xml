@@ -12,6 +12,7 @@
     <string name="entries_criterion_settings_note">Escolha como o período de Lançamentos é filtrado por padrão.</string>
     <string name="entries_filters_count">Filtros (%d)</string>
     <string name="entries_previous_month">Mês anterior</string>
+    <string name="entries_back_to_current">Voltar ao mês atual</string>
     <string name="entries_next_month">Próximo mês</string>
     <string name="entries_invoice_month">Fatura %1$s</string>
     <string name="entries_criterion_budget">Critério: mês do orçamento</string>
@@ -36,7 +37,7 @@
     <string name="summary_incomes">Rendas</string>
     <string name="summary_credits_list">Créditos de estorno</string>
     <string name="summary_invoice_payments">Quitações de fatura</string>
-    <string name="summary_note">Estes totais são só da lista filtrada. O saldo total, no alto, é tudo o que foi recebido menos as despesas até este mês, já abatidos os estornos; a receita e a despesa do cabeçalho são só deste mês. Renda prevista e quitações de fatura não entram.</string>
+    <string name="summary_note">Estes totais são só da lista filtrada. O saldo total, no alto, é tudo o que foi recebido menos as despesas até o fim do mês exibido, já abatidos os estornos; a receita e a despesa do cabeçalho são só desse mês. Renda prevista e quitações de fatura não entram.</string>
     <string name="entries_balance_title">Saldo total</string>
     <string name="entries_balance_income">Receita do mês</string>
     <string name="entries_balance_expense">Despesa do mês</string>

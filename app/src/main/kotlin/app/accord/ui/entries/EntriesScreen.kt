@@ -22,6 +22,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import app.accord.ui.components.AccordButton as Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -182,11 +183,16 @@ fun EntriesScreen(
             )
         }
         item {
-            FilterBar(state.filter, onPickMonth = { showMonthPicker = true }, onChangeMonth = { delta ->
-                onApplyFilter(
-                    state.filter.copy(from = state.filter.from.plusMonths(delta), to = state.filter.to.plusMonths(delta)),
-                )
-            })
+            FilterBar(
+                state.filter, state.currentMonth,
+                onPickMonth = { showMonthPicker = true },
+                onChangeMonth = { delta ->
+                    onApplyFilter(
+                        state.filter.copy(from = state.filter.from.plusMonths(delta), to = state.filter.to.plusMonths(delta)),
+                    )
+                },
+                onBackToCurrent = { onApplyFilter(state.filter.copy(from = state.currentMonth, to = state.currentMonth)) },
+            )
         }
 
         when {
@@ -248,8 +254,10 @@ private val ENTRY_INVOICE_MONTH = DateTimeFormatter.ofPattern("MM/yy", Locale.fo
 @Composable
 private fun FilterBar(
     filter: EntriesFilterState,
+    currentMonth: YearMonth,
     onPickMonth: () -> Unit,
     onChangeMonth: (Long) -> Unit,
+    onBackToCurrent: () -> Unit,
 ) {
     val monthPickerDescription = stringResource(R.string.entries_pick_month)
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -273,6 +281,11 @@ private fun FilterBar(
                         style = MaterialTheme.typography.labelLarge,
                         modifier = Modifier.padding(start = AccordSpacing.s2),
                     )
+                }
+            }
+            if (filter.from != currentMonth || filter.to != currentMonth) {
+                FilledTonalIconButton(onClick = onBackToCurrent, modifier = Modifier.size(AccordSpacing.touchMin).testTag("entries-back-to-current")) {
+                    Icon(painterResource(Lucide.drawable.lucide_ic_calendar_check), contentDescription = stringResource(R.string.entries_back_to_current))
                 }
             }
             IconButton(onClick = { onChangeMonth(1) }, modifier = Modifier.size(AccordSpacing.touchMin)) {

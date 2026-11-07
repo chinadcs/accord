@@ -38,8 +38,8 @@ private const val ABSENT = "—"
 private const val MIN_TEXT_CONTRAST = 4.5f
 
 /**
- * Saldo total acumulado até o mês atual (renda recebida menos despesa comprometida), com Receita e
- * Despesa só do mês atual; sem filtros. Renda prevista e quitação de fatura não entram; o botão do cabeçalho abre os filtros da lista.
+ * Saldo total acumulado até o fim do mês exibido (renda recebida menos despesa comprometida), com Receita e
+ * Despesa só desse mês; a busca e os demais filtros não mexem. Renda prevista e quitação de fatura não entram; o botão do cabeçalho abre os filtros da lista.
  */
 @Composable
 fun BalanceHeader(

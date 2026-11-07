@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasContentDescription
@@ -71,10 +72,12 @@ class EntriesUiTest {
         loadMoreFailed: Boolean = false,
         summary: EntrySummary? = EntrySummary(brl(250), Money.ZERO, Money.ZERO, Money.ZERO),
         balance: TotalBalance? = summary?.let { TotalBalance(it, it) },
+        currentMonth: YearMonth = oct,
     ) = EntriesUiState(
         filter = filter, rows = rows, total = rows.size,
         summary = summary, balance = balance,
         nextCursor = next, status = status, loadMoreFailed = loadMoreFailed, categories = categories, stale = stale,
+        currentMonth = currentMonth,
     )
 
     private fun show(
@@ -131,8 +134,8 @@ class EntriesUiTest {
         // o mesmo total aparece no resumo por tipo e na Despesa do cabeçalho
         compose.onAllNodesWithText(brl(250).format()).assertCountEquals(2)
         compose.onNodeWithText(
-            "Estes totais são só da lista filtrada. O saldo total, no alto, é tudo o que foi recebido menos as despesas até este mês, " +
-                "já abatidos os estornos; a receita e a despesa do cabeçalho são só deste mês. " +
+            "Estes totais são só da lista filtrada. O saldo total, no alto, é tudo o que foi recebido menos as despesas até o fim do mês exibido, " +
+                "já abatidos os estornos; a receita e a despesa do cabeçalho são só desse mês. " +
                 "Renda prevista e quitações de fatura não entram.",
         ).assertIsDisplayed()
     }
@@ -173,7 +176,7 @@ class EntriesUiTest {
     }
 
     @Test
-    fun saldoTotalNaoMudaComOPeriodoNemComOsFiltros() {
+    fun saldoTotalNaoMudaComABuscaNemComOsFiltros() {
         val total = EntrySummary(brl(300), brl(1500), Money.ZERO, Money.ZERO, receivedIncomes = brl(1000))
         show(
             state(
@@ -183,6 +186,21 @@ class EntriesUiTest {
         )
         compose.onNodeWithText("Saldo total").assertIsDisplayed()
         compose.onNodeWithText(brl(700).format()).assertIsDisplayed() // 1000 − 300, e não o resumo filtrado
+    }
+
+    @Test
+    fun botaoVoltarAoMesAtualSoApareceForaDoMesAtual() {
+        show(state(sample, currentMonth = oct))
+        compose.onNodeWithTag("entries-back-to-current").assertDoesNotExist()
+    }
+
+    @Test
+    fun botaoVoltarAoMesAtualLevaOPeriodoParaOMesAtual() {
+        var applied: EntriesFilterState? = null
+        show(state(sample, currentMonth = oct.plusMonths(2)), onApply = { applied = it })
+        compose.onNodeWithTag("entries-back-to-current").performClick()
+        assertEquals(oct.plusMonths(2), applied?.from)
+        assertEquals(oct.plusMonths(2), applied?.to)
     }
 
     @Test

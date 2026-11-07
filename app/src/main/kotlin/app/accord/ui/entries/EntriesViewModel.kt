@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.accord.SpaceProvider
+import app.accord.core.BudgetClock
 import app.accord.core.space.CategoryNode
 import app.accord.core.space.EntryPage
 import app.accord.core.space.EntryRow
@@ -16,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.YearMonth
 
 enum class EntriesStatus { Loading, Ready, Failed }
 
@@ -28,8 +30,10 @@ data class EntriesUiState(
     val rows: List<EntryRow> = emptyList(),
     val total: Int = 0,
     val summary: EntrySummary? = null,
-    /** Cabeçalho: saldo total acumulado e resumo do mês atual, sem filtros; independe da busca e do período da lista. */
+    /** Cabeçalho: saldo acumulado até o mês exibido ([EntriesFilterState.to]) e resumo desse mês; independe da busca e dos demais filtros. */
     val balance: TotalBalance? = null,
+    /** Mês do calendário hoje; o atalho "Mês atual" só aparece quando o período da lista é outro. */
+    val currentMonth: YearMonth = YearMonth.now(BudgetClock.ZONE),
     val nextCursor: Int? = null,
     val status: EntriesStatus = EntriesStatus.Loading,
     /** A última tentativa de buscar mais linhas falhou; as já carregadas permanecem. */
@@ -44,7 +48,9 @@ class EntriesViewModel(
     private val saved: SavedStateHandle,
     initial: EntriesFilterState,
 ) : ViewModel() {
-    private val _state = MutableStateFlow(EntriesUiState(filter = EntriesFilterState.restore(saved, initial)))
+    private val _state = MutableStateFlow(
+        EntriesUiState(filter = EntriesFilterState.restore(saved, initial), currentMonth = provider.clock.currentMonth()),
+    )
     val state: StateFlow<EntriesUiState> = _state.asStateFlow()
 
     private var job: Job? = null
@@ -91,20 +97,25 @@ class EntriesViewModel(
     }
 
     private fun apply(filter: EntriesFilterState, debounce: Boolean) {
-        val criterionChanged = filter.criterion != _state.value.filter.criterion
+        val previous = _state.value.filter
+        val balanceChanged = filter.criterion != previous.criterion || filter.to != previous.to
         filter.saveTo(saved)
         _state.value = _state.value.copy(filter = filter, status = EntriesStatus.Loading, stale = true)
         refresh(debounce)
-        if (criterionChanged) refreshBalance()
+        if (balanceChanged) refreshBalance()
     }
 
-    /** O saldo total só muda com os dados ou com o critério de data; falha mantém o valor anterior. */
+    /** O saldo muda com os dados, o critério de data ou o mês exibido; falha mantém o valor anterior. */
     private fun refreshBalance() {
         balanceJob?.cancel()
-        val criterion = _state.value.filter.criterion
+        val filter = _state.value.filter
+        _state.value = _state.value.copy(currentMonth = provider.clock.currentMonth())
         balanceJob = viewModelScope.launch {
-            when (val result = provider.space().totalBalance(criterion)) {
-                is QueryResult.Data -> _state.value = _state.value.copy(balance = result.value)
+            when (val result = provider.space().totalBalance(filter.criterion, filter.to)) {
+                is QueryResult.Data ->
+                    if (_state.value.filter.let { it.criterion == filter.criterion && it.to == filter.to }) {
+                        _state.value = _state.value.copy(balance = result.value)
+                    }
                 is QueryResult.Failure -> Unit
             }
         }

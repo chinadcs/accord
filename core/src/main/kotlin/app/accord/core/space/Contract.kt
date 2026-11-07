@@ -88,10 +88,10 @@ interface FinanceSpace {
     suspend fun entries(filter: EntryFilter, cursor: Int = 0, pageSize: Int = 50): QueryResult<EntryPage>
 
     /**
-     * Saldo total (acumulado até o fim do mês atual) e o resumo do mês atual, sem filtros. Mesma regra de
-     * [EntrySummary.balance]: renda recebida menos despesa comprometida; renda prevista fica de fora.
+     * Saldo total (acumulado até o fim de [month], o mês exibido na lista) e o resumo de [month], sem outros filtros.
+     * Mesma regra de [EntrySummary.balance]: renda recebida menos despesa comprometida; renda prevista fica de fora.
      */
-    suspend fun totalBalance(criterion: DateCriterion): QueryResult<TotalBalance>
+    suspend fun totalBalance(criterion: DateCriterion, month: YearMonth): QueryResult<TotalBalance>
 
     /** Detalhe do lançamento (tela 08) por ID estável; nulo se não existe. */
     suspend fun entry(id: String): QueryResult<EntryDetail?>

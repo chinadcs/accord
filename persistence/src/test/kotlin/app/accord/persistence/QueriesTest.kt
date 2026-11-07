@@ -265,7 +265,7 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `saldo total acumula meses até o atual, sem renda prevista nem mês futuro, e ignora filtros`() = runBlocking<Unit> {
+    fun `saldo total acumula meses até o exibido, sem renda prevista nem mês seguinte, e ignora filtros`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         // setembro: salário recebido; outubro: gasto pago e mercado; novembro (futuro): fora do saldo de hoje
@@ -276,7 +276,7 @@ class QueriesTest : SpaceTestBase() {
         h.space.execute(h.env(), RegisterIncome("Freela previsto", brl(700), d(2026, 10, 28))).applied()
         h.pix("Viagem", 500, date = d(2026, 11, 12))
 
-        val header = h.space.totalBalance(DateCriterion.PurchaseDate).value()
+        val header = h.space.totalBalance(DateCriterion.PurchaseDate, oct).value()
         val total = header.total
         assertEquals(brl(1000), total.receivedIncomes)
         assertEquals(brl(380), total.committedExpenses)
@@ -289,6 +289,33 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
+    fun `saldo total acompanha o mês exibido e Receita e Despesa são desse mês`() = runBlocking<Unit> {
+        val h = open()
+        h.withDefaultAccount()
+        // outubro: salário recebido de R$ 8.000 e gasto de R$ 300; novembro: sem movimento; dezembro: renda recebida de R$ 1.500
+        val salary = h.space.execute(h.env(), RegisterIncome("Salário", brl(8000), d(2026, 10, 5))).applied().changes.single().id
+        h.space.execute(h.env(), ReceiveIncome(salary, Settlement(d(2026, 10, 5)))).applied()
+        h.pix("Mercado", 300, date = d(2026, 10, 3))
+        val bonus = h.space.execute(h.env(), RegisterIncome("Bônus", brl(1500), d(2026, 12, 10))).applied().changes.single().id
+        h.space.execute(h.env(), ReceiveIncome(bonus, Settlement(d(2026, 12, 10)))).applied()
+
+        val october = h.space.totalBalance(DateCriterion.PurchaseDate, oct).value()
+        val november = h.space.totalBalance(DateCriterion.PurchaseDate, ym(2026, 11)).value()
+        val december = h.space.totalBalance(DateCriterion.PurchaseDate, ym(2026, 12)).value()
+        assertEquals(brl(7700), october.total.balance)
+        // mês sem movimento mantém o saldo e zera Receita e Despesa do cabeçalho
+        assertEquals(brl(7700), november.total.balance)
+        assertEquals(Money.ZERO, november.month.receivedIncomes)
+        assertEquals(Money.ZERO, november.month.committedExpenses)
+        // a renda recebida de dezembro soma ao saldo acumulado; sem despesa nova, o saldo sobe pelo valor recebido
+        assertEquals(brl(9200), december.total.balance)
+        assertEquals(brl(1500), december.month.receivedIncomes)
+        assertEquals(Money.ZERO, december.month.committedExpenses)
+        // um mês anterior não inclui o que veio depois
+        assertEquals(Money.ZERO, h.space.totalBalance(DateCriterion.PurchaseDate, sep).value().total.balance)
+    }
+
+    @Test
     fun `despesa do mês do cabeçalho segue o mês do orçamento mesmo com a data da compra, e o saldo total não muda`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
@@ -297,8 +324,8 @@ class QueriesTest : SpaceTestBase() {
         h.pix("Mercado", 320, date = d(2026, 10, 3))
         h.pix("Farmácia", 185, date = d(2026, 10, 9))
 
-        val byPurchase = h.space.totalBalance(DateCriterion.PurchaseDate).value()
-        val byBudget = h.space.totalBalance(DateCriterion.BudgetMonth).value()
+        val byPurchase = h.space.totalBalance(DateCriterion.PurchaseDate, oct).value()
+        val byBudget = h.space.totalBalance(DateCriterion.BudgetMonth, oct).value()
         // Despesa do mês = Comprometido do Orçamento de outubro, qualquer que seja o critério da lista
         assertEquals(brl(505), byPurchase.month.committedExpenses)
         assertEquals(byBudget.month, byPurchase.month)
@@ -318,7 +345,7 @@ class QueriesTest : SpaceTestBase() {
         h.space.execute(h.env(), RegisterInvoiceTotal(oct, brl(70))).applied()
         h.space.execute(h.env(), PayInvoice(oct, brl(70), d(2026, 10, 15))).applied()
 
-        val total = h.space.totalBalance(DateCriterion.PurchaseDate).value().total
+        val total = h.space.totalBalance(DateCriterion.PurchaseDate, oct).value().total
         assertEquals(brl(130), total.committedExpenses) // 100 + 70 − 40; a quitação de R$ 70 não entra de novo
         assertEquals(brl(-130), total.balance)
     }
@@ -345,7 +372,7 @@ class QueriesTest : SpaceTestBase() {
             h.space.entries(filter(from = ym(2026, m), to = ym(2026, m))).value().summary.expenses.cents
         }
         assertEquals(brl(600).cents, byBudget)
-        assertEquals(brl(600), h.space.totalBalance(DateCriterion.PurchaseDate).value().total.committedExpenses)
+        assertEquals(brl(600), h.space.totalBalance(DateCriterion.PurchaseDate, oct).value().total.committedExpenses)
     }
 
     @Test
