@@ -8,7 +8,7 @@ description: Coordenar trabalho autorizado do Accord pelo ciclo observar, orient
 
 Ler [AGENTS.md](../../../AGENTS.md), [ARCHITECTURE.md](../../../ARCHITECTURE.md), o
 [plano](../../../docs/plano-desenvolvimento.md) e a
-[spec relevante](../../../docs/specs/README.md). Decisões posteriores prevalecem sobre
+[spec relevante](../../../docs/specs/design/README.md). Decisões posteriores prevalecem sobre
 propostas anteriores. Não presumir aplicativo, serviço ou testes já implementados.
 
 ## Ciclo ancorado em evidência

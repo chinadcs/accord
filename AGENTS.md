@@ -33,6 +33,7 @@ bancários continuam abertos. Não introduzir outra plataforma ou backend por he
 | [Plano de desenvolvimento](docs/plano-desenvolvimento.md) | Requisitos, etapas e aceite; decisões posteriores §§14 e 16 prevalecem sobre propostas anteriores |
 | [Índice das telas](docs/specs/design/README.md) | Navegação, regras comuns, prioridades, direção visual e pendências |
 | [Specs 01–38](docs/specs/design/README.md#4-índice-dos-arquivos) | Tela afetada, estados, recuperação, acessibilidade, aceite e dependências |
+| [Specs S1–S7](docs/specs/) | Especificações de desenvolvimento por fatia (`docs/specs/S*.md`): escopo, aceite e dependências de cada etapa |
 | [Arquitetura](ARCHITECTURE.md) | Mapa atual, responsabilidades planejadas, invariantes e escolhas abertas |
 | [ADRs](docs/adr/README.md) | Decisões estruturais, motivos, autoridade e histórico; consultar os relacionados à mudança |
 | [Catálogo de agentes](.claude/agents-roster.md) | Responsabilidades dos papéis locais e adaptação entre runtimes |

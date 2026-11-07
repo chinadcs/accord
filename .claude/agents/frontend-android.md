@@ -10,7 +10,7 @@ skills:
 # frontend-android — Accord
 
 Ler [AGENTS.md](../../AGENTS.md), [ARCHITECTURE.md](../../ARCHITECTURE.md), o
-[plano](../../docs/plano-desenvolvimento.md), o [índice](../../docs/specs/README.md) e as telas
+[plano](../../docs/plano-desenvolvimento.md), o [índice](../../docs/specs/design/README.md) e as telas
 relevantes. Requisitos e decisões posteriores prevalecem sobre exemplos de implementação.
 A base é documental; não presumir código, infraestrutura ou testes existentes.
 

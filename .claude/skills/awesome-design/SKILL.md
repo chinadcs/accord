@@ -8,7 +8,7 @@ description: Use VoltAgent's collection of website design references when the us
 Referência opcional para o trabalho de design solicitado. O produto é Android nativo em
 Kotlin/Jetpack Compose; esta skill genérica não escolhe plataforma, biblioteca, fonte,
 iconografia ou navegação. Seguir [AGENTS.md](../../../AGENTS.md) e as
-[specs de tela](../../../docs/specs/README.md): fonte nativa, tokens semânticos, Lucide,
+[specs de tela](../../../docs/specs/design/README.md): fonte nativa, tokens semânticos, Lucide,
 catálogo/logos bancários locais e acessibilidade Android. Não aplicar exigências de HTML,
 React, CSS, DOM ou marketing a telas Compose. Para UI Android, usar a skill
 [android-compose](../android-compose/SKILL.md). Buscar diretriz web externa somente se o
