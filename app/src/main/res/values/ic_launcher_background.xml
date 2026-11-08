@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Verde floresta do logo 02 Encontro (docs/branding/logo-options). -->
+    <color name="ic_launcher_background">#146C45</color>
+</resources>

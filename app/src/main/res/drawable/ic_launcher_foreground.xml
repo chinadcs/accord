@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Logo 02 Encontro: dois colchetes iguais, girados 180°, em volta de um espaço central compartilhado.
+     Caixa do símbolo 200 × 200 reduzida a 52 dp no centro da grade adaptativa de 108 dp (zona segura de 66 dp).
+     A mesma geometria está em AccordMark (BrandComponents.kt). Serve também ao ícone monocromático. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:translateX="28"
+        android:translateY="28"
+        android:scaleX="0.26"
+        android:scaleY="0.26">
+        <path
+            android:fillColor="#FAF9F7"
+            android:pathData="M0,138 L0,56 A56,56 0 0 1 56,0 L138,0 L138,56 L70,56 A14,14 0 0 0 56,70 L56,138 Z" />
+        <path
+            android:fillColor="#FAF9F7"
+            android:pathData="M200,62 L200,144 A56,56 0 0 1 144,200 L62,200 L62,144 L130,144 A14,14 0 0 0 144,130 L144,62 Z" />
+    </group>
+</vector>
