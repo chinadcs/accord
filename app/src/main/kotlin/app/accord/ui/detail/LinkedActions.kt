@@ -2,10 +2,12 @@ package app.accord.ui.detail
 
 import app.accord.core.Money
 import app.accord.core.MoneyParse
+import app.accord.core.space.AssignmentState
 import app.accord.core.space.CancelState
 import app.accord.core.space.Command
 import app.accord.core.space.ConfirmNonCharge
 import app.accord.core.space.ConfirmRefund
+import app.accord.core.space.CorrectOccurrenceInvoice
 import app.accord.core.space.EntryDetail
 import app.accord.core.space.EntryKind
 import app.accord.core.space.PayBoleto
@@ -19,6 +21,7 @@ import app.accord.core.space.RegisterRefund
 import app.accord.core.space.RequestInstallmentCancellation
 import app.accord.core.space.Settlement
 import java.time.LocalDate
+import java.time.YearMonth
 
 /**
  * Ações ligadas a um lançamento já registrado (tela 09, modos vinculados): pagar boleto, receber
@@ -47,6 +50,21 @@ sealed interface LinkedAction {
         override val revision: Long get() = refund.revision
     }
 
+    /**
+     * Confere ou corrige a fatura de uma ocorrência de recorrência no cartão (ADR 0049). Vale só para esta ocorrência; as opções
+     * são a fatura estimada pelo ciclo e a anterior e a seguinte. [confirmed] é verdadeiro quando a pessoa já escolheu uma.
+     */
+    data class OccurrenceInvoice(
+        val recurrenceId: String,
+        val occurrence: Int,
+        val estimated: YearMonth,
+        val current: YearMonth,
+        val confirmed: Boolean,
+        override val revision: Long,
+    ) : LinkedAction {
+        val options: List<YearMonth> get() = listOf(estimated.minusMonths(1), estimated, estimated.plusMonths(1))
+    }
+
     /** [candidates] são os números das parcelas que o pedido pode alcançar; [nonCharge] confirma o que já foi pedido. */
     data class Cancellation(
         val purchaseId: String,
@@ -63,9 +81,11 @@ data class LinkedForm(
     /** Estorno: sem opção pré-selecionada, porque só o confirmado muda os totais. */
     val refundStatus: RefundStatus? = null,
     val selected: Set<Int> = emptySet(),
+    /** Fatura da ocorrência: sem opção pré-selecionada, a pessoa escolhe. */
+    val invoice: YearMonth? = null,
 )
 
-enum class LinkedField { Date, Amount, Status, Installments }
+enum class LinkedField { Date, Amount, Status, Installments, Invoice }
 
 sealed interface LinkedError {
     data object AmountEmpty : LinkedError
@@ -74,6 +94,7 @@ sealed interface LinkedError {
     data object MustBePositive : LinkedError
     data object StatusRequired : LinkedError
     data object NothingSelected : LinkedError
+    data object InvoiceRequired : LinkedError
 }
 
 sealed interface LinkedBuilt {
@@ -118,6 +139,10 @@ fun LinkedAction.build(form: LinkedForm): LinkedBuilt {
             val amount = parseAmount(form.amountText, required = true, errors)
             amount?.let { ConfirmRefund(refund.id, it, form.date, expectedRevision = refund.revision) }
         }
+        is LinkedAction.OccurrenceInvoice -> {
+            if (form.invoice == null) errors[LinkedField.Invoice] = LinkedError.InvoiceRequired
+            form.invoice?.let { CorrectOccurrenceInvoice(recurrenceId, occurrence, it, expectedRevision = revision) }
+        }
         is LinkedAction.Cancellation -> {
             if (form.selected.isEmpty()) errors[LinkedField.Installments] = LinkedError.NothingSelected
             val numbers = form.selected.sorted()
@@ -140,9 +165,18 @@ fun availableActions(detail: EntryDetail): List<LinkedAction> {
         EntryKind.Income -> detail.income?.takeIf { it.receivedDate == null }?.let {
             actions += LinkedAction.Settle(LinkedAction.Settle.Kind.Income, it.id, it.expectedAmount, revision = it.revision)
         }
-        EntryKind.RecurrenceOccurrence -> detail.occurrence?.takeIf { !it.paid && it.form == RecurrenceForm.OffCard }?.let {
-            val kind = if (it.kind == RecurrenceKind.Income) LinkedAction.Settle.Kind.OccurrenceIncome else LinkedAction.Settle.Kind.Occurrence
-            actions += LinkedAction.Settle(kind, it.recurrenceId, it.expectedAmount, occurrence = it.number, revision = detail.revision)
+        EntryKind.RecurrenceOccurrence -> {
+            detail.occurrence?.takeIf { !it.paid && it.form == RecurrenceForm.OffCard }?.let {
+                val kind = if (it.kind == RecurrenceKind.Income) LinkedAction.Settle.Kind.OccurrenceIncome else LinkedAction.Settle.Kind.Occurrence
+                actions += LinkedAction.Settle(kind, it.recurrenceId, it.expectedAmount, occurrence = it.number, revision = detail.revision)
+            }
+            detail.occurrence?.takeIf { it.form == RecurrenceForm.Card && it.kind == RecurrenceKind.Expense }?.let { o ->
+                o.estimatedInvoice?.let {
+                    actions += LinkedAction.OccurrenceInvoice(
+                        o.recurrenceId, o.number, it, o.budgetMonth, confirmed = o.assignment == AssignmentState.Confirmed, revision = detail.revision,
+                    )
+                }
+            }
         }
         else -> Unit
     }

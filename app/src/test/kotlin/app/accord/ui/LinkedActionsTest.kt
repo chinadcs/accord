@@ -7,6 +7,10 @@ import app.accord.core.space.CancelState
 import app.accord.core.space.Classification
 import app.accord.core.space.ConfirmNonCharge
 import app.accord.core.space.ConfirmRefund
+import app.accord.core.space.RecurrenceKind
+import app.accord.core.space.RecurrenceForm
+import app.accord.core.space.OccurrenceView
+import app.accord.core.space.CorrectOccurrenceInvoice
 import app.accord.core.space.EntryDetail
 import app.accord.core.space.EntryKind
 import app.accord.core.space.InstallmentView
@@ -163,5 +167,52 @@ class LinkedActionsTest {
             assertIs<LinkedBuilt.Ok>(LinkedAction.Cancellation("p", listOf(2), nonCharge = true, revision = 5).build(form.copy(selected = setOf(2)))).command,
         )
         assertEquals(listOf(2), confirmed.installmentNumbers)
+    }
+    // ---- fatura da ocorrência no cartão (ADR 0049) ----
+
+    private fun occurrence(
+        form: RecurrenceForm = RecurrenceForm.Card,
+        kind: RecurrenceKind = RecurrenceKind.Expense,
+        assignment: AssignmentState? = AssignmentState.ToConfirm,
+        estimated: YearMonth? = YearMonth.of(2026, 11),
+        budgetMonth: YearMonth = YearMonth.of(2026, 11),
+    ) = OccurrenceView(
+        recurrenceId = "rec", number = 3, kind = kind, form = form, scheduledDate = today, description = "Academia", categoryId = null,
+        expectedAmount = Money(10_000), accountId = null, settledDate = null, settledAmount = null, budgetMonth = budgetMonth,
+        paid = false, assignment = assignment, estimatedInvoice = estimated,
+    )
+
+    private fun occurrenceDetail(o: OccurrenceView) = detail(EntryKind.RecurrenceOccurrence).copy(occurrence = o)
+
+    @Test
+    fun ocorrenciaNoCartaoOfereConferirFaturaComAEstimadaEAsVizinhas() {
+        val action = availableActions(occurrenceDetail(occurrence())).single()
+        assertIs<LinkedAction.OccurrenceInvoice>(action)
+        assertEquals(listOf(YearMonth.of(2026, 10), YearMonth.of(2026, 11), YearMonth.of(2026, 12)), action.options)
+        assertEquals(false, action.confirmed)
+        assertEquals(4L, action.revision)
+    }
+
+    @Test
+    fun faturaJaEscolhidaViraCorrigirESemEstimativaOuForaDoCartaoNaoHaAcao() {
+        val chosen = availableActions(occurrenceDetail(occurrence(assignment = AssignmentState.Confirmed, budgetMonth = YearMonth.of(2026, 12)))).single()
+        assertEquals(true, (chosen as LinkedAction.OccurrenceInvoice).confirmed)
+        assertEquals(YearMonth.of(2026, 12), chosen.current)
+        assertTrue(availableActions(occurrenceDetail(occurrence(estimated = null))).isEmpty())
+        // fora do cartão a ação é a de pagar, nunca a de fatura
+        val off = availableActions(occurrenceDetail(occurrence(form = RecurrenceForm.OffCard, assignment = null, estimated = null)))
+        assertTrue(off.none { it is LinkedAction.OccurrenceInvoice })
+        // renda recorrente não tem fatura
+        assertTrue(availableActions(occurrenceDetail(occurrence(kind = RecurrenceKind.Income))).none { it is LinkedAction.OccurrenceInvoice })
+    }
+
+    @Test
+    fun faturaDaOcorrenciaExigeEscolhaEMontaOComandoComAVersao() {
+        val action = availableActions(occurrenceDetail(occurrence())).single()
+        val missing = assertIs<LinkedBuilt.Invalid>(action.build(form))
+        assertEquals(LinkedError.InvoiceRequired, missing.errors[LinkedField.Invoice])
+
+        val ok = assertIs<LinkedBuilt.Ok>(action.build(form.copy(invoice = YearMonth.of(2026, 12))))
+        assertEquals(CorrectOccurrenceInvoice("rec", 3, YearMonth.of(2026, 12), expectedRevision = 4), ok.command)
     }
 }

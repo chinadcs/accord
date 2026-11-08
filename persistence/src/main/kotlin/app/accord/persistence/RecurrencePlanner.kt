@@ -1,5 +1,7 @@
 package app.accord.persistence
 
+import app.accord.core.label
+import app.accord.core.space.CorrectOccurrenceInvoice
 import app.accord.core.CardCycle
 import app.accord.core.Frequency
 import app.accord.core.Money
@@ -47,6 +49,7 @@ internal class RecurrencePlanner(
             it.number to OccurrenceOverride(
                 it.deleted,
                 RecurrenceFields(it.description, it.classificationId, it.amountCents?.let(::Money), it.accountId),
+                it.invoiceMonth?.let(YearMonth::parse),
             )
         }
         val series = RecurrenceSeries.restore(
@@ -66,7 +69,10 @@ internal class RecurrencePlanner(
         dao.deleteOverrides(id)
         dao.insertOverrides(
             series.overrides.map { (n, o) ->
-                RecurrenceOverrideRow(id, n, o.deleted, o.fields.description, o.fields.classificationId, o.fields.amount?.cents, o.fields.accountId)
+                RecurrenceOverrideRow(
+                    id, n, o.deleted, o.fields.description, o.fields.classificationId, o.fields.amount?.cents, o.fields.accountId,
+                    o.invoice?.toString(),
+                )
             },
         )
     }
@@ -189,6 +195,45 @@ internal class RecurrencePlanner(
         }
     }
 
+    /**
+     * Confere ou corrige a fatura de uma ocorrência no cartão (ADR 0049). Só esta ocorrência muda; a escolha fica como exceção
+     * da ocorrência, tira o selo "a conferir" e nunca altera o ciclo das demais. Mudar de fatura exige que nenhuma das duas
+     * esteja quitada, como na correção da fatura de uma parcela.
+     */
+    suspend fun planCorrectInvoice(c: CorrectOccurrenceInvoice): Planned {
+        val (loaded, stopped) = loadForCommand(c.recurrenceId, c.expectedRevision)
+        if (loaded == null) return stopped!!
+        val occurrence = loaded.series.occurrence(c.occurrence)
+            ?: return stop("occurrence", ErrorCode.UnknownReference, "Ocorrência não encontrada.")
+        if (loaded.row.kind != RecurrenceKind.Expense.name || loaded.row.form != RecurrenceForm.Card.name) {
+            return stop("occurrence", ErrorCode.NotAllowed, "Só a ocorrência de uma despesa no cartão tem fatura.")
+        }
+        val cycleOfSpace = cycle(sessions.current().spaceId)
+        val view = place(loaded, c.occurrence, cycleOfSpace)!!
+        val estimate = view.estimatedInvoice!!
+        val current = view.budgetMonth
+        if (kotlin.math.abs(java.time.temporal.ChronoUnit.MONTHS.between(estimate, c.invoice)) > 1) {
+            return stop("invoice", ErrorCode.OutOfRange, "A fatura pode ficar no máximo um mês da estimada (${estimate.label()}).")
+        }
+        if (loaded.series.overrides[c.occurrence]?.invoice == c.invoice) {
+            return stop("invoice", ErrorCode.NotAllowed, "Esta fatura já está confirmada para a ocorrência.")
+        }
+        if (c.invoice != current) {
+            val errors = buildList {
+                setOf(current, c.invoice).filter { dao.isInvoicePaid(it.toString()) }
+                    .forEach { add(FieldError("invoice", ErrorCode.NotAllowed, "A fatura de ${it.label()} já foi quitada.")) }
+            }
+            if (errors.isNotEmpty()) return stop(errors)
+        }
+        val series = loaded.series.withInvoice(c.occurrence, c.invoice)
+        return Planned.Go(months = setOf(current, c.invoice, estimate)) {
+            saveSeries(loaded.row.id, series)
+            val next = loaded.row.copy(revision = loaded.row.revision + 1)
+            dao.upsertRecurrence(next)
+            listOf(EntityChange(EntityType.Recurrence, next.id, null, next.revision))
+        }
+    }
+
     suspend fun planPay(session: Session, c: PayOccurrence): Planned {
         val (loaded, stopped) = loadForCommand(c.recurrenceId, c.expectedRevision)
         if (loaded == null) return stopped!!
@@ -227,7 +272,9 @@ internal class RecurrencePlanner(
         val form = RecurrenceForm.valueOf(loaded.row.form)
         val settledDate = settled?.let { LocalDate.ofEpochDay(it.epochDay) }
         val onCard = kind == RecurrenceKind.Expense && form == RecurrenceForm.Card
-        val assignment = if (onCard) cycle.assign(occurrence.date) else null
+        val estimate = if (onCard) cycle.assign(occurrence.date) else null
+        // A fatura que a pessoa escolheu (ADR 0049) vale sobre o ciclo e tira o selo "a conferir".
+        val chosen = loaded.series.overrides[number]?.invoice?.takeIf { onCard }
         return OccurrenceView(
             recurrenceId = loaded.row.id,
             number = number,
@@ -240,9 +287,16 @@ internal class RecurrencePlanner(
             accountId = settled?.accountId ?: occurrence.template.accountId,
             settledDate = settledDate,
             settledAmount = settled?.let { Money(it.cents) },
-            budgetMonth = assignment?.dueMonth ?: YearMonth.from(settledDate ?: occurrence.date),
+            budgetMonth = chosen ?: estimate?.dueMonth ?: YearMonth.from(settledDate ?: occurrence.date),
             paid = settled != null,
-            assignment = assignment?.let { if (it.toConfirm) AssignmentState.ToConfirm else AssignmentState.Estimated },
+            assignment = estimate?.let {
+                when {
+                    chosen != null -> AssignmentState.Confirmed
+                    it.toConfirm -> AssignmentState.ToConfirm
+                    else -> AssignmentState.Estimated
+                }
+            },
+            estimatedInvoice = estimate?.dueMonth,
         )
     }
 
@@ -252,7 +306,8 @@ internal class RecurrencePlanner(
             val loaded = loadSeries(row)
             // O mês de uma ocorrência pode diferir do mês da data prevista (pagamento antecipado ou
             // atrasado, fatura seguinte): olha os meses vizinhos e os pagamentos registrados.
-            val candidates = listOf(month.minusMonths(1), month, month.plusMonths(1))
+            // A fatura escolhida pode ficar um mês além da estimada: olha mais um mês para trás.
+            val candidates = listOf(month.minusMonths(3), month.minusMonths(2), month.minusMonths(1), month, month.plusMonths(1))
                 .mapNotNull { loaded.series.recurrence.numberIn(it) }.toSet() +
                 loaded.settlements.filterValues { YearMonth.from(LocalDate.ofEpochDay(it.epochDay)) == month }.keys
             candidates.mapNotNull { place(loaded, it, spaceCycle) }.filter { it.budgetMonth == month }

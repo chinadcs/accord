@@ -1,5 +1,6 @@
 package app.accord.persistence
 
+import app.accord.core.space.CorrectOccurrenceInvoice
 import androidx.room.immediateTransaction
 import androidx.room.useWriterConnection
 import app.accord.core.BudgetClock
@@ -279,6 +280,7 @@ class RoomFinanceSpace private constructor(
         is EditRecurrence -> recurrencePlanner.planEdit(command)
         is DeleteRecurrence -> recurrencePlanner.planDelete(command)
         is PayOccurrence -> recurrencePlanner.planPay(session, command)
+        is CorrectOccurrenceInvoice -> recurrencePlanner.planCorrectInvoice(command)
         is RegisterRefund -> refundPlanner.planRegister(session, origin, command)
         is ConfirmRefund -> refundPlanner.planConfirm(command)
         is RequestInstallmentCancellation -> cancellationPlanner.planRequest(command)

@@ -1,6 +1,7 @@
 package app.accord.core
 
 import java.time.LocalDate
+import java.time.YearMonth
 
 enum class RecurrenceScope { OnlyThis, ThisAndNext }
 
@@ -52,9 +53,16 @@ data class RecurrenceFields(
             (accountId != null && edit.accountId != null)
 }
 
-/** Exceção de uma única ocorrência: excluída ou com campos próprios. */
-data class OccurrenceOverride(val deleted: Boolean = false, val fields: RecurrenceFields = RecurrenceFields()) {
-    val isEmpty get() = !deleted && fields.isEmpty
+/**
+ * Exceção de uma única ocorrência: excluída, com campos próprios ou com a fatura do cartão escolhida pela pessoa
+ * ([invoice], mês de vencimento; ADR 0049). A fatura não é um campo de série: nunca se estende às próximas.
+ */
+data class OccurrenceOverride(
+    val deleted: Boolean = false,
+    val fields: RecurrenceFields = RecurrenceFields(),
+    val invoice: YearMonth? = null,
+) {
+    val isEmpty get() = !deleted && fields.isEmpty && invoice == null
 }
 
 data class Occurrence(val number: Int, val date: LocalDate, val template: Template)
@@ -152,6 +160,13 @@ class RecurrenceSeries private constructor(
                 )
             }
         }
+    }
+
+    /** Fixa a fatura de uma só ocorrência; nada mais na série muda. */
+    fun withInvoice(number: Int, invoice: YearMonth): RecurrenceSeries {
+        require(number >= 1) { "Número da ocorrência começa em 1" }
+        val current = overrides[number] ?: OccurrenceOverride()
+        return copy(overrides = overrides + (number to current.copy(invoice = invoice)))
     }
 
     fun delete(

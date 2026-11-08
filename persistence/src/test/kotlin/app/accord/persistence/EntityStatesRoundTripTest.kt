@@ -8,11 +8,13 @@ import app.accord.core.RecurrenceScope
 import app.accord.core.TotalChange
 import app.accord.core.space.AddAccount
 import app.accord.core.space.AmountMeaning
+import app.accord.core.space.AssignmentState
 import app.accord.core.space.BankRef
 import app.accord.core.space.CategoryLimitEdit
 import app.accord.core.space.Classification
 import app.accord.core.space.CommitmentKind
 import app.accord.core.space.CorrectEntry
+import app.accord.core.space.CorrectOccurrenceInvoice
 import app.accord.core.space.CreateCategory
 import app.accord.core.space.CreateIncomeCategory
 import app.accord.core.space.IconRef
@@ -139,6 +141,15 @@ class EntityStatesRoundTripTest : SpaceTestBase() {
             ),
         ).applied()
         assertTrue(pet.isNotBlank())
+        // ADR 0049: ocorrência no cartão na janela do fechamento, com a fatura escolhida (mês seguinte ao estimado).
+        val streaming = h.space.execute(
+            h.env(),
+            CreateRecurrence(
+                kind = RecurrenceKind.Expense, description = "Streaming", categoryId = seed("assinaturas"), amount = brl(40),
+                form = RecurrenceForm.Card, frequency = Frequency.Monthly, firstDate = d(2026, 10, 8),
+            ),
+        ).applied().changes.single().id
+        h.space.execute(h.env(), CorrectOccurrenceInvoice(streaming, 1, YearMonth.of(2026, 12))).applied()
     }
 
     @Test
@@ -157,6 +168,9 @@ class EntityStatesRoundTripTest : SpaceTestBase() {
             same(a.space.commitments(month, CommitmentKind.All).value(), b.space.commitments(month, CommitmentKind.All).value(), "compromissos de $month")
             same(a.space.invoice(month).value(), b.space.invoice(month).value(), "fatura de $month")
         }
+        val streamingOnB = b.space.occurrences(YearMonth.of(2026, 12)).value().single { it.description == "Streaming" && it.number == 1 }
+        assertEquals(AssignmentState.Confirmed, streamingOnB.assignment, "a fatura escolhida chega ao outro aparelho")
+        assertEquals(YearMonth.of(2026, 12), streamingOnB.budgetMonth)
         same(a.space.categories().value(), b.space.categories().value())
         same(a.space.incomeCategories().value(), b.space.incomeCategories().value())
         same(a.space.iconAssociations().value(), b.space.iconAssociations().value())

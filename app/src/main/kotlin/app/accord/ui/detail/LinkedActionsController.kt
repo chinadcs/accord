@@ -88,6 +88,7 @@ class LinkedActionsController(
             is LinkedAction.Settle -> if (action.receiving) R.string.feedback_received else R.string.feedback_paid
             is LinkedAction.NewRefund -> R.string.feedback_refund_registered
             is LinkedAction.ConfirmRefundOf -> R.string.feedback_refund_confirmed
+            is LinkedAction.OccurrenceInvoice -> R.string.feedback_occurrence_invoice
             is LinkedAction.Cancellation -> if (action.nonCharge) R.string.feedback_non_charge else R.string.feedback_cancel_requested
         }
         provider.feedback.post(FeedbackEvent(message, undoOperationId = operationId.takeIf { undoable }))

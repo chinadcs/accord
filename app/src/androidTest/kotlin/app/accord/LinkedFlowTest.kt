@@ -17,6 +17,10 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.accord.core.Money
+import app.accord.core.space.RecurrenceKind
+import app.accord.core.space.RecurrenceForm
+import app.accord.core.space.CreateRecurrence
+import app.accord.core.Frequency
 import app.accord.core.space.AddAccount
 import app.accord.core.space.AmountMeaning
 import app.accord.core.space.BankRef
@@ -32,6 +36,7 @@ import app.accord.core.space.RegisterDirectPayment
 import app.accord.core.space.SetMyDefaultAccount
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -180,5 +185,39 @@ class LinkedFlowTest {
         dialogButton("Confirmar")
         waitForText("Cancelamento solicitado.")
         waitForText("Confirmar que não foram cobradas")
+    }
+    @Test
+    fun conferirAFaturaDeUmaOcorrenciaNoCartaoTiraOAConferirEViraCorrigir() {
+        val gym = "Academia $tag"
+        runBlocking {
+            val space = ApplicationProvider.getApplicationContext<AccordApplication>().container.space()
+            // Véspera do fechamento (dia 7, fechamento 8): cai na janela e a fatura nasce "a conferir".
+            val result = space.execute(
+                Envelope(CommandId("l-rec-$tag")),
+                CreateRecurrence(
+                    kind = RecurrenceKind.Expense, description = gym,
+                    categoryId = DeterministicIds.seedCategory(AppContainer.DEV_SPACE_ID, "saude"), amount = Money(9_900),
+                    form = RecurrenceForm.Card, frequency = Frequency.Monthly, firstDate = YearMonth.now().atDay(7),
+                ),
+            )
+            assertTrue(result is CommandResult.Applied)
+        }
+        // Não usa openDetail: com mais uma linha, o Mercado sai da tela e a lista só mostra as de data mais recente.
+        compose.onNodeWithText("Lançamentos").performClick()
+        compose.onNodeWithText("Buscar descrição ou estabelecimento").performTextInput(tag)
+        waitForText(gym)
+        waitForText("A conferir") // a linha da lista mostra o selo antes da conferência
+        tap(gym)
+        waitForText("Detalhe do lançamento")
+        tap("Conferir fatura")
+        waitForText("Em qual fatura ela entra?")
+        // sem opção pré-selecionada: confirmar sem escolher mostra o erro e mantém o diálogo
+        dialogButton("Confirmar")
+        waitForText("Escolha a fatura.")
+        compose.onAllNodes(hasText("(estimada pelo fechamento)", substring = true)).onLast().performSemanticsAction(SemanticsActions.OnClick)
+        dialogButton("Confirmar")
+        waitForText("Fatura da ocorrência atualizada.")
+        waitForText("Corrigir fatura")
+        waitGone("Conferir fatura")
     }
 }

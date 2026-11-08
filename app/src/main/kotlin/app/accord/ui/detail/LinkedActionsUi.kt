@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import app.accord.R
+import app.accord.core.label
 import app.accord.core.space.RefundStatus
 import app.accord.ui.fullLabel
 import app.accord.ui.register.DatePickerSheet
@@ -60,6 +61,7 @@ private fun actionLabel(action: LinkedAction): String = when (action) {
     is LinkedAction.Settle -> stringResource(if (action.receiving) R.string.linked_receive else R.string.linked_pay)
     is LinkedAction.NewRefund -> stringResource(R.string.linked_refund)
     is LinkedAction.ConfirmRefundOf -> stringResource(R.string.linked_refund_confirm, action.refund.amount.format())
+    is LinkedAction.OccurrenceInvoice -> stringResource(if (action.confirmed) R.string.linked_invoice_correct else R.string.linked_invoice_confirm)
     is LinkedAction.Cancellation -> stringResource(if (action.nonCharge) R.string.linked_non_charge else R.string.linked_cancel_request)
 }
 
@@ -68,6 +70,7 @@ private fun actionTitle(action: LinkedAction): String = when (action) {
     is LinkedAction.Settle -> stringResource(if (action.receiving) R.string.linked_receive_title else R.string.linked_pay_title)
     is LinkedAction.NewRefund -> stringResource(R.string.linked_refund_title)
     is LinkedAction.ConfirmRefundOf -> stringResource(R.string.linked_refund_confirm_title)
+    is LinkedAction.OccurrenceInvoice -> stringResource(R.string.linked_invoice_title)
     is LinkedAction.Cancellation -> stringResource(if (action.nonCharge) R.string.linked_non_charge_title else R.string.linked_cancel_title)
 }
 
@@ -80,6 +83,7 @@ private fun errorText(error: LinkedError?): String? = when (error) {
     LinkedError.MustBePositive -> stringResource(R.string.error_must_be_positive)
     LinkedError.StatusRequired -> stringResource(R.string.error_refund_status)
     LinkedError.NothingSelected -> stringResource(R.string.error_installments_pick)
+    LinkedError.InvoiceRequired -> stringResource(R.string.error_invoice_pick)
 }
 
 /** Formulário curto da ação vinculada; a recusa da fachada aparece dentro dele, sem fechar nem apagar o que foi digitado. */
@@ -140,6 +144,23 @@ fun LinkedActionDialog(
                             error = errorText(state.errors[LinkedField.Amount]),
                         ) { v -> onChange { it.copy(amountText = v) } }
                         DateField(R.string.linked_date_refund, form, bring) { pickingDate = true }
+                    }
+                    is LinkedAction.OccurrenceInvoice -> {
+                        Text(stringResource(R.string.linked_invoice_pick), style = MaterialTheme.typography.titleMedium)
+                        action.options.forEach { month ->
+                            val label = when (month) {
+                                action.estimated -> stringResource(R.string.linked_invoice_option_estimated, month.label())
+                                else -> month.label()
+                            }
+                            ChoiceRow(label, form.invoice == month) { onChange { it.copy(invoice = month) } }
+                        }
+                        errorText(state.errors[LinkedField.Invoice])?.let {
+                            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                        }
+                        Text(
+                            stringResource(R.string.linked_invoice_note), style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
                     }
                     is LinkedAction.Cancellation -> {
                         Text(stringResource(R.string.linked_cancel_pick), style = MaterialTheme.typography.titleMedium)

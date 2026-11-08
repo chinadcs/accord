@@ -9,6 +9,9 @@ import app.accord.core.space.AssignmentState
 import app.accord.core.space.BankRef
 import app.accord.core.space.CommandResult
 import app.accord.core.space.CreateRecurrence
+import app.accord.core.space.RegisterInvoiceTotal
+import app.accord.core.space.PayInvoice
+import app.accord.core.space.CorrectOccurrenceInvoice
 import app.accord.core.space.Decision
 import app.accord.core.space.DeleteRecurrence
 import app.accord.core.space.EditRecurrence
@@ -273,6 +276,120 @@ class RecurrenceTest : SpaceTestBase() {
         val h = open()
         h.create(gym(first = d(2026, 10, 8), form = RecurrenceForm.Card))
         assertEquals(1, h.space.budget(ym(2026, 11)).value().invoiceLinksToConfirm)
+    }
+
+    // ---- fatura da ocorrência no cartão (ADR 0049) ----
+
+    private val nov = ym(2026, 11)
+    private val dec = ym(2026, 12)
+
+    private suspend fun Handle.cardOccurrence(id: String, number: Int, month: YearMonth) =
+        space.occurrences(month).value().single { it.recurrenceId == id && it.number == number }
+
+    @Test
+    fun `confirmar a fatura estimada tira o a conferir só desta ocorrência`() = runBlocking<Unit> {
+        val h = open()
+        val id = h.create(gym(first = d(2026, 10, 8), form = RecurrenceForm.Card))
+        assertEquals(1, h.space.budget(nov).value().invoiceLinksToConfirm)
+
+        h.space.execute(h.env(), CorrectOccurrenceInvoice(id, 1, nov)).applied()
+
+        val first = h.cardOccurrence(id, 1, nov)
+        assertEquals(AssignmentState.Confirmed, first.assignment)
+        assertEquals(nov, first.estimatedInvoice)
+        assertEquals(0, h.space.budget(nov).value().invoiceLinksToConfirm)
+        assertEquals(brl(100), h.space.budget(nov).value().committed)
+        // a ocorrência seguinte (8/11) também cai na janela e continua a conferir: a escolha não se estende
+        assertEquals(AssignmentState.ToConfirm, h.cardOccurrence(id, 2, dec).assignment)
+    }
+
+    @Test
+    fun `corrigir a fatura muda o mês do orçamento e da fatura só desta ocorrência`() = runBlocking<Unit> {
+        val h = open()
+        val id = h.create(gym(first = d(2026, 10, 8), form = RecurrenceForm.Card))
+
+        h.space.execute(h.env(), CorrectOccurrenceInvoice(id, 1, dec)).applied()
+
+        val moved = h.cardOccurrence(id, 1, dec)
+        assertEquals(dec, moved.budgetMonth)
+        assertEquals(nov, moved.estimatedInvoice, "a estimada do ciclo continua visível")
+        assertEquals(Money.ZERO, h.space.budget(nov).value().committed)
+        assertEquals(brl(200), h.space.budget(dec).value().committed, "a ocorrência movida e a 2ª, que segue o ciclo")
+        assertEquals(brl(200), h.space.invoice(dec).value().purchases)
+        assertEquals(Money.ZERO, h.space.invoice(nov).value().purchases)
+    }
+
+    @Test
+    fun `a fatura escolhida fica a no máximo um mês da estimada`() = runBlocking<Unit> {
+        val h = open()
+        val id = h.create(gym(first = d(2026, 10, 8), form = RecurrenceForm.Card))
+        val far = h.space.execute(h.env(), CorrectOccurrenceInvoice(id, 1, ym(2027, 1)))
+        assertEquals(ErrorCode.OutOfRange, assertIs<CommandResult.Rejected>(far).errors.single().code)
+        h.space.execute(h.env(), CorrectOccurrenceInvoice(id, 1, ym(2026, 10))).applied()
+    }
+
+    @Test
+    fun `confirmar duas vezes a mesma fatura é recusado e não cria operação`() = runBlocking<Unit> {
+        val h = open()
+        val id = h.create(gym(first = d(2026, 10, 8), form = RecurrenceForm.Card))
+        h.space.execute(h.env(), CorrectOccurrenceInvoice(id, 1, nov)).applied()
+        val before = h.space.operations().value().size
+        val again = h.space.execute(h.env(), CorrectOccurrenceInvoice(id, 1, nov))
+        assertEquals(ErrorCode.NotAllowed, assertIs<CommandResult.Rejected>(again).errors.single().code)
+        assertEquals(before, h.space.operations().value().size)
+    }
+
+    @Test
+    fun `mudar de fatura exige as duas em aberto, mas confirmar a quitada continua permitido`() = runBlocking<Unit> {
+        val h = open()
+        h.withDefaultAccount()
+        val id = h.create(gym(first = d(2026, 10, 8), form = RecurrenceForm.Card))
+        h.space.execute(h.env(), RegisterInvoiceTotal(nov, brl(100))).applied()
+        h.space.execute(h.env(), PayInvoice(nov, brl(100), d(2026, 11, 15))).applied()
+
+        val moved = h.space.execute(h.env(), CorrectOccurrenceInvoice(id, 1, dec))
+        assertTrue(assertIs<CommandResult.Rejected>(moved).errors.single().message.contains("quitada"))
+        assertEquals(nov, h.cardOccurrence(id, 1, nov).budgetMonth, "nada mudou")
+
+        h.space.execute(h.env(), CorrectOccurrenceInvoice(id, 1, nov)).applied()
+        assertEquals(AssignmentState.Confirmed, h.cardOccurrence(id, 1, nov).assignment)
+    }
+
+    @Test
+    fun `só ocorrência de despesa no cartão tem fatura`() = runBlocking<Unit> {
+        val h = open()
+        val offCard = h.create(gym(first = d(2026, 10, 8)))
+        val r = h.space.execute(h.env(), CorrectOccurrenceInvoice(offCard, 1, nov))
+        assertEquals(ErrorCode.NotAllowed, assertIs<CommandResult.Rejected>(r).errors.single().code)
+        val missing = h.space.execute(h.env(), CorrectOccurrenceInvoice("nao-existe", 1, nov))
+        assertEquals(ErrorCode.UnknownReference, assertIs<CommandResult.Rejected>(missing).errors.single().code)
+        val onCard = h.create(gym(first = d(2026, 10, 8), form = RecurrenceForm.Card))
+        val noOccurrence = h.space.execute(h.env(), CorrectOccurrenceInvoice(onCard, 0, nov))
+        assertEquals(ErrorCode.UnknownReference, assertIs<CommandResult.Rejected>(noOccurrence).errors.single().code)
+    }
+
+    @Test
+    fun `versão antiga é recusada`() = runBlocking<Unit> {
+        val h = open()
+        val id = h.create(gym(first = d(2026, 10, 8), form = RecurrenceForm.Card))
+        val revision = h.space.recurrence(id).value()!!.revision
+        h.space.execute(h.env(), CorrectOccurrenceInvoice(id, 1, nov, expectedRevision = revision)).applied()
+        val stale = h.space.execute(h.env(), CorrectOccurrenceInvoice(id, 1, dec, expectedRevision = revision))
+        assertIs<CommandResult.StaleVersion>(stale)
+    }
+
+    @Test
+    fun `editar a série daqui em diante preserva a fatura escolhida da ocorrência`() = runBlocking<Unit> {
+        val h = open()
+        val id = h.create(gym(first = d(2026, 10, 8), form = RecurrenceForm.Card))
+        h.space.execute(h.env(), CorrectOccurrenceInvoice(id, 1, dec)).applied()
+
+        h.space.execute(h.env(), EditRecurrence(id, 1, RecurrenceScope.ThisAndNext, RecurrenceFields(amount = brl(120)))).applied()
+
+        val first = h.cardOccurrence(id, 1, dec)
+        assertEquals(dec, first.budgetMonth)
+        assertEquals(AssignmentState.Confirmed, first.assignment)
+        assertEquals(brl(120), first.expectedAmount)
     }
 
     // ---- renda recorrente ----

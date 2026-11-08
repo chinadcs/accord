@@ -513,6 +513,18 @@ data class DeleteRecurrence(
 ) : Command
 
 /**
+ * Confere ou corrige a fatura (mês de vencimento) de uma ocorrência de recorrência no cartão. Vale só para esta ocorrência
+ * (ADR 0049): a escolha tira o selo "a conferir", e as demais ocorrências seguem o ciclo. [invoice] fica a no máximo um mês
+ * da fatura estimada; mudar de fatura é recusado se alguma das duas já foi quitada.
+ */
+data class CorrectOccurrenceInvoice(
+    val recurrenceId: String,
+    val occurrence: Int,
+    val invoice: YearMonth,
+    val expectedRevision: Long? = null,
+) : Command
+
+/**
  * Pagamento de uma ocorrência fora do cartão (ou recebimento de renda recorrente): segue a
  * regra do boleto. No cartão, a ocorrência é paga pela quitação da fatura.
  */
@@ -1071,6 +1083,8 @@ data class OccurrenceView(
     val budgetMonth: YearMonth,
     val paid: Boolean,
     val assignment: AssignmentState?,
+    /** Fatura estimada pelo ciclo do cartão; nula fora do cartão. Difere de [budgetMonth] quando a pessoa escolheu outra. */
+    val estimatedInvoice: YearMonth? = null,
 )
 
 /** Fase exibida da fatura; "fechada" quando um total foi registrado (pessoa ou importação). */

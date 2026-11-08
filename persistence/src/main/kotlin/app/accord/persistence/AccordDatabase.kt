@@ -309,6 +309,8 @@ data class RecurrenceOverrideRow(
     val classificationId: String?,
     val amountCents: Long?,
     val accountId: String?,
+    /** Fatura do cartão (mês de vencimento) escolhida para esta ocorrência; nulo segue o ciclo (ADR 0049). */
+    val invoiceMonth: String? = null,
 )
 
 /** Pagamento (ou recebimento) efetivo de uma ocorrência; o previsto continua no modelo da série. */
@@ -754,7 +756,7 @@ interface SpaceDao {
         ImportBatchRow::class, ImportMovementRow::class, ImportDecisionRow::class, ImportPairRow::class,
         AlertEventRow::class, AlertDisplayRow::class, AlertPreferenceRow::class, IconAssociationRow::class, IntentionRow::class,
     ],
-    version = 15,
+    version = 16,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2, spec = Migration1To2::class),
@@ -782,6 +784,8 @@ interface SpaceDao {
         AutoMigration(from = 13, to = 14),
         // S7 / ADR 0048: o compromisso já reconhecido, quando a conversão da intenção diverge entre os aparelhos.
         AutoMigration(from = 14, to = 15),
+        // ADR 0049: fatura escolhida para uma ocorrência de recorrência no cartão (exceção da ocorrência, compartilhada).
+        AutoMigration(from = 15, to = 16),
     ],
 )
 abstract class AccordDatabase : RoomDatabase() {

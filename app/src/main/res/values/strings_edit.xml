@@ -55,6 +55,14 @@
     <string name="feedback_refund_confirmed">Estorno confirmado.</string>
     <string name="feedback_cancel_requested">Cancelamento solicitado.</string>
     <string name="feedback_non_charge">Parcelas retiradas do comprometido.</string>
+    <string name="feedback_occurrence_invoice">Fatura da ocorrência atualizada.</string>
+    <string name="linked_invoice_confirm">Conferir fatura</string>
+    <string name="linked_invoice_correct">Corrigir fatura</string>
+    <string name="linked_invoice_title">Fatura desta ocorrência</string>
+    <string name="linked_invoice_pick">Em qual fatura ela entra?</string>
+    <string name="linked_invoice_option_estimated">%1$s (estimada pelo fechamento)</string>
+    <string name="linked_invoice_note">Vale só para esta ocorrência. As outras seguem o fechamento e o vencimento do cartão. Faturas já quitadas não mudam.</string>
+    <string name="error_invoice_pick">Escolha a fatura.</string>
 
     <string name="linked_actions_title">Ações</string>
     <string name="linked_pay">Registrar pagamento</string>
