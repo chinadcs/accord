@@ -153,6 +153,7 @@ observada em 24/10/2026. Os estados abaixo são de decisão, não de conclusão 
 | [0045](0045-marca-de-encargo-no-movimento-e-cobertura-derivada.md) | Marca de encargo no pagamento direto e cobertura do período derivada dos lotes | proposed |
 | [0046](0046-acao-consultar-no-chat-com-catalogo-fechado.md) | Ação `consultar` no Chat: catálogo fechado, execução só pela fachada e resposta do app | accepted |
 | [0047](0047-associacao-de-icone-de-marca-ao-lancamento.md) | Associação de ícone de marca ao lançamento: catálogo Simple Icons, reconhecimento por regras e agregado sincronizado | accepted |
+| [0048](0048-intencoes-de-compra-conversao-e-simulacao.md) | Intenções de compra, vínculo de conversão único e simulação como consulta pura (S7) | accepted |
 
 Questões ainda sem decisão, como modelo/motor, leitores bancários, acesso local, retenção de
 idempotência e validação financeira no serviço, permanecem nos Beads/specs S2–S4. Suas tarefas
