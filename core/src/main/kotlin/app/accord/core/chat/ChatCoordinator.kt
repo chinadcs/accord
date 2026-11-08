@@ -497,9 +497,6 @@ class ChatCoordinator(
         }
         closeQuestionsOf(message.id, QuestionState.Answered)
         val toClassify = entry.nature == Nature.Expense && entry.categoryId == null
-        store.saveMessage(
-            message.copy(state = if (toClassify) MessageState.ToClassify else MessageState.Applied, draftId = null, categoryHints = message.categoryHints),
-        )
         if (toClassify && store.snapshot().questions.none { it.link == QuestionLink.Entry(entryId) }) {
             val summary = summaryOf(entryId, null)
             store.saveQuestion(
@@ -518,6 +515,10 @@ class ChatCoordinator(
             )
             startCategorySuggestion(message, entryId, context)
         }
+        // Estado terminal somente depois do recibo e da pergunta persistidos.
+        store.saveMessage(
+            message.copy(state = if (toClassify) MessageState.ToClassify else MessageState.Applied, draftId = null, categoryHints = message.categoryHints),
+        )
     }
 
     /** Capture under stateLock, infer outside it, then check again before publishing local hints. */
