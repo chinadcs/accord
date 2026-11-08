@@ -231,7 +231,7 @@ Vocabulário do plano §§3–5 e do índice das telas; não é descrição exau
   o mês do pagamento efetivo, retirando a previsão anterior e preservando as duas datas.
   Cartão usa fatura atribuída; fechamento dia 8 e vencimento dia 15 são configuração inicial,
   sem garantir atribuição do emissor. Atividade P1 usa data original, sem outra despesa.
-  Um cartão é o escopo inicial, sem gestão de múltiplos cartões por suposição.
+  Vários cartões, cada um com fechamento, vencimento e limite próprios, cartão padrão individual e conta vinculada ([ADR 0052](docs/adr/0052-multiplos-cartoes-cartao-padrao-e-conta-vinculada.md), aceito em 08/11/2026; **ainda não implementado**: hoje há um cartão).
 - **Limites:** soma destinada às subcategorias não supera o principal. Sem distribuir difere de
   restante após gastos; subcategoria sem divisão não recebe limite zero presumido. Excesso não
   amplia nem redistribui limites. Cada edição escolhe só o mês ou esse mês e os seguintes,
@@ -304,7 +304,7 @@ não está no repositório. Débito de quitação do extrato vincula à fatura s
 
 Previsões explicam conhecidos e novos variáveis sem projetar novamente parcelas/contas já
 incluídas; dados incompletos reduzem confiança. No máximo um evento de alerta por categoria
-principal por semana, destinado aos dois, respeitando preferências/permissões dos aparelhos.
+principal por semana, destinado a todos os membros do espaço, respeitando preferências/permissões dos aparelhos.
 Janela em America/Sao_Paulo: segunda 00h até segunda seguinte 00h, fim exclusivo. Renovar não
 agenda envio; editar limite/recalcular não renova cota. Notificar offline primeiro foi confirmado;
 coordenação concreta entre aparelhos continua pendente de implementação em S5 (ADR 0020).

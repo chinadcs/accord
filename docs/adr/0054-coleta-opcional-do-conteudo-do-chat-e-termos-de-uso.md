@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 recorded_at: 2026-11-08
-decision_date: null
+decision_date: 2026-11-08
 ---
 
 # ADR 0054 — Coleta opcional do conteúdo do Chat e Termos de uso
@@ -14,7 +14,7 @@ e o [ADR 0050](0050-voto-de-joinha-no-recibo-do-chat.md) (proposto) evita guarda
 decidiu coletar o conteúdo do Chat, com consentimento, para melhorar a precisão do interpretador, e
 exigir Termos de uso.
 
-## Decisão (proposta)
+## Decisão
 
 - **Dois aceites**: Termos (obrigatório) e coleta do conteúdo do Chat (opcional, desmarcada, revogável
   em Mais > Privacidade). Usuários existentes veem tela bloqueante de aceite versionado.
@@ -39,4 +39,4 @@ plano Free do Supabase: volume de texto e tabela, a acompanhar.
 ## Fontes e evidências
 
 - [Plano](../plano-melhorias-2026-11.md), etapa 3; Beads `accord-g5r8`, `accord-4yfy`.
-- Decisão do usuário em 08/11/2026; **aceite pendente**. Nada implementado.
+- Decisão do usuário em 08/11/2026; aceito em 08/11/2026 ("Aceito todos os ADRs"). Nada implementado.

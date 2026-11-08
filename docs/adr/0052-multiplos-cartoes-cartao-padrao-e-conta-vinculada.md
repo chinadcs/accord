@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 recorded_at: 2026-11-08
-decision_date: null
+decision_date: 2026-11-08
 ---
 
 # ADR 0052 — Múltiplos cartões, cartão padrão e conta vinculada
@@ -14,7 +14,7 @@ com fechamento, vencimento e limite próprios, e conta criada junto com o cartã
 continuar válidos: um único cartão, faturas, parcelas e a escolha de fatura do
 [ADR 0049](0049-fatura-escolhida-por-ocorrencia-recorrente-no-cartao.md).
 
-## Decisão (proposta)
+## Decisão
 
 - Compra, parcela, fatura, pagamento de fatura e escolha do ADR 0049 ganham `cardId`. O cartão atual mantém
   o seu id; os novos têm id aleatório. Backfill do cartão atual sem duplicar faturas. O id da fatura de
@@ -30,7 +30,7 @@ continuar válidos: um único cartão, faturas, parcelas e a escolha de fatura d
 
 ## Consequências
 
-Revisa o AGENTS.md ("Um cartão é o escopo inicial") e o ARCHITECTURE.md quando aceito. Toca Chat
+Revisa o AGENTS.md ("Um cartão é o escopo inicial") e o ARCHITECTURE.md, já atualizados. Toca Chat
 (`RefuseReason.NoCard`, `EntryCompleter`), importação (`ImportEvaluator`), quitação (`InvoicePlanner`) e
 telas de cartão e fatura. Risco principal: dados antigos sem `cardId`; o teste de migração e de ida e volta
 do estado precisa cobrir. Verificar se o protocolo recusa versão antiga de cliente. Fecha o `accord-qxc`.
@@ -38,4 +38,4 @@ do estado precisa cobrir. Verificar se o protocolo recusa versão antiga de clie
 ## Fontes e evidências
 
 - [Plano](../plano-melhorias-2026-11.md), etapa 5; Beads `accord-k9zy` (depende de `accord-ihok`).
-- Decisão do usuário em 08/11/2026; **aceite pendente**. Nada implementado.
+- Decisão do usuário em 08/11/2026; aceito em 08/11/2026 ("Aceito todos os ADRs"). Nada implementado.

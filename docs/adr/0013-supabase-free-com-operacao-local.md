@@ -20,6 +20,8 @@ no aparelho. Falha, pausa ou limite do serviço preservam dados locais e operaç
 Se exigir pagamento, rever com o usuário, sem cobrança automática. Não usar o serviço para Chat
 ou arquivos bancários completos.
 
+> **Revisão (08/11/2026):** ponto "não usar o serviço para Chat" revisado pelo [ADR 0054](0054-coleta-opcional-do-conteudo-do-chat-e-termos-de-uso.md); arquivos bancários seguem fora. Este registro continua como histórico.
+
 ## Consequências
 
 Gratuidade permanente não é garantida. Condições comerciais precisam ser consultadas quando

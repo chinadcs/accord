@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 recorded_at: 2026-11-08
-decision_date: null
+decision_date: 2026-11-08
 ---
 
 # ADR 0053 — Espaço de até quatro pessoas e código de convite multiuso
@@ -13,7 +13,7 @@ O [ADR 0014](0014-espaco-igualitario-e-convite.md) limita o espaço a duas pesso
 quem entra por convite. O restante do ADR 0014 continua: contas individuais, poderes iguais, sem gastos
 privados, validação no serviço/banco.
 
-## Decisão (proposta)
+## Decisão
 
 - Até **4 pessoas**, direitos iguais.
 - **Um código ativo por vez**, de 8 caracteres, multiuso: serve até o espaço lotar, validade de 3 dias,
@@ -38,4 +38,4 @@ resolve fora do app. Os testes pgTAP de permissões e de convite mudam.
 ## Fontes e evidências
 
 - [Plano](../plano-melhorias-2026-11.md), etapa 2; Beads `accord-0vdp`, `accord-algp`.
-- Decisão do usuário em 08/11/2026; **aceite pendente**. Nada implementado nem aplicado no Supabase.
+- Decisão do usuário em 08/11/2026; aceito em 08/11/2026 ("Aceito todos os ADRs"). Nada implementado.

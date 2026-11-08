@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: superseded
 recorded_at: 2026-11-08
 decision_date: null
 ---
@@ -25,6 +25,8 @@ do histórico não os leva. Sinais de editar/desfazer/corrigir não são gravado
 recibos na leitura, para não contar o mesmo recibo duas vezes.
 
 Aceite pende do usuário (nova tabela local e retenção própria).
+
+> **Substituído (08/11/2026)** pelo [ADR 0054](0054-coleta-opcional-do-conteudo-do-chat-e-termos-de-uso.md), que aceita coletar o conteúdo do Chat com consentimento. O joinha continua, mas o voto passa a ser parte da coleta (com texto) e a retenção é de 12 meses. O que já foi implementado continua como está até a etapa 3.
 
 ## Consequências
 

@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 recorded_at: 2026-11-08
-decision_date: null
+decision_date: 2026-11-08
 ---
 
 # ADR 0051 — Saldo derivado por conta, Carteira, transferência e ajuste
@@ -14,7 +14,7 @@ saldo. Renda prevista não é saldo confirmado e as projeções são derivadas
 ([ADR 0025](0025-projecoes-financeiras-derivadas.md)); o saldo não pode virar um número digitado que
 diverge dos lançamentos.
 
-## Decisão (proposta)
+## Decisão
 
 - **Saldo derivado**, nunca gravado: cada conta guarda só **saldo inicial** e **data de corte**. Saldo =
   inicial + rendas recebidas − despesas pagas fora do cartão − quitações de fatura, contando só o que tem data
@@ -30,14 +30,13 @@ diverge dos lançamentos.
 
 ## Consequências
 
-Substitui o ADR 0029 no ponto "dinheiro sem conta" e a spec 28 §7 (contas sem saldo); ambos seguem
-valendo até o aceite. O saldo depende de a data efetiva estar correta (renda recebida, boleto pago); dado
+Substitui o ADR 0029 no ponto "dinheiro sem conta" e a spec 28 §7 (contas sem saldo). O saldo depende de a data efetiva estar correta (renda recebida, boleto pago); dado
 sem conta não entra em nenhum saldo. Estado novo entra como campo no JSON opaco das entidades
 (`EntityStates`), sem mudança de esquema no Supabase. Custo: recomputar saldo por conta na leitura.
 
 ## Fontes e evidências
 
 - [Plano das onze melhorias](../plano-melhorias-2026-11.md), etapa 4; Beads `accord-ihok`.
-- Decisão do usuário em conversa em 08/11/2026; **aceite do ADR pendente**. Nada implementado.
+- Decisão do usuário em conversa em 08/11/2026; Aceito pelo usuário em 08/11/2026 ("Aceito todos os ADRs").
 - Relacionados: [0025](0025-projecoes-financeiras-derivadas.md), [0026](0026-configuracao-inicial-e-conta-unica.md),
   [0029](0029-troca-de-forma-de-pagamento-como-comando.md).

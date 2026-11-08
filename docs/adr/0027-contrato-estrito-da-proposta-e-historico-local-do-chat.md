@@ -38,6 +38,8 @@ Proposta de implementação, com as regras de produto já confirmadas em 23–24
 - **Transferência entre aparelhos**: arquivo JSON legível com dono (conta|espaço), sem senha e sem criptografia
   no P0, que só entra no mesmo dono e não duplica por ID.
 
+> **Revisão (08/11/2026):** o ponto "histórico só no aparelho" foi revisado pelo [ADR 0054](0054-coleta-opcional-do-conteudo-do-chat-e-termos-de-uso.md); o contrato estrito da proposta segue valendo. Este registro continua como histórico.
+
 ## Consequências
 
 O contrato é testável com interpretador fake e uma bateria fictícia versionada que depois mede o modelo real

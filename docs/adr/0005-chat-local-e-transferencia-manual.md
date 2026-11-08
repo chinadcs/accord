@@ -19,6 +19,8 @@ tem prazo automático; limpar histórico não altera lançamentos e sair não o 
 exportar/importar por arquivo escolhido no seletor do sistema, sem serviço e, no P0, sem senha,
 avisando que quem acessar o arquivo pode ler as conversas. Importar histórico não altera finanças.
 
+> **Revisão (08/11/2026):** ponto "Chat sem sair do aparelho" revisado pelo [ADR 0054](0054-coleta-opcional-do-conteudo-do-chat-e-termos-de-uso.md) (coleta opcional, com consentimento). Este registro continua como histórico.
+
 ## Consequências
 
 Outra pessoa continua vendo os dados financeiros compartilhados, não a conversa de origem.

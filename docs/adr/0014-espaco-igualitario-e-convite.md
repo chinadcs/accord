@@ -18,6 +18,8 @@ mesmos poderes sobre dados e configurações, sem gastos privados ou cotas indiv
 entra por código de 8 caracteres alfanuméricos maiúsculos, uso único e validade de 3 dias,
 validado e consumido no serviço/banco. Conhecer um ID não concede autorização.
 
+> **Revisão (08/11/2026):** o limite de duas pessoas e o código de uso único foram substituídos pelo [ADR 0053](0053-espaco-de-ate-quatro-pessoas-e-codigo-multiuso.md) (até 4, código multiuso). O restante segue valendo. Este registro continua como histórico.
+
 ## Consequências
 
 É necessário verificar associação em leituras/escritas e impedir consumo concorrente indevido.

@@ -155,12 +155,12 @@ observada em 24/10/2026. Os estados abaixo são de decisão, não de conclusão 
 | [0047](0047-associacao-de-icone-de-marca-ao-lancamento.md) | Associação de ícone de marca ao lançamento: catálogo Simple Icons, reconhecimento por regras e agregado sincronizado | accepted |
 | [0048](0048-intencoes-de-compra-conversao-e-simulacao.md) | Intenções de compra, vínculo de conversão único e simulação como consulta pura (S7) | accepted |
 | [0049](0049-fatura-escolhida-por-ocorrencia-recorrente-no-cartao.md) | Fatura escolhida para uma ocorrência de recorrência no cartão | accepted |
-| [0050](0050-voto-de-joinha-no-recibo-do-chat.md) | Voto de joinha no recibo do Chat: tabela local, sem texto, retenção de 30 dias | proposed |
-| [0051](0051-saldo-derivado-por-conta-carteira-transferencia-e-ajuste.md) | Saldo derivado por conta, Carteira, transferência e ajuste | proposed |
-| [0052](0052-multiplos-cartoes-cartao-padrao-e-conta-vinculada.md) | Múltiplos cartões, cartão padrão e conta vinculada | proposed |
-| [0053](0053-espaco-de-ate-quatro-pessoas-e-codigo-multiuso.md) | Espaço de até quatro pessoas e código de convite multiuso | proposed |
-| [0054](0054-coleta-opcional-do-conteudo-do-chat-e-termos-de-uso.md) | Coleta opcional do conteúdo do Chat e Termos de uso | proposed |
-| [0055](0055-biblioteca-de-graficos-charty.md) | Biblioteca de gráficos: Charty | proposed |
+| [0050](0050-voto-de-joinha-no-recibo-do-chat.md) | Voto de joinha no recibo do Chat: tabela local, sem texto, retenção de 30 dias | superseded ([0054](0054-coleta-opcional-do-conteudo-do-chat-e-termos-de-uso.md)) |
+| [0051](0051-saldo-derivado-por-conta-carteira-transferencia-e-ajuste.md) | Saldo derivado por conta, Carteira, transferência e ajuste | accepted |
+| [0052](0052-multiplos-cartoes-cartao-padrao-e-conta-vinculada.md) | Múltiplos cartões, cartão padrão e conta vinculada | accepted |
+| [0053](0053-espaco-de-ate-quatro-pessoas-e-codigo-multiuso.md) | Espaço de até quatro pessoas e código de convite multiuso | accepted |
+| [0054](0054-coleta-opcional-do-conteudo-do-chat-e-termos-de-uso.md) | Coleta opcional do conteúdo do Chat e Termos de uso | accepted |
+| [0055](0055-biblioteca-de-graficos-charty.md) | Biblioteca de gráficos: Charty | accepted |
 
 Questões ainda sem decisão, como modelo/motor, leitores bancários, acesso local, retenção de
 idempotência e validação financeira no serviço, permanecem nos Beads/specs S2–S4. Suas tarefas

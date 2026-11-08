@@ -25,6 +25,8 @@ a nova identidade na troca de cartão à vista para Pix; o aceite está registra
   exigiria mexer em toda a resolução por ID e foi evitado. Para a pessoa continua sendo um único lançamento.
 - Parcelada, importada e outras origens não mudam por aqui; o Chat abre a tela 09 ou orienta excluir e registrar.
 
+> **Revisão (08/11/2026):** a regra "dinheiro não tem conta" foi substituída pelo [ADR 0051](0051-saldo-derivado-por-conta-carteira-transferencia-e-ajuste.md) (conta Carteira). Este registro continua como histórico.
+
 ## Consequências
 
 O recibo do Chat segue a nova identidade e o recibo anterior fica "alterado depois". Desfazer reativa a compra e
