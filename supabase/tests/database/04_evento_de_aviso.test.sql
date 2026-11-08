@@ -48,7 +48,7 @@ select is((select v -> 'results' -> 0 -> 'absorbed' -> 0 ->> 'id' from tests.ctx
 select is(((select v -> 'results' -> 0 -> 'absorbed' -> 0 ->> 'state' from tests.ctx where k = 'b')::jsonb) ->> 'totalCents', '130000', 'o canônico é o do primeiro reconhecido');
 select is(jsonb_array_length((select v -> 'results' -> 0 -> 'versions' from tests.ctx where k = 'b')), 0, 'nenhuma versão nova foi escrita');
 reset role;
-select is((select count(*)::int from public.space_entities where type = 'AlertEvent'), 1, 'há um só registro para a chave');
+select is((select count(*)::int from public.space_entities where type = 'AlertEvent' and space_id = '00000000-0000-0000-0000-0000000000e1'), 1, 'há um só registro para a chave');
 select is((select version from public.space_entities where id = 'ev-1'), 1::bigint, 'a versão continua 1');
 select is((select author_id from public.space_entities where id = 'ev-1'), '00000000-0000-0000-0000-000000000001'::uuid, 'o autor continua o do primeiro');
 

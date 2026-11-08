@@ -51,7 +51,7 @@ select matches((select v ->> 'code' from tests.ctx where k = 'invite1'), '^[2-9A
 select is(
   (select (v ->> 'validUntilMillis')::bigint - (v ->> 'generatedAtMillis')::bigint from tests.ctx where k = 'invite1'),
   3 * 24 * 60 * 60 * 1000::bigint, 'validade de 3 dias a partir da geração');
-select is((select count(*)::int from public.space_invites), 1, 'só o resumo do convite é guardado');
+select is((select count(*)::int from public.space_invites where space_id = '00000000-0000-0000-0000-0000000000e1'), 1, 'só o resumo do convite é guardado');
 select ok(not exists (select 1 from public.space_invites where code_digest = convert_to((select v ->> 'code' from tests.ctx where k = 'invite1'), 'UTF8')),
   'o resumo não é o código em texto');
 
