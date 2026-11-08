@@ -8,6 +8,7 @@ import app.accord.core.space.EntityType
 import app.accord.core.space.ErrorCode
 import app.accord.core.space.FieldError
 import app.accord.core.space.IntentionView
+import app.accord.core.space.ItemSync
 import app.accord.core.space.Session
 import app.accord.core.Money
 import java.time.YearMonth
@@ -53,11 +54,11 @@ internal class IntentionPlanner(private val dao: SpaceDao, private val nowMillis
         }
     }
 
-    fun viewOf(row: IntentionRow) = IntentionView(
+    fun viewOf(row: IntentionRow, sync: ItemSync) = IntentionView(
         id = row.id, name = row.name, estimatedValue = row.estimatedCents?.let(::Money),
         desiredMonth = row.desiredMonth?.let { runCatching { YearMonth.parse(it) }.getOrNull() }, note = row.note,
         createdBy = row.createdBy, updatedBy = row.updatedBy, createdAtMillis = row.createdAtMillis, updatedAtMillis = row.updatedAtMillis,
-        revision = row.revision,
+        revision = row.revision, sync = sync,
     )
 
     private fun validate(name: String, value: Money?, note: String?): List<FieldError> = buildList {

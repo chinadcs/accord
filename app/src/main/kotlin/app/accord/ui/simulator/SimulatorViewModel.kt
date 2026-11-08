@@ -46,6 +46,8 @@ data class SimulatorUiState(
     val categories: Map<String, CategoryNode> = emptyMap(),
     /** Fatura que o motor estimaria para uma compra hoje; é só sugestão. */
     val suggestedMonth: YearMonth? = null,
+    /** Intenção de onde a simulação partiu; nula num cenário avulso. Simular não altera a intenção. */
+    val originIntentionId: String? = null,
 ) {
     /** Mês efetivo da primeira fatura: a escolha do casal ou, sem ela, a sugestão. */
     val firstMonth: YearMonth? get() = form.firstMonth ?: suggestedMonth
@@ -64,11 +66,13 @@ class SimulatorViewModel(
     private val _state = MutableStateFlow(
         SimulatorUiState(
             form = SimulatorForm(
-                totalText = saved[KEY_TOTAL] ?: "",
+                // Vindo de uma intenção, nome, valor e período chegam como sugestão; o que foi digitado depois tem prioridade.
+                totalText = saved[KEY_TOTAL] ?: saved.get<String>(ARG_TOTAL)?.toLongOrNull()?.let { Money(it).formatPlain() } ?: "",
                 installmentsText = saved[KEY_INSTALLMENTS] ?: "",
                 categoryId = saved[KEY_CATEGORY],
-                firstMonth = saved.get<String>(KEY_MONTH)?.let(YearMonth::parse),
+                firstMonth = (saved.get<String>(KEY_MONTH) ?: saved.get<String>(ARG_MONTH))?.let { runCatching { YearMonth.parse(it) }.getOrNull() },
             ),
+            originIntentionId = saved.get<String>(ARG_INTENTION),
         ),
     )
     val state: StateFlow<SimulatorUiState> = _state.asStateFlow()
@@ -142,7 +146,7 @@ class SimulatorViewModel(
             _state.update { it.copy(errors = errors, outcome = SimulatorOutcome.Idle) }
             return
         }
-        val scenario = Scenario(total, installments, first, current.form.categoryId)
+        val scenario = Scenario(total, installments, first, current.form.categoryId, current.originIntentionId)
         _state.update { it.copy(errors = emptyMap(), outcome = SimulatorOutcome.Calculating) }
         val requested = generation
         viewModelScope.launch {
@@ -168,6 +172,9 @@ class SimulatorViewModel(
     }
 
     companion object {
+        const val ARG_TOTAL = "total"
+        const val ARG_MONTH = "month"
+        const val ARG_INTENTION = "intention"
         private const val KEY_TOTAL = "simTotal"
         private const val KEY_INSTALLMENTS = "simInstallments"
         private const val KEY_CATEGORY = "simCategory"

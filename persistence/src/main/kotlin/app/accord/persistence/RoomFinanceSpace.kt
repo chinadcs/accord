@@ -1557,9 +1557,9 @@ class RoomFinanceSpace private constructor(
 
     override suspend fun iconAssociations(): QueryResult<List<IconAssociationView>> = query { iconPlanner.viewsOf(dao.iconAssociations()) }
 
-    override suspend fun intentions(): QueryResult<List<IntentionView>> = query { dao.intentions().map(intentionPlanner::viewOf) }
+    override suspend fun intentions(): QueryResult<List<IntentionView>> = query { dao.intentions().map { intentionPlanner.viewOf(it, syncStatus.statusOf(EntityType.Intention, it.id)) } }
 
-    override suspend fun intention(id: String): QueryResult<IntentionView?> = query { dao.intention(id)?.let(intentionPlanner::viewOf) }
+    override suspend fun intention(id: String): QueryResult<IntentionView?> = query { dao.intention(id)?.let { intentionPlanner.viewOf(it, syncStatus.statusOf(EntityType.Intention, it.id)) } }
 
     override suspend fun incomeCategories(): QueryResult<List<IncomeCategoryNode>> = query {
         dao.incomeCategories().map { IncomeCategoryNode(it.id, it.name, it.sortOrder, it.iconKey, it.seedKey, it.revision) }

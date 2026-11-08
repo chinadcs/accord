@@ -35,6 +35,8 @@
     <string name="simulator_a11y_limit">%1$s: limite %2$s, com o cenário %3$s.</string>
     <string name="simulator_a11y_excess">Possível excesso do cenário: %1$s.</string>
     <string name="simulator_a11y_no_limit">%1$s: sem limite definido neste mês.</string>
+    <string name="simulator_save_intention">Guardar intenção</string>
+    <string name="simulator_back_to_intention">Voltar à intenção de origem</string>
     <string name="simulator_open_month">Ver composição de %1$s</string>
     <string name="simulator_stale_note">Compara com os dados deste aparelho. Registros do outro celular que ainda não chegaram podem não estar incluídos.</string>
     <string name="simulator_disclaimer">Isto é uma simulação do aplicativo. Não é aprovação de crédito nem garantia de disponibilidade no banco.</string>

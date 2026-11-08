@@ -917,6 +917,8 @@ data class IntentionView(
     val createdAtMillis: Long,
     val updatedAtMillis: Long,
     val revision: Long,
+    /** "Salvo no aparelho" difere de "reconhecido": se o outro celular já pode ver esta intenção. */
+    val sync: ItemSync = ItemSync.SavedOnDevice,
 )
 
 data class IncomeCategoryNode(

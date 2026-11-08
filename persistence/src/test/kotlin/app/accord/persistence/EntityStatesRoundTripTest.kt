@@ -160,7 +160,8 @@ class EntityStatesRoundTripTest : SpaceTestBase() {
         same(a.space.categories().value(), b.space.categories().value())
         same(a.space.incomeCategories().value(), b.space.incomeCategories().value())
         same(a.space.iconAssociations().value(), b.space.iconAssociations().value())
-        same(a.space.intentions().value(), b.space.intentions().value())
+        // A situação de envio é de cada aparelho; o resto (inclusive autor e instantes) chega igual.
+        same(a.space.intentions().value().map { it.copy(sync = app.accord.core.space.ItemSync.SavedOnDevice) }, b.space.intentions().value().map { it.copy(sync = app.accord.core.space.ItemSync.SavedOnDevice) })
         assertEquals(2, b.space.intentions().value().size, "intenção com valor e intenção sem valor chegam")
         assertNull(b.space.intentions().value().single { it.name == "Viagem" }.estimatedValue, "sem valor continua sem valor, não zero")
         assertEquals(2, b.space.iconAssociations().value().size, "ícone por nome e por lançamento chegam; o removido não aparece")

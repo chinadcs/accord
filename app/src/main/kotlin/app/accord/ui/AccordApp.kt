@@ -190,6 +190,12 @@ import app.accord.ui.nav.ROUTE_CARD
 import app.accord.ui.nav.ROUTE_COMMITMENT
 import app.accord.ui.nav.ROUTE_COMMITMENTS
 import app.accord.ui.nav.ROUTE_SIMULATOR
+import app.accord.ui.nav.ROUTE_INTENTIONS
+import app.accord.ui.nav.ROUTE_INTENTION
+import app.accord.ui.intentions.IntentionRoute
+import app.accord.ui.intentions.IntentionViewModel
+import app.accord.ui.intentions.IntentionsRoute
+import app.accord.ui.intentions.IntentionsViewModel
 import app.accord.ui.simulator.SimulatorRoute
 import app.accord.core.simulation.ScenarioArg
 import app.accord.ui.simulator.SimulatorViewModel
@@ -360,7 +366,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
     val context = LocalContext.current
     // O aviso da ação anterior não cobre o botão Salvar do formulário que abre em seguida.
     val formRoute = destination?.route?.substringBefore('?')?.substringBefore('/')
-    val inForm = formRoute in setOf(ROUTE_REGISTER, ROUTE_EDIT, ROUTE_CARD, ROUTE_ACCOUNTS, ROUTE_CATEGORIES, ROUTE_CATEGORY_EDIT, ROUTE_CATEGORY_MOVE, ROUTE_LIMITS, ROUTE_FIRST_STEPS, ROUTE_ALERT_PREFS, ROUTE_SIMULATOR)
+    val inForm = formRoute in setOf(ROUTE_REGISTER, ROUTE_EDIT, ROUTE_CARD, ROUTE_ACCOUNTS, ROUTE_CATEGORIES, ROUTE_CATEGORY_EDIT, ROUTE_CATEGORY_MOVE, ROUTE_LIMITS, ROUTE_FIRST_STEPS, ROUTE_ALERT_PREFS, ROUTE_SIMULATOR, ROUTE_INTENTION)
     // Ao abrir um formulário novo (de fora ou de outro formulário) o aviso some; voltar de uma tela de edição para a lista
     // (também formulário, já aberta antes) não apaga o aviso da ação que acabou de salvar.
     var cameFromForm by remember { mutableStateOf(false) }
@@ -622,6 +628,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             onComparison = { navController.navigate(ROUTE_COMPARISON) },
                             onWeeklyReview = { navController.navigate(ROUTE_WEEKLY_REVIEW) },
                             onSimulator = if (container.phase.includes(ProductPhase.P2)) ({ navController.navigate(ROUTE_SIMULATOR) }) else null,
+                            onIntentions = if (container.phase.includes(ProductPhase.P2)) ({ navController.navigate(ROUTE_INTENTIONS) }) else null,
                             onRegister = register,
                             onSpace = { navController.navigate(ROUTE_SPACE) },
                             onAppearance = { navController.navigate("appearance") },
@@ -793,14 +800,53 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 )
             }
             if (container.phase.includes(ProductPhase.P2)) {
-                composable(ROUTE_SIMULATOR) {
+                composable(
+                    "$ROUTE_SIMULATOR?${SimulatorViewModel.ARG_TOTAL}={${SimulatorViewModel.ARG_TOTAL}}&${SimulatorViewModel.ARG_MONTH}={${SimulatorViewModel.ARG_MONTH}}&${SimulatorViewModel.ARG_INTENTION}={${SimulatorViewModel.ARG_INTENTION}}",
+                    arguments = listOf(SimulatorViewModel.ARG_TOTAL, SimulatorViewModel.ARG_MONTH, SimulatorViewModel.ARG_INTENTION).map { name ->
+                        navArgument(name) { type = NavType.StringType; nullable = true; defaultValue = null }
+                    },
+                ) {
                     val viewModel: SimulatorViewModel = viewModel(
                         factory = viewModelFactory { initializer { SimulatorViewModel(container, createSavedStateHandle()) } },
                     )
                     SimulatorRoute(
                         viewModel, padding, onBack = { navController.popBackStack() },
+                        onSaveAsIntention = { scenario ->
+                            navController.navigate("$ROUTE_INTENTION/${IntentionViewModel.NEW}?${IntentionViewModel.ARG_VALUE}=${scenario.total.cents}&${IntentionViewModel.ARG_MONTH}=${scenario.firstMonth}")
+                        },
                         onOpenMonth = { month, scenario ->
                             navController.navigate("$ROUTE_COMMITMENTS?$ARG_MONTH=$month&${CommitmentsViewModel.ARG_SCENARIO}=${Uri.encode(ScenarioArg.encode(scenario))}")
+                        },
+                    )
+                }
+            }
+            if (container.phase.includes(ProductPhase.P2)) {
+                composable(ROUTE_INTENTIONS) {
+                    val viewModel: IntentionsViewModel = viewModel(factory = viewModelFactory { initializer { IntentionsViewModel(container) } })
+                    IntentionsRoute(
+                        viewModel, padding, onBack = { navController.popBackStack() },
+                        onOpen = { id -> navController.navigate("$ROUTE_INTENTION/${Uri.encode(id)}") },
+                        onNew = { navController.navigate("$ROUTE_INTENTION/${IntentionViewModel.NEW}") },
+                        onSimulate = { navController.navigate(ROUTE_SIMULATOR) },
+                    )
+                }
+                composable(
+                    "$ROUTE_INTENTION/{${IntentionViewModel.ARG_ID}}?${IntentionViewModel.ARG_VALUE}={${IntentionViewModel.ARG_VALUE}}&${IntentionViewModel.ARG_MONTH}={${IntentionViewModel.ARG_MONTH}}",
+                    arguments = listOf(
+                        navArgument(IntentionViewModel.ARG_ID) { type = NavType.StringType },
+                        navArgument(IntentionViewModel.ARG_VALUE) { type = NavType.StringType; nullable = true; defaultValue = null },
+                        navArgument(IntentionViewModel.ARG_MONTH) { type = NavType.StringType; nullable = true; defaultValue = null },
+                    ),
+                ) {
+                    val viewModel: IntentionViewModel = viewModel(
+                        factory = viewModelFactory { initializer { IntentionViewModel(container, createSavedStateHandle()) } },
+                    )
+                    IntentionRoute(
+                        viewModel, padding, onBack = { navController.popBackStack() },
+                        onSimulate = { view ->
+                            val total = view.estimatedValue?.cents?.let { "${SimulatorViewModel.ARG_TOTAL}=$it&" } ?: ""
+                            val month = view.desiredMonth?.let { "${SimulatorViewModel.ARG_MONTH}=$it&" } ?: ""
+                            navController.navigate("$ROUTE_SIMULATOR?$total$month${SimulatorViewModel.ARG_INTENTION}=${Uri.encode(view.id)}")
                         },
                     )
                 }

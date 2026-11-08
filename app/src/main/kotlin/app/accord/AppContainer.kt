@@ -57,6 +57,9 @@ interface SpaceProvider {
     /** Sugeridor local de categorias do espaço aberto; nulo quando a variante não o inclui (release não tem pesos, ADR 0032). */
     suspend fun categorySuggester(): app.accord.core.chat.CategorySuggester? = null
 
+    /** Rascunhos de intenção deste aparelho (S7, tela 35); nulo onde não existem. */
+    fun intentionDrafts(): app.accord.ui.intentions.IntentionDrafts? = null
+
     /** Desfaz uma operação; só funciona se nada nas entidades afetadas mudou depois dela. */
     suspend fun undo(operationId: String): UndoOutcome
 
@@ -84,6 +87,9 @@ class AppContainer(
 
     /** Preferência de tema deste aparelho; não é dado financeiro. */
     val theme = ThemeStore(context)
+
+    private val intentionDraftStore = app.accord.ui.intentions.SharedPreferencesIntentionDrafts(context)
+    override fun intentionDrafts(): app.accord.ui.intentions.IntentionDrafts = intentionDraftStore
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 

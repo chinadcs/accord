@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Intenções de compra (telas 34 e 35, P2) -->
+    <string name="more_intentions">Intenções de compra</string>
+    <string name="intentions_title">Intenções de compra</string>
+    <string name="intentions_not_budget">Estes valores não ocupam o orçamento.</string>
+    <string name="intentions_new">Nova intenção</string>
+    <string name="intentions_simulate">Simular uma compra</string>
+    <string name="intentions_empty_title">Nenhuma intenção guardada</string>
+    <string name="intentions_empty_body">Guarde aqui o que vocês pensam em comprar, mesmo sem saber o preço. Fica visível para os dois e não conta como despesa.</string>
+    <string name="intentions_failed">Não foi possível ler as intenções. Nada foi apagado; tente de novo.</string>
+    <string name="intentions_no_value">sem valor definido</string>
+    <string name="intentions_when">Quando pretende: %1$s</string>
+    <string name="intentions_row_a11y">%1$s, %2$s, não ocupa o orçamento. %3$s</string>
+    <string name="intentions_by_created">Cadastrada %1$s</string>
+    <string name="intentions_by_updated">Última alteração %1$s</string>
+    <string name="intentions_by_you">por você</string>
+    <string name="intentions_by_other">pela outra pessoa</string>
+
+    <string name="intention_title_view">Intenção do casal</string>
+    <string name="intention_title_new">Nova intenção</string>
+    <string name="intention_title_edit">Editar intenção</string>
+    <string name="intention_name">Nome</string>
+    <string name="intention_value">Valor estimado</string>
+    <string name="intention_value_hint">Opcional, ex.: 1.200,00</string>
+    <string name="intention_when">Quando pretende</string>
+    <string name="intention_when_none">Sem período definido</string>
+    <string name="intention_when_pick">Escolher mês</string>
+    <string name="intention_when_clear">Remover período</string>
+    <string name="intention_when_note">Só um lembrete: não é data de compra nem vencimento.</string>
+    <string name="intention_note">Observação</string>
+    <string name="intention_note_hint">Opcional</string>
+    <string name="intention_not_budget">Não incluída no orçamento real.</string>
+    <string name="intention_save">Salvar intenção</string>
+    <string name="intention_saving">Salvando…</string>
+    <string name="intention_edit">Editar</string>
+    <string name="intention_simulate">Simular impacto</string>
+    <string name="intention_cancel_edit">Cancelar edição</string>
+    <string name="intention_discard_draft">Descartar rascunho</string>
+    <string name="intention_draft_restored">Recuperamos o rascunho que você deixou aqui. Ele ainda não foi salvo.</string>
+    <string name="intention_stale">Esta intenção foi alterada em outro lugar. Veja a versão atual e salve de novo se quiser manter a sua.</string>
+    <string name="intention_stale_load">Ver a versão atual</string>
+    <string name="intention_save_failed">Não foi possível salvar agora. O que você digitou foi mantido; tente de novo.</string>
+    <string name="intention_not_found_title">Intenção não encontrada</string>
+    <string name="intention_not_found_body">Ela pode ainda não ter chegado a este aparelho. Volte à lista para ver as intenções atuais.</string>
+    <string name="intention_failed">Não foi possível ler esta intenção. Tente de novo.</string>
+    <string name="intention_created_by">Cadastrada %1$s</string>
+    <string name="intention_updated_by">Última alteração %1$s</string>
+    <string name="intention_error_name">Dê um nome à intenção.</string>
+    <string name="intention_error_name_long">O nome é longo demais.</string>
+    <string name="intention_error_note_long">A observação é longa demais.</string>
+    <string name="intention_error_value_positive">O valor estimado precisa ser maior que zero, ou deixe em branco.</string>
+</resources>

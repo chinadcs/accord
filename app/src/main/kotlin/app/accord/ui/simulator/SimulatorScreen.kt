@@ -56,6 +56,7 @@ fun SimulatorRoute(
     padding: PaddingValues,
     onBack: () -> Unit,
     onOpenMonth: (java.time.YearMonth, app.accord.core.simulation.Scenario) -> Unit,
+    onSaveAsIntention: (app.accord.core.simulation.Scenario) -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     SimulatorScreen(
@@ -63,6 +64,7 @@ fun SimulatorRoute(
         onTotal = viewModel::setTotal, onInstallments = viewModel::setInstallments, onCategory = viewModel::setCategory,
         onPreviousMonth = { viewModel.shiftFirstMonth(-1) }, onNextMonth = { viewModel.shiftFirstMonth(1) },
         onUseSuggestion = viewModel::useSuggestedMonth, onSimulate = viewModel::simulate, onOpenMonth = onOpenMonth,
+        onSaveAsIntention = onSaveAsIntention,
     )
 }
 
@@ -80,6 +82,7 @@ fun SimulatorScreen(
     onUseSuggestion: () -> Unit,
     onSimulate: () -> Unit,
     onOpenMonth: (java.time.YearMonth, app.accord.core.simulation.Scenario) -> Unit = { _, _ -> },
+    onSaveAsIntention: (app.accord.core.simulation.Scenario) -> Unit = {},
 ) {
     var pickingCategory by rememberSaveable { mutableStateOf(false) }
     val totalFocus = remember { FocusRequester() }
@@ -144,7 +147,7 @@ fun SimulatorScreen(
         when (val outcome = state.outcome) {
             SimulatorOutcome.Idle, SimulatorOutcome.Calculating -> Unit
             SimulatorOutcome.Unavailable -> UnavailableBanner(onSimulate)
-            is SimulatorOutcome.Ready -> ResultSection(outcome, state, onOpenMonth)
+            is SimulatorOutcome.Ready -> ResultSection(outcome, state, onOpenMonth, onSaveAsIntention, onBack)
         }
     }
 
@@ -171,6 +174,8 @@ private fun ResultSection(
     outcome: SimulatorOutcome.Ready,
     state: SimulatorUiState,
     onOpenMonth: (java.time.YearMonth, app.accord.core.simulation.Scenario) -> Unit,
+    onSaveAsIntention: (app.accord.core.simulation.Scenario) -> Unit,
+    onBackToIntention: () -> Unit,
 ) {
     val months = outcome.result.months
     val count = months.size
@@ -194,6 +199,16 @@ private fun ResultSection(
             style = MaterialTheme.typography.titleMedium,
         )
         months.forEach { m -> MonthCard(m, count, state) { onOpenMonth(m.month, outcome.scenario) } }
+        // Cenário avulso vira intenção pela tela 35; vindo de uma intenção, volta a ela sem alterar o valor estimado.
+        if (state.originIntentionId == null) {
+            OutlinedButton(onClick = { onSaveAsIntention(outcome.scenario) }, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+                Text(stringResource(R.string.simulator_save_intention))
+            }
+        } else {
+            OutlinedButton(onClick = onBackToIntention, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+                Text(stringResource(R.string.simulator_back_to_intention))
+            }
+        }
         Text(stringResource(R.string.simulator_stale_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(stringResource(R.string.simulator_disclaimer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }

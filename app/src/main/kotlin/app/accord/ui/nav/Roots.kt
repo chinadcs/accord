@@ -52,8 +52,12 @@ const val ROUTE_MODEL = "model"
 const val ROUTE_COMMITMENTS = "commitments"
 const val ARG_MONTH = "month"
 
-/** Simulador de compra (tela 36, P2): consulta pura, não grava nada. */
+/** Simulador de compra (tela 36, P2): consulta pura, não grava nada. Pré-preenchido por `total` (centavos), `month` (AAAA-MM) e `intention`. */
 const val ROUTE_SIMULATOR = "simulator"
+
+/** Intenções de compra (tela 34) e uma intenção (tela 35): `intention/{id}` ou `intention/new?value=centavos&month=AAAA-MM`. */
+const val ROUTE_INTENTIONS = "intentions"
+const val ROUTE_INTENTION = "intention"
 
 /** Detalhe de um compromisso: `commitment/{id}`; o ID pode ter `#` ou `:`, por isso vai codificado. */
 const val ROUTE_COMMITMENT = "commitment"
