@@ -6,6 +6,7 @@ import app.accord.core.BudgetClock
 import app.accord.core.CardCycle
 import app.accord.core.alerts.AlertPreference
 import app.accord.core.alerts.NotificationAccess
+import app.accord.core.simulation.PurchaseSchedule
 import app.accord.core.space.AlertEventView
 import app.accord.core.space.AlertNotice
 import app.accord.core.space.AlertStatus
@@ -607,13 +608,6 @@ class RoomFinanceSpace private constructor(
         if (c.installments > 1 && c.amountMeaning == null) {
             return Planned.Stop(CommandResult.DecisionNeeded(Decision.AmountMeaningRequired(c.installments, c.amount)))
         }
-        val amounts = try {
-            if (c.amountMeaning == AmountMeaning.PerInstallment) Installments.fromEach(c.amount, c.installments)
-            else Installments.splitTotal(c.amount, c.installments)
-        } catch (_: IllegalArgumentException) {
-            return stop("amount", ErrorCode.MustBePositive, "Cada parcela precisa ter ao menos um centavo.")
-        }
-
         // Encargo confirmado sem classificação usa Serviços > Tarifas e juros, pela identidade da semente.
         val classificationId = chosenId
             ?: if (c.isCharge) DeterministicIds.seedCategory(session.spaceId, CategorySeed.FEES_AND_INTEREST) else null
@@ -625,10 +619,13 @@ class RoomFinanceSpace private constructor(
             val assigned = cycleOf(session.spaceId).assign(c.date)
             assigned.dueMonth to if (assigned.toConfirm) AssignmentState.ToConfirm else AssignmentState.Estimated
         }
-        val months = Installments.schedule(firstMonth, c.installments)
-        val views = amounts.mapIndexed { i, amount ->
-            InstallmentView(i + 1, amount, months[i], if (i == 0) firstState else AssignmentState.Estimated)
+        // Cronograma único com o simulador do S7 (PurchaseSchedule): parcelas, centavos e meses de fatura.
+        val views = try {
+            PurchaseSchedule.build(c.amount, c.amountMeaning, c.installments, firstMonth, firstState)
+        } catch (_: IllegalArgumentException) {
+            return stop("amount", ErrorCode.MustBePositive, "Cada parcela precisa ter ao menos um centavo.")
         }
+        val months = views.map { it.invoiceMonth }
 
         return Planned.Go(after = views, months = months.toSet(), undoable = true) {
             val purchase = CardPurchaseRow(
@@ -636,7 +633,7 @@ class RoomFinanceSpace private constructor(
                 description = c.description.trim(),
                 classificationId = classificationId,
                 purchaseEpochDay = c.date.toEpochDay(),
-                totalCents = amounts.sum().cents,
+                totalCents = views.sumOf { it.amount.cents },
                 isCharge = c.isCharge,
                 spentBy = c.spentBy,
                 authorId = session.personId,
