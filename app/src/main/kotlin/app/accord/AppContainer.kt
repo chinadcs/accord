@@ -76,6 +76,8 @@ class AppContainer(
     modelSource: DistributionSource = UnconfiguredDistributionSource,
     modelEngine: ModelEngine? = null,
     val categoryPilot: app.accord.pilot.ChatPilot = app.accord.pilot.createChatPilot(context),
+    /** Fase do produto deste build: P1 por padrão; P2 (S7) só com `-Paccord.p2=true` em debug. Controles de fase futura não aparecem antes. */
+    val phase: app.accord.core.analysis.ProductPhase = defaultPhase(),
 ) : SpaceProvider {
     override val clock: BudgetClock = BudgetClock.system()
     override val feedback = FeedbackBus()
@@ -180,7 +182,7 @@ class AppContainer(
                     categorySuggester = categoryPilot.suggester(runtime.identity.spaceId),
                     onCategoryPilotEvent = categoryPilot::record,
                     // S6: o aplicativo expõe as telas 29–33, então o Chat responde as consultas do catálogo (fase P1).
-                    phase = app.accord.core.analysis.ProductPhase.P1,
+                    phase = phase,
                 )
                 coordinator.recover()
                 chatState.value = coordinator
@@ -254,6 +256,10 @@ class AppContainer(
         const val DEV_SPACE_ID = "dev-space"
         const val DEV_PERSON_ID = "dev-person"
         const val DATABASE_NAME = "accord-$DEV_PERSON_ID-$DEV_SPACE_ID.db"
+
+        /** Fase do build: P2 só quando a flag `accord.p2` está ligada; senão P1 (S6 sempre visível, como antes). */
+        fun defaultPhase(): app.accord.core.analysis.ProductPhase =
+            if (BuildConfig.PHASE_P2) app.accord.core.analysis.ProductPhase.P2 else app.accord.core.analysis.ProductPhase.P1
 
         /** URL e chave pública do build; sem elas, o serviço é "não configurado" e o app segue só neste aparelho. */
         fun defaultRemote(): RemoteSpaceService =

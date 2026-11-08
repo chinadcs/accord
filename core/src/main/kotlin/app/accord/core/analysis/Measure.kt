@@ -20,10 +20,14 @@ sealed interface Measure {
     }
 }
 
-/** Fase do produto que habilita as entradas de cada tela. P1 não é pré-requisito de P0 (S6 "Princípio geral", proposta de configuração de build). */
+/**
+ * Fase do produto que habilita as entradas de cada tela. P1 não é pré-requisito de P0 (S6 "Princípio geral", proposta de configuração de build);
+ * P2 (S7: intenções, simulador e pistas) também não é pré-requisito de P0/P1 e só aparece quando a fase estiver ativa.
+ */
 enum class ProductPhase {
     P0,
     P1,
+    P2,
     ;
 
     /** `true` se esta fase habilita recursos da fase [required]. */

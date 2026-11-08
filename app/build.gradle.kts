@@ -17,6 +17,8 @@ fun serviceSetting(name: String, env: String): String {
 // "true": piloto com interpretador fake (4 frases). "rules": sugestor de categorias com o interpretador por regras (ADR 0036).
 val categoryPilotMode = providers.gradleProperty("accord.categoryPilot").orNull
 val categoryPilotEnabled = categoryPilotMode == "true" || categoryPilotMode == "rules"
+// "true": liga os recursos P2 do S7 (intenções, simulador, pistas) no build de debug. Sem a propriedade a fase é P1 e nenhum controle P2 aparece.
+val phaseP2Enabled = providers.gradleProperty("accord.p2").orNull == "true"
 val uiValidationIsolated = providers.gradleProperty("accord.uiValidation").orNull == "true"
 val pilotAssets = layout.buildDirectory.dir("generated/categoryPilotAssets")
 val pilotArtifact = rootProject.layout.projectDirectory.file("poc/results/pc/run-070-category-development-v3/learned/model.json")
@@ -60,12 +62,14 @@ android {
         getByName("debug") {
             buildConfigField("boolean", "CATEGORY_PILOT", categoryPilotEnabled.toString())
             buildConfigField("boolean", "CATEGORY_PILOT_RULES", (categoryPilotMode == "rules").toString())
+            buildConfigField("boolean", "PHASE_P2", phaseP2Enabled.toString())
             // Physical UI tests get independent storage; never reinstall/uninstall the user's app.
             if (uiValidationIsolated) applicationIdSuffix = ".uivalidation"
         }
         getByName("release") {
             buildConfigField("boolean", "CATEGORY_PILOT", "false")
             buildConfigField("boolean", "CATEGORY_PILOT_RULES", "false")
+            buildConfigField("boolean", "PHASE_P2", "false")
         }
     }
     if (categoryPilotEnabled) sourceSets.getByName("debug").assets.directories.add(pilotAssets.get().asFile.absolutePath)

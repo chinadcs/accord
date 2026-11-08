@@ -153,4 +153,13 @@ class AnalysisBaseTest {
         assertTrue(ProductPhase.P1.includes(ProductPhase.P0))
         assertTrue(ProductPhase.P1.includes(ProductPhase.P1))
     }
+
+    @Test
+    fun `P2 inclui P0 e P1, mas P1 não habilita recursos P2`() {
+        assertFalse(ProductPhase.P1.includes(ProductPhase.P2))
+        assertFalse(ProductPhase.P0.includes(ProductPhase.P2))
+        assertTrue(ProductPhase.P2.includes(ProductPhase.P0))
+        assertTrue(ProductPhase.P2.includes(ProductPhase.P1))
+        assertTrue(ProductPhase.P2.includes(ProductPhase.P2))
+    }
 }
