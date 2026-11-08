@@ -16,6 +16,23 @@ class Brand(
     /** Texto pesquisável: título, apelidos e slug, já normalizados. */
     internal val searchKey: String = IconText.fold((listOf(title) + aliases + slug).joinToString(" "))
     internal val titleKey: String = IconText.fold(title)
+
+    /** Contraste (WCAG) da cor oficial sobre a placa branca. Logotipos são isentos de contraste mínimo, mas abaixo de [MIN_CONTRAST_ON_PLATE] a marca some. */
+    val contrastOnWhite: Double
+        get() {
+            fun channel(shift: Int): Double = ((color shr shift) and 0xFF) / 255.0
+            fun lin(v: Double) = if (v <= 0.03928) v / 12.92 else Math.pow((v + 0.055) / 1.055, 2.4)
+            val l = 0.2126 * lin(channel(16)) + 0.7152 * lin(channel(8)) + 0.0722 * lin(channel(0))
+            return 1.05 / (l + 0.05)
+        }
+
+    /** A cor oficial é legível sobre a placa branca; senão o desenho usa a tinta escura da placa. */
+    val officialColorVisible: Boolean get() = contrastOnWhite >= MIN_CONTRAST_ON_PLATE
+
+    companion object {
+        /** Abaixo disso (≈4% das marcas, como amarelos e cinzas muito claros) o logo quase não aparece sobre o branco. */
+        const val MIN_CONTRAST_ON_PLATE = 1.5
+    }
 }
 
 /** Catálogo local das marcas. Não há rede: a chave de uma marca é o slug exato; texto livre nunca é chave. */

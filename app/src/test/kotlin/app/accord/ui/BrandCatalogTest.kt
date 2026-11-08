@@ -1,5 +1,6 @@
 package app.accord.ui
 
+import app.accord.ui.vendors.Brand
 import app.accord.ui.vendors.BrandCatalog
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonArray
@@ -75,4 +76,12 @@ class BrandCatalogTest {
     }
 
     private fun app.accord.ui.vendors.Brand.searchKeyForTest() = (listOf(title) + aliases + slug).joinToString(" ").lowercase()
+
+    @Test
+    fun soMarcasQuaseBrancasCaemNaTintaEscuraDaPlaca() {
+        val hidden = catalog.brands.filterNot { it.officialColorVisible }
+        assertTrue(hidden.size in 50..250, "esperava poucas marcas claras demais, vieram ${hidden.size}")
+        for (slug in listOf("uber", "spotify", "netflix", "android", "ifood")) assertTrue(assertNotNull(catalog.find(slug)).officialColorVisible, slug)
+        assertTrue(hidden.all { it.contrastOnWhite < Brand.MIN_CONTRAST_ON_PLATE })
+    }
 }

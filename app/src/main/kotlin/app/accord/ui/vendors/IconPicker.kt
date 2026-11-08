@@ -26,7 +26,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
-import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.PrimaryScrollableTabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -105,7 +106,7 @@ fun IconPickerDialog(
                         value = query, onValueChange = { query = it }, singleLine = true,
                         label = { Text(stringResource(R.string.icon_picker_search)) }, modifier = Modifier.fillMaxWidth().testTag("icon-picker-search"),
                     )
-                    PrimaryTabRow(selectedTabIndex = tab.ordinal, containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
+                    PrimaryScrollableTabRow(selectedTabIndex = tab.ordinal, edgePadding = 0.dp, containerColor = MaterialTheme.colorScheme.surfaceContainerHigh) {
                         PickerTab.entries.forEach { entry ->
                             Tab(
                                 selected = tab == entry, onClick = { tab = entry },
@@ -123,7 +124,7 @@ fun IconPickerDialog(
                         library == null -> Text(stringResource(R.string.icon_picker_loading), style = MaterialTheme.typography.bodyMedium)
                         choices.isEmpty() -> Text(stringResource(R.string.icon_picker_empty), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.testTag("icon-picker-empty"))
                         else -> LazyVerticalGrid(
-                            columns = GridCells.Adaptive(92.dp), modifier = Modifier.weight(1f).testTag("icon-picker-grid"),
+                            columns = GridCells.Adaptive(92.dp * (1f + 0.7f * (LocalDensity.current.fontScale - 1f).coerceAtLeast(0f))), modifier = Modifier.weight(1f).testTag("icon-picker-grid"),
                             contentPadding = PaddingValues(vertical = AccordSpacing.s1),
                             verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
                             horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s1),

@@ -19,7 +19,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.withTransform
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -54,10 +53,7 @@ fun IconPlate(modifier: Modifier = Modifier, size: Dp = 48.dp, content: @Composa
 @Composable
 fun BrandGlyph(brand: Brand, modifier: Modifier = Modifier) {
     val path = remember(brand.slug) { PathParser().parsePathString(brand.pathData).toPath() }
-    val color = remember(brand.slug) {
-        val official = Color(0xFF000000.toInt() or brand.color)
-        if (1.05f / (official.luminance() + 0.05f) >= 3f) official else AccordLogoPlate.glyph
-    }
+    val color = remember(brand.slug) { if (brand.officialColorVisible) Color(0xFF000000.toInt() or brand.color) else AccordLogoPlate.glyph }
     Canvas(modifier.fillMaxSize()) {
         val scale = size.minDimension / 24f
         withTransform({ scale(scale, scale, Offset.Zero) }) { drawPath(path, color) }
