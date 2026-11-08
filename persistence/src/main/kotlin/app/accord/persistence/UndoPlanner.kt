@@ -115,16 +115,28 @@ internal class UndoPlanner(
                     EntityType.Boleto -> {
                         val row = dao.boleto(ch.entityId)!!
                         dao.upsertBoleto(
-                            if (creation) row.copy(revision = row.revision + 1, voided = true)
-                            else row.copy(revision = row.revision + 1, paidEpochDay = null, paidCents = null),
+                            when {
+                                creation -> row.copy(revision = row.revision + 1, voided = true)
+                                // Desfazer o "desligar Pago": volta ao pagamento que existia.
+                                op.commandType == "UndoBoletoPayment" -> settledAgain(op.detail!!).let { (day, cents) ->
+                                    row.copy(revision = row.revision + 1, paidEpochDay = day, paidCents = cents)
+                                }
+                                else -> row.copy(revision = row.revision + 1, paidEpochDay = null, paidCents = null)
+                            },
                         )
                         row.revision + 1
                     }
                     EntityType.Income -> {
                         val row = dao.income(ch.entityId)!!
                         dao.upsertIncome(
-                            if (creation) row.copy(revision = row.revision + 1, voided = true)
-                            else row.copy(revision = row.revision + 1, receivedEpochDay = null, receivedCents = null),
+                            when {
+                                creation -> row.copy(revision = row.revision + 1, voided = true)
+                                // Desfazer o "desligar Recebido": volta ao recebimento que existia.
+                                op.commandType == "UndoIncomeReceipt" -> settledAgain(op.detail!!).let { (day, cents) ->
+                                    row.copy(revision = row.revision + 1, receivedEpochDay = day, receivedCents = cents)
+                                }
+                                else -> row.copy(revision = row.revision + 1, receivedEpochDay = null, receivedCents = null)
+                            },
                         )
                         row.revision + 1
                     }
@@ -145,6 +157,12 @@ internal class UndoPlanner(
             }
         }
     }
+}
+
+/** Lê `paid=<dia>,<centavos>`, guardado ao desligar Pago/Recebido para o desfazer religar. */
+internal fun settledAgain(detail: String): Pair<Long, Long> {
+    val (day, cents) = detail.removePrefix("paid=").split(",")
+    return day.toLong() to cents.toLong()
 }
 
 /** Meses afetados guardados na operação, separados por vírgula. */

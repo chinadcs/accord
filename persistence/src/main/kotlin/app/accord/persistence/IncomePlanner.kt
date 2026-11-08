@@ -144,7 +144,8 @@ internal class IncomePlanner(
         }
         val received = income.receivedEpochDay ?: return stop("incomeId", ErrorCode.NotAllowed, "Esta renda ainda não foi recebida.")
         val months = setOf(YearMonth.from(LocalDate.ofEpochDay(income.expectedEpochDay)), YearMonth.from(LocalDate.ofEpochDay(received)))
-        return Planned.Go(months = months, undoable = true) {
+        // O desfazer do aviso religa o recebido: o que estava recebido fica na operação (`paid=<dia>,<centavos>`).
+        return Planned.Go(months = months, undoable = true, detail = "paid=$received,${income.receivedCents ?: income.expectedCents}") {
             val next = income.copy(receivedEpochDay = null, receivedCents = null, revision = income.revision + 1)
             dao.upsertIncome(next)
             listOf(EntityChange(EntityType.Income, next.id, null, next.revision))

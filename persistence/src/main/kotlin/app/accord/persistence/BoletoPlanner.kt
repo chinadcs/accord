@@ -99,7 +99,8 @@ internal class BoletoPlanner(
         }
         val paid = boleto.paidEpochDay ?: return stop("boletoId", ErrorCode.NotAllowed, "Este boleto ainda não está pago.")
         val months = setOf(YearMonth.from(LocalDate.ofEpochDay(boleto.dueEpochDay)), YearMonth.from(LocalDate.ofEpochDay(paid)))
-        return Planned.Go(months = months, undoable = true) {
+        // O desfazer do aviso religa o pago: o que estava pago fica na operação (`paid=<dia>,<centavos>`).
+        return Planned.Go(months = months, undoable = true, detail = "paid=$paid,${boleto.paidCents ?: boleto.expectedCents}") {
             val next = boleto.copy(paidEpochDay = null, paidCents = null, revision = boleto.revision + 1)
             dao.upsertBoleto(next)
             listOf(EntityChange(EntityType.Boleto, next.id, null, next.revision))

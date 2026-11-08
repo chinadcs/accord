@@ -313,4 +313,26 @@ class BoletoIncomeTest : SpaceTestBase() {
         assertIs<CommandResult.StaleVersion>(h.space.execute(h.env(), UndoBoletoPayment(id, expectedRevision = 1)))
         assertEquals(d(2026, 11, 3), h.space.boleto(id).value()!!.paidDate)
     }
+
+    @Test
+    fun `desfazer o desligar do pago e do recebido religa o que estava pago`() = runBlocking<Unit> {
+        val h = open()
+        h.withDefaultAccount()
+        val boletoId = h.registerBoleto(boleto(d(2026, 10, 30)))
+        h.space.execute(h.env(), PayBoleto(boletoId, Settlement(d(2026, 11, 3), brl(95)))).applied()
+        val off = h.space.execute(h.env(), UndoBoletoPayment(boletoId)).applied()
+        assertNull(h.space.boleto(boletoId).value()!!.paidDate)
+        h.space.execute(h.env(), Undo(off.operationId)).applied()
+        val again = h.space.boleto(boletoId).value()!!
+        assertEquals(d(2026, 11, 3), again.paidDate)
+        assertEquals(brl(95), again.paidAmount)
+
+        val incomeId = h.space.execute(h.env(), income(brl(1000), d(2026, 10, 30))).applied().changes.single().id
+        h.space.execute(h.env(), ReceiveIncome(incomeId, Settlement(d(2026, 11, 3), brl(900)))).applied()
+        val offIncome = h.space.execute(h.env(), UndoIncomeReceipt(incomeId)).applied()
+        h.space.execute(h.env(), Undo(offIncome.operationId)).applied()
+        val back = h.space.income(incomeId).value()!!
+        assertEquals(d(2026, 11, 3), back.receivedDate)
+        assertEquals(brl(900), back.receivedAmount)
+    }
 }
