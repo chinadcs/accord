@@ -38,7 +38,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ClipEntry
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -87,12 +89,23 @@ fun SpaceRoute(
     RefreshOnResume { if (access.space != null) viewModel.refresh() }
     DisposableEffect(viewModel) { onDispose { viewModel.leave() } }
     val clipboard = LocalClipboard.current
+    val context = androidx.compose.ui.platform.LocalContext.current
     val scope = rememberCoroutineScope()
     val clipLabel = stringResource(R.string.space_code_clip_label)
     SpaceScreen(
         ui, access, padding, firstRun,
         onTab = viewModel::selectTab, onName = viewModel::onName, onCode = viewModel::onCode,
         onCreate = viewModel::create, onJoin = viewModel::join, onGenerate = viewModel::generateInvite,
+        onRevoke = viewModel::revokeInvite,
+        onScan = {
+            InviteScanner.scan(context) { result ->
+                when (result) {
+                    is InviteScanner.Result.Scanned -> viewModel.onScanned(result.raw)
+                    InviteScanner.Result.Unavailable -> viewModel.scanUnavailable()
+                    InviteScanner.Result.Canceled -> Unit
+                }
+            }
+        },
         onRefresh = { viewModel.refresh(announce = true) },
         onCopy = { code ->
             scope.launch {
@@ -125,6 +138,8 @@ fun SpaceScreen(
     onCopy: (String) -> Unit,
     onContinue: () -> Unit,
     onBack: (() -> Unit)?,
+    onRevoke: () -> Unit = {},
+    onScan: () -> Unit = {},
 ) {
     Column(
         Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
@@ -139,9 +154,9 @@ fun SpaceScreen(
             Text(stringResource(R.string.space_title), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f).semantics { heading() })
         }
         if (access.space == null) {
-            NoSpaceContent(ui, access, onTab, onName, onCode, onCreate, onJoin)
+            NoSpaceContent(ui, access, onTab, onName, onCode, onCreate, onJoin, onScan)
         } else {
-            ManageContent(ui, access, firstRun, onGenerate, onRefresh, onCopy, onContinue)
+            ManageContent(ui, access, firstRun, onGenerate, onRefresh, onCopy, onContinue, onRevoke)
         }
         ui.message?.let { MessageBanner(it) }
     }
@@ -156,6 +171,7 @@ private fun NoSpaceContent(
     onCode: (String) -> Unit,
     onCreate: () -> Unit,
     onJoin: () -> Unit,
+    onScan: () -> Unit,
 ) {
     Text(stringResource(R.string.space_intro), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     PrimaryTabRow(selectedTabIndex = ui.tab.ordinal, modifier = Modifier.selectableGroup()) {
@@ -186,6 +202,9 @@ private fun NoSpaceContent(
         }
         SpaceTab.Join -> {
             Text(stringResource(R.string.space_join_note), style = MaterialTheme.typography.bodyMedium)
+            OutlinedButton(onClick = onScan, enabled = !ui.working, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).testTag("space-scan-qr")) {
+                Text(stringResource(R.string.space_scan_qr))
+            }
             OutlinedTextField(
                 value = ui.code, onValueChange = onCode, singleLine = true, enabled = !ui.working,
                 label = { Text(stringResource(R.string.space_code)) },
@@ -213,6 +232,7 @@ private fun ManageContent(
     onRefresh: () -> Unit,
     onCopy: (String) -> Unit,
     onContinue: () -> Unit,
+    onRevoke: () -> Unit,
 ) {
     val space = checkNotNull(access.space)
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
@@ -222,9 +242,9 @@ private fun ManageContent(
             Text(space.name, style = MaterialTheme.typography.headlineSmall)
             Text(stringResource(R.string.space_section_participants), style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-            val bothIn = (access.participants?.items?.size ?: 0) >= InviteCode.MAX_MEMBERS
+            val members = access.participants?.items?.size ?: 1
             Text(
-                stringResource(R.string.space_you_connected) + " · " + stringResource(if (bothIn) R.string.space_other_connected else R.string.space_other_waiting),
+                stringResource(R.string.space_you_connected) + " · " + stringResource(R.string.space_members_count, members, InviteCode.MAX_MEMBERS),
                 style = MaterialTheme.typography.bodyLarge,
             )
             Text(
@@ -236,9 +256,9 @@ private fun ManageContent(
             }
         }
     }
-    InviteBlock(ui, access, onGenerate, onCopy)
+    InviteBlock(ui, access, onGenerate, onCopy, onRevoke)
     if (firstRun) {
-        val bothIn = (access.participants?.items?.size ?: 0) >= InviteCode.MAX_MEMBERS
+        val bothIn = (access.participants?.items?.size ?: 0) >= 2
         Button(onClick = onContinue, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
             Text(stringResource(if (bothIn || access.invite == null) R.string.space_continue_steps else R.string.space_continue_later))
         }
@@ -246,18 +266,20 @@ private fun ManageContent(
 }
 
 @Composable
-private fun InviteBlock(ui: SpaceUi, access: AccessState, onGenerate: () -> Unit, onCopy: (String) -> Unit) {
+private fun InviteBlock(ui: SpaceUi, access: AccessState, onGenerate: () -> Unit, onCopy: (String) -> Unit, onRevoke: () -> Unit) {
     val invite: InviteView? = access.invite
     val full = (access.participants?.items?.size ?: 0) >= InviteCode.MAX_MEMBERS
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
         Text(stringResource(R.string.space_invite_title), style = MaterialTheme.typography.titleSmall, modifier = Modifier.semantics { heading() })
         if (full) {
-            // Com as duas pessoas no espaço, gerar código deixa de ser oferecido.
+            // Com o espaço lotado, gerar código deixa de ser oferecido.
             Text(stringResource(R.string.space_invite_full), style = MaterialTheme.typography.bodyMedium)
             return@Column
         }
         Text(stringResource(R.string.space_invite_note), style = MaterialTheme.typography.bodyMedium)
+        val slots = InviteCode.MAX_MEMBERS - (access.participants?.items?.size ?: 1)
+        Text(pluralStringResource(R.plurals.space_invite_slots, slots, slots), style = MaterialTheme.typography.bodyMedium)
         val code = invite?.code
         if (code != null) {
             // O TalkBack lê o código caractere a caractere, não como uma palavra.
@@ -269,6 +291,7 @@ private fun InviteBlock(ui: SpaceUi, access: AccessState, onGenerate: () -> Unit
                     modifier = Modifier.fillMaxWidth().padding(AccordSpacing.s4).semantics { contentDescription = spoken },
                 )
             }
+            InviteQrImage(code, Modifier.align(Alignment.CenterHorizontally).testTag("invite-qr"))
             Text(stringResource(R.string.space_invite_shown_once), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             OutlinedButton(onClick = { onCopy(code) }, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
                 Icon(painterResource(Lucide.drawable.lucide_ic_copy), contentDescription = null, modifier = Modifier.size(20.dp))
@@ -295,6 +318,11 @@ private fun InviteBlock(ui: SpaceUi, access: AccessState, onGenerate: () -> Unit
                     },
                 ),
             )
+        }
+        if (invite != null && !invite.expired) {
+            OutlinedButton(onClick = onRevoke, enabled = !ui.working, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).testTag("invite-revoke")) {
+                Text(stringResource(if (access.busy == AccessAction.RevokingInvite) R.string.space_invite_revoking else R.string.space_invite_revoke))
             }
+        }
     }
 }

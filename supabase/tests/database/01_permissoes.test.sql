@@ -2,7 +2,7 @@
 -- espaço E1, U3 no espaço E2, U4 e U5 sem espaço, e chamadas anônimas. Valores fictícios.
 begin;
 create extension if not exists pgtap with schema extensions;
-select plan(47);
+select plan(58);
 
 create schema tests;
 grant usage on schema tests to anon, authenticated;
@@ -34,7 +34,8 @@ insert into auth.users (id, email, aud, role) values
   ('00000000-0000-0000-0000-0000000000a2', 'u2@teste.exemplo', 'authenticated', 'authenticated'),
   ('00000000-0000-0000-0000-0000000000a3', 'u3@teste.exemplo', 'authenticated', 'authenticated'),
   ('00000000-0000-0000-0000-0000000000a4', 'u4@teste.exemplo', 'authenticated', 'authenticated'),
-  ('00000000-0000-0000-0000-0000000000a5', 'u5@teste.exemplo', 'authenticated', 'authenticated');
+  ('00000000-0000-0000-0000-0000000000a5', 'u5@teste.exemplo', 'authenticated', 'authenticated'),
+  ('00000000-0000-0000-0000-0000000000a6', 'u6@teste.exemplo', 'authenticated', 'authenticated');
 
 -- ---- espaços e convite pelas funções ----
 select tests.as_user('00000000-0000-0000-0000-0000000000a1');
@@ -127,13 +128,41 @@ select is((public.join_with_code((select v ->> 'code' from tests.ctx where k = '
 select tests.back();
 select is((select count(*)::int from public.space_members where space_id = '00000000-0000-0000-0000-0000000000e1'), 2, 'E1 tem exatamente 2 associações');
 
+-- O código é multiuso: a terceira pessoa entra com o mesmo código, enquanto houver vaga.
 select tests.as_user('00000000-0000-0000-0000-0000000000a4');
-select is((public.join_with_code((select v ->> 'code' from tests.ctx where k = 'invite1'))) ->> 'error', 'invalid_invite', 'reuso recusado com erro genérico');
+select is((public.join_with_code((select v ->> 'code' from tests.ctx where k = 'invite1'))) ->> 'spaceId', '00000000-0000-0000-0000-0000000000e1', 'U4 entra em E1 com o mesmo código (multiuso)');
 select tests.back();
+select is((select count(*)::int from public.space_members where space_id = '00000000-0000-0000-0000-0000000000e1'), 3, 'E1 tem 3 associações');
+
 select tests.as_user('00000000-0000-0000-0000-0000000000a1');
-select is((public.generate_invite('00000000-0000-0000-0000-0000000000e1')) ->> 'error', 'space_full', 'com 2 pessoas, gerar código é recusado');
+insert into tests.ctx select 'invite2', public.generate_invite('00000000-0000-0000-0000-0000000000e1');
+select matches((select v ->> 'code' from tests.ctx where k = 'invite2'), '^[2-9A-HJKMNP-Z]{8}$', 'com 3 pessoas ainda se gera código');
+select is((public.active_invite('00000000-0000-0000-0000-0000000000e1')) -> 'invite' ->> 'remainingSlots', '1', 'restam 1 vaga');
+select is((public.revoke_invite('00000000-0000-0000-0000-0000000000e2')) ->> 'error', 'not_member', 'U1 não revoga o convite de E2');
+select is((public.revoke_invite('00000000-0000-0000-0000-0000000000e1')) ->> 'revoked', 'true', 'U1 revoga o código ativo');
 select tests.back();
-select is((select count(*)::int from public.space_members where space_id = '00000000-0000-0000-0000-0000000000e1'), 2, 'E1 continua com 2 associações');
+
+select tests.as_user('00000000-0000-0000-0000-0000000000a5');
+select is((public.join_with_code((select v ->> 'code' from tests.ctx where k = 'invite1'))) ->> 'error', 'invalid_invite', 'o código anterior, substituído, não serve mais');
+select is((public.join_with_code((select v ->> 'code' from tests.ctx where k = 'invite2'))) ->> 'error', 'invalid_invite', 'o código revogado não serve');
+select tests.back();
+
+select tests.as_user('00000000-0000-0000-0000-0000000000a1');
+insert into tests.ctx select 'invite3', public.generate_invite('00000000-0000-0000-0000-0000000000e1');
+select tests.back();
+select tests.as_user('00000000-0000-0000-0000-0000000000a5');
+select is((public.join_with_code((select v ->> 'code' from tests.ctx where k = 'invite3'))) ->> 'spaceId', '00000000-0000-0000-0000-0000000000e1', 'U5 entra com o novo código');
+select tests.back();
+select is((select count(*)::int from public.space_members where space_id = '00000000-0000-0000-0000-0000000000e1'), 4, 'E1 chega a 4 associações');
+
+select tests.as_user('00000000-0000-0000-0000-0000000000a1');
+select is((public.generate_invite('00000000-0000-0000-0000-0000000000e1')) ->> 'error', 'space_full', 'com 4 pessoas, gerar código é recusado');
+select is((public.active_invite('00000000-0000-0000-0000-0000000000e1')) -> 'invite' ->> 'remainingSlots', '0', 'não restam vagas');
+select tests.back();
+select tests.as_user('00000000-0000-0000-0000-0000000000a6');
+select is((public.join_with_code((select v ->> 'code' from tests.ctx where k = 'invite3'))) ->> 'error', 'space_full', 'a quinta pessoa é recusada: espaço lotado');
+select tests.back();
+select is((select count(*)::int from public.space_members where space_id = '00000000-0000-0000-0000-0000000000e1'), 4, 'E1 continua com 4 associações');
 
 -- ---- U1 e U2 têm exatamente os mesmos direitos ----
 select tests.as_user('00000000-0000-0000-0000-0000000000a2');

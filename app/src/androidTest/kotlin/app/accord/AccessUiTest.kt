@@ -13,6 +13,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
@@ -186,7 +187,7 @@ class AccessUiTest {
     @Test
     fun modoEntrarExplicaQueNinguemCompartilhaSenha() {
         showSpace(SpaceUi(tab = SpaceTab.Join))
-        compose.onNodeWithText("Peça o código a quem criou o espaço. Você entra com a sua própria conta; ninguém precisa compartilhar senha.").assertIsDisplayed()
+        compose.onNodeWithText("Peça o QR ou o código a quem está no espaço. Você entra com a sua própria conta; ninguém precisa compartilhar senha.").assertIsDisplayed()
         compose.onNodeWithText("Entrar no espaço").assertIsDisplayed()
     }
 
@@ -195,7 +196,7 @@ class AccessUiTest {
         showSpace(
             SpaceUi(tab = SpaceTab.Join, code = "ZZZZZZZZ", message = ScreenMessage(MessageKind.Error, R.string.space_msg_invalid_invite)),
         )
-        compose.onNodeWithText("Esse código é inválido, expirou ou já foi usado. Peça um novo a quem criou o espaço. Nenhum espaço foi criado.").assertIsDisplayed()
+        compose.onNodeWithText("Esse código é inválido, expirou ou foi invalidado. Peça um novo a quem criou o espaço. Nenhum espaço foi criado.").assertIsDisplayed()
         compose.onNodeWithText("ZZZZZZZZ").assertIsDisplayed()
     }
 
@@ -209,7 +210,8 @@ class AccessUiTest {
     fun espacoCriadoMostraParticipantesComUltimaVerificacaoSemGarantirAceite() {
         showSpace(access = withSpace)
         compose.onNodeWithText("Nosso orçamento").assertIsDisplayed()
-        compose.onNodeWithText("Você: conectado · Outra pessoa: aguardando").assertIsDisplayed()
+        compose.onNodeWithText("Você: conectado · 1 de 4 pessoas no espaço").assertIsDisplayed()
+        compose.onNodeWithText("Restam 3 vagas.").assertIsDisplayed()
         compose.onNodeWithText("Última verificação:", substring = true).assertIsDisplayed()
         compose.onNodeWithText("Gerar código de convite").assertIsDisplayed()
         compose.onNodeWithText("Convidar depois e continuar", substring = true).assertDoesNotExist()
@@ -223,8 +225,10 @@ class AccessUiTest {
             log = log,
         )
         compose.onNodeWithText("ABCD EFGH").assertIsDisplayed()
+        compose.onNodeWithTag("invite-qr").assertExists()
+        compose.onNodeWithTag("invite-revoke").assertExists()
         compose.onNodeWithText("O código aparece só agora. Se perder, gere outro: o anterior deixa de valer.").assertIsDisplayed()
-        compose.onNodeWithText("Válido até", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Válido até", substring = true).performScrollTo().assertIsDisplayed()
         compose.onNodeWithContentDescription("Código de convite: A, B, C, D, E, F, G, H").assertExists()
         compose.onNodeWithText("Copiar código").performScrollTo().performClick()
         assertEquals(listOf("copiar:ABCDEFGH"), log)
@@ -237,15 +241,38 @@ class AccessUiTest {
         compose.onNodeWithText("O código expirou. Gere outro.").assertIsDisplayed()
     }
 
+    private fun people(n: Int) = withSpace.copy(
+        participants = ParticipantsView(List(n) { Participant("p$it", "pessoa$it", it.toLong()) }, 1_700_000_000_000, "p0"),
+    )
+
     @Test
-    fun comAsDuasPessoasNaoHaMaisConviteENenhumaAcaoDeGerar() {
-        val full = withSpace.copy(
-            participants = ParticipantsView(listOf(Participant("a", "ana", 1), Participant("b", "bruno", 2)), 1_700_000_000_000, "a"),
-        )
-        showSpace(access = full)
-        compose.onNodeWithText("Você: conectado · Outra pessoa: conectada").assertIsDisplayed()
-        compose.onNodeWithText("O espaço já tem as duas pessoas; não há mais convite.").assertIsDisplayed()
+    fun comTresPessoasAindaRestaUmaVagaEOConviteContinuaOferecido() {
+        showSpace(access = people(3))
+        compose.onNodeWithText("Você: conectado · 3 de 4 pessoas no espaço").assertIsDisplayed()
+        compose.onNodeWithText("Resta 1 vaga.").assertIsDisplayed()
+        compose.onNodeWithText("Gerar código de convite").assertIsDisplayed()
+    }
+
+    @Test
+    fun comQuatroPessoasNaoHaMaisConviteENenhumaAcaoDeGerar() {
+        showSpace(access = people(4))
+        compose.onNodeWithText("Você: conectado · 4 de 4 pessoas no espaço").assertIsDisplayed()
+        compose.onNodeWithText("O espaço já está com todas as vagas ocupadas; não há mais convite.").assertIsDisplayed()
         assertTrue(compose.onAllNodesWithText("Gerar código de convite").fetchSemanticsNodes().isEmpty())
+    }
+
+    @Test
+    fun invalidarCodigoEOfereceSoComConviteAtivoENaoVencido() {
+        showSpace(access = withSpace.copy(invite = InviteView(1_800_000_000_000, expired = false)))
+        compose.onNodeWithTag("invite-revoke").assertIsDisplayed()
+    }
+
+    @Test
+    fun entrarComCodigoOfereceLerQrECodigoDigitadoContinuaDisponivel() {
+        showSpace(SpaceUi(tab = SpaceTab.Join), access = AccessState(stage = EntryStage.NoSpace))
+        compose.onNodeWithTag("space-scan-qr").assertIsDisplayed()
+        compose.onNodeWithText("Ler QR Code").assertIsDisplayed()
+        compose.onNodeWithText("Código de convite", substring = true).assertExists()
     }
 
     @Test
@@ -255,6 +282,28 @@ class AccessUiTest {
     }
 
     // ---- tela 03 ----
+
+    @Test
+    fun convidadoVeVoceEntrouEmEOQueJaExisteEOsPassosSaoSoOsDele() {
+        compose.setContent {
+            AccordTheme {
+                FirstStepsScreen(
+                    StepsContent.Ready(
+                        rows = listOf(rows[1].copy(id = StepId.AccountsAndMyDefault, title = R.string.steps_accounts, detail = StepText(R.string.steps_accounts_pending), action = R.string.steps_accounts_action)),
+                        guest = StepsContent.Guest("Casa Silva", 12, cardConfigured = true, limitsTotal = null),
+                    ),
+                    PaddingValues(),
+                    StepActions({}, {}, {}, {}, {}, {}, {}),
+                )
+            }
+        }
+        compose.onNodeWithText("Você entrou em Casa Silva").assertIsDisplayed()
+        compose.onNodeWithText("Categorias: 12 grupos já definidos.").assertIsDisplayed()
+        compose.onNodeWithText("Cartão: já configurado.").assertIsDisplayed()
+        compose.onNodeWithText("Limites: ainda não definidos.").assertIsDisplayed()
+        compose.onNodeWithText("Vamos começar").assertIsDisplayed()
+        compose.onNodeWithText("Cartão padrão", substring = true).assertDoesNotExist()
+    }
 
     private fun showSteps(rows: List<StepRow>, log: MutableList<String> = mutableListOf()) {
         compose.setContent {

@@ -239,22 +239,35 @@ abstract class SpaceServiceContract {
     }
 
     @Test
-    fun `código usado não serve para outra pessoa`() = test {
-        val couple = newSpace()
-        val code = ok(service.generateInvite(couple.creator.accessToken, couple.spaceId)).code
-        ok(service.joinWithCode(signUp().accessToken, code))
-        val third = signUp()
-        assertEquals(RemoteFailure.InvalidInvite, failure(service.joinWithCode(third.accessToken, code)))
-        assertEquals(2, ok(service.participants(couple.creator.accessToken, couple.spaceId)).items.size)
+    fun `o mesmo código serve a várias pessoas ate lotar em quatro`() = test {
+        val space = newSpace()
+        val code = ok(service.generateInvite(space.creator.accessToken, space.spaceId)).code
+        repeat(3) { ok(service.joinWithCode(signUp().accessToken, code)) }
+        assertEquals(4, ok(service.participants(space.creator.accessToken, space.spaceId)).items.size)
+        val fifth = signUp()
+        assertEquals(RemoteFailure.SpaceFull, failure(service.joinWithCode(fifth.accessToken, code)))
+        assertEquals(4, ok(service.participants(space.creator.accessToken, space.spaceId)).items.size)
     }
 
     @Test
-    fun `com as duas pessoas no espaço não se gera código e nenhum código associa a terceira`() = test {
-        val couple = newCouple()
-        assertEquals(RemoteFailure.SpaceFull, failure(service.generateInvite(couple.creator.accessToken, couple.spaceId)))
-        assertEquals(RemoteFailure.SpaceFull, failure(service.generateInvite(couple.partner!!.accessToken, couple.spaceId)))
-        val third = signUp()
-        assertEquals(RemoteFailure.InvalidInvite, failure(service.joinWithCode(third.accessToken, "ABCDEFGH")))
+    fun `com quatro pessoas no espaço não se gera código, com três ainda se gera`() = test {
+        val space = newSpace()
+        val code = ok(service.generateInvite(space.creator.accessToken, space.spaceId)).code
+        repeat(2) { ok(service.joinWithCode(signUp().accessToken, code)) }
+        assertTrue(ok(service.generateInvite(space.creator.accessToken, space.spaceId)).code.isNotBlank())
+        val again = ok(service.generateInvite(space.creator.accessToken, space.spaceId)).code
+        ok(service.joinWithCode(signUp().accessToken, again))
+        assertEquals(RemoteFailure.SpaceFull, failure(service.generateInvite(space.creator.accessToken, space.spaceId)))
+    }
+
+    @Test
+    fun `invalidar o código impede novas entradas e só membro invalida`() = test {
+        val space = newSpace()
+        val code = ok(service.generateInvite(space.creator.accessToken, space.spaceId)).code
+        assertEquals(RemoteFailure.NotMember, failure(service.revokeInvite(signUp().accessToken, space.spaceId)))
+        ok(service.revokeInvite(space.creator.accessToken, space.spaceId))
+        assertEquals(null, ok(service.activeInvite(space.creator.accessToken, space.spaceId)))
+        assertEquals(RemoteFailure.InvalidInvite, failure(service.joinWithCode(signUp().accessToken, code)))
     }
 
     @Test
@@ -330,18 +343,17 @@ abstract class SpaceServiceContract {
     }
 
     @Test
-    fun `dois consumos simultâneos do mesmo código deixam exatamente uma pessoa associada`() = test {
-        repeat(10) {
-            val couple = newSpace()
-            val code = ok(service.generateInvite(couple.creator.accessToken, couple.spaceId)).code
-            val one = signUp()
-            val two = signUp()
-            val results = listOf(one, two).map { person ->
+    fun `cinco entradas simultâneas com o mesmo código deixam o espaço com exatamente quatro pessoas`() = test {
+        repeat(5) {
+            val space = newSpace()
+            val code = ok(service.generateInvite(space.creator.accessToken, space.spaceId)).code
+            val people = List(5) { signUp() }
+            val results = people.map { person ->
                 kotlinx.coroutines.CoroutineScope(Dispatchers.Default).async { service.joinWithCode(person.accessToken, code) }
             }.awaitAll()
-            assertEquals(1, results.count { it is RemoteResult.Ok }, "resultados: $results")
-            assertEquals(1, results.count { it is RemoteResult.Failed && it.failure == RemoteFailure.InvalidInvite })
-            assertEquals(2, ok(service.participants(couple.creator.accessToken, couple.spaceId)).items.size)
+            assertEquals(3, results.count { it is RemoteResult.Ok }, "resultados: $results")
+            assertEquals(2, results.count { it is RemoteResult.Failed && it.failure == RemoteFailure.SpaceFull }, "resultados: $results")
+            assertEquals(4, ok(service.participants(space.creator.accessToken, space.spaceId)).items.size)
         }
     }
 

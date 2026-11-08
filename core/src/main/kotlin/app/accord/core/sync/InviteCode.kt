@@ -2,13 +2,13 @@ package app.accord.core.sync
 
 /**
  * Regras do código de convite (decisão de 23/10/2026): 8 caracteres alfanuméricos em caixa alta,
- * uso único, 3 dias, no máximo 2 pessoas. Alfabeto sem caracteres ambíguos (0/O e 1/I/L) e
+ * validade de 3 dias, multiuso até lotar o espaço (ADR 0053, de 08/11/2026: até 4 pessoas; antes, uso único e 2 pessoas). Alfabeto sem caracteres ambíguos (0/O e 1/I/L) e
  * normalização da entrada são propostas do S2. O serviço aplica a mesma normalização.
  */
 object InviteCode {
     const val LENGTH = 8
     const val VALIDITY_MILLIS = 3L * 24 * 60 * 60 * 1000
-    const val MAX_MEMBERS = 2
+    const val MAX_MEMBERS = 4
 
     /** Proposta (mecanismo e números em aberto no S2): tentativas falhas por conta numa janela de 10 minutos. */
     const val MAX_FAILED_ATTEMPTS = 5

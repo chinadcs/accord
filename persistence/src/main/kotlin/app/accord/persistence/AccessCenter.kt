@@ -204,9 +204,9 @@ class AccessCenter(
         }
     }
 
-    private suspend fun bind(accountId: String, ref: SpaceRef, dismissedSteps: Boolean): AccessSnapshot = store.update {
+    private suspend fun bind(accountId: String, ref: SpaceRef, dismissedSteps: Boolean, joinedByInvite: Boolean = false): AccessSnapshot = store.update {
         it.copy(
-            bindings = it.bindings + (accountId to SpaceBinding(accountId, ref.spaceId, ref.name, dismissedSteps)),
+            bindings = it.bindings + (accountId to SpaceBinding(accountId, ref.spaceId, ref.name, dismissedSteps, joinedByInvite)),
             pending = it.pending - accountId,
         )
     }
@@ -249,6 +249,19 @@ class AccessCenter(
         }
     }
 
+    /** Invalida o código ativo (ele pode ter vazado ou já cumpriu o papel); outro só se gera por pedido. */
+    suspend fun revokeInvite(): AccessOutcome = guarded(AccessAction.RevokingInvite) {
+        val (session, binding) = boundSession() ?: return@guarded AccessOutcome.Failed(sessionFailureOrNoSpace())
+        when (val result = authorized { remote.revokeInvite(it, binding.spaceId) }) {
+            is RemoteResult.Failed -> fail(result.failure)
+            is RemoteResult.Ok -> {
+                issuedCode = null
+                store.update { it.copy(invites = it.invites - session.accountId) }
+                AccessOutcome.Done(stageOf(store.read()))
+            }
+        }
+    }
+
     /** Esquece o código mostrado (ao sair da tela, por exemplo). */
     suspend fun forgetIssuedCode() {
         issuedCode = null
@@ -264,7 +277,8 @@ class AccessCenter(
         when (val result = authorized { remote.joinWithCode(it, normalized) }) {
             is RemoteResult.Failed -> fail(result.failure)
             is RemoteResult.Ok -> {
-                val snapshot = bind(session.accountId, result.value, dismissedSteps = false)
+                // Quem já estava no espaço (código repetido) não é tratado como convidado novo.
+                val snapshot = bind(session.accountId, result.value, dismissedSteps = result.value.adoptedExisting, joinedByInvite = !result.value.adoptedExisting)
                 openRuntimeFor(snapshot)
                 AccessOutcome.Done(stageOf(snapshot))
             }
@@ -298,7 +312,15 @@ class AccessCenter(
         val accountId = snapshot.session?.accountId
         val cached = accountId?.let { snapshot.participants[it] }
         val participants = cached?.let { app.accord.core.sync.Participants(it.items, it.checkedAtMillis) }
+        if (accountId?.let { snapshot.bindings[it] }?.joinedByInvite == true) return FirstSteps.deriveGuest(runtime.space)
         return FirstSteps.derive(runtime.space, currentMonth(), participants)
+    }
+
+    /** Nome do espaço de quem entrou por convite neste aparelho; nulo para quem criou o espaço. */
+    suspend fun guestSpaceName(): String? {
+        val snapshot = store.read()
+        val accountId = snapshot.session?.accountId ?: return null
+        return snapshot.bindings[accountId]?.takeIf { it.joinedByInvite }?.spaceName
     }
 
     /** "Começar a registrar": encerra a lista neste aparelho; ela continua acessível em Mais. */

@@ -35,6 +35,8 @@ data class SpaceBinding(
     val spaceId: String,
     val spaceName: String,
     val firstStepsDismissed: Boolean = false,
+    /** Entrou por convite (ADR 0053): os primeiros passos são os do convidado, sem refazer o que o espaço já tem. */
+    val joinedByInvite: Boolean = false,
 )
 
 /** Criação de espaço em andamento: o mesmo ID é reutilizado se a resposta se perder. */
@@ -61,7 +63,7 @@ interface AccessStore {
     suspend fun update(block: (AccessSnapshot) -> AccessSnapshot): AccessSnapshot
 }
 
-enum class AccessAction { SigningIn, SigningUp, SigningOut, CreatingSpace, GeneratingInvite, Joining, Refreshing }
+enum class AccessAction { SigningIn, SigningUp, SigningOut, CreatingSpace, GeneratingInvite, RevokingInvite, Joining, Refreshing }
 
 data class AccountView(val accountId: String, val email: String)
 
@@ -141,6 +143,16 @@ data class FirstStep(val id: StepId, val status: StepStatus)
  * à lista, porque o núcleo não conhece a plataforma.
  */
 object FirstSteps {
+    /**
+     * Passos de quem entrou por convite: só a própria conta padrão. Categorias, cartão, limites e convite já são do
+     * espaço (ou não cabem ao convidado); a permissão de notificação é acrescentada pelo aplicativo, como no fluxo completo.
+     */
+    suspend fun deriveGuest(space: FinanceSpace): List<FirstStep> {
+        val accounts = (space.accounts() as? QueryResult.Data)?.value
+        val done = accounts != null && accounts.accounts.isNotEmpty() && accounts.myDefaultAccountId != null
+        return listOf(FirstStep(StepId.AccountsAndMyDefault, if (done) StepStatus.Done else StepStatus.Pending))
+    }
+
     suspend fun derive(space: FinanceSpace, month: YearMonth, participants: Participants?): List<FirstStep> {
         suspend fun <T> value(result: QueryResult<T>): T? = (result as? QueryResult.Data)?.value
         val categories = value(space.categories())
@@ -155,7 +167,8 @@ object FirstSteps {
                 if (accounts != null && accounts.accounts.isNotEmpty() && accounts.myDefaultAccountId != null) StepStatus.Done else StepStatus.Pending,
             ),
             FirstStep(StepId.LimitsAndSplit, if (limits?.any { it.setting.total != null } == true) StepStatus.Done else StepStatus.Pending),
-            FirstStep(StepId.OtherPerson, if ((participants?.items?.size ?: 0) >= InviteCode.MAX_MEMBERS) StepStatus.Done else StepStatus.Pending),
+            // Basta mais uma pessoa no espaço; o limite de vagas vale para o convite, não para este passo.
+            FirstStep(StepId.OtherPerson, if ((participants?.items?.size ?: 0) >= 2) StepStatus.Done else StepStatus.Pending),
             // O modelo no aparelho pertence a S3; até lá não é apresentado como pendência do casal.
             FirstStep(StepId.DeviceModel, StepStatus.Unavailable),
         )

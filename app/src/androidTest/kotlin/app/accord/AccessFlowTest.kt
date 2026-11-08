@@ -223,7 +223,7 @@ class AccessFlowTest {
         type("Nome do espaço", "Nosso orçamento")
         tapLast("Criar espaço")
         waitForText("Você: conectado")
-        waitForText("Outra pessoa: aguardando")
+        waitForText("1 de 4 pessoas no espaço")
         assertTrue(service.sentEmails.isEmpty())
 
         tap("Gerar código de convite")

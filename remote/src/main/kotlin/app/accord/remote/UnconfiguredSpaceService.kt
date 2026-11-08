@@ -27,6 +27,7 @@ object UnconfiguredSpaceService : RemoteSpaceService {
     override suspend fun currentSpace(accessToken: String): RemoteResult<SpaceRef?> = unavailable
     override suspend fun generateInvite(accessToken: String, spaceId: String): RemoteResult<IssuedInvite> = unavailable
     override suspend fun activeInvite(accessToken: String, spaceId: String): RemoteResult<InviteStatus?> = unavailable
+    override suspend fun revokeInvite(accessToken: String, spaceId: String): RemoteResult<Unit> = unavailable
     override suspend fun joinWithCode(accessToken: String, code: String): RemoteResult<SpaceRef> = unavailable
     override suspend fun participants(accessToken: String, spaceId: String): RemoteResult<Participants> = unavailable
     override suspend fun push(accessToken: String, spaceId: String, operations: List<OperationEnvelope>): RemoteResult<List<OperationResult>> = unavailable

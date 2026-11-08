@@ -37,6 +37,7 @@ import app.accord.core.sync.StepStatus
 import app.accord.ui.components.DecorativeIcon
 import app.accord.ui.components.RefreshOnResume
 import app.accord.ui.theme.Accord
+import androidx.compose.ui.platform.testTag
 import app.accord.ui.theme.AccordSpacing
 import com.composables.icons.lucide.R as Lucide
 
@@ -76,8 +77,11 @@ fun FirstStepsScreen(content: StepsContent, padding: PaddingValues, actions: Ste
             }
             Text(stringResource(R.string.steps_title), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f).semantics { heading() })
         }
-        Text(stringResource(R.string.steps_intro), style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        val guest = (content as? StepsContent.Ready)?.guest
+        if (guest != null) GuestSummaryCard(guest) else Text(
+            stringResource(R.string.steps_intro), style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         when (content) {
             StepsContent.Loading -> Text(stringResource(R.string.state_loading), style = MaterialTheme.typography.bodyLarge)
             is StepsContent.Ready -> Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
@@ -100,6 +104,26 @@ fun FirstStepsScreen(content: StepsContent, padding: PaddingValues, actions: Ste
         }
         OutlinedButton(onClick = actions.onRegisterManually, enabled = canStart, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
             Text(stringResource(R.string.steps_register_manually))
+        }
+    }
+}
+
+/** "Você entrou em [espaço]" e o que já existe: quem entra por convite não refaz categorias, cartão nem limites. */
+@Composable
+private fun GuestSummaryCard(guest: StepsContent.Guest) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+        Column(
+            Modifier.fillMaxWidth().padding(AccordSpacing.s4).testTag("guest-summary"),
+            verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+        ) {
+            Text(stringResource(R.string.steps_guest_title, guest.spaceName), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+            Text(stringResource(R.string.steps_guest_intro), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.steps_guest_categories, guest.categoryGroups), style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(if (guest.cardConfigured) R.string.steps_guest_card_set else R.string.steps_guest_card_unset), style = MaterialTheme.typography.bodyMedium)
+            Text(
+                guest.limitsTotal?.let { stringResource(R.string.steps_guest_limits_set, it) } ?: stringResource(R.string.steps_guest_limits_unset),
+                style = MaterialTheme.typography.bodyMedium,
+            )
         }
     }
 }

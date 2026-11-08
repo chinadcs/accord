@@ -15,7 +15,7 @@ class AccessSnapshotCodecTest {
     private val full = AccessSnapshot(
         lastEmail = "ana@x.test",
         session = StoredSession("acc-1", "ana@x.test", "acesso", "renovacao", 1_700_000_000_000, needsRenewal = true),
-        bindings = mapOf("acc-1" to SpaceBinding("acc-1", "esp-1", "Nosso orçamento", firstStepsDismissed = true)),
+        bindings = mapOf("acc-1" to SpaceBinding("acc-1", "esp-1", "Nosso orçamento", firstStepsDismissed = true, joinedByInvite = true)),
         pending = mapOf("acc-2" to PendingSpace("esp-2", "Casa")),
         participants = mapOf("acc-1" to ParticipantsCache(listOf(Participant("acc-1", "ana", 5), Participant("acc-3", "bruno", 9)), 77)),
         invites = mapOf("acc-1" to InviteCache(123, expired = true, checkedAtMillis = 88)),

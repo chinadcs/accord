@@ -48,6 +48,7 @@ object AccessSnapshotCodec {
                         buildJsonObject {
                             put("accountId", b.accountId); put("spaceId", b.spaceId); put("spaceName", b.spaceName)
                             put("firstStepsDismissed", b.firstStepsDismissed)
+                            put("joinedByInvite", b.joinedByInvite)
                         },
                     )
                 }
@@ -113,7 +114,7 @@ object AccessSnapshotCodec {
             session = session,
             bindings = root["bindings"].objects().mapNotNull { b ->
                 val account = b.str("accountId") ?: return@mapNotNull null
-                account to SpaceBinding(account, b.str("spaceId").orEmpty(), b.str("spaceName").orEmpty(), b.bool("firstStepsDismissed"))
+                account to SpaceBinding(account, b.str("spaceId").orEmpty(), b.str("spaceName").orEmpty(), b.bool("firstStepsDismissed"), b.bool("joinedByInvite"))
             }.toMap(),
             pending = root["pending"].objects().mapNotNull { p ->
                 val account = p.str("accountId") ?: return@mapNotNull null

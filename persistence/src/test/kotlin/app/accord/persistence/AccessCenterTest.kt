@@ -220,8 +220,8 @@ class AccessCenterTest {
         val participants = assertNotNull(ana.access.status.value.participants)
         assertEquals(2, participants.items.size)
         assertEquals(ana.access.status.value.account?.accountId, participants.yourAccountId)
-        // Com as duas pessoas, gerar outro código deixa de ser possível.
-        assertEquals(AccessOutcome.Failed(AccessFailure.SpaceFull), ana.access.generateInvite())
+        // O espaço comporta até quatro: com duas pessoas ainda se gera outro código.
+        assertIs<AccessOutcome.Done>(ana.access.generateInvite())
     }
 
     @Test
@@ -346,15 +346,19 @@ class AccessCenterTest {
             assertIs<app.accord.core.space.CommandResult.Applied>(it)
         }
         assertEquals(StepStatus.Done, ana.steps()[StepId.DefaultCard])
-        assertEquals(StepStatus.Pending, bruno.steps()[StepId.DefaultCard], "o outro aparelho ainda não recebeu")
+
+        // Quem entrou por convite (ADR 0053) vê só a própria conta padrão: o resto é do espaço.
+        assertEquals(setOf(StepId.AccountsAndMyDefault), bruno.steps().keys)
+        assertNotNull(bruno.access.guestSpaceName(), "o convidado é reconhecido")
+        assertEquals(null, ana.access.guestSpaceName(), "quem criou o espaço não é convidado")
 
         assertIs<SyncOutcome.Completed>(ana.access.runtime.value!!.engine.syncNow())
         assertIs<SyncOutcome.Completed>(bruno.access.runtime.value!!.engine.syncNow())
-        assertEquals(StepStatus.Done, bruno.steps()[StepId.DefaultCard], "depois de receber, o item muda")
+        val brunoCard = bruno.access.runtime.value!!.space.card()
+        assertEquals(true, (brunoCard as app.accord.core.space.QueryResult.Data).value.configured, "depois de receber, o cartão aparece para o convidado")
 
         ana.access.refreshSpaceInfo()
         assertEquals(StepStatus.Done, ana.steps()[StepId.OtherPerson])
-        assertEquals(StepStatus.Pending, bruno.steps()[StepId.OtherPerson], "Bruno ainda não verificou os participantes")
     }
 
     @Test

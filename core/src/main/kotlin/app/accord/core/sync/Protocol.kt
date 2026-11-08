@@ -167,7 +167,7 @@ sealed interface RemoteFailure {
     /** A conta não participa do espaço citado. */
     data object NotMember : RemoteFailure
     data object InvalidInvite : RemoteFailure
-    /** O espaço já tem as duas pessoas: nenhum código associa mais ninguém e não se gera outro. */
+    /** O espaço já tem o número máximo de pessoas: nenhum código associa mais ninguém e não se gera outro. */
     data object SpaceFull : RemoteFailure
     data object AlreadyInAnotherSpace : RemoteFailure
     data class RateLimited(val retryAfterMillis: Long?) : RemoteFailure
@@ -218,13 +218,16 @@ interface RemoteSpaceService {
     /** Espaço de que a conta participa, ou nulo. Serve a quem entra num aparelho novo ou reinstalado. */
     suspend fun currentSpace(accessToken: String): RemoteResult<SpaceRef?>
 
-    /** Gera um novo código e invalida o anterior; só membro, e só com vaga livre. */
+    /** Gera um novo código e invalida o anterior; só membro, e só com vaga livre. O código serve a várias pessoas, até lotar. */
     suspend fun generateInvite(accessToken: String, spaceId: String): RemoteResult<IssuedInvite>
 
     /** Convite ativo (sem o código). Nulo se não há. */
     suspend fun activeInvite(accessToken: String, spaceId: String): RemoteResult<InviteStatus?>
 
-    /** Idempotente para a conta que consumiu o código. */
+    /** Invalida o código ativo, sem gerar outro. Só membro. */
+    suspend fun revokeInvite(accessToken: String, spaceId: String): RemoteResult<Unit>
+
+    /** Idempotente para a conta que já entrou com o código. */
     suspend fun joinWithCode(accessToken: String, code: String): RemoteResult<SpaceRef>
     suspend fun participants(accessToken: String, spaceId: String): RemoteResult<Participants>
 

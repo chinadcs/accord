@@ -48,7 +48,7 @@
     <string name="space_name_required">Dê um nome ao espaço.</string>
     <string name="space_create_action">Criar espaço</string>
     <string name="space_creating">Criando espaço…</string>
-    <string name="space_join_note">Peça o código a quem criou o espaço. Você entra com a sua própria conta; ninguém precisa compartilhar senha.</string>
+    <string name="space_join_note">Peça o QR ou o código a quem está no espaço. Você entra com a sua própria conta; ninguém precisa compartilhar senha.</string>
     <string name="space_code">Código de convite</string>
     <string name="space_code_required">Digite o código de convite.</string>
     <string name="space_code_format">O código tem 8 letras e números. Confira o que foi digitado.</string>
@@ -58,9 +58,9 @@
     <string name="space_msg_joined">Você entrou no espaço %1$s. Os dois têm o mesmo acesso.</string>
     <string name="space_msg_create_network">Sem resposta do serviço. Nada foi perdido: ao tentar de novo, o mesmo espaço é recuperado, sem criar outro.</string>
     <string name="space_msg_join_network">Sem conexão. A entrada não foi concluída e o código foi mantido.</string>
-    <string name="space_msg_invalid_invite">Esse código é inválido, expirou ou já foi usado. Peça um novo a quem criou o espaço. Nenhum espaço foi criado.</string>
+    <string name="space_msg_invalid_invite">Esse código é inválido, expirou ou foi invalidado. Peça um novo a quem criou o espaço. Nenhum espaço foi criado.</string>
     <string name="space_msg_other_space">Esta conta já participa de outro espaço, por isso o código não pode ser usado. Nenhum orçamento foi juntado.</string>
-    <string name="space_msg_full">O espaço já tem as duas pessoas. Nenhum código associa uma terceira.</string>
+    <string name="space_msg_full">Esse espaço já está lotado. Nenhum código associa mais uma pessoa.</string>
     <string name="space_msg_rate_limited">Muitas tentativas seguidas. Aguarde alguns minutos e confira o código.</string>
     <string name="space_msg_session">Seu acesso precisa ser renovado antes de continuar. Entre de novo com a mesma conta.</string>
     <string name="space_msg_unavailable">O serviço não respondeu agora. Nada foi alterado; tente de novo em instantes.</string>
@@ -72,13 +72,24 @@
     <string name="space_section_space">Espaço</string>
     <string name="space_section_participants">Participantes</string>
     <string name="space_you_connected">Você: conectado</string>
-    <string name="space_other_waiting">Outra pessoa: aguardando</string>
-    <string name="space_other_connected">Outra pessoa: conectada</string>
+    <string name="space_members_count">%1$d de %2$d pessoas no espaço</string>
+    <string name="space_other_waiting">Outras pessoas: aguardando</string>
     <string name="space_last_check">Última verificação: %1$s</string>
     <string name="space_never_checked">Ainda não verificado neste aparelho.</string>
     <string name="space_check_participants">Verificar participantes</string>
-    <string name="space_invite_title">Convidar a outra pessoa</string>
-    <string name="space_invite_note">Ela cria o próprio acesso e digita o código em Entrar com código. Vocês podem usar o espaço enquanto o convite está pendente.</string>
+    <string name="space_invite_title">Convidar pessoas</string>
+    <string name="space_invite_note">Quem for entrar cria o próprio acesso e lê o QR ou digita o código em Entrar com código. O mesmo código serve a mais de uma pessoa, até o espaço lotar, e vale por 3 dias.</string>
+    <plurals name="space_invite_slots">
+        <item quantity="one">Resta %1$d vaga.</item>
+        <item quantity="other">Restam %1$d vagas.</item>
+    </plurals>
+    <string name="space_invite_revoke">Invalidar código</string>
+    <string name="space_invite_revoking">Invalidando…</string>
+    <string name="space_msg_invite_revoked">Código invalidado. Gere outro quando quiser convidar.</string>
+    <string name="space_qr_content_description">QR Code do convite. Leva o mesmo código que aparece escrito ao lado.</string>
+    <string name="space_scan_qr">Ler QR Code</string>
+    <string name="space_scan_unavailable">A leitura de QR não está disponível neste aparelho. Digite o código.</string>
+    <string name="space_scan_invalid">Esse QR não é de um convite do Accord. Digite o código ou peça outro QR.</string>
     <string name="space_invite_generate">Gerar código de convite</string>
     <string name="space_invite_generate_again">Gerar outro código</string>
     <string name="space_invite_generating">Gerando código…</string>
@@ -88,7 +99,7 @@
     <string name="space_invite_valid_until">Válido até %1$s</string>
     <string name="space_invite_expired">O código expirou. Gere outro.</string>
     <string name="space_invite_pending_hidden">Há um convite ativo, válido até %1$s. Por segurança o código não é mostrado de novo; gere outro se precisar.</string>
-    <string name="space_invite_full">O espaço já tem as duas pessoas; não há mais convite.</string>
+    <string name="space_invite_full">O espaço já está com todas as vagas ocupadas; não há mais convite.</string>
     <string name="space_code_content_description">Código de convite: %1$s</string>
     <string name="space_continue_steps">Continuar para primeiros passos</string>
     <string name="space_continue_later">Convidar depois e continuar</string>
@@ -125,6 +136,13 @@
     <string name="steps_model_unavailable">Chega em uma etapa futura. Sem ele, use o registro manual.</string>
     <string name="steps_start">Começar a registrar</string>
     <string name="steps_register_manually">Registrar manualmente</string>
+    <string name="steps_guest_title">Você entrou em %1$s</string>
+    <string name="steps_guest_intro">O espaço já tem o que vocês configuraram. Falta só a sua parte.</string>
+    <string name="steps_guest_categories">Categorias: %1$d grupos já definidos.</string>
+    <string name="steps_guest_card_set">Cartão: já configurado.</string>
+    <string name="steps_guest_card_unset">Cartão: ainda não configurado por quem criou o espaço.</string>
+    <string name="steps_guest_limits_set">Limites: %1$s no mês.</string>
+    <string name="steps_guest_limits_unset">Limites: ainda não definidos.</string>
     <string name="steps_note_received">Os outros ajustes podem ficar para depois. Para começar, permita as notificações neste aparelho. Dados do outro aparelho mostram só o que já chegou aqui.</string>
     <string name="steps_item_open">%1$s, %2$s. %3$s</string>
 

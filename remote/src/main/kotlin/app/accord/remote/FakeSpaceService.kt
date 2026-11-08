@@ -50,13 +50,14 @@ class FakeSpaceService(
     private class Account(val id: String, val email: String, var password: String)
     private class Token(val accountId: String, val expiresAtMillis: Long)
 
-    private enum class InviteState { Active, Consumed, Replaced }
+    private enum class InviteState { Active, Replaced, Revoked }
     private class Invite(
         val code: String,
         val generatedAtMillis: Long,
         val validUntilMillis: Long,
         var state: InviteState = InviteState.Active,
-        var consumedBy: String? = null,
+        /** Contas que já entraram com este código: o código é multiuso e a repetição da mesma conta é idempotente. */
+        val usedBy: MutableSet<String> = mutableSetOf(),
     )
 
     private class Member(val accountId: String, val nickname: String, val joinedAtMillis: Long)
@@ -135,7 +136,7 @@ class FakeSpaceService(
     fun backdateInvites(spaceId: String, byMillis: Long) {
         val space = spaces[spaceId] ?: return
         val shifted = space.invites.map {
-            Invite(it.code, it.generatedAtMillis - byMillis, it.validUntilMillis - byMillis, it.state, it.consumedBy)
+            Invite(it.code, it.generatedAtMillis - byMillis, it.validUntilMillis - byMillis, it.state, it.usedBy)
         }
         space.invites.clear()
         space.invites.addAll(shifted)
@@ -265,6 +266,13 @@ class FakeSpaceService(
         RemoteResult.Ok(active?.let { InviteStatus(it.validUntilMillis, expired = clock() >= it.validUntilMillis) })
     }
 
+    override suspend fun revokeInvite(accessToken: String, spaceId: String): RemoteResult<Unit> = call {
+        val account = authenticate(accessToken) ?: return@call fail(RemoteFailure.SessionExpired)
+        val space = memberSpace(account, spaceId) ?: return@call fail(RemoteFailure.NotMember)
+        space.invites.filter { it.state == InviteState.Active }.forEach { it.state = InviteState.Revoked }
+        RemoteResult.Ok(Unit)
+    }
+
     override suspend fun joinWithCode(accessToken: String, code: String): RemoteResult<SpaceRef> = call {
         val account = authenticate(accessToken) ?: return@call fail(RemoteFailure.SessionExpired)
         val now = clock()
@@ -278,8 +286,8 @@ class FakeSpaceService(
             s.invites.firstOrNull { it.code == normalized }?.let { s to it }
         } ?: (null to null)
 
-        // Repetição pela conta que consumiu: conclui a mesma associação, sem erro.
-        if (space != null && invite != null && invite.state == InviteState.Consumed && invite.consumedBy == account.id) {
+        // Repetição pela conta que já entrou com este código: conclui a mesma associação, sem erro.
+        if (space != null && invite != null && account.id in invite.usedBy && space.members.any { it.accountId == account.id }) {
             return@call RemoteResult.Ok(SpaceRef(space.id, space.name))
         }
         if (account.id in spaceOfAccount) return@call fail(RemoteFailure.AlreadyInAnotherSpace)
@@ -290,8 +298,7 @@ class FakeSpaceService(
         if (space.members.size >= InviteCode.MAX_MEMBERS) return@call fail(RemoteFailure.SpaceFull)
         space.members += Member(account.id, nicknameOf(account), now)
         spaceOfAccount[account.id] = space.id
-        invite.state = InviteState.Consumed
-        invite.consumedBy = account.id
+        invite.usedBy += account.id
         RemoteResult.Ok(SpaceRef(space.id, space.name))
     }
 

@@ -33,7 +33,10 @@ data class StepRow(
 sealed interface StepsContent {
     data object Loading : StepsContent
 
-    data class Ready(val rows: List<StepRow>) : StepsContent {
+    /** O que o espaço já tem, para quem entrou por convite ("Você entrou em [espaço]"). */
+    data class Guest(val spaceName: String, val categoryGroups: Int, val cardConfigured: Boolean, val limitsTotal: String?)
+
+    data class Ready(val rows: List<StepRow>, val guest: Guest? = null) : StepsContent {
         /** O passo de notificações é obrigatório (decisão de 03/11/2026): "Começar a registrar" só vale com a permissão concedida neste aparelho. */
         val canStart: Boolean get() = rows.firstOrNull { it.id == StepId.Notifications }?.status != StepStatus.Pending
     }
@@ -81,7 +84,11 @@ class FirstStepsViewModel(
                 if (notificationAccess == NotificationAccess.Granted) R.string.steps_notifications_action_done else R.string.steps_notifications_action_pending,
             )
 
-            _content.value = StepsContent.Ready(
+            val guestName = access.guestSpaceName()
+            val guest = guestName?.let {
+                StepsContent.Guest(it, categories.count { c -> c.parentId == null }, card?.configured == true, total.takeIf { t -> t > Money.ZERO }?.format())
+            }
+            _content.value = StepsContent.Ready(guest = guest, rows =
                 // ADR 0036: sem modelo no P0, o passo "modelo no aparelho" não aparece na lista.
                 steps.filter { it.id != StepId.DeviceModel }.map { step ->
                     val done = step.status == StepStatus.Done

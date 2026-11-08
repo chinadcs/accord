@@ -221,6 +221,12 @@ class SupabaseSpaceService(
             }
         }
 
+    override suspend fun revokeInvite(accessToken: String, spaceId: String): RemoteResult<Unit> =
+        when (val r = rpc("revoke_invite", accessToken, buildJsonObject { put("p_space", spaceId) })) {
+            is RemoteResult.Failed -> r
+            is RemoteResult.Ok -> RemoteResult.Ok(Unit)
+        }
+
     override suspend fun joinWithCode(accessToken: String, code: String): RemoteResult<SpaceRef> =
         when (val r = rpc("join_with_code", accessToken, buildJsonObject { put("p_code", code) })) {
             is RemoteResult.Failed -> r
