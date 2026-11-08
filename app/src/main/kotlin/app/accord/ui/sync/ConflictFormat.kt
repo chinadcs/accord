@@ -79,6 +79,10 @@ object ConflictFormat {
             Spec("iconSource", R.string.field_icon_source, Kind.Text), Spec("iconKey", R.string.field_icon, Kind.Text),
             Spec("voided", R.string.field_status, Kind.Deleted),
         ),
+        EntityType.Intention to listOf(
+            Spec("name", R.string.field_name, Kind.Text), Spec("estimatedCents", R.string.field_estimated_value, Kind.Cents),
+            Spec("desiredMonth", R.string.field_desired_month, Kind.Month), Spec("note", R.string.field_note, Kind.Text),
+        ),
         EntityType.Recurrence to listOf(
             Spec("kind", R.string.field_kind, Kind.Text), Spec("frequency", R.string.field_frequency, Kind.Text),
             Spec("anchorEpochDay", R.string.field_first_occurrence, Kind.Day), Spec("segments", R.string.field_segments, Kind.Count),
@@ -131,6 +135,7 @@ object ConflictFormat {
         EntityType.ImportBatch -> R.string.conflict_entity_import_batch
         EntityType.AlertEvent -> R.string.conflict_entity_alert_event
         EntityType.IconAssociation -> R.string.conflict_entity_icon_association
+        EntityType.Intention -> R.string.conflict_entity_intention
         EntityType.Account -> R.string.conflict_entity_account
         EntityType.Card -> R.string.conflict_entity_card
         EntityType.Preferences -> R.string.conflict_entity_preferences

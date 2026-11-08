@@ -67,6 +67,25 @@ data class IconAssociationRow(
     val revision: Long,
 )
 
+/**
+ * Intenção de compra do casal (S7, ADR 0048). Não é despesa. [estimatedCents] nulo é "sem valor definido"; [desiredMonth] é `AAAA-MM` e só lembra.
+ * A situação "convertida" não fica aqui: é derivada do compromisso que aponta para esta intenção.
+ */
+@Entity(tableName = "intention")
+@Serializable
+data class IntentionRow(
+    @PrimaryKey val id: String,
+    val name: String,
+    val estimatedCents: Long?,
+    val desiredMonth: String?,
+    val note: String?,
+    val createdBy: String,
+    val updatedBy: String,
+    val createdAtMillis: Long,
+    val updatedAtMillis: Long,
+    val revision: Long,
+)
+
 @Entity(tableName = "account")
 @Serializable
 data class AccountRow(
@@ -416,6 +435,10 @@ interface SpaceDao {
     @Upsert suspend fun upsertIconAssociation(row: IconAssociationRow)
     @Query("SELECT * FROM icon_association WHERE id = :id") suspend fun iconAssociation(id: String): IconAssociationRow?
     @Query("SELECT * FROM icon_association WHERE voided = 0 ORDER BY scope, target") suspend fun iconAssociations(): List<IconAssociationRow>
+
+    @Upsert suspend fun upsertIntention(row: IntentionRow)
+    @Query("SELECT * FROM intention WHERE id = :id") suspend fun intention(id: String): IntentionRow?
+    @Query("SELECT * FROM intention ORDER BY updatedAtMillis DESC, id") suspend fun intentions(): List<IntentionRow>
     @Insert suspend fun insertCategory(row: CategoryRow)
     @Query("SELECT * FROM category ORDER BY sortOrder, name") suspend fun categories(): List<CategoryRow>
     @Query("SELECT * FROM category WHERE id = :id") suspend fun category(id: String): CategoryRow?
@@ -708,9 +731,9 @@ interface SpaceDao {
         SyncStateRow::class, ConflictRow::class, ConflictEntityRow::class,
         ChatMessageRow::class, ChatAttemptRow::class, ChatQuestionRow::class, ChatReceiptRow::class,
         ImportBatchRow::class, ImportMovementRow::class, ImportDecisionRow::class, ImportPairRow::class,
-        AlertEventRow::class, AlertDisplayRow::class, AlertPreferenceRow::class, IconAssociationRow::class,
+        AlertEventRow::class, AlertDisplayRow::class, AlertPreferenceRow::class, IconAssociationRow::class, IntentionRow::class,
     ],
-    version = 12,
+    version = 13,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2, spec = Migration1To2::class),

@@ -46,6 +46,11 @@ interface FinanceSpace {
 
     /** Ícones escolhidos por lançamento ou por nome de lançamento (ADR 0047), sem os removidos. */
     suspend fun iconAssociations(): QueryResult<List<IconAssociationView>>
+
+    /** Intenções de compra do casal (S7, P2), da alteração mais recente para a mais antiga. Não são despesa e não ocupam o orçamento. */
+    suspend fun intentions(): QueryResult<List<IntentionView>>
+
+    suspend fun intention(id: String): QueryResult<IntentionView?>
     suspend fun accounts(): QueryResult<AccountsView>
     suspend fun budget(month: YearMonth): QueryResult<MonthBudget>
 
@@ -319,6 +324,28 @@ data class SetIconAssociation(val scope: IconScope, val target: String, val icon
 
 /** Remove a escolha de ícone do alvo (volta ao reconhecimento automático). Recusa quando não há escolha. */
 data class ClearIconAssociation(val scope: IconScope, val target: String, val expectedRevision: Long? = null) : Command
+
+/**
+ * Guarda uma intenção de compra do casal (S7, ADR 0048): um desejo ainda não assumido. Só o [name] é obrigatório; [estimatedValue] ausente é
+ * "sem valor definido" (nunca zero) e [desiredMonth] é só lembrete (não é data de compra nem vencimento). Não é despesa, não ocupa orçamento nem
+ * limite, não entra em Compromissos futuros e não é desfazível: editar de novo é o caminho de volta.
+ */
+data class CreateIntention(
+    val name: String,
+    val estimatedValue: Money? = null,
+    val desiredMonth: YearMonth? = null,
+    val note: String? = null,
+) : Command
+
+/** Substitui todos os campos da intenção (versão inteira, sem mesclar). Recusa se [expectedRevision] não for a atual. */
+data class EditIntention(
+    val intentionId: String,
+    val name: String,
+    val estimatedValue: Money? = null,
+    val desiredMonth: YearMonth? = null,
+    val note: String? = null,
+    val expectedRevision: Long? = null,
+) : Command
 
 data class AddAccount(val bank: BankRef, val nickname: String) : Command
 
@@ -819,7 +846,7 @@ data class FieldError(
     val month: YearMonth? = null,
 )
 
-enum class EntityType { Category, Account, Preferences, Movement, Card, CardPurchase, Boleto, Income, Recurrence, Refund, Invoice, InvoicePayment, LimitPlan, IncomeCategory, ImportBatch, AlertEvent, IconAssociation }
+enum class EntityType { Category, Account, Preferences, Movement, Card, CardPurchase, Boleto, Income, Recurrence, Refund, Invoice, InvoicePayment, LimitPlan, IncomeCategory, ImportBatch, AlertEvent, IconAssociation, Intention }
 
 data class EntityRef(val type: EntityType, val id: String)
 
@@ -874,6 +901,21 @@ data class IconAssociationView(
     val scope: IconScope,
     val target: String,
     val icon: IconRef,
+    val revision: Long,
+)
+
+/** Intenção de compra (S7). [createdBy] e [updatedBy] são identidades de pessoa do espaço; os instantes vêm do relógio do aparelho que salvou. */
+data class IntentionView(
+    val id: String,
+    val name: String,
+    /** Nulo: sem valor definido. Zero não existe aqui. */
+    val estimatedValue: Money?,
+    val desiredMonth: YearMonth?,
+    val note: String?,
+    val createdBy: String,
+    val updatedBy: String,
+    val createdAtMillis: Long,
+    val updatedAtMillis: Long,
     val revision: Long,
 )
 

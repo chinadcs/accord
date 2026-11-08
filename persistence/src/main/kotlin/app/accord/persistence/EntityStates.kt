@@ -56,6 +56,7 @@ internal object EntityStates {
             EntityType.IncomeCategory -> dao.incomeCategory(id)?.let { obj(IncomeCategoryRow.serializer(), it, true) }
             EntityType.AlertEvent -> dao.alertEvent(id)?.let { obj(AlertEventRow.serializer(), it, true) }
             EntityType.IconAssociation -> dao.iconAssociation(id)?.let { obj(IconAssociationRow.serializer(), it, true) }
+            EntityType.Intention -> dao.intention(id)?.let { obj(IntentionRow.serializer(), it, true) }
             EntityType.ImportBatch -> dao.importBatch(id)?.let {
                 obj(ImportBatchRow.serializer(), it, true).with(
                     "movements" to list(ImportMovementRow.serializer(), dao.importMovements(id)),
@@ -94,6 +95,7 @@ internal object EntityStates {
         EntityType.ImportBatch -> dao.importBatch(id)?.revision
         EntityType.AlertEvent -> dao.alertEvent(id)?.revision
         EntityType.IconAssociation -> dao.iconAssociation(id)?.revision
+        EntityType.Intention -> dao.intention(id)?.revision
         EntityType.Recurrence -> dao.recurrence(id)?.revision
         EntityType.Refund -> dao.refund(id)?.revision
         EntityType.Invoice -> dao.invoiceById(id)?.revision
@@ -130,6 +132,7 @@ internal object EntityStates {
             EntityType.IncomeCategory -> dao.upsertIncomeCategory(json.decodeFromJsonElement(IncomeCategoryRow.serializer(), withRevision()))
             EntityType.AlertEvent -> dao.upsertAlertEvent(json.decodeFromJsonElement(AlertEventRow.serializer(), withRevision()))
             EntityType.IconAssociation -> dao.upsertIconAssociation(json.decodeFromJsonElement(IconAssociationRow.serializer(), withRevision()))
+            EntityType.Intention -> dao.upsertIntention(json.decodeFromJsonElement(IntentionRow.serializer(), withRevision()))
             EntityType.ImportBatch -> {
                 dao.upsertImportBatch(json.decodeFromJsonElement(ImportBatchRow.serializer(), withRevision()))
                 dao.deleteImportMovements(id)

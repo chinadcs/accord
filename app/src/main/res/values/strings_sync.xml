@@ -149,6 +149,7 @@
     <string name="conflict_entity_category">Categoria</string>
     <string name="conflict_entity_income_category">Categoria de renda</string>
     <string name="conflict_entity_icon_association">Ícone de lançamento</string>
+    <string name="conflict_entity_intention">Intenção de compra</string>
     <string name="conflict_entity_import_batch">Importação de documento</string>
     <string name="conflict_entity_alert_event">Aviso de possível excesso</string>
     <string name="conflict_entity_account">Conta</string>
@@ -174,6 +175,9 @@
     <string name="field_installments">Parcelas</string>
     <string name="field_limits">Limites por mês</string>
     <string name="field_name">Nome</string>
+    <string name="field_estimated_value">Valor estimado</string>
+    <string name="field_desired_month">Quando pretende</string>
+    <string name="field_note">Observação</string>
     <string name="field_parent">Categoria principal</string>
     <string name="field_bank">Banco</string>
     <string name="field_nickname">Apelido</string>

@@ -19,6 +19,8 @@ import app.accord.core.space.IconRef
 import app.accord.core.space.IconScope
 import app.accord.core.space.IconSource
 import app.accord.core.space.SetIconAssociation
+import app.accord.core.space.CreateIntention
+import app.accord.core.space.EditIntention
 import app.accord.core.space.ClearIconAssociation
 import app.accord.core.space.CreateRecurrence
 import app.accord.core.space.DefineLimits
@@ -48,6 +50,7 @@ import kotlinx.coroutines.runBlocking
 import java.time.YearMonth
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
@@ -113,6 +116,9 @@ class EntityStatesRoundTripTest : SpaceTestBase() {
         h.space.execute(h.env(), SetIconAssociation(IconScope.Entry, pix, IconRef(IconSource.Generic, "pizza"))).applied()
         h.space.execute(h.env(), SetIconAssociation(IconScope.Name, "Academia", IconRef(IconSource.Bank, "60701190"))).applied()
         h.space.execute(h.env(), ClearIconAssociation(IconScope.Name, "Academia")).applied()
+        val tv = h.space.execute(h.env(), CreateIntention("Televisão", brl(1200), YearMonth.of(2026, 11), "Sala")).applied().changes.single().id
+        h.space.execute(h.env(), EditIntention(tv, "Televisão 55", brl(1100), YearMonth.of(2026, 11), "Sala", expectedRevision = 1)).applied()
+        h.space.execute(h.env(), CreateIntention("Viagem")).applied()
         val gym = h.space.execute(
             h.env(),
             CreateRecurrence(
@@ -154,6 +160,9 @@ class EntityStatesRoundTripTest : SpaceTestBase() {
         same(a.space.categories().value(), b.space.categories().value())
         same(a.space.incomeCategories().value(), b.space.incomeCategories().value())
         same(a.space.iconAssociations().value(), b.space.iconAssociations().value())
+        same(a.space.intentions().value(), b.space.intentions().value())
+        assertEquals(2, b.space.intentions().value().size, "intenção com valor e intenção sem valor chegam")
+        assertNull(b.space.intentions().value().single { it.name == "Viagem" }.estimatedValue, "sem valor continua sem valor, não zero")
         assertEquals(2, b.space.iconAssociations().value().size, "ícone por nome e por lançamento chegam; o removido não aparece")
         assertTrue(b.space.incomeCategories().value().any { it.name == "Trabalho avulso" }, "categoria criada e renomeada chega ao outro aparelho")
         assertTrue(b.space.incomes(YearMonth.of(2026, 10)).value().items.any { it.incomeCategoryId != null }, "renda categorizada chega com a categoria")
