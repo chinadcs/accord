@@ -78,12 +78,15 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.res.pluralStringResource
 import app.accord.core.sync.EntryStage
 import app.accord.core.sync.SessionState
+import app.accord.core.sync.SyncOutcome
 import app.accord.ui.access.AccessRoute
 import app.accord.ui.access.AccessViewModel
 import app.accord.ui.alerts.AlertPreferencesRoute
 import app.accord.ui.alerts.AlertPreferencesViewModel
 import app.accord.ui.alerts.rememberAllowNotifications
 import app.accord.core.alerts.NotificationAccess
+import app.accord.ui.components.LocalPullSync
+import app.accord.ui.components.PullToRefresh
 import app.accord.ui.components.RefreshOnResume
 import app.accord.ui.firststeps.FirstStepsRoute
 import app.accord.ui.firststeps.FirstStepsViewModel
@@ -469,6 +472,10 @@ private fun MainApp(container: AppContainer, startRoute: String) {
         CompositionLocalProvider(
             LocalSyncStatus provides syncStatus,
             LocalOpenSync provides { navController.navigate(ROUTE_SYNC) },
+            LocalPullSync provides {
+                // Sem rede ou sem sessão a leitura local segue valendo: só se diz que ficou no aparelho.
+                if (container.sync.syncNow() is SyncOutcome.Stopped) container.feedback.post(FeedbackEvent(R.string.pull_refresh_offline))
+            },
         ) {
         val transitionMs = Accord.motion.navigation
         NavHost(
@@ -510,17 +517,19 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     val viewModel: BudgetViewModel = viewModel(
                         factory = viewModelFactory { initializer { BudgetViewModel(container, createSavedStateHandle()) } },
                     )
-                    BudgetRoute(
-                        viewModel, padding,
-                        onOpenCategory = { id, month -> navController.navigate("$ROUTE_CATEGORY/$id/$month") },
-                        onClassify = { month -> navController.openFilteredEntries(month, null, EntrySituation.ToClassify) },
-                        onRegister = register,
-                        onOpenCommitments = { month -> navController.navigate("$ROUTE_COMMITMENTS?$ARG_MONTH=$month") },
-                        onOpenIncomes = { month -> navController.navigate("$ROUTE_INCOMES?$ARG_MONTH=$month") },
-                        onOpenCard = { navController.navigate(ROUTE_CARD) },
-                        onSearch = { openRoot(Root.Entries) },
-                        onOpenForecasts = { month -> navController.navigate("$ROUTE_FORECASTS?$ARG_MONTH=$month") },
-                    )
+                    PullToRefresh(viewModel::refresh) {
+                        BudgetRoute(
+                            viewModel, padding,
+                            onOpenCategory = { id, month -> navController.navigate("$ROUTE_CATEGORY/$id/$month") },
+                            onClassify = { month -> navController.openFilteredEntries(month, null, EntrySituation.ToClassify) },
+                            onRegister = register,
+                            onOpenCommitments = { month -> navController.navigate("$ROUTE_COMMITMENTS?$ARG_MONTH=$month") },
+                            onOpenIncomes = { month -> navController.navigate("$ROUTE_INCOMES?$ARG_MONTH=$month") },
+                            onOpenCard = { navController.navigate(ROUTE_CARD) },
+                            onSearch = { openRoot(Root.Entries) },
+                            onOpenForecasts = { month -> navController.navigate("$ROUTE_FORECASTS?$ARG_MONTH=$month") },
+                        )
+                    }
                 }
                 composable(
                     "$ROUTE_CATEGORY/{${CategoryViewModel.ARG_CATEGORY}}/{${CategoryViewModel.ARG_MONTH}}",
@@ -553,8 +562,10 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             }
                         },
                     )
-                    EntriesRoute(viewModel, padding, onOpenEntry = openEntry,
-                        onNew = if (largeFont) openEntriesRegistration else register)
+                    PullToRefresh(viewModel::reload) {
+                        EntriesRoute(viewModel, padding, onOpenEntry = openEntry,
+                            onNew = if (largeFont) openEntriesRegistration else register)
+                    }
                 }
             }
             navigation(startDestination = Root.Review.start, route = Root.Review.graph) {
@@ -571,21 +582,23 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     )
                     val queueState by queue.state.collectAsStateWithLifecycle()
                     RefreshOnResume(queue::refresh)
-                    ReviewRoot(
-                        stringResource(R.string.review_title), padding, register,
-                        extra = {
-                            PendingHubCard(queueState.items.size, queueState.loading) { navController.navigate(ROUTE_PENDING) }
-                            ImportHub(
-                                hubState,
-                                onImport = { navController.navigate(ROUTE_IMPORT) },
-                                onContinue = { id -> navController.navigate("$ROUTE_IMPORT_REVIEW/${Uri.encode(id)}") },
-                                onOpenResult = { id -> navController.navigate("$ROUTE_IMPORT_RESULT/${Uri.encode(id)}") },
-                                onDiscard = hub::discard,
-                            )
-                            ReviewConflicts(conflicts) { id -> navController.navigate("$ROUTE_CONFLICT/${Uri.encode(id)}") }
-                            ReviewCategories(categories, onAccept = viewModel::accept, onChoose = { navController.openRoot(Root.Chat) })
-                        },
-                    )
+                    PullToRefresh({ viewModel.refresh(); hub.refresh(); queue.refresh() }) {
+                        ReviewRoot(
+                            stringResource(R.string.review_title), padding, register,
+                            extra = {
+                                PendingHubCard(queueState.items.size, queueState.loading) { navController.navigate(ROUTE_PENDING) }
+                                ImportHub(
+                                    hubState,
+                                    onImport = { navController.navigate(ROUTE_IMPORT) },
+                                    onContinue = { id -> navController.navigate("$ROUTE_IMPORT_REVIEW/${Uri.encode(id)}") },
+                                    onOpenResult = { id -> navController.navigate("$ROUTE_IMPORT_RESULT/${Uri.encode(id)}") },
+                                    onDiscard = hub::discard,
+                                )
+                                ReviewConflicts(conflicts) { id -> navController.navigate("$ROUTE_CONFLICT/${Uri.encode(id)}") }
+                                ReviewCategories(categories, onAccept = viewModel::accept, onChoose = { navController.openRoot(Root.Chat) })
+                            },
+                        )
+                    }
                 }
             }
             navigation(startDestination = Root.More.start, route = Root.More.graph) {
@@ -892,19 +905,21 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 val viewModel: PurchaseActivityViewModel = viewModel(
                     factory = viewModelFactory { initializer { PurchaseActivityViewModel(container, createSavedStateHandle()) } },
                 )
-                PurchaseActivityRoute(
-                    viewModel, padding,
-                    ActivityActions(
-                        onBack = { navController.popBackStack() },
-                        onOpenEntries = { month, categoryId, toClassify ->
-                            navController.openFilteredEntries(
-                                month, categoryId, EntrySituation.ToClassify.takeIf { toClassify }, DateCriterion.PurchaseDate,
-                            )
-                        },
-                        onOpenBudget = { navController.openRoot(Root.Budget) },
-                        onOpenComparison = { navController.navigate(ROUTE_COMPARISON) },
-                    ),
-                )
+                PullToRefresh(viewModel::refresh) {
+                    PurchaseActivityRoute(
+                        viewModel, padding,
+                        ActivityActions(
+                            onBack = { navController.popBackStack() },
+                            onOpenEntries = { month, categoryId, toClassify ->
+                                navController.openFilteredEntries(
+                                    month, categoryId, EntrySituation.ToClassify.takeIf { toClassify }, DateCriterion.PurchaseDate,
+                                )
+                            },
+                            onOpenBudget = { navController.openRoot(Root.Budget) },
+                            onOpenComparison = { navController.navigate(ROUTE_COMPARISON) },
+                        ),
+                    )
+                }
             }
             composable(ROUTE_WEEKLY_REVIEW) {
                 val context = androidx.compose.ui.platform.LocalContext.current
@@ -930,16 +945,18 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 val viewModel: ComparisonViewModel = viewModel(
                     factory = viewModelFactory { initializer { ComparisonViewModel(container, createSavedStateHandle()) } },
                 )
-                ComparisonRoute(
-                    viewModel, padding,
-                    ComparisonActions(
-                        onBack = { navController.popBackStack() },
-                        onOpenEntries = { month, categoryId, criterion, toClassify ->
-                            navController.openFilteredEntries(month, categoryId, EntrySituation.ToClassify.takeIf { toClassify }, criterion)
-                        },
-                        onOpenPendings = { navController.openRoot(Root.Review) },
-                    ),
-                )
+                PullToRefresh(viewModel::refresh) {
+                    ComparisonRoute(
+                        viewModel, padding,
+                        ComparisonActions(
+                            onBack = { navController.popBackStack() },
+                            onOpenEntries = { month, categoryId, criterion, toClassify ->
+                                navController.openFilteredEntries(month, categoryId, EntrySituation.ToClassify.takeIf { toClassify }, criterion)
+                            },
+                            onOpenPendings = { navController.openRoot(Root.Review) },
+                        ),
+                    )
+                }
             }
             composable(ROUTE_SUBSCRIPTIONS) {
                 val viewModel: SubscriptionsViewModel = viewModel(
@@ -1043,10 +1060,12 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 val viewModel: CategoriesViewModel = viewModel(
                     factory = viewModelFactory { initializer { CategoriesViewModel(container, createSavedStateHandle()) } },
                 )
-                CategoriesRoute(
-                    viewModel, padding, onBack = { navController.popBackStack() },
-                    onEdit = { id -> navController.navigate("$ROUTE_CATEGORY_EDIT/$id") },
-                )
+                PullToRefresh(viewModel::refresh) {
+                    CategoriesRoute(
+                        viewModel, padding, onBack = { navController.popBackStack() },
+                        onEdit = { id -> navController.navigate("$ROUTE_CATEGORY_EDIT/$id") },
+                    )
+                }
             }
             composable(
                 "$ROUTE_CATEGORY_EDIT/{${CategoryEditViewModel.ARG_CATEGORY}}",
@@ -1098,12 +1117,14 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 val viewModel: CardViewModel = viewModel(
                     factory = viewModelFactory { initializer { CardViewModel(container, createSavedStateHandle()) } },
                 )
-                CardRoute(
-                    viewModel, padding, onBack = { navController.popBackStack() },
-                    onOpenInvoice = { month -> navController.navigate("$ROUTE_INVOICE/$month") },
-                    onToConfirm = { navController.openFilteredEntries(container.clock.currentMonth(), null, EntrySituation.InvoiceLinkToConfirm) },
-                    initialSetup = cardEntry.arguments?.getBoolean("initialSetup") == true,
-                )
+                PullToRefresh(viewModel::refresh) {
+                    CardRoute(
+                        viewModel, padding, onBack = { navController.popBackStack() },
+                        onOpenInvoice = { month -> navController.navigate("$ROUTE_INVOICE/$month") },
+                        onToConfirm = { navController.openFilteredEntries(container.clock.currentMonth(), null, EntrySituation.InvoiceLinkToConfirm) },
+                        initialSetup = cardEntry.arguments?.getBoolean("initialSetup") == true,
+                    )
+                }
             }
             composable("appearance") {
                 val theme by container.theme.preference.collectAsStateWithLifecycle()
@@ -1121,10 +1142,12 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 val viewModel: InvoiceViewModel = viewModel(
                     factory = viewModelFactory { initializer { InvoiceViewModel(container, createSavedStateHandle()) } },
                 )
-                InvoiceRoute(
-                    viewModel, padding, onBack = { navController.popBackStack() },
-                    onSeeEntries = { month -> navController.openFilteredEntries(month, null, null) },
-                )
+                PullToRefresh(viewModel::refresh) {
+                    InvoiceRoute(
+                        viewModel, padding, onBack = { navController.popBackStack() },
+                        onSeeEntries = { month -> navController.openFilteredEntries(month, null, null) },
+                    )
+                }
             }
             composable(ROUTE_IMPORT) {
                 val appContext = LocalContext.current.applicationContext
@@ -1200,10 +1223,12 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 val viewModel: IncomesViewModel = viewModel(
                     factory = viewModelFactory { initializer { IncomesViewModel(container, createSavedStateHandle()) } },
                 )
-                IncomesRoute(
-                    viewModel, padding, onBack = { navController.popBackStack() }, onOpen = openEntry,
-                    onAdd = { navController.navigate("$ROUTE_REGISTER?$ARG_REGISTER_KIND=income") },
-                )
+                PullToRefresh(viewModel::refresh) {
+                    IncomesRoute(
+                        viewModel, padding, onBack = { navController.popBackStack() }, onOpen = openEntry,
+                        onAdd = { navController.navigate("$ROUTE_REGISTER?$ARG_REGISTER_KIND=income") },
+                    )
+                }
             }
             composable(ROUTE_MODEL) {
                 val viewModel: ModelViewModel = viewModel(factory = viewModelFactory { initializer { ModelViewModel(container) } })

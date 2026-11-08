@@ -120,6 +120,7 @@
     <string name="origin_import">importação</string>
     <string name="origin_system">automático</string>
     <string name="sync_saved_on_device">salvo no aparelho</string>
+    <string name="pull_refresh_offline">Não deu para atualizar agora. O que você registrou está salvo no aparelho.</string>
     <string name="sync_awaiting">aguardando envio</string>
     <string name="sync_acknowledged">reconhecido pelo serviço</string>
     <string name="sync_conflict">em conflito</string>

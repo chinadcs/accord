@@ -12,11 +12,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.compose.ui.Alignment
@@ -43,6 +50,8 @@ import app.accord.ui.theme.Accord
 import app.accord.ui.theme.AccordSpacing
 import com.composables.icons.lucide.R as Lucide
 import java.time.YearMonth
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.launch
 
 /** Ícone Lucide pelo nome (`utensils`, `shopping-bag`); nome desconhecido usa `tag`, o das categorias do casal. */
 @Composable
@@ -154,4 +163,41 @@ fun AdaptiveRow(modifier: Modifier = Modifier, start: @Composable () -> Unit, en
 @Composable
 fun RefreshOnResume(onRefresh: () -> Unit) {
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { onRefresh() }
+}
+
+/**
+ * Um ciclo de envio e recebimento, disparado ao puxar a lista para atualizar. Quem provê (a raiz do
+ * aplicativo) roda `syncNow` e avisa se não houve rede; o padrão não faz nada, para pré-visualizações e testes.
+ */
+val LocalPullSync = staticCompositionLocalOf<suspend () -> Unit> { {} }
+
+/**
+ * Puxar para atualizar: roda a sincronização e, ao final, recarrega a tela. A leitura local acontece
+ * mesmo sem rede, então o que está salvo no aparelho continua à vista e a falha só é dita, sem bloquear.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PullToRefresh(onRefresh: () -> Unit, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    val sync = LocalPullSync.current
+    val scope = rememberCoroutineScope()
+    var refreshing by remember { mutableStateOf(false) }
+    PullToRefreshBox(
+        isRefreshing = refreshing,
+        onRefresh = {
+            refreshing = true
+            scope.launch {
+                try {
+                    sync()
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) {
+                    // Falha de rede ou de serviço não impede a leitura local; o aviso de "salvo no aparelho" é de quem provê o sync.
+                } finally {
+                    onRefresh()
+                    refreshing = false
+                }
+            }
+        },
+        modifier = modifier,
+    ) { content() }
 }
