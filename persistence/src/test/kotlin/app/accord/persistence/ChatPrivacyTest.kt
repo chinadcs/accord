@@ -27,7 +27,7 @@ class ChatPrivacyTest {
         val types = app.accord.core.space.EntityType.entries.map { it.name.lowercase() }
         assertTrue(types.none { "chat" in it })
         val states = File(sources, "EntityStates.kt").readText()
-        assertTrue("ChatMessageRow" !in states && "ChatReceiptRow" !in states && "ChatQuestionRow" !in states)
+        assertTrue("ChatMessageRow" !in states && "ChatReceiptRow" !in states && "ChatQuestionRow" !in states && "ChatFeedbackRow" !in states)
     }
 
     @Test
@@ -37,6 +37,6 @@ class ChatPrivacyTest {
     }
 
     private companion object {
-        val CHAT_IDENTIFIERS = listOf("ChatDao", "ChatStore", "ChatMessage", "ChatReceipt", "ChatQuestion", "chat_message", "chat_receipt", "chat_question")
+        val CHAT_IDENTIFIERS = listOf("ChatDao", "ChatStore", "ChatMessage", "ChatReceipt", "ChatQuestion", "chat_message", "chat_receipt", "chat_question", "ChatFeedback", "chat_feedback")
     }
 }

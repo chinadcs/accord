@@ -4,7 +4,10 @@ import androidx.room.immediateTransaction
 import androidx.room.useWriterConnection
 import app.accord.core.chat.ChatArchive
 import app.accord.core.chat.ChatAttempt
+import app.accord.core.chat.ChatFeedback
 import app.accord.core.chat.ChatImportResult
+import app.accord.core.chat.FeedbackField
+import app.accord.core.chat.FeedbackVote
 import app.accord.core.chat.ChatMessage
 import app.accord.core.chat.ChatQuestion
 import app.accord.core.chat.ChatQuestionRecord
@@ -37,14 +40,15 @@ class RoomChatStore(private val db: AccordDatabase) : ChatStore {
     private val dao get() = db.chatDao()
 
     override fun observe(): Flow<ChatSnapshot> =
-        combine(dao.observeMessages(), dao.observeQuestions(), dao.observeReceipts()) { messages, questions, receipts ->
-            ChatSnapshot(messages.map(::toMessage), questions.mapNotNull(::toQuestion), receipts.map(::toReceipt))
+        combine(dao.observeMessages(), dao.observeQuestions(), dao.observeReceipts(), dao.observeFeedback()) { messages, questions, receipts, feedback ->
+            ChatSnapshot(messages.map(::toMessage), questions.mapNotNull(::toQuestion), receipts.map(::toReceipt), feedback.mapNotNull(::toFeedback))
         }
 
     override suspend fun snapshot() = ChatSnapshot(
         dao.messages().map(::toMessage),
         dao.questions().mapNotNull(::toQuestion),
         dao.receipts().map(::toReceipt),
+        dao.feedback().mapNotNull(::toFeedback),
     )
 
     override suspend fun saveMessage(message: ChatMessage) = dao.upsertMessage(toRow(message))
@@ -64,9 +68,22 @@ class RoomChatStore(private val db: AccordDatabase) : ChatStore {
     override suspend fun receiptsOfEntry(entryId: String) = dao.receiptsOfEntry(entryId).map(::toReceipt)
     override suspend fun activeReceipts(limit: Int) = dao.activeReceipts(limit).map(::toReceipt)
 
+    override suspend fun saveFeedback(feedback: ChatFeedback) =
+        dao.upsertFeedback(ChatFeedbackRow(feedback.receiptId, feedback.vote.name.uppercase(), feedback.field?.name?.uppercase(), feedback.votedAtMillis))
+    override suspend fun clearFeedback(receiptId: String) = dao.deleteFeedback(receiptId)
+    override suspend fun feedback() = dao.feedback().mapNotNull(::toFeedback)
+    override suspend fun purgeFeedbackBefore(beforeMillis: Long) = dao.purgeFeedbackBefore(beforeMillis)
+
+    private fun toFeedback(row: ChatFeedbackRow): ChatFeedback? {
+        val vote = FeedbackVote.entries.firstOrNull { it.name.uppercase() == row.vote } ?: return null
+        val field = row.field?.let { name -> FeedbackField.entries.firstOrNull { it.name.uppercase() == name } ?: return null }
+        return ChatFeedback(row.receiptId, vote, field, row.votedAtMillis)
+    }
+
     override suspend fun clear() {
         db.useWriterConnection { connection ->
             connection.immediateTransaction {
+                dao.clearFeedback()
                 dao.clearReceipts()
                 dao.clearQuestions()
                 dao.clearAttempts()

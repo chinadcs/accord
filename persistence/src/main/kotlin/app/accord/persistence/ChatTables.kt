@@ -79,6 +79,18 @@ data class ChatReceiptRow(
     val createdAtMillis: Long,
 )
 
+/** Voto vigente por recibo (accord-8q5), só neste aparelho: sem texto da frase, valores ou nomes. */
+@Entity(tableName = "chat_feedback", indices = [Index("votedAtMillis")])
+@Serializable
+data class ChatFeedbackRow(
+    @PrimaryKey val receiptId: String,
+    /** UP ou DOWN. */
+    val vote: String,
+    /** VALUE, CATEGORY, DATE, PAYMENT ou UNDERSTOOD; nulo quando a pessoa não disse. */
+    val field: String?,
+    val votedAtMillis: Long,
+)
+
 @Dao
 interface ChatDao {
     @Upsert suspend fun upsertMessage(row: ChatMessageRow)
@@ -109,6 +121,13 @@ interface ChatDao {
     @Query("SELECT * FROM chat_receipt WHERE state = 'Active' ORDER BY createdAtMillis DESC, id LIMIT :limit")
     suspend fun activeReceipts(limit: Int): List<ChatReceiptRow>
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insertReceiptIfAbsent(row: ChatReceiptRow): Long
+
+    @Upsert suspend fun upsertFeedback(row: ChatFeedbackRow)
+    @Query("DELETE FROM chat_feedback WHERE receiptId = :receiptId") suspend fun deleteFeedback(receiptId: String)
+    @Query("SELECT * FROM chat_feedback ORDER BY votedAtMillis, receiptId") suspend fun feedback(): List<ChatFeedbackRow>
+    @Query("SELECT * FROM chat_feedback ORDER BY votedAtMillis, receiptId") fun observeFeedback(): Flow<List<ChatFeedbackRow>>
+    @Query("DELETE FROM chat_feedback WHERE votedAtMillis < :beforeMillis") suspend fun purgeFeedbackBefore(beforeMillis: Long)
+    @Query("DELETE FROM chat_feedback") suspend fun clearFeedback()
 
     @Query("DELETE FROM chat_message") suspend fun clearMessages()
     @Query("DELETE FROM chat_attempt") suspend fun clearAttempts()

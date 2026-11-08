@@ -171,6 +171,21 @@ class ChatCoordinator(
         }
     }
 
+    /**
+     * Joinha do recibo (accord-8q5). Tocar de novo no voto vigente, sem campo, o retira; escolher o campo do joinha para baixo
+     * completa o mesmo voto. Só o ID do recibo, o voto, o campo e o instante são guardados; nada sai do aparelho.
+     */
+    suspend fun rate(receiptId: String, vote: FeedbackVote, field: FeedbackField? = null) = stateLock.withLock {
+        if (store.receipt(receiptId) == null) return@withLock
+        val kept = field.takeIf { vote == FeedbackVote.Down }
+        val current = store.feedback().firstOrNull { it.receiptId == receiptId }
+        if (current?.vote == vote && field == null) store.clearFeedback(receiptId)
+        else store.saveFeedback(ChatFeedback(receiptId, vote, kept, nowMillis()))
+    }
+
+    /** Retém os votos por 30 dias; os mais antigos são apagados. */
+    suspend fun purgeExpiredFeedback() = store.purgeFeedbackBefore(nowMillis() - FEEDBACK_RETENTION_MILLIS)
+
     /** Desfaz a operação do recibo mais recente. Se algo mudou depois, a fachada recusa e nada é apagado. */
     suspend fun undo(receiptId: String): UndoResult = stateLock.withLock {
         val snapshot = store.snapshot()
@@ -795,6 +810,7 @@ class ChatCoordinator(
 
     private companion object {
         const val RECENT_RECEIPTS = 3
+        const val FEEDBACK_RETENTION_MILLIS = 30L * 24 * 60 * 60 * 1000
         val RETRYABLE = setOf(MessageState.Failed, MessageState.Interrupted, MessageState.Canceled, MessageState.NoModel, MessageState.Refused)
         val ENTRY_TYPES = setOf(EntityType.CardPurchase, EntityType.Movement, EntityType.Income)
 

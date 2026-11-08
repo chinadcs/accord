@@ -1,5 +1,6 @@
 package app.accord.ui.chat
 
+import app.accord.core.chat.ChatFeedback
 import app.accord.core.chat.ChatMessage
 import app.accord.core.chat.ChatQuestionRecord
 import app.accord.core.chat.ChatReceiptRecord
@@ -36,6 +37,8 @@ sealed interface ChatItem {
         val question: ChatQuestionRecord?,
         val suggestedRef: String? = null,
         val suggestedRefs: List<String> = listOfNotNull(suggestedRef),
+        /** Joinha vigente deste recibo (accord-8q5), só neste aparelho. */
+        val feedback: ChatFeedback? = null,
     ) : ChatItem {
         override val key get() = "r-${receipt.id}"
     }
@@ -75,7 +78,7 @@ fun buildChatItems(snapshot: ChatSnapshot): List<ChatItem> {
                     snapshot.receipts.filter { it.messageId == message.id }.sortedBy { it.createdAtMillis }.forEach { receipt ->
                         val question = openQuestions.firstOrNull { it.link == QuestionLink.Entry(receipt.entryId) }
                         val hints = message.categoryHints.take(3).mapNotNull { id -> question?.options?.firstOrNull { (it.value as? app.accord.core.chat.OptionValue.Category)?.id == id }?.ref }
-                        add(ChatItem.Receipt(receipt, receipt.id == undoable, question, question?.let { suggestedCategoryOption(it, message)?.ref }, hints))
+                        add(ChatItem.Receipt(receipt, receipt.id == undoable, question, question?.let { suggestedCategoryOption(it, message)?.ref }, hints, snapshot.feedback.firstOrNull { it.receiptId == receipt.id }))
                     }
                 }
                 MessageState.Asked ->

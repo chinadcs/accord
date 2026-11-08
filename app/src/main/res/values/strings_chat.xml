@@ -53,6 +53,17 @@
     <string name="receipt_action_view">Ver lançamento</string>
     <string name="receipt_action_edit">Editar</string>
     <string name="receipt_action_undo">Desfazer</string>
+    <string name="feedback_prompt">Entendi certo?</string>
+    <string name="feedback_up">Entendeu certo</string>
+    <string name="feedback_down">Entendeu errado</string>
+    <string name="feedback_selected">Escolhido</string>
+    <string name="feedback_not_selected">Não escolhido</string>
+    <string name="feedback_field_prompt">O que errou?</string>
+    <string name="feedback_field_value">Valor</string>
+    <string name="feedback_field_category">Categoria</string>
+    <string name="feedback_field_date">Data</string>
+    <string name="feedback_field_payment">Pagamento</string>
+    <string name="feedback_field_understood">Entendeu outra coisa</string>
     <string name="receipt_announce">Registrado %1$s. %2$s</string>
 
     <!-- Perguntas -->

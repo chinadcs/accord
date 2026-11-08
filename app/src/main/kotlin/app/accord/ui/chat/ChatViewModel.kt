@@ -10,6 +10,8 @@ import app.accord.R
 import app.accord.core.chat.ChatCoordinator
 import app.accord.core.chat.ChatMessage
 import app.accord.core.chat.ChatSnapshot
+import app.accord.core.chat.FeedbackField
+import app.accord.core.chat.FeedbackVote
 import app.accord.core.chat.ChatQuestionRecord
 import app.accord.core.chat.MessageState
 import app.accord.core.chat.PartialEntry
@@ -101,6 +103,11 @@ class ChatViewModel(
 
     private val coordinator: ChatCoordinator? get() = container.chat.value
 
+    init {
+        // Retenção de 30 dias dos votos do joinha (accord-8q5).
+        viewModelScope.launch { container.chat.collect { it?.purgeExpiredFeedback() } }
+    }
+
     fun onComposerChange(text: String) {
         composer.value = text
         saved[KEY_COMPOSER] = text
@@ -156,6 +163,11 @@ class ChatViewModel(
             container.feedback.post(FeedbackEvent(message))
             if (message == R.string.undo_done) container.feedback.notifyUndone()
         }
+    }
+
+    /** Joinha do recibo; o campo só vale no joinha para baixo. */
+    fun rate(receiptId: String, vote: FeedbackVote, field: FeedbackField?) {
+        viewModelScope.launch { coordinator?.rate(receiptId, vote, field) }
     }
 
     fun discardQuestion(question: ChatQuestionRecord) {

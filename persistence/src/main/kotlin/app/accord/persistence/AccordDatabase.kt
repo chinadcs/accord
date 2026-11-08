@@ -752,11 +752,11 @@ interface SpaceDao {
         EntitySyncRow::class, DraftRow::class, RefundRow::class, LimitPlanRow::class, LimitEntryRow::class, CategoryMoveRow::class, InvoiceRow::class, InvoicePaymentRow::class, RecurrenceRow::class, RecurrenceSegmentRow::class, RecurrenceOverrideRow::class, RecurrenceSettlementRow::class,
         OperationRow::class, OperationChangeRow::class,
         SyncStateRow::class, ConflictRow::class, ConflictEntityRow::class,
-        ChatMessageRow::class, ChatAttemptRow::class, ChatQuestionRow::class, ChatReceiptRow::class,
+        ChatMessageRow::class, ChatAttemptRow::class, ChatQuestionRow::class, ChatReceiptRow::class, ChatFeedbackRow::class,
         ImportBatchRow::class, ImportMovementRow::class, ImportDecisionRow::class, ImportPairRow::class,
         AlertEventRow::class, AlertDisplayRow::class, AlertPreferenceRow::class, IconAssociationRow::class, IntentionRow::class,
     ],
-    version = 16,
+    version = 17,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2, spec = Migration1To2::class),
@@ -786,6 +786,8 @@ interface SpaceDao {
         AutoMigration(from = 14, to = 15),
         // ADR 0049: fatura escolhida para uma ocorrência de recorrência no cartão (exceção da ocorrência, compartilhada).
         AutoMigration(from = 15, to = 16),
+        // accord-8q5: voto vigente por recibo do Chat (joinha), só neste aparelho e fora da fila de sincronização.
+        AutoMigration(from = 16, to = 17),
     ],
 )
 abstract class AccordDatabase : RoomDatabase() {

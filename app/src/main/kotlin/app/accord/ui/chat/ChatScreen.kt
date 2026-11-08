@@ -33,6 +33,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardOptions
 import app.accord.ui.components.AccordButton as Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -59,6 +60,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.ImeAction
@@ -73,7 +76,10 @@ import app.accord.ui.vendors.LocalIconChoices
 import app.accord.ui.vendors.rememberIconLibrary
 import app.accord.ui.components.AccordMark
 import app.accord.core.Money
+import app.accord.core.chat.ChatFeedback
 import app.accord.core.chat.ChatMessage
+import app.accord.core.chat.FeedbackField
+import app.accord.core.chat.FeedbackVote
 import app.accord.core.chat.ChatPayment
 import app.accord.core.chat.ChatQuestion
 import app.accord.core.chat.ChatQuestionRecord
@@ -135,6 +141,7 @@ fun ChatRoute(viewModel: ChatViewModel, padding: PaddingValues, today: LocalDate
         onDiscard = viewModel::discardQuestion,
         onExample = viewModel::insertExample,
         onManual = openManual,
+        onRate = viewModel::rate,
     )
 }
 
@@ -154,6 +161,7 @@ fun ChatScreen(
     onDiscard: (ChatQuestionRecord) -> Unit,
     onExample: (String) -> Unit,
     onManual: (ChatMessage?) -> Unit,
+    onRate: (String, FeedbackVote, FeedbackField?) -> Unit = { _, _, _ -> },
 ) {
     val listState = rememberLazyListState()
     val hasViewport by remember { derivedStateOf { listState.layoutInfo.viewportSize.height > 0 } }
@@ -177,7 +185,7 @@ fun ChatScreen(
                 item(key = "chat-welcome") { EmptyChat(onExample, pilot = state.badge == ModelBadge.FakePilot) }
             } else {
                 items(state.items, key = { it.key }) { item ->
-                    ChatItemView(item, today, state, actions, onCancel, onRetry, onAnswer, onAnswerAmount, onUndo, onDiscard, onManual)
+                    ChatItemView(item, today, state, actions, onCancel, onRetry, onAnswer, onAnswerAmount, onUndo, onDiscard, onManual, onRate)
                 }
             }
         }
@@ -333,11 +341,12 @@ private fun ChatItemView(
     onUndo: (String) -> Unit,
     onDiscard: (ChatQuestionRecord) -> Unit,
     onManual: (ChatMessage?) -> Unit,
+    onRate: (String, FeedbackVote, FeedbackField?) -> Unit,
 ) {
     when (item) {
         is ChatItem.User -> UserBubble(item.message.text)
         is ChatItem.Working -> WorkingCard(item.message, onCancel = { onCancel(item.message) }, onManual = { onManual(item.message) })
-        is ChatItem.Receipt -> ReceiptCard(item, today, actions, state.categories, onAnswer, onUndo)
+        is ChatItem.Receipt -> ReceiptCard(item, today, actions, state.categories, onAnswer, onUndo, onRate)
         is ChatItem.Question -> QuestionCard(item, onAnswer, onAnswerAmount, onDiscard, onManual = { onManual(item.message) })
         is ChatItem.Query -> QueryCard(item, actions, onChoose = actions.onSendQuestion)
         is ChatItem.Notice -> NoticeCard(item.message, state, actions, onRetry = { onRetry(item.message) }, onManual = { onManual(item.message) })
@@ -412,6 +421,7 @@ private fun ReceiptCard(
     categories: Map<String, CategoryNode>,
     onAnswer: (ChatQuestionRecord, app.accord.core.chat.QuestionOption) -> Unit,
     onUndo: (String) -> Unit,
+    onRate: (String, FeedbackVote, FeedbackField?) -> Unit,
 ) {
     val receipt = item.receipt
     val summary = receipt.summary
@@ -467,9 +477,65 @@ private fun ReceiptCard(
                         }
                     }
                 }
+                FeedbackRow(item.feedback) { vote, field -> onRate(receipt.id, vote, field) }
             }
         }
     }
+}
+
+/**
+ * Joinha do recibo (accord-8q5): "Entendi certo?" com dois botões de 48 dp. O joinha para baixo oferece o campo errado.
+ * Mede utilidade percebida, não correção, e fica só neste aparelho; Editar e Desfazer continuam na linha de ações.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun FeedbackRow(feedback: ChatFeedback?, onRate: (FeedbackVote, FeedbackField?) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+            Text(stringResource(R.string.feedback_prompt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            VoteButton(Lucide.drawable.lucide_ic_thumbs_up, stringResource(R.string.feedback_up), feedback?.vote == FeedbackVote.Up) { onRate(FeedbackVote.Up, null) }
+            VoteButton(Lucide.drawable.lucide_ic_thumbs_down, stringResource(R.string.feedback_down), feedback?.vote == FeedbackVote.Down) { onRate(FeedbackVote.Down, null) }
+        }
+        if (feedback?.vote == FeedbackVote.Down) {
+            Text(stringResource(R.string.feedback_field_prompt), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+                FeedbackField.entries.forEach { field ->
+                    FilterChip(
+                        selected = feedback.field == field,
+                        onClick = { onRate(FeedbackVote.Down, field) },
+                        label = { Text(stringResource(feedbackFieldLabel(field))) },
+                        modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun VoteButton(icon: Int, description: String, selected: Boolean, onClick: () -> Unit) {
+    val state = stringResource(if (selected) R.string.feedback_selected else R.string.feedback_not_selected)
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier.size(AccordSpacing.touchMin).semantics {
+            contentDescription = description
+            stateDescription = state
+            this.selected = selected
+        },
+    ) {
+        Icon(
+            painterResource(icon), contentDescription = null, modifier = Modifier.size(20.dp),
+            tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+private fun feedbackFieldLabel(field: FeedbackField): Int = when (field) {
+    FeedbackField.Value -> R.string.feedback_field_value
+    FeedbackField.Category -> R.string.feedback_field_category
+    FeedbackField.Date -> R.string.feedback_field_date
+    FeedbackField.Payment -> R.string.feedback_field_payment
+    FeedbackField.Understood -> R.string.feedback_field_understood
 }
 
 @OptIn(ExperimentalLayoutApi::class)

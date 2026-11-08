@@ -133,11 +133,29 @@ data class ChatReceiptRecord(
     val createdAtMillis: Long,
 )
 
+/** Joinha no recibo (accord-8q5): mede utilidade percebida, não correção; ausência de voto não prova acerto. */
+enum class FeedbackVote { Up, Down }
+
+/** O que o joinha para baixo aponta como errado; sem escolha, o voto fica sem campo. */
+enum class FeedbackField { Value, Category, Date, Payment, Understood }
+
+/**
+ * Voto vigente de um recibo, só neste aparelho. Guarda apenas o ID do recibo, o voto, o campo apontado e o instante:
+ * nunca o texto da frase, valores, categorias, contas ou bancos. Corrigir um lançamento cria outro recibo, com voto próprio.
+ */
+data class ChatFeedback(
+    val receiptId: String,
+    val vote: FeedbackVote,
+    val field: FeedbackField?,
+    val votedAtMillis: Long,
+)
+
 /** Tudo o que a tela do Chat precisa, numa leitura só. */
 data class ChatSnapshot(
     val messages: List<ChatMessage>,
     val questions: List<ChatQuestionRecord>,
     val receipts: List<ChatReceiptRecord>,
+    val feedback: List<ChatFeedback> = emptyList(),
 )
 
 /** Arquivo de transferência do histórico (S3 §12): sem senhas, tokens ou credenciais. */
@@ -172,7 +190,15 @@ interface ChatStore {
     suspend fun receiptsOfEntry(entryId: String): List<ChatReceiptRecord>
     suspend fun activeReceipts(limit: Int): List<ChatReceiptRecord>
 
-    /** Apaga mensagens, perguntas, recibos e tentativas deste aparelho; lançamentos não mudam. */
+    /** Grava o voto do recibo, substituindo o anterior. */
+    suspend fun saveFeedback(feedback: ChatFeedback)
+    suspend fun clearFeedback(receiptId: String)
+    suspend fun feedback(): List<ChatFeedback>
+
+    /** Expurgo dos votos anteriores a [beforeMillis] (retenção de 30 dias). */
+    suspend fun purgeFeedbackBefore(beforeMillis: Long)
+
+    /** Apaga mensagens, perguntas, recibos, tentativas e votos deste aparelho; lançamentos não mudam. */
     suspend fun clear()
 
     suspend fun export(): ChatArchive
