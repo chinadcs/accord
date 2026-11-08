@@ -51,10 +51,11 @@ fun CommitmentDetailRoute(
     onBack: () -> Unit,
     onOpenEntry: (String) -> Unit,
     onEdit: (String) -> Unit,
+    onOpenIntention: (String) -> Unit = {},
 ) {
     val content by viewModel.content.collectAsStateWithLifecycle()
     RefreshOnResume(viewModel::refresh)
-    CommitmentDetailScreen(content, padding, onBack, { viewModel.load() }, onOpenEntry, onEdit)
+    CommitmentDetailScreen(content, padding, onBack, { viewModel.load() }, onOpenEntry, onEdit, onOpenIntention)
 }
 
 @Composable
@@ -65,6 +66,7 @@ fun CommitmentDetailScreen(
     onRetry: () -> Unit,
     onOpenEntry: (String) -> Unit,
     onEdit: (String) -> Unit,
+    onOpenIntention: (String) -> Unit = {},
 ) {
     Column(
         Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
@@ -82,10 +84,13 @@ fun CommitmentDetailScreen(
                 Text(stringResource(R.string.commitment_not_found_body), style = MaterialTheme.typography.bodyLarge)
                 OutlinedButton(onClick = onBack, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.action_back)) }
             }
-            is CommitmentDetailContent.Ready -> when (val d = content.detail) {
+            is CommitmentDetailContent.Ready -> {
+                app.accord.ui.intentions.OriginIntentionLink(content.origin, onOpenIntention)
+                when (val d = content.detail) {
                 is CommitmentDetail.Installments -> InstallmentsDetail(d, content, onOpenEntry, onEdit)
                 is CommitmentDetail.Recurring -> RecurringDetail(d, content, onOpenEntry, onEdit)
                 is CommitmentDetail.Bill -> BillDetail(d, content, onOpenEntry, onEdit)
+                }
             }
         }
     }

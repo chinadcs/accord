@@ -17,6 +17,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -66,6 +69,7 @@ fun IntentionsScreen(
 ) {
     // A rolagem fica guardada com a tela: voltar de uma intenção reencontra o mesmo ponto da lista.
     val listState = rememberLazyListState()
+    var filter by rememberSaveable { mutableStateOf(IntentionFilter.All) }
     LazyColumn(
         Modifier.fillMaxSize().padding(padding), state = listState,
         contentPadding = PaddingValues(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
@@ -80,11 +84,21 @@ fun IntentionsScreen(
                 }
             }
         }
+        item {
+            androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                IntentionFilter.entries.forEach { option ->
+                    androidx.compose.material3.FilterChip(
+                        selected = filter == option, onClick = { filter = option },
+                        label = { Text(stringResource(option.label)) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
+                    )
+                }
+            }
+        }
         when (val content = state.content) {
             IntentionsContent.Loading -> item { Text(stringResource(R.string.state_loading), style = MaterialTheme.typography.bodyLarge) }
             is IntentionsContent.Failed -> {
                 item { FailureBanner(onRetry) }
-                content.last?.let { rows(it, state.currentPersonId, onOpen) }
+                content.last?.let { rows(it.filtered(filter), state.currentPersonId, onOpen) }
             }
             is IntentionsContent.Ready -> {
                 if (content.items.isEmpty()) {
@@ -94,12 +108,25 @@ fun IntentionsScreen(
                             Text(stringResource(R.string.intentions_empty_body), style = MaterialTheme.typography.bodyLarge)
                         }
                     }
+                } else if (content.items.filtered(filter).isEmpty()) {
+                    item { Text(stringResource(R.string.intentions_filter_empty), style = MaterialTheme.typography.bodyLarge) }
                 } else {
-                    rows(content.items, state.currentPersonId, onOpen)
+                    rows(content.items.filtered(filter), state.currentPersonId, onOpen)
                 }
             }
         }
     }
+}
+
+/** Filtro por situação (tela 34): a situação "convertida" é derivada do compromisso vinculado. */
+enum class IntentionFilter(@androidx.annotation.StringRes val label: Int) {
+    All(R.string.intention_filter_all), Planned(R.string.intention_filter_planned), Converted(R.string.intention_filter_converted),
+}
+
+private fun List<IntentionView>.filtered(filter: IntentionFilter) = when (filter) {
+    IntentionFilter.All -> this
+    IntentionFilter.Planned -> filter { it.situation == app.accord.core.space.IntentionSituation.Planned }
+    IntentionFilter.Converted -> filter { it.situation == app.accord.core.space.IntentionSituation.Converted }
 }
 
 private fun androidx.compose.foundation.lazy.LazyListScope.rows(items: List<IntentionView>, currentPersonId: String, onOpen: (String) -> Unit) {
@@ -135,7 +162,8 @@ private fun IntentionRow(item: IntentionView, currentPersonId: String, onOpen: (
     val value = item.estimatedValue?.format() ?: stringResource(R.string.intentions_no_value)
     val sync = item.sync.label()
     val who = personName(item.updatedBy, currentPersonId)
-    val spoken = stringResource(R.string.intentions_row_a11y, item.name, value, stringResource(R.string.intentions_by_updated, who) + ". " + sync)
+    val converted = if (item.conversion != null) stringResource(R.string.intentions_converted_tag) + ". " else ""
+    val spoken = stringResource(R.string.intentions_row_a11y, item.name, value, converted + stringResource(R.string.intentions_by_updated, who) + ". " + sync)
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium,
         modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).clickable(role = Role.Button) { onOpen(item.id) }
@@ -147,6 +175,12 @@ private fun IntentionRow(item: IntentionView, currentPersonId: String, onOpen: (
                 end = { Text(value, style = Accord.typography.amountRow, textAlign = TextAlign.End) },
             )
             item.desiredMonth?.let { Text(stringResource(R.string.intentions_when, it.label()), style = MaterialTheme.typography.bodyMedium) }
+            if (item.conversion != null) {
+                androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+                    DecorativeIcon(Lucide.drawable.lucide_ic_circle_check)
+                    Text(stringResource(R.string.intentions_converted_tag), style = MaterialTheme.typography.labelLarge)
+                }
+            }
             Text(
                 stringResource(R.string.intentions_by_updated, who) + " · " + sync,
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,

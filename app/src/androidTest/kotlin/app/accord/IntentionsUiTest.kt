@@ -105,7 +105,7 @@ class IntentionsUiTest {
         compose.onNodeWithText("Editar").assertExists()
         compose.onNodeWithText("Simular impacto").performScrollTo().performClick()
         assertEquals("i1", simulated?.id)
-        assertTrue("Assumir compromisso ainda não existe nesta fase", compose.onAllNodesWithText("Assumir", substring = true).fetchSemanticsNodes().isEmpty())
+        compose.onNodeWithText("Assumir compromisso…").assertExists()
     }
 
     @Test fun editModeShowsFieldErrorsAndKeepsTheTypedText() {

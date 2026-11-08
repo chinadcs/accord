@@ -72,6 +72,8 @@ data class RegisterForm(
     val settledDate: LocalDate? = null,
     val settledAmountText: String = "",
     val moreOptions: Boolean = false,
+    /** Conversão de intenção (S7, ADR 0048): o compromisso nasce desta intenção e fica vinculado a ela. Só despesa. */
+    val originIntentionId: String? = null,
 ) {
     val installments: Int? get() = installmentsText.trim().toIntOrNull()
 
@@ -137,15 +139,17 @@ data class RegisterForm(
                 accountId = account,
                 frequency = frequency,
                 firstDate = date,
+                originIntentionId = originIntentionId,
             )
             kind == FormKind.Income -> RegisterIncome(description.trim(), amount, date, account, settlement, incomeCategoryId)
             form == ExpenseForm.Card -> RegisterCardPurchase(
                 description = description.trim(), classification = Classification.Category(categoryId!!), date = date, amount = amount,
                 amountMeaning = amountMeaning.takeIf { (count ?: 1) > 1 }, installments = count ?: 1, invoice = invoice,
+                originIntentionId = originIntentionId,
             )
             form == ExpenseForm.Boleto -> RegisterBoleto(
                 description.trim(), Classification.Category(categoryId!!), dueDate = date, amount = amount,
-                accountId = account, payment = settlement,
+                accountId = account, payment = settlement, originIntentionId = originIntentionId,
             )
             else -> RegisterDirectPayment(
                 kind = when (form) {
@@ -154,7 +158,7 @@ data class RegisterForm(
                     else -> DirectPaymentKind.Pix
                 },
                 description = description.trim(), classification = Classification.Category(categoryId!!), date = date,
-                amount = amount, accountId = account,
+                amount = amount, accountId = account, originIntentionId = originIntentionId,
             )
         }
         return Built.Ok(command)

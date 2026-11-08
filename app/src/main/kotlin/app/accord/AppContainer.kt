@@ -47,6 +47,9 @@ import java.util.UUID
 /** O que as telas precisam para ler e alterar dados: a fachada e o relógio do orçamento. */
 interface SpaceProvider {
     val clock: BudgetClock
+
+    /** Fase do produto deste build (P1 por padrão; P2 com a flag do S7). Controles de fase futura não aparecem antes. */
+    val phase: app.accord.core.analysis.ProductPhase
     val personId: String
     val feedback: FeedbackBus
     suspend fun space(): FinanceSpace
@@ -80,7 +83,7 @@ class AppContainer(
     modelEngine: ModelEngine? = null,
     val categoryPilot: app.accord.pilot.ChatPilot = app.accord.pilot.createChatPilot(context),
     /** Fase do produto deste build: P1 por padrão; P2 (S7) só com `-Paccord.p2=true` em debug. Controles de fase futura não aparecem antes. */
-    val phase: app.accord.core.analysis.ProductPhase = defaultPhase(),
+    override val phase: app.accord.core.analysis.ProductPhase = defaultPhase(),
 ) : SpaceProvider {
     override val clock: BudgetClock = BudgetClock.system()
     override val feedback = FeedbackBus()

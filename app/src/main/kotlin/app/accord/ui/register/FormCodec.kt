@@ -32,6 +32,7 @@ object FormCodec {
         f.settledDate?.let { put("settledDate", it.toString()) }
         put("settledAmount", f.settledAmountText)
         put("moreOptions", f.moreOptions.toString())
+        f.originIntentionId?.let { put("originIntentionId", it) }
     }
 
     fun fromFields(fields: Map<String, String>, fallbackDate: LocalDate): RegisterForm = RegisterForm(
@@ -50,6 +51,7 @@ object FormCodec {
         settledDate = fields["settledDate"]?.let { runCatching { LocalDate.parse(it) }.getOrNull() },
         settledAmountText = fields["settledAmount"].orEmpty(),
         moreOptions = fields["moreOptions"]?.toBooleanStrictOrNull() ?: false,
+        originIntentionId = fields["originIntentionId"],
     )
 
     /** Uma única string para o SavedStateHandle. */

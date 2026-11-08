@@ -27,6 +27,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.accord.R
 import app.accord.core.label
+import app.accord.core.space.IntentionConversion
 import app.accord.core.space.IntentionView
 import app.accord.ui.access.MessageKind
 import app.accord.ui.access.ScreenMessage
@@ -46,6 +47,8 @@ fun IntentionRoute(
     padding: PaddingValues,
     onBack: () -> Unit,
     onSimulate: (IntentionView) -> Unit,
+    onAssume: (IntentionView) -> Unit,
+    onOpenConversion: (IntentionConversion) -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     app.accord.ui.components.RefreshOnResume(viewModel::refresh)
@@ -57,6 +60,7 @@ fun IntentionRoute(
         onPickMonth = { viewModel.shiftMonth(0) },
         onEdit = viewModel::startEdit, onSave = viewModel::save, onCancelEdit = viewModel::cancelEdit, onDiscardDraft = viewModel::discardDraft,
         onSimulate = onSimulate, onRetryLoad = viewModel::retryLoad, onShowCurrent = viewModel::showCurrentVersion,
+        onAssume = onAssume, onOpenConversion = onOpenConversion,
     )
 }
 
@@ -81,6 +85,8 @@ fun IntentionScreen(
     onSimulate: (IntentionView) -> Unit,
     onRetryLoad: () -> Unit,
     onShowCurrent: () -> Unit,
+    onAssume: (IntentionView) -> Unit = {},
+    onOpenConversion: (IntentionConversion) -> Unit = {},
 ) {
     val title = when {
         state.isNew -> R.string.intention_title_new
@@ -108,7 +114,7 @@ fun IntentionScreen(
                 if (state.editing) {
                     EditForm(state, onName, onValue, onNote, onPreviousMonth, onNextMonth, onClearMonth, onPickMonth, onSave, onCancelEdit, onDiscardDraft)
                 } else {
-                    state.saved?.let { ViewContent(it, state, onEdit, onSimulate) }
+                    state.saved?.let { ViewContent(it, state, onEdit, onSimulate, onAssume, onOpenConversion) }
                 }
             }
         }
@@ -129,7 +135,14 @@ private fun Notice(notice: IntentionNotice, onShowCurrent: () -> Unit) {
 }
 
 @Composable
-private fun ViewContent(view: IntentionView, state: IntentionUiState, onEdit: () -> Unit, onSimulate: (IntentionView) -> Unit) {
+private fun ViewContent(
+    view: IntentionView,
+    state: IntentionUiState,
+    onEdit: () -> Unit,
+    onSimulate: (IntentionView) -> Unit,
+    onAssume: (IntentionView) -> Unit,
+    onOpenConversion: (IntentionConversion) -> Unit,
+) {
     Text(view.name, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { heading() })
     Text(
         view.estimatedValue?.format() ?: stringResource(R.string.intentions_no_value),
@@ -146,6 +159,18 @@ private fun ViewContent(view: IntentionView, state: IntentionUiState, onEdit: ()
         Text(stringResource(R.string.intention_simulate))
     }
     OutlinedButton(onClick = onEdit, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.intention_edit)) }
+    // Assumir compromisso é uma ação à parte de Salvar intenção. Convertida: mostra o vínculo e não oferece converter de novo.
+    val conversion = view.conversion
+    if (conversion == null) {
+        OutlinedButton(onClick = { onAssume(view) }, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+            Text(stringResource(R.string.intention_assume))
+        }
+    } else {
+        Text(stringResource(R.string.intention_converted_title), style = MaterialTheme.typography.titleSmall, modifier = Modifier.semantics { heading() })
+        OutlinedButton(onClick = { onOpenConversion(conversion) }, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+            Text(stringResource(R.string.intention_converted_open))
+        }
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)

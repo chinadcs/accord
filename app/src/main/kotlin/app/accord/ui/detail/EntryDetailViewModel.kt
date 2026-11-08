@@ -17,6 +17,7 @@ import app.accord.core.space.EntryDetail
 import app.accord.core.space.EntryKind
 import app.accord.core.space.ExtraReason
 import app.accord.core.space.QueryResult
+import app.accord.ui.intentions.originIntention
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,6 +30,8 @@ data class DetailData(
     val categories: Map<String, CategoryNode>,
     val accounts: Map<String, AccountInfo>,
     val currentPersonId: String,
+    /** Intenção de compra de onde o lançamento nasceu (S7, P2); nula fora da fase ou sem vínculo. */
+    val origin: app.accord.core.space.IntentionView? = null,
 ) {
     /** Só lançamentos de despesa e renda avulsos se excluem aqui; ocorrência, estorno e quitação têm outros caminhos. */
     val canDelete: Boolean
@@ -112,7 +115,9 @@ class EntryDetailViewModel(
             _content.value = if (categories == null || accounts == null) {
                 DetailContent.Failed
             } else {
-                DetailContent.Ready(DetailData(detail, categories, accounts, currentPersonId))
+                // A raiz do compromisso: a compra (antes do #) ou a série (antes do :); o lançamento avulso é a própria raiz.
+                val root = detail.id.substringBefore('#').substringBefore(':')
+                DetailContent.Ready(DetailData(detail, categories, accounts, currentPersonId, origin = provider.originIntention(root)))
             }
         }
     }

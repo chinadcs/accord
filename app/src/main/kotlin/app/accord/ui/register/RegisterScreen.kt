@@ -66,6 +66,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -158,6 +159,7 @@ fun RegisterScreen(
                 Text(stringResource(R.string.register_load_failed), color = MaterialTheme.colorScheme.error)
             }
             if (state.recoveredDraft) RecoveredBanner(onDismissRecovered)
+            state.origin?.let { ConversionBanner(it, state.preview.firstOrNull()?.invoiceMonth) }
             state.generalError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
 
             FormTextField(
@@ -666,6 +668,41 @@ private fun MoreOptions(
 }
 
 /** Fatura estimada (com "a conferir" quando cai na janela do fechamento) e cronograma das parcelas. */
+/**
+ * Modo conversão (S7): diz de qual intenção nasce o compromisso, que só passa a existir ao salvar e que a intenção fica vinculada a ele. Se a fatura
+ * atribuída pelas regras do aplicativo for outra que a simulada, mostra a diferença antes de salvar. Nenhuma data de "quando pretende" vira data da compra.
+ */
+@Composable
+private fun ConversionBanner(origin: ConversionOrigin, assignedInvoice: java.time.YearMonth?) {
+    androidx.compose.material3.Surface(color = Accord.colors.attentionContainer, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalAlignment = Alignment.CenterVertically) {
+                DecorativeIcon(Lucide.drawable.lucide_ic_triangle_alert, tint = Accord.colors.onAttentionContainer)
+                Text(
+                    stringResource(R.string.conversion_title, origin.name.orEmpty()),
+                    style = MaterialTheme.typography.titleSmall, color = Accord.colors.onAttentionContainer,
+                    modifier = Modifier.semantics { heading() },
+                )
+            }
+            when (origin.problem) {
+                OriginProblem.NotFound -> Text(stringResource(R.string.conversion_not_found), color = Accord.colors.onAttentionContainer)
+                OriginProblem.AlreadyConverted -> Text(stringResource(R.string.conversion_already), color = Accord.colors.onAttentionContainer)
+                OriginProblem.None -> {
+                    Text(stringResource(R.string.conversion_impact), color = Accord.colors.onAttentionContainer)
+                    Text(stringResource(R.string.conversion_other_phone), style = MaterialTheme.typography.bodySmall, color = Accord.colors.onAttentionContainer)
+                }
+            }
+            val simulated = origin.simulatedInvoice
+            if (simulated != null && assignedInvoice != null && simulated != assignedInvoice) {
+                Text(
+                    stringResource(R.string.conversion_invoice_differs, assignedInvoice.label(), simulated.label()),
+                    style = MaterialTheme.typography.bodyMedium, color = Accord.colors.onAttentionContainer,
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun InvoiceAndSchedule(state: RegisterUiState, onCorrectInvoice: () -> Unit, onUseEstimate: () -> Unit) {
     val first = state.preview.firstOrNull() ?: return

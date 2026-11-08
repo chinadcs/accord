@@ -11,6 +11,7 @@ import app.accord.core.space.CommitmentDetail
 import app.accord.core.space.CommitmentKind
 import app.accord.core.space.MonthCommitments
 import app.accord.core.space.QueryResult
+import app.accord.ui.intentions.originIntention
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -108,7 +109,12 @@ sealed interface CommitmentDetailContent {
     data object Loading : CommitmentDetailContent
     data object NotFound : CommitmentDetailContent
     data object Failed : CommitmentDetailContent
-    data class Ready(val detail: CommitmentDetail, val categories: Map<String, CategoryNode>) : CommitmentDetailContent
+    data class Ready(
+        val detail: CommitmentDetail,
+        val categories: Map<String, CategoryNode>,
+        /** Intenção de compra de onde o compromisso nasceu (S7, P2); nula fora da fase ou sem vínculo. */
+        val origin: app.accord.core.space.IntentionView? = null,
+    ) : CommitmentDetailContent
 }
 
 /** Detalhe de um compromisso (tela 11): cronograma de parcelas, série recorrente ou boleto previsto. */
@@ -140,7 +146,11 @@ class CommitmentDetailViewModel(
             _content.value = when {
                 detail == null -> CommitmentDetailContent.NotFound
                 categories == null -> CommitmentDetailContent.Failed
-                else -> CommitmentDetailContent.Ready(detail, categories)
+                else -> CommitmentDetailContent.Ready(
+                    detail, categories,
+                    // A raiz do compromisso: compra (antes do #), série (antes do :) ou o próprio boleto.
+                    origin = provider.originIntention(detail.id.substringBefore('#').substringBefore(':')),
+                )
             }
         }
     }

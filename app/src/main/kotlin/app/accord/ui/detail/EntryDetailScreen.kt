@@ -66,6 +66,7 @@ fun EntryDetailRoute(
     onBack: () -> Unit,
     onEdit: (String) -> Unit,
     onOpenCommitment: (String) -> Unit = {},
+    onOpenIntention: (String) -> Unit = {},
 ) {
     val content by viewModel.content.collectAsStateWithLifecycle()
     val delete by viewModel.delete.collectAsStateWithLifecycle()
@@ -78,7 +79,7 @@ fun EntryDetailRoute(
         content, delete, padding, onBack, onEdit,
         onRetry = viewModel::load, onRequestDelete = viewModel::requestDelete, onCancelDelete = viewModel::cancelDelete,
         onConfirmDelete = viewModel::confirmDelete,
-        onOpenCommitment = onOpenCommitment,
+        onOpenCommitment = onOpenCommitment, onOpenIntention = onOpenIntention,
         linked = linked, onOpenAction = viewModel::openAction, onLinkedChange = viewModel::updateLinked,
         onLinkedSubmit = viewModel::submitLinked, onLinkedClose = viewModel::closeLinked,
     )
@@ -96,6 +97,7 @@ fun EntryDetailScreen(
     onCancelDelete: () -> Unit,
     onConfirmDelete: (extraConfirmed: Boolean) -> Unit,
     onOpenCommitment: (String) -> Unit = {},
+    onOpenIntention: (String) -> Unit = {},
     linked: LinkedState? = null,
     onOpenAction: (LinkedAction) -> Unit = {},
     onLinkedChange: ((LinkedForm) -> LinkedForm) -> Unit = {},
@@ -122,7 +124,10 @@ fun EntryDetailScreen(
                     Text(stringResource(R.string.action_back))
                 }
             }
-            is DetailContent.Ready -> ReadyDetail(content.data, onEdit, onRequestDelete, onOpenAction, onOpenCommitment)
+            is DetailContent.Ready -> {
+                app.accord.ui.intentions.OriginIntentionLink(content.data.origin, onOpenIntention)
+                ReadyDetail(content.data, onEdit, onRequestDelete, onOpenAction, onOpenCommitment)
+            }
         }
     }
     DeleteDialogs(delete, (content as? DetailContent.Ready)?.data, onCancelDelete, onConfirmDelete)

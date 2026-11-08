@@ -245,6 +245,12 @@ import app.accord.ui.theme.Accord
 import com.composables.icons.lucide.R as Lucide
 import app.accord.ui.register.RegisterRoute
 import app.accord.ui.register.RegisterViewModel
+import app.accord.ui.register.RegisterForm
+import app.accord.ui.register.FormKind
+import app.accord.ui.register.ExpenseForm
+import app.accord.ui.register.FormCodec
+import app.accord.core.space.AmountMeaning
+import app.accord.core.space.EntityType
 import java.time.YearMonth
 
 /**
@@ -354,6 +360,11 @@ private fun MainApp(container: AppContainer, startRoute: String) {
             form?.let { append("&$ARG_REGISTER_FORM=$it") }
         }
         navController.navigate(route)
+    }
+    /** "Assumir compromisso" (S7): abre o registro manual já preenchido, com a intenção de origem e a fatura simulada; só salvar cria o compromisso. */
+    fun conversionRoute(form: RegisterForm, simulatedInvoice: java.time.YearMonth?): String = buildString {
+        append("$ROUTE_REGISTER?$ARG_REGISTER_FORM=${Uri.encode(FormCodec.encode(form))}")
+        simulatedInvoice?.let { append("&${RegisterViewModel.ARG_SIM_INVOICE}=$it") }
     }
     val openEntriesRegistration: () -> Unit = {
         focusManager.clearFocus(force = true)
@@ -718,6 +729,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     onBack = { navController.popBackStack() },
                     onEdit = { id -> navController.navigate("$ROUTE_EDIT/${Uri.encode(id)}") },
                     onOpenCommitment = { id -> navController.navigate("$ROUTE_COMMITMENT/${Uri.encode(id)}") },
+                    onOpenIntention = { id -> navController.navigate("$ROUTE_INTENTION/${Uri.encode(id)}") },
                 )
             }
             composable(
@@ -811,6 +823,14 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     )
                     SimulatorRoute(
                         viewModel, padding, onBack = { navController.popBackStack() },
+                        onAssume = { scenario ->
+                            val form = RegisterForm(
+                                kind = FormKind.Expense, form = ExpenseForm.Card, amountText = scenario.total.formatPlain(), date = container.clock.today(),
+                                categoryId = scenario.categoryId, installmentsText = scenario.installments.toString(),
+                                amountMeaning = AmountMeaning.Total.takeIf { scenario.installments > 1 }, originIntentionId = scenario.originIntentionId,
+                            )
+                            navController.navigate(conversionRoute(form, scenario.firstMonth))
+                        },
                         onSaveAsIntention = { scenario ->
                             navController.navigate("$ROUTE_INTENTION/${IntentionViewModel.NEW}?${IntentionViewModel.ARG_VALUE}=${scenario.total.cents}&${IntentionViewModel.ARG_MONTH}=${scenario.firstMonth}")
                         },
@@ -843,6 +863,23 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     )
                     IntentionRoute(
                         viewModel, padding, onBack = { navController.popBackStack() },
+                        onAssume = { view ->
+                            val form = RegisterForm(
+                                kind = FormKind.Expense, form = ExpenseForm.Card, description = view.name,
+                                amountText = view.estimatedValue?.formatPlain().orEmpty(), date = container.clock.today(), originIntentionId = view.id,
+                            )
+                            navController.navigate(conversionRoute(form, null))
+                        },
+                        onOpenConversion = { conversion ->
+                            navController.navigate(
+                                when (conversion.type) {
+                                    EntityType.Movement -> "$ROUTE_ENTRY/${Uri.encode(conversion.id)}"
+                                    EntityType.CardPurchase -> "$ROUTE_COMMITMENT/${Uri.encode(conversion.id + "#1")}"
+                                    EntityType.Recurrence -> "$ROUTE_COMMITMENT/${Uri.encode(conversion.id + ":1")}"
+                                    else -> "$ROUTE_COMMITMENT/${Uri.encode(conversion.id)}"
+                                },
+                            )
+                        },
                         onSimulate = { view ->
                             val total = view.estimatedValue?.cents?.let { "${SimulatorViewModel.ARG_TOTAL}=$it&" } ?: ""
                             val month = view.desiredMonth?.let { "${SimulatorViewModel.ARG_MONTH}=$it&" } ?: ""
@@ -936,6 +973,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 CommitmentDetailRoute(
                     viewModel, padding, onBack = { navController.popBackStack() }, onOpenEntry = openEntry,
                     onEdit = { id -> navController.navigate("$ROUTE_EDIT/${Uri.encode(id)}") },
+                    onOpenIntention = { id -> navController.navigate("$ROUTE_INTENTION/${Uri.encode(id)}") },
                 )
             }
             composable(ROUTE_SYNC) {
@@ -1179,8 +1217,9 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 )
             }
             composable(
-                "$ROUTE_REGISTER?$ARG_REGISTER_KIND={$ARG_REGISTER_KIND}&$ARG_REGISTER_FORM={$ARG_REGISTER_FORM}&$ARG_REGISTER_CHAT={$ARG_REGISTER_CHAT}",
+                "$ROUTE_REGISTER?$ARG_REGISTER_KIND={$ARG_REGISTER_KIND}&$ARG_REGISTER_FORM={$ARG_REGISTER_FORM}&$ARG_REGISTER_CHAT={$ARG_REGISTER_CHAT}&${RegisterViewModel.ARG_SIM_INVOICE}={${RegisterViewModel.ARG_SIM_INVOICE}}",
                 arguments = listOf(
+                    navArgument(RegisterViewModel.ARG_SIM_INVOICE) { type = NavType.StringType; nullable = true; defaultValue = null },
                     navArgument(ARG_REGISTER_KIND) { type = NavType.StringType; nullable = true; defaultValue = null },
                     navArgument(ARG_REGISTER_FORM) { type = NavType.StringType; nullable = true; defaultValue = null },
                     navArgument(ARG_REGISTER_CHAT) { type = NavType.StringType; nullable = true; defaultValue = null },

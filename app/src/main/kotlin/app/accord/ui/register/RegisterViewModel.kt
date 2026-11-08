@@ -36,6 +36,11 @@ import java.util.UUID
 
 enum class RegisterPhase { Editing, Saving, Saved }
 
+enum class OriginProblem { None, AlreadyConverted, NotFound }
+
+/** O que a tela mostra sobre a intenção de origem. [simulatedInvoice] é a primeira fatura do cenário, para avisar se a atribuída pelo aplicativo for outra. */
+data class ConversionOrigin(val name: String?, val problem: OriginProblem, val simulatedInvoice: YearMonth?)
+
 data class RegisterUiState(
     val form: RegisterForm,
     val today: java.time.LocalDate = form.date,
@@ -57,6 +62,8 @@ data class RegisterUiState(
     /** Campo a receber foco depois de salvar com erro; [focusTick] muda a cada pedido para repetir o foco. */
     val focusField: FormField? = null,
     val focusTick: Int = 0,
+    /** Modo conversão (S7): a intenção de origem, quando o formulário nasceu de "Assumir compromisso". */
+    val origin: ConversionOrigin? = null,
 ) {
     val previewToConfirm: Boolean get() = preview.firstOrNull()?.assignment == AssignmentState.ToConfirm
     val saving: Boolean get() = phase == RegisterPhase.Saving
@@ -114,6 +121,19 @@ class RegisterViewModel(
             val categories = (space.categories() as? QueryResult.Data)?.value
             val accounts = (space.accounts() as? QueryResult.Data)?.value
             val incomeCategories = (space.incomeCategories() as? QueryResult.Data)?.value.orEmpty()
+            val origin = _state.value.form.originIntentionId?.let { id ->
+                val intention = (space.intention(id) as? QueryResult.Data)?.value
+                val simulated = saved.get<String>(ARG_SIM_INVOICE)?.let { runCatching { YearMonth.parse(it) }.getOrNull() }
+                ConversionOrigin(
+                    name = intention?.name,
+                    problem = when {
+                        intention == null -> OriginProblem.NotFound
+                        intention.conversion != null -> OriginProblem.AlreadyConverted
+                        else -> OriginProblem.None
+                    },
+                    simulatedInvoice = simulated,
+                )
+            }
             if (categories == null || accounts == null) {
                 _state.update { it.copy(loading = false, loadFailed = true) }
                 return@launch
@@ -137,7 +157,12 @@ class RegisterViewModel(
                     defaultAccountId = accounts.myDefaultAccountId,
                     loading = false,
                     recoveredDraft = recovered,
-                    form = withDefaultAccount(it.form, accounts.myDefaultAccountId),
+                    origin = origin,
+                    // O nome da intenção é a descrição de partida; a pessoa pode trocá-la.
+                    form = withDefaultAccount(
+                        if (origin?.name != null && it.form.description.isBlank()) it.form.copy(description = origin.name) else it.form,
+                        accounts.myDefaultAccountId,
+                    ),
                 )
             }
             schedulePreview()
@@ -162,6 +187,8 @@ class RegisterViewModel(
     /** Ao trocar de tipo ou forma, some o que não se aplica mais, para não salvar lixo escondido. */
     private fun normalize(f: RegisterForm): RegisterForm {
         var r = f
+        // Conversão de intenção de compra só gera despesa (ADR 0048).
+        if (r.originIntentionId != null) r = r.copy(kind = FormKind.Expense)
         if (!r.allowsInstallments) r = r.copy(installmentsText = "1", amountMeaning = null)
         if (r.kind != FormKind.Expense || r.form != ExpenseForm.Card || r.frequency != null) r = r.copy(invoice = null)
         if (!(r.kind == FormKind.Income || r.form == ExpenseForm.Boleto)) r = r.copy(settledDate = null, settledAmountText = "")
@@ -350,7 +377,7 @@ class RegisterViewModel(
     /** Mês da fatura que a pessoa escolheu, ou o estimado pela prévia. */
     fun estimatedInvoice(): YearMonth? = _state.value.preview.firstOrNull()?.invoiceMonth
 
-    private companion object {
+    companion object {
         const val ARG_KIND = "kind"
         const val ARG_FORM = "form"
         const val KIND_INCOME = "income"
@@ -358,6 +385,7 @@ class RegisterViewModel(
         const val KEY_COMMAND = "commandId"
         const val KEY_DRAFT = "draftId"
         const val KEY_CHAT_MESSAGE = "chatMessage"
+        const val ARG_SIM_INVOICE = "simInvoice"
         const val PREVIEW_DEBOUNCE_MS = 250L
     }
 }

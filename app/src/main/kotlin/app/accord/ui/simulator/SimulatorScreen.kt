@@ -57,6 +57,7 @@ fun SimulatorRoute(
     onBack: () -> Unit,
     onOpenMonth: (java.time.YearMonth, app.accord.core.simulation.Scenario) -> Unit,
     onSaveAsIntention: (app.accord.core.simulation.Scenario) -> Unit,
+    onAssume: (app.accord.core.simulation.Scenario) -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     SimulatorScreen(
@@ -64,7 +65,7 @@ fun SimulatorRoute(
         onTotal = viewModel::setTotal, onInstallments = viewModel::setInstallments, onCategory = viewModel::setCategory,
         onPreviousMonth = { viewModel.shiftFirstMonth(-1) }, onNextMonth = { viewModel.shiftFirstMonth(1) },
         onUseSuggestion = viewModel::useSuggestedMonth, onSimulate = viewModel::simulate, onOpenMonth = onOpenMonth,
-        onSaveAsIntention = onSaveAsIntention,
+        onSaveAsIntention = onSaveAsIntention, onAssume = onAssume,
     )
 }
 
@@ -83,6 +84,7 @@ fun SimulatorScreen(
     onSimulate: () -> Unit,
     onOpenMonth: (java.time.YearMonth, app.accord.core.simulation.Scenario) -> Unit = { _, _ -> },
     onSaveAsIntention: (app.accord.core.simulation.Scenario) -> Unit = {},
+    onAssume: (app.accord.core.simulation.Scenario) -> Unit = {},
 ) {
     var pickingCategory by rememberSaveable { mutableStateOf(false) }
     val totalFocus = remember { FocusRequester() }
@@ -147,7 +149,7 @@ fun SimulatorScreen(
         when (val outcome = state.outcome) {
             SimulatorOutcome.Idle, SimulatorOutcome.Calculating -> Unit
             SimulatorOutcome.Unavailable -> UnavailableBanner(onSimulate)
-            is SimulatorOutcome.Ready -> ResultSection(outcome, state, onOpenMonth, onSaveAsIntention, onBack)
+            is SimulatorOutcome.Ready -> ResultSection(outcome, state, onOpenMonth, onSaveAsIntention, onBack, onAssume)
         }
     }
 
@@ -176,6 +178,7 @@ private fun ResultSection(
     onOpenMonth: (java.time.YearMonth, app.accord.core.simulation.Scenario) -> Unit,
     onSaveAsIntention: (app.accord.core.simulation.Scenario) -> Unit,
     onBackToIntention: () -> Unit,
+    onAssume: (app.accord.core.simulation.Scenario) -> Unit,
 ) {
     val months = outcome.result.months
     val count = months.size
@@ -199,6 +202,10 @@ private fun ResultSection(
             style = MaterialTheme.typography.titleMedium,
         )
         months.forEach { m -> MonthCard(m, count, state) { onOpenMonth(m.month, outcome.scenario) } }
+        // Assumir compromisso é uma ação separada: abre o registro manual preenchido, e só salvar cria o compromisso.
+        Button(onClick = { onAssume(outcome.scenario) }, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+            Text(stringResource(R.string.intention_assume))
+        }
         // Cenário avulso vira intenção pela tela 35; vindo de uma intenção, volta a ela sem alterar o valor estimado.
         if (state.originIntentionId == null) {
             OutlinedButton(onClick = { onSaveAsIntention(outcome.scenario) }, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {

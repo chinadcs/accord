@@ -50,4 +50,22 @@
     <string name="intention_error_name_long">O nome é longo demais.</string>
     <string name="intention_error_note_long">A observação é longa demais.</string>
     <string name="intention_error_value_positive">O valor estimado precisa ser maior que zero, ou deixe em branco.</string>
+
+    <!-- Registro manual em modo conversão (tela 09) -->
+    <string name="intention_assume">Assumir compromisso…</string>
+    <string name="intention_converted_title">Convertida em compromisso</string>
+    <string name="intention_converted_open">Ver compromisso vinculado</string>
+    <string name="intention_filter_all">Todas</string>
+    <string name="intention_filter_planned">Planejadas</string>
+    <string name="intention_filter_converted">Convertidas</string>
+    <string name="intentions_converted_tag">Convertida em compromisso</string>
+    <string name="intentions_filter_empty">Nenhuma intenção neste filtro.</string>
+    <string name="conversion_title">Assumindo o compromisso da intenção “%1$s”</string>
+    <string name="conversion_impact">O compromisso só passa a existir quando você salvar, e então entra no orçamento. A intenção fica vinculada a ele e não poderá ser convertida de novo.</string>
+    <string name="conversion_other_phone">Se o outro celular ainda não sincronizou, ele pode já ter convertido esta intenção. Nesse caso, vocês verão as duas versões para escolher qual manter.</string>
+    <string name="conversion_not_found">Não encontramos esta intenção neste aparelho. Volte e abra a lista para conferir.</string>
+    <string name="conversion_already">Esta intenção já foi convertida em compromisso. Abra o compromisso vinculado em vez de criar outro.</string>
+    <string name="conversion_invoice_differs">Pelas regras do aplicativo esta compra cairia na fatura de %1$s, e a simulação usou %2$s. Confira antes de salvar.</string>
+    <string name="detail_origin_intention">Originado da intenção “%1$s”</string>
+    <string name="detail_origin_open">Ver intenção</string>
 </resources>
