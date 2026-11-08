@@ -11,10 +11,13 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -26,6 +29,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.test.platform.app.InstrumentationRegistry
 import app.accord.core.Money
@@ -39,6 +43,7 @@ import app.accord.ui.AccordApp
 import app.accord.ui.theme.AccordTheme
 import app.accord.ui.theme.ThemePreference
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -89,6 +94,22 @@ class CharcoalVisualReviewTest {
         compose.waitForIdle()
     }
 
+    /**
+     * O corte de uma linha do rótulo hifenizado (ex.: "Lan-ça-men-tos" sem o "tos") só aparece no layout do texto:
+     * a aba continua "exibida". [TextLayoutResult.didOverflowHeight] acusa linhas que não couberam.
+     */
+    private fun assertNavLabelsNotClipped() {
+        for (label in listOf("Lançamentos", "Orçamento", "Revisar", "Mais")) {
+            val node = compose.onNode(hasText(label) and hasAnyAncestor(hasTestTag("root-navigation")), useUnmergedTree = true)
+            node.assertIsDisplayed()
+            val action = node.fetchSemanticsNode().config[SemanticsActions.GetTextLayoutResult].action
+            val layouts = mutableListOf<TextLayoutResult>()
+            compose.runOnIdle { action?.invoke(layouts) }
+            val layout = layouts.single()
+            assertFalse("Rótulo \"$label\" cortado na barra inferior", layout.didOverflowHeight || layout.didOverflowWidth)
+        }
+    }
+
     private fun capture(name: String) {
         // Assentar as transições do Material antes de capturar, inclusive a troca do FAB.
         compose.mainClock.advanceTimeBy(500)
@@ -136,6 +157,9 @@ class CharcoalVisualReviewTest {
             tab(label)
             tabNode(label).assertIsDisplayed()
             compose.onNodeWithTag("root-navigation", useUnmergedTree = true).assertIsDisplayed()
+            assertNavLabelsNotClipped()
+            // Em Lançamentos o registro vira botão em fluxo: o "+" não pode cobrir a seta do mês (accord-4r8).
+            if (label == "Lançamentos") compose.onNodeWithTag("root-register-fab", useUnmergedTree = true).assertDoesNotExist()
             capture("$slug-escuro-fonte200")
         }
 
