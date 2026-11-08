@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Simulador de compra (tela 36, P2) -->
+    <string name="more_simulator">Simular compra</string>
+    <string name="simulator_title">Simular compra</string>
+    <string name="simulator_intro">Veja como uma compra parcelada ocuparia os próximos meses. Nada é registrado e o orçamento real não muda.</string>
+    <string name="simulator_total">Valor total</string>
+    <string name="simulator_total_hint">1.200,00</string>
+    <string name="simulator_installments">Parcelas</string>
+    <string name="simulator_installments_hint">6</string>
+    <string name="simulator_payment">Pagamento</string>
+    <string name="simulator_payment_card">Cartão</string>
+    <string name="simulator_category">Categoria</string>
+    <string name="simulator_category_pick">Escolher para comparar com o limite</string>
+    <string name="simulator_category_clear">Não comparar com limite</string>
+    <string name="simulator_first_invoice">Primeira fatura</string>
+    <string name="simulator_first_invoice_estimate">Sugestão pela data de hoje e pelo fechamento do cartão. É uma estimativa: o banco pode atribuir outra fatura.</string>
+    <string name="simulator_first_invoice_chosen">Escolhida por você. O banco pode atribuir outra fatura.</string>
+    <string name="simulator_use_suggestion">Voltar à sugestão</string>
+    <string name="simulator_action_simulate">Simular</string>
+    <string name="simulator_calculating">Calculando…</string>
+    <string name="simulator_label_scenario">SIMULAÇÃO · não altera seu orçamento</string>
+    <string name="simulator_summary">%1$s a %2$s: +%3$s por mês</string>
+    <string name="simulator_summary_uneven">%1$s a %2$s: %3$s no total, em %4$d parcelas</string>
+    <string name="simulator_month_title">%1$s · parcela %2$d de %3$d</string>
+    <string name="simulator_known">Conhecidos do mês: %1$s</string>
+    <string name="simulator_scenario_line">Cenário: +%1$s</string>
+    <string name="simulator_total_with">Total com o cenário: %1$s</string>
+    <string name="simulator_estimate_line">Estimativa de novos gastos variáveis: %1$s (separada, não entra no total)</string>
+    <string name="simulator_limit_line">%1$s: limite %2$s, conhecidos %3$s, com o cenário %4$s</string>
+    <string name="simulator_limit_none">%1$s: sem limite definido neste mês</string>
+    <string name="simulator_excess_scenario">Possível excesso do cenário: %1$s</string>
+    <string name="simulator_within_limit">O cenário cabe no limite deste mês.</string>
+    <string name="simulator_a11y_month">Simulação, não altera o orçamento. %1$s, parcela %2$d de %3$d: cenário %4$s, conhecidos %5$s, total com o cenário %6$s.</string>
+    <string name="simulator_a11y_limit">%1$s: limite %2$s, com o cenário %3$s.</string>
+    <string name="simulator_a11y_excess">Possível excesso do cenário: %1$s.</string>
+    <string name="simulator_a11y_no_limit">%1$s: sem limite definido neste mês.</string>
+    <string name="simulator_open_month">Ver composição de %1$s</string>
+    <string name="simulator_stale_note">Compara com os dados deste aparelho. Registros do outro celular que ainda não chegaram podem não estar incluídos.</string>
+    <string name="simulator_disclaimer">Isto é uma simulação do aplicativo. Não é aprovação de crédito nem garantia de disponibilidade no banco.</string>
+    <string name="simulator_unavailable">Não foi possível ler os dados do orçamento. Nada foi alterado; tente de novo.</string>
+    <string name="simulator_retry">Tentar de novo</string>
+    <string name="simulator_first_month_prev">Mês anterior da primeira fatura</string>
+    <string name="simulator_first_month_next">Próximo mês da primeira fatura</string>
+</resources>

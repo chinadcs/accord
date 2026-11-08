@@ -52,6 +52,9 @@ const val ROUTE_MODEL = "model"
 const val ROUTE_COMMITMENTS = "commitments"
 const val ARG_MONTH = "month"
 
+/** Simulador de compra (tela 36, P2): consulta pura, não grava nada. */
+const val ROUTE_SIMULATOR = "simulator"
+
 /** Detalhe de um compromisso: `commitment/{id}`; o ID pode ter `#` ou `:`, por isso vai codificado. */
 const val ROUTE_COMMITMENT = "commitment"
 

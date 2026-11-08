@@ -189,6 +189,10 @@ import app.accord.ui.chat.ChatViewModel
 import app.accord.ui.nav.ROUTE_CARD
 import app.accord.ui.nav.ROUTE_COMMITMENT
 import app.accord.ui.nav.ROUTE_COMMITMENTS
+import app.accord.ui.nav.ROUTE_SIMULATOR
+import app.accord.ui.simulator.SimulatorRoute
+import app.accord.ui.simulator.SimulatorViewModel
+import app.accord.core.analysis.ProductPhase
 import app.accord.ui.nav.ARG_FILTER_CRITERION
 import app.accord.ui.nav.ROUTE_ACTIVITY
 import app.accord.ui.nav.ROUTE_COMPARISON
@@ -355,7 +359,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
     val context = LocalContext.current
     // O aviso da ação anterior não cobre o botão Salvar do formulário que abre em seguida.
     val formRoute = destination?.route?.substringBefore('?')?.substringBefore('/')
-    val inForm = formRoute in setOf(ROUTE_REGISTER, ROUTE_EDIT, ROUTE_CARD, ROUTE_ACCOUNTS, ROUTE_CATEGORIES, ROUTE_CATEGORY_EDIT, ROUTE_CATEGORY_MOVE, ROUTE_LIMITS, ROUTE_FIRST_STEPS, ROUTE_ALERT_PREFS)
+    val inForm = formRoute in setOf(ROUTE_REGISTER, ROUTE_EDIT, ROUTE_CARD, ROUTE_ACCOUNTS, ROUTE_CATEGORIES, ROUTE_CATEGORY_EDIT, ROUTE_CATEGORY_MOVE, ROUTE_LIMITS, ROUTE_FIRST_STEPS, ROUTE_ALERT_PREFS, ROUTE_SIMULATOR)
     // Ao abrir um formulário novo (de fora ou de outro formulário) o aviso some; voltar de uma tela de edição para a lista
     // (também formulário, já aberta antes) não apaga o aviso da ação que acabou de salvar.
     var cameFromForm by remember { mutableStateOf(false) }
@@ -616,6 +620,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             onActivity = { navController.navigate(ROUTE_ACTIVITY) },
                             onComparison = { navController.navigate(ROUTE_COMPARISON) },
                             onWeeklyReview = { navController.navigate(ROUTE_WEEKLY_REVIEW) },
+                            onSimulator = if (container.phase.includes(ProductPhase.P2)) ({ navController.navigate(ROUTE_SIMULATOR) }) else null,
                             onRegister = register,
                             onSpace = { navController.navigate(ROUTE_SPACE) },
                             onAppearance = { navController.navigate("appearance") },
@@ -782,6 +787,14 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     onOpenCard = { navController.navigate(ROUTE_CARD) },
                     onOpenSubscriptions = { navController.navigate(ROUTE_SUBSCRIPTIONS) },
                 )
+            }
+            if (container.phase.includes(ProductPhase.P2)) {
+                composable(ROUTE_SIMULATOR) {
+                    val viewModel: SimulatorViewModel = viewModel(
+                        factory = viewModelFactory { initializer { SimulatorViewModel(container, createSavedStateHandle()) } },
+                    )
+                    SimulatorRoute(viewModel, padding, onBack = { navController.popBackStack() })
+                }
             }
             composable(ROUTE_ACTIVITY) {
                 val viewModel: PurchaseActivityViewModel = viewModel(

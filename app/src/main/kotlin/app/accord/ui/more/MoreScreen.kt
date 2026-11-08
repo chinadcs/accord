@@ -63,6 +63,8 @@ data class MoreActions(
     val onActivity: () -> Unit = {},
     val onComparison: () -> Unit = {},
     val onWeeklyReview: () -> Unit = {},
+    /** Simulador de compra (tela 36, P2); nulo enquanto a fase P2 não estiver ativa: a linha não aparece. */
+    val onSimulator: (() -> Unit)? = null,
     /** Liga ou desliga os avisos neste aparelho (salva na hora). */
     val onAlertsToggle: (Boolean) -> Unit = {},
     /** "Permitir notificações" (ou abrir os ajustes do sistema), quando falta a permissão ou o canal está desativado. */
@@ -118,6 +120,7 @@ fun MoreScreen(
             MoreRow(R.string.more_comparison, Lucide.drawable.lucide_ic_chart_column, actions.onComparison)
             MoreRow(R.string.more_weekly, Lucide.drawable.lucide_ic_calendar_check, actions.onWeeklyReview)
             MoreRow(R.string.forecast_title, Lucide.drawable.lucide_ic_trending_up, actions.onForecasts)
+            actions.onSimulator?.let { MoreRow(R.string.more_simulator, Lucide.drawable.lucide_ic_calculator, it) }
         }
 
         Section(R.string.more_group_space) {
