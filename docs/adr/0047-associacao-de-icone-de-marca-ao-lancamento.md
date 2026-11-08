@@ -38,7 +38,7 @@ do pedido original (accord-nq8) passa a ser reconhecimento determinístico por r
 - O ativo cresce (milhares de caminhos, estimativa de poucos MB); a carga e a busca devem ficar fora da thread de interface. Medir o tamanho do APK e o tempo de busca.
 - Só o nome normalizado do lançamento (já compartilhado) e a chave do ícone sincronizam; Chat continua só no aparelho de origem.
 - Regras por nome com colisão de nomes de lançamentos diferentes aplicam o mesmo ícone: a pessoa pode usar "só este lançamento" ou remover a regra.
-- A lista de palavras comuns e o limite de 3 caracteres são ajustes de precisão; reconhecimento ruim é corrigido pela escolha manual. Revisar se o uso real mostrar acertos errados frequentes.
+- A lista inicial de palavras comuns (`assets/vendors/generic-words.txt`) foi vista e aprovada pelo usuário em 07/11/2026. A lista e o limite de 3 caracteres são ajustes de precisão; reconhecimento ruim é corrigido pela escolha manual. Revisar se o uso real mostrar acertos errados frequentes.
 - Reabrir o SLM (ADR 0036) não muda este ADR: uma proposta de chave de modelo, se existir, passaria pela mesma lista branca do catálogo.
 
 ## Fontes e evidências

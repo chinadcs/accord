@@ -181,7 +181,9 @@ GPU `host`, 1080×2400 a 420 dpi como o S20 FE); o `4.65_720p_Galaxy_Nexus_API_3
 continua disponível. Com os dois abertos, informar o serial (`-Serial` ou `ANDROID_SERIAL`). No
 AVD rápido as animações do sistema estão em 0 (`adb shell settings put global
 window_animation_scale 0`, idem `transition_animation_scale` e `animator_duration_scale`); ele não
-serve para validar movimento nem substitui a validação no Galaxy S20 FE e no S23 FE. Não há
+serve para validar movimento nem substitui a validação no Galaxy S20 FE e no S23 FE. Num AVD recém-iniciado
+(`-no-snapshot`) o teclado virtual abre sobre a lista e a espreme a zero: rodar `adb shell settings put secure
+show_ime_with_hard_keyboard 0` antes dos testes de interface (sem isso `EditFlowTest` e similares não acham as linhas). Não há
 `cmdline-tools` instalado (sem `avdmanager`); os AVDs foram criados copiando `config.ini`.
 
 Para docs/configuração, verificar UTF-8, links locais, frontmatter, JSON/TOML, coerência entre

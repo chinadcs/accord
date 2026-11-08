@@ -6,6 +6,9 @@ import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -116,6 +119,8 @@ class IconChoiceFlowTest {
     }
 
     private fun openFirstBakery() {
+        // A lista é preguiçosa: a padaria pode estar abaixo da dobra e só existe depois da rolagem.
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText(bakery, substring = true))
         compose.onAllNodesWithText(bakery, substring = true).onFirst().performSemanticsAction(SemanticsActions.OnClick)
         waitForText("Detalhe do lançamento")
     }

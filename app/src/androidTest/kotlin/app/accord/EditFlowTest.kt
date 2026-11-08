@@ -1,6 +1,8 @@
 package app.accord
 
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.getOrNull
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasContentDescription
@@ -94,8 +96,21 @@ class EditFlowTest {
         scenario?.close()
     }
 
-    private fun waitForText(text: String) =
-        compose.waitUntil(8_000) { compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty() }
+    private fun waitForText(text: String) {
+        try {
+            compose.waitUntil(8_000) { compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty() }
+        } catch (e: androidx.compose.ui.test.ComposeTimeoutException) {
+            // Diagnóstico: o que havia na tela quando o texto esperado não apareceu.
+            val seen = mutableListOf<String>()
+            fun walk(node: androidx.compose.ui.semantics.SemanticsNode) {
+                node.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.Text)?.firstOrNull()?.text?.let { seen += it }
+                node.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.EditableText)?.text?.let { seen += "campo:$it" }
+                node.children.forEach(::walk)
+            }
+            walk(compose.onRoot(useUnmergedTree = true).fetchSemanticsNode())
+            throw AssertionError("esperava \"$text\"; na tela: ${seen.take(40)}", e)
+        }
+    }
 
     private fun waitGone(text: String) =
         compose.waitUntil(8_000) { compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isEmpty() }
@@ -116,8 +131,10 @@ class EditFlowTest {
         waitForText(grocery) // a lista carregou; os outros itens podem estar abaixo e precisam de rolagem
         tap(description)
         waitForText("Detalhe do lançamento")
+        waitForText("Editar") // o detalhe mostra o título antes de carregar o conteúdo e as ações
         tap("Editar")
         waitForText("Editar lançamento")
+        waitForText("Descrição") // o título aparece antes do formulário carregar; sem isso a rolagem corre contra o carregamento
     }
 
     private fun replace(label: String, value: String) {
@@ -174,6 +191,7 @@ class EditFlowTest {
 
         tap("Editar")
         waitForText("Editar lançamento")
+        waitForText("Descrição")
         replace("Descrição", "Outra $tag")
         compose.onNode(hasContentDescription("Voltar")).performSemanticsAction(SemanticsActions.OnClick)
         waitForText("Descartar alterações?")
