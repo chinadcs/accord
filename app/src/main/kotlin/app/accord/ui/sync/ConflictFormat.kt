@@ -110,6 +110,8 @@ object ConflictFormat {
             Spec("removed", R.string.field_status, Kind.Deleted),
         ),
         EntityType.Account to listOf(
+            Spec("initialBalanceCents", R.string.balance_initial, Kind.Cents),
+            Spec("balanceCutoffEpochDay", R.string.balance_date, Kind.Day),
             Spec("bankName", R.string.field_bank, Kind.Text), Spec("nickname", R.string.field_nickname, Kind.Text),
         ),
         EntityType.Card to listOf(
@@ -117,10 +119,18 @@ object ConflictFormat {
             Spec("closingDay", R.string.field_closing_day, Kind.Text), Spec("dueDay", R.string.field_due_day, Kind.Text),
         ),
         EntityType.Preferences to listOf(Spec("defaultAccountId", R.string.field_default_account, Kind.Account)),
+        EntityType.AccountMove to listOf(
+            Spec("fromAccountId", R.string.balance_origin, Kind.Account),
+            Spec("toAccountId", R.string.balance_destination, Kind.Account),
+            Spec("amountCents", R.string.field_amount, Kind.Cents),
+            Spec("epochDay", R.string.field_date, Kind.Day),
+            Spec("voided", R.string.field_status, Kind.Deleted),
+        ),
     )
 
     @StringRes
     fun entityLabel(type: EntityType): Int = when (type) {
+        EntityType.AccountMove -> R.string.balance_move
         EntityType.Movement -> R.string.conflict_entity_movement
         EntityType.CardPurchase -> R.string.conflict_entity_card_purchase
         EntityType.Boleto -> R.string.conflict_entity_boleto

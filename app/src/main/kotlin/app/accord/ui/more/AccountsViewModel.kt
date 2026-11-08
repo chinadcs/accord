@@ -23,14 +23,21 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
+import app.accord.core.Money
+import app.accord.core.MoneyParse
+import app.accord.core.space.AccountBalanceView
+import app.accord.core.space.SetAccountBalance
+import app.accord.core.space.TransferBetweenAccounts
+import app.accord.core.space.AdjustAccountBalance
+import java.time.LocalDate
 
 sealed interface AccountsContent {
     data object Loading : AccountsContent
     data object Failed : AccountsContent
-    data class Ready(val view: AccountsView) : AccountsContent
+    data class Ready(val view: AccountsView, val balances: List<AccountBalanceView> = emptyList()) : AccountsContent
 }
 
-/** Cadastro simples: só banco e apelido, sem agência, número, credencial nem saldo. */
+/** Cadastro de banco e apelido; saldo inicial e movimentos têm formulário próprio. */
 data class AccountForm(
     /** Nulo ao adicionar; o ID da conta ao corrigir o cadastro (mesma identidade e vínculos). */
     val editingId: String?,
@@ -48,13 +55,77 @@ data class AccountForm(
  */
 class AccountsViewModel(
     private val provider: SpaceProvider,
-    @Suppress("unused") saved: SavedStateHandle,
+    private val saved: SavedStateHandle,
 ) : ViewModel() {
     private val _content = MutableStateFlow<AccountsContent>(AccountsContent.Loading)
     val content: StateFlow<AccountsContent> = _content.asStateFlow()
 
     private val _form = MutableStateFlow<AccountForm?>(null)
     val form: StateFlow<AccountForm?> = _form.asStateFlow()
+
+    val balanceAction = saved.getStateFlow<String?>("balanceAction", null)
+    val balanceAccount = saved.getStateFlow("balanceAccount", "")
+    val balanceTarget = saved.getStateFlow("balanceTarget", "")
+    val balanceAmount = saved.getStateFlow("balanceAmount", "")
+    val balanceDate = saved.getStateFlow("balanceDate", "")
+    private val _balanceMessage = MutableStateFlow<String?>(null)
+    val balanceMessage = _balanceMessage.asStateFlow()
+    private val _balanceWorking = MutableStateFlow(false)
+    val balanceWorking = _balanceWorking.asStateFlow()
+
+    fun openBalance(action: String, account: String) {
+        if (_balanceWorking.value) return
+        saved["balanceAccount"] = account
+        saved["balanceAction"] = action
+        saved["balanceTarget"] = ""
+        saved["balanceAmount"] = ""
+        saved["balanceDate"] = LocalDate.now().toString()
+        saved["balanceCommand"] = UUID.randomUUID().toString()
+        _balanceMessage.value = null
+    }
+
+    fun changeBalance(field: String, value: String) { saved[field] = value }
+    fun cancelBalance() { if (!_balanceWorking.value) saved["balanceAction"] = null }
+
+    fun saveBalance() {
+        if (_balanceWorking.value) return
+        val action = balanceAction.value ?: return
+        val text = balanceAmount.value.trim()
+        val parsed = Money.parse(text.removePrefix("-")) as? MoneyParse.Ok
+        val date = runCatching { LocalDate.parse(balanceDate.value) }.getOrNull()
+        if (parsed == null || date == null) {
+            _balanceMessage.value = "Informe um valor em reais e uma data no formato AAAA-MM-DD."
+            return
+        }
+        val amount = if (text.startsWith("-")) -parsed.money else parsed.money
+        val command = when (action) {
+            "initial" -> SetAccountBalance(balanceAccount.value, amount, date)
+            "transfer" -> TransferBetweenAccounts(balanceAccount.value, balanceTarget.value, amount, date)
+            "adjust" -> AdjustAccountBalance(balanceAccount.value, amount, date)
+            else -> return
+        }
+        _balanceWorking.value = true
+        viewModelScope.launch {
+            try {
+                when (val result = provider.space().execute(Envelope(CommandId(saved.get<String>("balanceCommand")!!)), command)) {
+                    is CommandResult.Applied -> finishBalance(result.receipt.operationId, result.receipt.undoable)
+                    is CommandResult.AlreadyApplied -> finishBalance(result.receipt.operationId, result.receipt.undoable)
+                    is CommandResult.Rejected -> _balanceMessage.value = result.errors.joinToString(" ") { it.message }
+                    else -> _balanceMessage.value = "Não foi possível salvar. Recarregue e confira a conta."
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (_: Exception) {
+                _balanceMessage.value = "Não foi possível confirmar. Confira a conta ou tente novamente."
+            } finally { _balanceWorking.value = false }
+        }
+    }
+
+    private fun finishBalance(operationId: String, undoable: Boolean) {
+        saved["balanceAction"] = null
+        provider.feedback.post(FeedbackEvent(R.string.feedback_account_saved, undoOperationId = operationId.takeIf { undoable }))
+        refresh()
+    }
 
     /** Um ID por abertura do formulário: tocar duas vezes em Salvar não cria duas contas. */
     private var commandId = CommandId(UUID.randomUUID().toString())
@@ -70,7 +141,8 @@ class AccountsViewModel(
         if (showLoading) _content.value = AccountsContent.Loading
         viewModelScope.launch {
             val view = (provider.space().accounts() as? QueryResult.Data)?.value
-            _content.value = view?.let(AccountsContent::Ready) ?: AccountsContent.Failed
+            val balances = (provider.space().accountBalances() as? QueryResult.Data)?.value
+            _content.value = if (view != null && balances != null) AccountsContent.Ready(view, balances) else AccountsContent.Failed
         }
     }
 

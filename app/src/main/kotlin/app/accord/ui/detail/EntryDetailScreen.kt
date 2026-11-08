@@ -184,6 +184,9 @@ private fun ReadyDetail(
                 Text(category?.name ?: stringResource(R.string.detail_category_unset), style = MaterialTheme.typography.bodyLarge)
             }
             d.method?.let { Text(it.label(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            if (d.method == app.accord.core.space.PaymentMethod.Cash) {
+                Text(stringResource(R.string.balance_wallet), style = MaterialTheme.typography.bodyMedium)
+            }
             d.accountId?.let { id ->
                 data.accounts[id]?.let { account ->
                     val bank = when (val b = account.bank) {

@@ -95,6 +95,11 @@ class EntityStatesRoundTripTest : SpaceTestBase() {
     private suspend fun scenario(h: Handle) {
         val account = h.space.execute(h.env(), AddAccount(BankRef.Other("Banco A"), "Conta A")).applied().changes.single().id
         h.space.execute(h.env(), SetMyDefaultAccount(account)).applied()
+        val wallet = h.space.accounts().value().wallet!!.id
+        h.space.execute(h.env(), app.accord.core.space.SetAccountBalance(account, brl(500), d(2026, 10, 1))).applied()
+        h.space.execute(h.env(), app.accord.core.space.SetAccountBalance(wallet, brl(20), d(2026, 10, 1))).applied()
+        h.space.execute(h.env(), app.accord.core.space.TransferBetweenAccounts(account, wallet, brl(50), d(2026, 10, 24))).applied()
+        h.space.execute(h.env(), app.accord.core.space.AdjustAccountBalance(wallet, brl(80), d(2026, 10, 24))).applied()
         val delivery = seed("alimentacao.delivery")
         val pix = h.space.execute(h.env(), RegisterDirectPayment(DirectPaymentKind.Pix, "Delivery", Classification.Category(delivery), d(2026, 10, 22), brl(68))).applied().changes.single().id
         h.space.execute(h.env(), CorrectEntry(pix, description = "Delivery noite")).applied()
@@ -182,6 +187,8 @@ class EntityStatesRoundTripTest : SpaceTestBase() {
         assertTrue(b.space.incomeCategories().value().any { it.name == "Trabalho avulso" }, "categoria criada e renomeada chega ao outro aparelho")
         assertTrue(b.space.incomes(YearMonth.of(2026, 10)).value().items.any { it.incomeCategoryId != null }, "renda categorizada chega com a categoria")
         same(a.space.accounts().value(), b.space.accounts().value())
+        same(a.space.accountBalances().value(), b.space.accountBalances().value())
+        same(a.space.accountMoves().value(), b.space.accountMoves().value())
         same(a.space.card().value(), b.space.card().value())
         same(a.space.invoices().value(), b.space.invoices().value())
         val filter = app.accord.core.space.EntryFilter(months.first(), months.last())

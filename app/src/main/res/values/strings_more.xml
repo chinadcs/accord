@@ -21,7 +21,7 @@
 
     <!-- Contas -->
     <string name="accounts_title">Contas</string>
-    <string name="accounts_note">As contas são da casa. “Minha conta padrão” é só sua e preenche os registros novos; você sempre pode trocar na hora. Não pedimos agência, número, senha nem saldo.</string>
+    <string name="accounts_note">As contas e os saldos são da casa. “Minha conta padrão” é só sua e preenche os registros novos; você sempre pode trocar na hora. O saldo é calculado pelos registros do Accord, sem conexão com o banco.</string>
     <string name="accounts_empty">Nenhuma conta cadastrada ainda.</string>
     <string name="accounts_add">Adicionar conta</string>
     <string name="accounts_add_title">Nova conta</string>

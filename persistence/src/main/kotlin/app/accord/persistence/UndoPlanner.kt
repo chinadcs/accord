@@ -28,7 +28,7 @@ internal class UndoPlanner(
     private companion object {
         val CREATION_COMMANDS = setOf(
             "RegisterDirectPayment", "RegisterCardPurchase", "RegisterBoleto", "RegisterIncome",
-            "RegisterRefund", "CreateRecurrence",
+            "RegisterRefund", "CreateRecurrence", "TransferBetweenAccounts", "AdjustAccountBalance",
         )
     }
 
@@ -43,6 +43,7 @@ internal class UndoPlanner(
         EntityType.Refund -> dao.refund(change.entityId)?.revision
         EntityType.Invoice -> dao.invoiceRows().firstOrNull { it.id == change.entityId }?.revision
         EntityType.InvoicePayment -> dao.invoicePayment(change.entityId)?.revision
+        EntityType.AccountMove -> dao.accountMove(change.entityId)?.revision
         else -> null
     }
 
@@ -105,6 +106,11 @@ internal class UndoPlanner(
                     EntityType.InvoicePayment -> {
                         val row = dao.invoicePayment(ch.entityId)!!
                         dao.upsertInvoicePayment(row.copy(revision = row.revision + 1, voided = true))
+                        row.revision + 1
+                    }
+                    EntityType.AccountMove -> {
+                        val row = dao.accountMove(ch.entityId)!!
+                        dao.upsertAccountMove(row.copy(revision = row.revision + 1, voided = true))
                         row.revision + 1
                     }
                     EntityType.Refund -> {

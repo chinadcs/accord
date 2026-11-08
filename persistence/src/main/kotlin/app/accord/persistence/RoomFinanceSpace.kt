@@ -114,6 +114,12 @@ import app.accord.core.space.RecurrenceForm
 import app.accord.core.space.RecurrenceKind
 import app.accord.core.space.RecurrenceView
 import app.accord.core.space.ReceiveIncome
+import app.accord.core.space.AccountMoveKind
+import app.accord.core.space.AccountMoveView
+import app.accord.core.space.AccountBalanceView
+import app.accord.core.space.AdjustAccountBalance
+import app.accord.core.space.SetAccountBalance
+import app.accord.core.space.TransferBetweenAccounts
 import app.accord.core.space.UndoBoletoPayment
 import app.accord.core.space.UndoIncomeReceipt
 import app.accord.core.space.RegisterBoleto
@@ -270,6 +276,9 @@ class RoomFinanceSpace private constructor(
         is EditIntention -> intentionPlanner.planEdit(session, command)
         is AddAccount -> accountPlanner.planAdd(command)
         is SetMyDefaultAccount -> accountPlanner.planSetDefault(session, command)
+        is SetAccountBalance -> accountPlanner.planSetBalance(command)
+        is TransferBetweenAccounts -> accountPlanner.planTransfer(session, origin, command)
+        is AdjustAccountBalance -> accountPlanner.planAdjust(session, origin, command)
         is RegisterDirectPayment -> directPaymentPlanner.plan(session, origin, command)
         is ConfigureCard -> accountPlanner.planConfigureCard(session, command)
         is RegisterCardPurchase -> cardPurchasePlanner.plan(session, origin, command)
@@ -733,12 +742,27 @@ class RoomFinanceSpace private constructor(
         val session = sessions.current()
         val defaultId = effectiveDefaultAccount(session)
         AccountsView(
-            accounts = dao.accounts().map {
+            accounts = dao.bankAccounts().map {
                 val bank = if (it.bankIspb != null) BankRef.Catalog(it.bankIspb, it.bankName) else BankRef.Other(it.bankName)
                 AccountInfo(it.id, bank, it.nickname)
             },
             myDefaultAccountId = defaultId,
+            wallet = dao.walletAccount()?.let { AccountInfo(it.id, BankRef.Other(it.bankName), it.nickname, isWallet = true) },
         )
+    }
+
+    override suspend fun accountBalances(): QueryResult<List<AccountBalanceView>> = query {
+        val reader = BalanceReader(dao)
+        dao.accounts().map { reader.view(it) }
+    }
+
+    override suspend fun accountMoves(): QueryResult<List<AccountMoveView>> = query {
+        dao.accountMoves().map {
+            AccountMoveView(
+                it.id, AccountMoveKind.valueOf(it.kind), it.fromAccountId, it.toAccountId, Money(it.amountCents),
+                LocalDate.ofEpochDay(it.epochDay), it.note, it.revision, it.voided,
+            )
+        }
     }
 
     override suspend fun card(): QueryResult<CardInfo> = query {
@@ -932,6 +956,8 @@ class RoomFinanceSpace private constructor(
                 )
             },
         )
+        // A Carteira (dinheiro) de cada espaço, sem saldo até a pessoa informar o inicial (ADR 0051).
+        dao.insertSeedAccount(AccountRow(DeterministicIds.wallet(spaceId), null, "Carteira", "Dinheiro", 0, isWallet = true))
         // Um cartão por espaço, com os dias padrão 8 e 15 até a pessoa configurar.
         dao.insertSeedCard(CardRow(cardId(spaceId), null, null, "Cartão", CardCycle().closingDay, CardCycle().dueDay, 0))
     }

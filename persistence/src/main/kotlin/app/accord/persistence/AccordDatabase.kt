@@ -99,6 +99,32 @@ data class AccountRow(
     val bankName: String,
     val nickname: String,
     val revision: Long,
+    /** Saldo inicial em centavos; nulo enquanto a conta não tem saldo (ADR 0051). Vem junto com [balanceCutoffEpochDay]. */
+    val initialBalanceCents: Long? = null,
+    /** Dia de corte: só lançamentos desta data em diante entram no saldo calculado. */
+    val balanceCutoffEpochDay: Long? = null,
+    /** A Carteira (dinheiro) do espaço: uma só, de identidade determinística; dinheiro sai dela. */
+    @ColumnInfo(defaultValue = "0") val isWallet: Boolean = false,
+)
+
+/** Transferência entre contas ou ajuste de saldo (ADR 0051): fora do orçamento; compartilhado e desfazível. */
+@Entity(tableName = "account_move", indices = [Index("epochDay")])
+@Serializable
+data class AccountMoveRow(
+    @PrimaryKey val id: String,
+    /** [app.accord.core.space.AccountMoveKind] por nome. */
+    val kind: String,
+    /** Conta de onde sai; nula no ajuste que aumenta o saldo. */
+    val fromAccountId: String?,
+    /** Conta para onde vai; nula no ajuste que diminui o saldo. */
+    val toAccountId: String?,
+    val amountCents: Long,
+    val epochDay: Long,
+    val note: String?,
+    val authorId: String,
+    val origin: String,
+    val revision: Long,
+    val voided: Boolean,
 )
 
 @Entity(tableName = "preferences")
@@ -474,6 +500,21 @@ interface SpaceDao {
     @Insert suspend fun insertAccount(row: AccountRow)
     @Query("SELECT * FROM account WHERE id = :id") suspend fun account(id: String): AccountRow?
     @Query("SELECT * FROM account ORDER BY nickname") suspend fun accounts(): List<AccountRow>
+    @Query("SELECT * FROM account WHERE isWallet = 0 ORDER BY nickname") suspend fun bankAccounts(): List<AccountRow>
+    @Query("SELECT * FROM account WHERE isWallet = 1 LIMIT 1") suspend fun walletAccount(): AccountRow?
+    @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insertSeedAccount(row: AccountRow)
+
+    // transferências e ajustes de saldo; eventos que contam no saldo, a partir do dia de corte
+    @Upsert suspend fun upsertAccountMove(row: AccountMoveRow)
+    @Query("SELECT * FROM account_move WHERE id = :id") suspend fun accountMove(id: String): AccountMoveRow?
+    @Query("SELECT * FROM account_move WHERE voided = 0 ORDER BY epochDay DESC, id") suspend fun accountMoves(): List<AccountMoveRow>
+    @Query("SELECT * FROM movement WHERE voided = 0 AND epochDay >= :from") suspend fun movementsFrom(from: Long): List<MovementEntity>
+    @Query("SELECT * FROM income WHERE voided = 0 AND receivedEpochDay IS NOT NULL AND receivedEpochDay >= :from")
+    suspend fun incomesReceivedFrom(from: Long): List<IncomeRow>
+    @Query("SELECT * FROM boleto WHERE voided = 0 AND paidEpochDay IS NOT NULL AND paidEpochDay >= :from")
+    suspend fun boletosPaidFrom(from: Long): List<BoletoRow>
+    @Query("SELECT * FROM invoice_payment WHERE voided = 0 AND epochDay >= :from") suspend fun invoicePaymentsFrom(from: Long): List<InvoicePaymentRow>
+    @Query("SELECT * FROM recurrence_settlement WHERE epochDay >= :from") suspend fun settlementsFrom(from: Long): List<RecurrenceSettlementRow>
     @Upsert suspend fun upsertPreferences(row: PreferencesRow)
     @Query("SELECT * FROM preferences WHERE id = :id") suspend fun preferences(id: String): PreferencesRow?
 
@@ -755,8 +796,9 @@ interface SpaceDao {
         ChatMessageRow::class, ChatAttemptRow::class, ChatQuestionRow::class, ChatReceiptRow::class, ChatFeedbackRow::class,
         ImportBatchRow::class, ImportMovementRow::class, ImportDecisionRow::class, ImportPairRow::class,
         AlertEventRow::class, AlertDisplayRow::class, AlertPreferenceRow::class, IconAssociationRow::class, IntentionRow::class,
+        AccountMoveRow::class,
     ],
-    version = 17,
+    version = 18,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2, spec = Migration1To2::class),
@@ -788,6 +830,8 @@ interface SpaceDao {
         AutoMigration(from = 15, to = 16),
         // accord-8q5: voto vigente por recibo do Chat (joinha), só neste aparelho e fora da fila de sincronização.
         AutoMigration(from = 16, to = 17),
+        // ADR 0051: saldo inicial, data de corte e Carteira na conta; transferência e ajuste de saldo (compartilhados).
+        AutoMigration(from = 17, to = 18),
     ],
 )
 abstract class AccordDatabase : RoomDatabase() {

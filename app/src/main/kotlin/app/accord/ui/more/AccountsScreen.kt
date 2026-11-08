@@ -49,7 +49,9 @@ fun AccountsRoute(viewModel: AccountsViewModel, padding: PaddingValues, onBack: 
     AccountsScreen(
         content, form, padding, onBack, onRetry = { viewModel.load() }, onAdd = viewModel::startAdd, onEdit = viewModel::startEdit,
         onSetDefault = viewModel::setDefault, onChange = viewModel::change, onSave = viewModel::save, onCancel = viewModel::cancel,
+        onBalance = viewModel::openBalance,
     )
+    BalanceDialog(viewModel, content)
 }
 
 @Composable
@@ -65,6 +67,7 @@ fun AccountsScreen(
     onChange: (BankRef?, String?) -> Unit,
     onSave: () -> Unit,
     onCancel: () -> Unit,
+    onBalance: (String, String) -> Unit = { _, _ -> },
 ) {
     Column(
         Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
@@ -87,11 +90,71 @@ fun AccountsScreen(
                     }
                     content.view.accounts.forEach { account ->
                         AccountRow(account, account.id == content.view.myDefaultAccountId, { onEdit(account.id) }, { onSetDefault(account.id) })
+                        BalanceActions(account, content, onBalance)
+                    }
+                    content.view.wallet?.let { wallet ->
+                        Text(stringResource(R.string.balance_wallet), style = MaterialTheme.typography.titleMedium)
+                        BalanceActions(wallet, content, onBalance)
                     }
                     Button(onClick = onAdd, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
                         Text(stringResource(R.string.accounts_add))
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BalanceActions(account: AccountInfo, content: AccountsContent.Ready, onBalance: (String, String) -> Unit) {
+    val balance = content.balances.firstOrNull { it.accountId == account.id }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+        Text(stringResource(R.string.balance_calculated), style = MaterialTheme.typography.bodyMedium)
+        Text(balance?.balance?.format() ?: stringResource(R.string.balance_unknown), style = MaterialTheme.typography.titleMedium)
+        OutlinedButton(onClick = { onBalance("initial", account.id) }) { Text(stringResource(R.string.balance_initial)) }
+        OutlinedButton(onClick = { onBalance("transfer", account.id) }) { Text(stringResource(R.string.balance_transfer)) }
+        if (balance?.configured == true) OutlinedButton(onClick = { onBalance("adjust", account.id) }) { Text(stringResource(R.string.balance_adjust)) }
+    }
+}
+
+@Composable
+private fun BalanceDialog(vm: AccountsViewModel, content: AccountsContent) {
+    val action by vm.balanceAction.collectAsStateWithLifecycle()
+    val account by vm.balanceAccount.collectAsStateWithLifecycle()
+    val target by vm.balanceTarget.collectAsStateWithLifecycle()
+    val amount by vm.balanceAmount.collectAsStateWithLifecycle()
+    val date by vm.balanceDate.collectAsStateWithLifecycle()
+    val message by vm.balanceMessage.collectAsStateWithLifecycle()
+    val working by vm.balanceWorking.collectAsStateWithLifecycle()
+    val mode = action ?: return
+    val view = (content as? AccountsContent.Ready)?.view ?: return
+    val accounts = view.accounts + listOfNotNull(view.wallet)
+    androidx.compose.ui.window.Dialog(onDismissRequest = vm::cancelBalance) {
+        Surface(shape = MaterialTheme.shapes.large) {
+            Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
+                Text(stringResource(when (mode) {
+                    "initial" -> R.string.balance_initial
+                    "transfer" -> R.string.balance_transfer
+                    else -> R.string.balance_adjust
+                }), style = MaterialTheme.typography.titleLarge)
+                Text(accounts.firstOrNull { it.id == account }?.nickname.orEmpty())
+                if (mode == "transfer") {
+                    Text(stringResource(R.string.balance_destination))
+                    accounts.filter { it.id != account }.forEach { item ->
+                        Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(enabled = !working, role = Role.RadioButton) { vm.changeBalance("balanceTarget", item.id) }, verticalAlignment = Alignment.CenterVertically) {
+                            androidx.compose.material3.RadioButton(selected = target == item.id, onClick = null)
+                            Text(item.nickname)
+                        }
+                    }
+                }
+                Text(stringResource(R.string.balance_explanation), style = MaterialTheme.typography.bodyMedium)
+                OutlinedTextField(amount, { vm.changeBalance("balanceAmount", it) }, enabled = !working,
+                    label = { Text(stringResource(if (mode == "adjust") R.string.balance_actual else R.string.balance_value)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                OutlinedTextField(date, { vm.changeBalance("balanceDate", it) }, enabled = !working,
+                    label = { Text(stringResource(R.string.balance_date)) }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                message?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                Button(onClick = vm::saveBalance, enabled = !working, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.accounts_save)) }
+                OutlinedButton(onClick = vm::cancelBalance, enabled = !working, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.edit_cancel)) }
             }
         }
     }

@@ -149,6 +149,9 @@ object DeterministicIds {
     fun seedCategory(spaceId: String, seedKey: String) = of(spaceId, "category", seedKey)
     fun seedIncomeCategory(spaceId: String, seedKey: String) = of(spaceId, "incomecategory", seedKey)
     fun preferences(spaceId: String, personId: String) = of(spaceId, "preferences", personId)
+
+    /** A Carteira (dinheiro) de cada espaço: mesma identidade em todo aparelho, sem passar pela fila (ADR 0051). */
+    fun wallet(spaceId: String) = of(spaceId, "account", "wallet")
 }
 
 object NameKey {

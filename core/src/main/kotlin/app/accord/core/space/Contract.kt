@@ -52,6 +52,12 @@ interface FinanceSpace {
 
     suspend fun intention(id: String): QueryResult<IntentionView?>
     suspend fun accounts(): QueryResult<AccountsView>
+
+    /** Saldo derivado de cada conta e da Carteira (ADR 0051); contas sem saldo inicial vêm com [AccountBalanceView.balance] nulo. */
+    suspend fun accountBalances(): QueryResult<List<AccountBalanceView>>
+
+    /** Transferências e ajustes de saldo, sem os desfeitos, do mais recente para o mais antigo. */
+    suspend fun accountMoves(): QueryResult<List<AccountMoveView>>
     suspend fun budget(month: YearMonth): QueryResult<MonthBudget>
 
     /** Limite vigente de cada categoria principal em [month], com a origem da vigência. */
@@ -347,7 +353,41 @@ data class EditIntention(
     val expectedRevision: Long? = null,
 ) : Command
 
-data class AddAccount(val bank: BankRef, val nickname: String) : Command
+/** [initialBalance] e [balanceCutoff] vêm juntos: o saldo calculado conta só os lançamentos a partir da data de corte (ADR 0051). */
+data class AddAccount(
+    val bank: BankRef,
+    val nickname: String,
+    val initialBalance: Money? = null,
+    val balanceCutoff: LocalDate? = null,
+) : Command
+
+/** Define ou corrige o saldo inicial e a data de corte da conta (ou da Carteira). Não mexe em nenhum lançamento. */
+data class SetAccountBalance(
+    val accountId: String,
+    val initialBalance: Money,
+    val cutoff: LocalDate,
+    val expectedRevision: Long? = null,
+) : Command
+
+/** Passa dinheiro de uma conta para outra (a Carteira inclusive). Não é despesa nem renda e não mexe no orçamento. */
+data class TransferBetweenAccounts(
+    val fromAccountId: String,
+    val toAccountId: String,
+    val amount: Money,
+    val date: LocalDate,
+    val note: String? = null,
+) : Command
+
+/**
+ * Ajusta o saldo calculado ao saldo real que a pessoa vê, somando ou tirando a diferença. Não é despesa nem renda e não mexe no orçamento;
+ * os lançamentos continuam como estavam. A conta precisa ter saldo inicial e a data não pode ser anterior à de corte.
+ */
+data class AdjustAccountBalance(
+    val accountId: String,
+    val actualBalance: Money,
+    val date: LocalDate,
+    val note: String? = null,
+) : Command
 
 data class SetMyDefaultAccount(val accountId: String) : Command
 
@@ -878,7 +918,7 @@ data class FieldError(
     val month: YearMonth? = null,
 )
 
-enum class EntityType { Category, Account, Preferences, Movement, Card, CardPurchase, Boleto, Income, Recurrence, Refund, Invoice, InvoicePayment, LimitPlan, IncomeCategory, ImportBatch, AlertEvent, IconAssociation, Intention }
+enum class EntityType { Category, Account, Preferences, Movement, Card, CardPurchase, Boleto, Income, Recurrence, Refund, Invoice, InvoicePayment, LimitPlan, IncomeCategory, ImportBatch, AlertEvent, IconAssociation, Intention, AccountMove }
 
 data class EntityRef(val type: EntityType, val id: String)
 
@@ -1341,9 +1381,13 @@ sealed interface PendingItem {
     data class InvoiceTotalDifference(val difference: Money, override val month: YearMonth) : PendingItem
 }
 
-data class AccountInfo(val id: String, val bank: BankRef, val nickname: String)
+data class AccountInfo(val id: String, val bank: BankRef, val nickname: String, val isWallet: Boolean = false)
 
-data class AccountsView(val accounts: List<AccountInfo>, val myDefaultAccountId: String?)
+/**
+ * [accounts] são as contas escolhíveis nos registros (bancos); a [wallet] (ADR 0051) fica à parte: dinheiro sai dela, e ela nunca é conta
+ * padrão nem opção de Pix, débito, boleto ou renda.
+ */
+data class AccountsView(val accounts: List<AccountInfo>, val myDefaultAccountId: String?, val wallet: AccountInfo? = null)
 
 /** Linha "A classificar": soma e quantidade, sem limite (S1 §7.3). */
 data class ToClassifyLine(val amount: Money, val count: Int)

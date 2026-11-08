@@ -1,0 +1,15 @@
+<resources>
+    <string name="balance_origin">Conta de origem</string>
+    <string name="balance_move">Transferência ou ajuste de saldo</string>
+    <string name="balance_wallet">Carteira (dinheiro)</string>
+    <string name="balance_calculated">Saldo calculado pelo Accord</string>
+    <string name="balance_unknown">Saldo inicial não informado</string>
+    <string name="balance_initial">Informar saldo inicial</string>
+    <string name="balance_transfer">Transferir entre contas</string>
+    <string name="balance_adjust">Ajustar saldo</string>
+    <string name="balance_destination">Conta de destino</string>
+    <string name="balance_explanation">Saldo inicial considera os registros a partir da data de corte. Transferências e ajustes alteram só os saldos, sem mudar o orçamento. Para saldo negativo, use o sinal de menos.</string>
+    <string name="balance_value">Valor (R$)</string>
+    <string name="balance_actual">Saldo conferido (R$)</string>
+    <string name="balance_date">Data (AAAA-MM-DD)</string>
+</resources>
