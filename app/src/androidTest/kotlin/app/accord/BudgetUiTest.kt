@@ -3,6 +3,7 @@ package app.accord
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.test.SemanticsNodeInteraction
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
@@ -77,100 +78,123 @@ class BudgetUiTest {
         }
     }
 
+    private fun text(value: String): SemanticsNodeInteraction {
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText(value))
+        return compose.onNodeWithText(value)
+    }
+
     private fun ready(b: MonthBudget) = BudgetUiState(oct, BudgetContent.Ready(BudgetData(b, nodes)))
+
+    @Test fun graficoUsaLiquidoEAClassificarSemSomarPagoEAbreCategoriaDoMesExibido() {
+        var opened: Pair<String, YearMonth>? = null
+        val data = BudgetData(budget(listOf(category("food", 100, credits = 40)), toClassify = ToClassifyLine(brl(150), 1)), nodes)
+        compose.setContent {
+            AccordTheme {
+                BudgetScreen(BudgetUiState(oct.plusMonths(1), BudgetContent.Failed(data)), PaddingValues(), {}, {}, {},
+                    { id, month -> opened = id to month }, {}, {})
+            }
+        }
+        text("Outubro/2026 · mês do orçamento · valores líquidos em R$").assertIsDisplayed()
+        text("1. Alimentação: ${brl(60).format()}").assertIsDisplayed().performClick()
+        assertEquals("food" to oct, opened)
+        text("2. A classificar: ${brl(150).format()}").assertIsDisplayed()
+        text("Gastos por categoria").assertIsDisplayed()
+        chartScreenshot(compose, "budget-net-and-unclassified")
+    }
 
     @Test
     fun resumoMostraComprometidoPagoComoParteDoComprometidoERendaEmBlocosSeparados() {
         show(ready(budget(listOf(category("food", 980, limit = 1200)))))
-        compose.onNodeWithText("Comprometido").assertIsDisplayed()
-        compose.onNodeWithText(brl(3200).format()).assertIsDisplayed()
-        compose.onNodeWithText("Já pago").assertIsDisplayed()
-        compose.onNodeWithText("parte do comprometido").assertIsDisplayed()
-        compose.onNodeWithText("Renda recebida").assertIsDisplayed()
-        compose.onNodeWithText("A receber").assertIsDisplayed()
-        compose.onNodeWithText(brl(4500).format()).assertIsDisplayed()
+        text("Comprometido").assertIsDisplayed()
+        text(brl(3200).format()).assertIsDisplayed()
+        text("Já pago").assertIsDisplayed()
+        text("parte do comprometido").assertIsDisplayed()
+        text("Renda recebida").assertIsDisplayed()
+        text("A receber").assertIsDisplayed()
+        text(brl(4500).format()).assertIsDisplayed()
     }
 
     @Test
     fun categoriaDentroDoLimiteMostraValorLimiteERestante() {
         show(ready(budget(listOf(category("food", 980, limit = 1200)))))
-        compose.onNodeWithText("Faltam ${brl(220).format()}").assertIsDisplayed()
-        compose.onNodeWithText(brl(980).format()).assertIsDisplayed()
-        compose.onNodeWithText("Limite ${brl(1200).format()}").assertIsDisplayed()
+        text("Faltam ${brl(220).format()}").assertIsDisplayed()
+        text(brl(980).format()).assertIsDisplayed()
+        text("Limite ${brl(1200).format()}").assertIsDisplayed()
     }
 
     @Test
     fun categoriaSemLimiteDizLimiteNaoDefinidoENaoMostraExcessoNemPercentual() {
         show(ready(budget(listOf(category("pets", 50)))))
-        compose.onNodeWithText("Limite não definido").assertIsDisplayed()
+        text("Limite não definido").assertIsDisplayed()
         assertEquals(0, compose.onAllNodes(hasText("%", substring = true)).fetchSemanticsNodes().size)
     }
 
     @Test
     fun excessoApareceComTextoEIconeSemAumentarOLimite() {
         show(ready(budget(listOf(category("food", 980, limit = 900)))))
-        compose.onNodeWithText("Passou ${brl(80).format()}").assertIsDisplayed()
-        compose.onNodeWithText(brl(980).format()).assertIsDisplayed()
-        compose.onNodeWithText("Limite ${brl(900).format()}").assertIsDisplayed()
+        text("Passou ${brl(80).format()}").assertIsDisplayed()
+        text(brl(980).format()).assertIsDisplayed()
+        text("Limite ${brl(900).format()}").assertIsDisplayed()
     }
 
     @Test
     fun creditosSuperioresADespesasMostramCreditoLiquidoSemTruncarEmZero() {
         show(ready(budget(listOf(category("fun", 0, credits = 40, limit = 500)), committed = 0, paid = 0, credits = 40)))
-        compose.onNodeWithText("Crédito líquido de ${brl(40).format()}").assertIsDisplayed()
-        compose.onNodeWithText("Despesas ${brl(0).format()} · Créditos ${brl(40).format()} · Líquido ${Money(-4_000).format()}")
+        text("Crédito líquido de ${brl(40).format()}").assertIsDisplayed()
+        text("Despesas ${brl(0).format()} · Créditos ${brl(40).format()} · Líquido ${Money(-4_000).format()}")
             .assertIsDisplayed()
     }
 
     @Test
     fun vinculosDeFaturaAConferirAparecemNoResumoComoValoresProvisorios() {
         show(ready(budget(listOf(category("food", 100, limit = 1200)), links = 2)))
-        compose.onNodeWithText("2 vínculos de fatura a conferir").assertIsDisplayed()
-        compose.onNodeWithText("Esses valores estão no mês estimado, de forma provisória.").assertIsDisplayed()
+        text("2 vínculos de fatura a conferir").assertIsDisplayed()
+        text("Esses valores estão no mês estimado, de forma provisória.").assertIsDisplayed()
     }
 
     @Test
     fun linhaAClassificarFicaSeparadaSemLimiteComAcao() {
         show(ready(budget(listOf(category("food", 100, limit = 1200)), toClassify = ToClassifyLine(brl(150), 1))))
-        compose.onNodeWithText("A classificar").assertIsDisplayed()
-        compose.onNodeWithText("${brl(150).format()} · 1 lançamento · sem limite").assertIsDisplayed()
-        compose.onNodeWithText("Classificar").assertIsDisplayed()
+        text("A classificar").assertIsDisplayed()
+        text("${brl(150).format()} · 1 lançamento · sem limite").assertIsDisplayed()
+        text("Classificar").assertIsDisplayed()
     }
 
     @Test
     fun mesSemLancamentosMostraEstadoVazioComRegistroManual() {
         show(ready(budget(listOf(category("food", 0)), committed = 0, paid = 0).copy(income = IncomeTotals(Money.ZERO, Money.ZERO))))
-        compose.onNodeWithText("Sem lançamentos neste mês").assertIsDisplayed()
-        compose.onNodeWithText("Registrar manualmente").assertIsDisplayed()
+        text("Sem lançamentos neste mês").assertIsDisplayed()
+        text("Registrar manualmente").assertIsDisplayed()
     }
 
     @Test
     fun falhaDeLeituraMantemAUltimaVisaoIdentificadaEOferecerTentarDeNovo() {
         val last = BudgetData(budget(listOf(category("food", 980, limit = 1200))), nodes)
         show(BudgetUiState(YearMonth.of(2026, 11), BudgetContent.Failed(last)))
-        compose.onNodeWithText("Não foi possível ler os dados deste aparelho.").assertIsDisplayed()
-        compose.onNodeWithText("Mostrando a última leitura de ${"Outubro/2026"}.").assertIsDisplayed()
-        compose.onNodeWithText("Tentar de novo").assertIsDisplayed()
-        compose.onNodeWithText(brl(3200).format()).assertIsDisplayed()
+        text("Não foi possível ler os dados deste aparelho.").assertIsDisplayed()
+        text("Mostrando a última leitura de ${"Outubro/2026"}.").assertIsDisplayed()
+        text("Tentar de novo").assertIsDisplayed()
+        text(brl(3200).format()).assertIsDisplayed()
     }
 
     @Test
     fun falhaSemLeituraAnteriorNaoMostraZeroNenhum() {
         show(BudgetUiState(oct, BudgetContent.Failed(null)))
-        compose.onNodeWithText("Tentar de novo").assertIsDisplayed()
+        text("Tentar de novo").assertIsDisplayed()
         assertEquals(0, compose.onAllNodes(hasText("R$", substring = true)).fetchSemanticsNodes().size)
     }
 
     @Test
     fun carregandoMantemOMesSelecionadoVisivel() {
         show(BudgetUiState(oct, BudgetContent.Loading))
-        compose.onNodeWithText("Outubro/2026").assertIsDisplayed()
-        compose.onNodeWithText("Carregando…").assertIsDisplayed()
+        text("Outubro/2026").assertIsDisplayed()
+        text("Carregando…").assertIsDisplayed()
     }
 
     @Test
     fun linhaDaCategoriaTemEquivalenteTextualParaOTalkBack() {
         show(ready(budget(listOf(category("food", 600, limit = 1200)))))
+        compose.onNode(hasScrollAction()).performScrollToNode(hasContentDescription("Alimentação", substring = true))
         compose.onNode(hasContentDescription("Alimentação", substring = true)).assertIsDisplayed()
         compose.onNode(hasContentDescription("Faltam ${brl(600).format()}", substring = true)).assertIsDisplayed()
         compose.onNode(hasContentDescription("Dentro do limite", substring = true)).assertIsDisplayed()
@@ -181,9 +205,9 @@ class BudgetUiTest {
         show(ready(budget(listOf(category("food", 1100, limit = 1200)), links = 1)), fontScale = 2f)
         // Com texto ampliado o conteúdo rola; nada é cortado nem fica sem acesso.
         compose.onNode(hasScrollAction()).performScrollToNode(hasText("Faltam ${brl(100).format()}"))
-        compose.onNodeWithText("Faltam ${brl(100).format()}").assertIsDisplayed()
+        text("Faltam ${brl(100).format()}").assertIsDisplayed()
         compose.onNode(hasScrollAction()).performScrollToNode(hasText("1 vínculo de fatura a conferir"))
-        compose.onNodeWithText("1 vínculo de fatura a conferir").assertIsDisplayed()
+        text("1 vínculo de fatura a conferir").assertIsDisplayed()
     }
 
     @Test

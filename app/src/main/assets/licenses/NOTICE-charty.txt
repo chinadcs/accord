@@ -1,0 +1,11 @@
+Charty 3.2.0 — com.himanshoe:charty
+Copyright 2025 The Charty Authors
+Licensed under the Apache License, Version 2.0 (see charty-Apache-2.0.txt).
+
+Source: https://github.com/hi-manshu/charty/tree/v3.2.0
+License declaration: https://github.com/hi-manshu/charty/blob/v3.2.0/README.md#license
+Published POM: https://repo.maven.apache.org/maven2/com/himanshoe/charty/3.2.0/charty-3.2.0.pom
+
+The upstream tag and Android AAR do not contain a dedicated LICENSE or NOTICE file.
+The unmodified Apache 2.0 license text is included here from https://www.apache.org/licenses/LICENSE-2.0.txt.
+Accord uses the unmodified published library behind its own presentation wrapper.

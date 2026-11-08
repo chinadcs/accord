@@ -114,6 +114,9 @@ private fun androidx.compose.foundation.lazy.LazyListScope.forecastContent(data:
         item { ToClassifyRow(Money(classify.cents).format(), classify.count, actions.onClassify) }
     }
     val shown = data.shown
+    if (shown.isNotEmpty()) item {
+        ForecastChart(data.forecast.month, shown.map { data.categories[it.categoryId]?.name.orEmpty() to it }, actions.onOpenDetail)
+    }
     if (shown.isEmpty()) {
         item { Text(stringResource(R.string.forecast_empty), style = MaterialTheme.typography.bodyLarge) }
     }

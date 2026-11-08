@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="chart_budget_title">Gastos por categoria</string>
+    <string name="chart_budget_criterion">%1$s · mês do orçamento · valores líquidos em R$</string>
+    <string name="chart_comparison_title">Mês a mês</string>
+    <string name="chart_period_a">A · %1$s</string>
+    <string name="chart_period_b">B · %1$s</string>
+    <string name="chart_order">Barras na ordem da lista · linha horizontal = zero · valores em R$ · deslize para ver todas</string>
+    <string name="chart_value">%1$d. %2$s: %3$s</string>
+    <string name="chart_to_classify">A classificar</string>
+    <string name="chart_forecast_title">Conhecidos × previsão</string>
+    <string name="chart_forecast_criterion">%1$s · mês do orçamento · valores em R$. Conhecidos incluem compromissos futuros. O total previsto já inclui os conhecidos; não some as barras.</string>
+    <string name="chart_known">%1$s · conhecidos</string>
+    <string name="chart_projected">%1$s · total previsto</string>
+    <string name="chart_unavailable">Previsão indisponível</string>
+    <string name="chart_ended">Mês encerrado · sem projeção</string>
+</resources>

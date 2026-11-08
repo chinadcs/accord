@@ -48,6 +48,8 @@ import app.accord.ui.components.BudgetBar
 import app.accord.ui.components.DecorativeIcon
 import app.accord.ui.sync.SyncIndicator
 import app.accord.ui.components.MonthSelector
+import app.accord.ui.components.MoneyChart
+import app.accord.ui.components.MoneyChartValue
 import app.accord.ui.components.RefreshOnResume
 import app.accord.ui.components.ScreenTitle
 import app.accord.ui.components.lucideRes
@@ -177,6 +179,17 @@ private fun LazyListScope.budgetContent(
     item { BudgetCriteria() }
     item { IncomeBlock(data) }
     if (data.budget.toClassify.count > 0) item { ToClassifyRow(data) { onClassify(data.month) } }
+    item {
+        val values = data.budget.categories.map { category ->
+            MoneyChartValue(
+                data.categories[category.categoryId]?.name.orEmpty(), category.net,
+                onClick = { onOpenCategory(category.categoryId, data.month) },
+            )
+        } + if (data.budget.toClassify.count > 0) listOf(
+            MoneyChartValue(stringResource(R.string.chart_to_classify), data.budget.toClassify.amount, onClick = { onClassify(data.month) }),
+        ) else emptyList()
+        MoneyChart(stringResource(R.string.chart_budget_title), stringResource(R.string.chart_budget_criterion, data.month.label()), values)
+    }
     item {
         Text(
             stringResource(R.string.categories_title),

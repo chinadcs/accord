@@ -92,6 +92,18 @@ class ComparisonUiTest {
         compose.onAllNodes(hasText(text, substring = true)).onFirst().assertIsDisplayed()
     }
 
+    @Test fun graficoMensalSegueCriterioEAbreOMesEscolhidoSemConverterAusenciaEmZero() {
+        var opened: Triple<YearMonth, String?, DateCriterion>? = null
+        show(comparison(listOf(foodRow), criterion = DateCriterion.PurchaseDate),
+            actions = ComparisonActions({}, { month, category, criterion, _ -> opened = Triple(month, category, criterion) }, {}))
+        val label = "2. B · Outubro/2026: ${brl(980).format()}"
+        see(label)
+        compose.onNodeWithText(label).performClick()
+        assertEquals(Triple(oct, null, DateCriterion.PurchaseDate), opened)
+        see("Mês a mês")
+        chartScreenshot(compose, "comparison-months")
+    }
+
     @Test
     fun alimentacaoDe800Para980MostraDiferencaEPercentual() {
         show(comparison(listOf(foodRow)))

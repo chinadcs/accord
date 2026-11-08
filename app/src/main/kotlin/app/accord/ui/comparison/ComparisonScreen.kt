@@ -48,6 +48,8 @@ import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
 import app.accord.ui.components.DecorativeIcon
 import app.accord.ui.components.DetailHeader
 import app.accord.ui.components.MonthSelector
+import app.accord.ui.components.MoneyChart
+import app.accord.ui.components.MoneyChartValue
 import app.accord.ui.components.RefreshOnResume
 import app.accord.ui.theme.AccordSpacing
 import com.composables.icons.lucide.R as Lucide
@@ -174,6 +176,18 @@ private fun androidx.compose.foundation.lazy.LazyListScope.comparisonItems(data:
             }
         }
         return
+    }
+    item {
+        MoneyChart(
+            stringResource(R.string.chart_comparison_title),
+            stringResource(if (c.criterion == DateCriterion.BudgetMonth) R.string.comparison_criterion_budget_note else R.string.comparison_criterion_purchase_note),
+            listOf(
+                MoneyChartValue(stringResource(R.string.chart_period_a, periodName(c.a)), (c.totalA as? Measure.Value)?.money, cellText(c.totalA),
+                    onClick = { actions.onOpenEntries(YearMonth.from(c.a.period.from), null, c.criterion, false) }),
+                MoneyChartValue(stringResource(R.string.chart_period_b, periodName(c.b)), (c.totalB as? Measure.Value)?.money, cellText(c.totalB),
+                    onClick = { actions.onOpenEntries(YearMonth.from(c.b.period.from), null, c.criterion, false) }),
+            ),
+        )
     }
     item {
         Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {

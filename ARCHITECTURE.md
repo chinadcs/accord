@@ -45,6 +45,11 @@ isoladamente não reprova candidato nem bloqueia integração; os critérios de 
 
 ## Mapa atual do repositório
 
+Gráficos das telas 05, 33 e 20/21: Charty 3.2.0 atrás de `ui/components/MoneyChart`, com
+valores exatos/lista acessível, desenho local e sem animação de crescimento
+([ADR 0055](docs/adr/0055-biblioteca-de-graficos-charty.md)). O wrapper consome as projeções
+existentes; não calcula regras financeiras. Validação nos Galaxy/TalkBack em `accord-g3xc`.
+
 ```text
 accord/
   AGENTS.md, CLAUDE.md       regras compartilhadas; CLAUDE.md importa AGENTS.md

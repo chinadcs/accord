@@ -123,6 +123,7 @@ private fun Body(data: ForecastDetailData, showHow: Boolean, onToggleHow: () -> 
     val detail = data.detail
     data.event?.let { EventBanner(it, detail.forecast.totalCents) }
     Summary(detail)
+    ForecastChart(detail.month, listOf(data.name to detail.forecast))
     val stackActions = LocalDensity.current.fontScale >= 1.5f
     val checkButton: @Composable (Modifier) -> Unit = { modifier ->
         Button(onClick = actions.onCheckEntries, modifier = modifier.heightIn(min = AccordSpacing.touchMin)) {
