@@ -1,5 +1,8 @@
 package app.accord.persistence
 
+import app.accord.core.space.Envelope
+import app.accord.core.space.CommandId
+
 import app.accord.core.LimitEdit
 import app.accord.core.LimitScope
 import app.accord.core.Money
@@ -117,12 +120,17 @@ class IntentionTest : SpaceTestBase() {
 
     @Test fun `autor do cadastro e da ultima alteracao ficam registrados e a lista traz a mais recente primeiro`() = runBlocking<Unit> {
         val database = newDatabase()
-        val ana = open("ana", database)
-        val first = ana.space.execute(ana.env(), CreateIntention("Primeira")).applied().changes.single().id
-        val second = ana.space.execute(ana.env(), CreateIntention("Segunda")).applied().changes.single().id
-        val bia = open("bia", database, now = java.time.Instant.parse("2026-10-25T12:00:00Z"))
-        bia.space.execute(bia.env(), EditIntention(first, "Primeira (editada)")).applied()
-        val list = bia.space.intentions().value()
+        var millis = 1_000L
+        suspend fun forPerson(person: String) = RoomFinanceSpace.open(database.db, clock,
+            app.accord.core.space.SessionProvider { app.accord.core.space.Session(spaceId, person) }, nowMillis = { millis })
+        val ana = forPerson("ana")
+        val first = ana.execute(Envelope(CommandId("first")), CreateIntention("Primeira")).applied().changes.single().id
+        millis = 2_000L
+        val second = ana.execute(Envelope(CommandId("second")), CreateIntention("Segunda")).applied().changes.single().id
+        millis = 3_000L
+        val bia = forPerson("bia")
+        bia.execute(Envelope(CommandId("edit")), EditIntention(first, "Primeira (editada)")).applied()
+        val list = bia.intentions().value()
         assertEquals(listOf(first, second), list.map { it.id }, "a alterada por último vem primeiro")
         val edited = list.first()
         assertEquals("ana", edited.createdBy)
