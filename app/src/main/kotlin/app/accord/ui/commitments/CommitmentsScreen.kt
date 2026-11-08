@@ -26,6 +26,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.accord.ui.components.DetailHeader
@@ -99,6 +101,7 @@ fun CommitmentsScreen(
                 }
             }
         }
+        state.scenario?.let { scenario -> item { ScenarioLayer(scenario, state) } }
         when (val content = state.content) {
             CommitmentsContent.Loading -> item { Text(stringResource(R.string.state_loading), style = MaterialTheme.typography.bodyLarge) }
             is CommitmentsContent.Failed -> {
@@ -202,6 +205,42 @@ private fun CommitmentRow(item: Commitment, data: CommitmentsData, onOpen: (Stri
             Text(line, style = MaterialTheme.typography.bodyMedium)
             category?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             if (item.situations.isNotEmpty()) SituationTags(item.situations.toList())
+        }
+    }
+}
+
+/**
+ * Camada de cenário (S7): rotulada, separada e sem somar aos totais reais, que continuam sendo só o que foi registrado.
+ * O texto e o ícone dizem que é simulação; a leitura do TalkBack é uma frase única.
+ */
+@Composable
+private fun ScenarioLayer(scenario: app.accord.core.simulation.Scenario, state: CommitmentsUiState) {
+    val part = app.accord.core.simulation.Simulation.partIn(scenario, state.month)
+    val known = ((state.content as? CommitmentsContent.Ready)?.data ?: (state.content as? CommitmentsContent.Failed)?.last)?.commitments?.knownTotal
+    val spoken = if (part == null) {
+        stringResource(R.string.commitments_scenario_none)
+    } else {
+        stringResource(
+            R.string.commitments_scenario_a11y, part.number, scenario.installments, part.amount.format(),
+            known?.let { (it + part.amount).format() } ?: part.amount.format(),
+        )
+    }
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+        Column(
+            Modifier.padding(AccordSpacing.s3).semantics(mergeDescendants = true) { contentDescription = spoken },
+            verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                DecorativeIcon(Lucide.drawable.lucide_ic_info)
+                Text(stringResource(R.string.commitments_scenario_title), style = MaterialTheme.typography.titleSmall)
+            }
+            if (part == null) {
+                Text(stringResource(R.string.commitments_scenario_none), style = MaterialTheme.typography.bodyMedium)
+            } else {
+                Text(stringResource(R.string.commitments_scenario_line, part.number, scenario.installments, part.amount.format()), style = MaterialTheme.typography.bodyMedium)
+                known?.let { Text(stringResource(R.string.commitments_scenario_total, (it + part.amount).format()), style = MaterialTheme.typography.bodyMedium) }
+            }
+            Text(stringResource(R.string.commitments_scenario_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

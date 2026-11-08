@@ -191,6 +191,7 @@ import app.accord.ui.nav.ROUTE_COMMITMENT
 import app.accord.ui.nav.ROUTE_COMMITMENTS
 import app.accord.ui.nav.ROUTE_SIMULATOR
 import app.accord.ui.simulator.SimulatorRoute
+import app.accord.core.simulation.ScenarioArg
 import app.accord.ui.simulator.SimulatorViewModel
 import app.accord.core.analysis.ProductPhase
 import app.accord.ui.nav.ARG_FILTER_CRITERION
@@ -774,8 +775,11 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 )
             }
             composable(
-                "$ROUTE_COMMITMENTS?$ARG_MONTH={$ARG_MONTH}",
-                arguments = listOf(navArgument(ARG_MONTH) { type = NavType.StringType; nullable = true; defaultValue = null }),
+                "$ROUTE_COMMITMENTS?$ARG_MONTH={$ARG_MONTH}&${CommitmentsViewModel.ARG_SCENARIO}={${CommitmentsViewModel.ARG_SCENARIO}}",
+                arguments = listOf(
+                    navArgument(ARG_MONTH) { type = NavType.StringType; nullable = true; defaultValue = null },
+                    navArgument(CommitmentsViewModel.ARG_SCENARIO) { type = NavType.StringType; nullable = true; defaultValue = null },
+                ),
             ) {
                 val viewModel: CommitmentsViewModel = viewModel(
                     factory = viewModelFactory { initializer { CommitmentsViewModel(container, createSavedStateHandle()) } },
@@ -793,7 +797,12 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     val viewModel: SimulatorViewModel = viewModel(
                         factory = viewModelFactory { initializer { SimulatorViewModel(container, createSavedStateHandle()) } },
                     )
-                    SimulatorRoute(viewModel, padding, onBack = { navController.popBackStack() })
+                    SimulatorRoute(
+                        viewModel, padding, onBack = { navController.popBackStack() },
+                        onOpenMonth = { month, scenario ->
+                            navController.navigate("$ROUTE_COMMITMENTS?$ARG_MONTH=$month&${CommitmentsViewModel.ARG_SCENARIO}=${Uri.encode(ScenarioArg.encode(scenario))}")
+                        },
+                    )
                 }
             }
             composable(ROUTE_ACTIVITY) {

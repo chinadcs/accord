@@ -17,6 +17,14 @@
     <string name="commitments_line_recurring">Recorrente · vence %1$s</string>
     <string name="commitments_line_bill">Boleto · vence %1$s</string>
 
+    <!-- Camada de cenário na tela 10 (S7, vinda do simulador) -->
+    <string name="commitments_scenario_title">Cenário de simulação · não é registro deste mês</string>
+    <string name="commitments_scenario_line">Compra simulada: parcela %1$d de %2$d, +%3$s</string>
+    <string name="commitments_scenario_total">Conhecidos + cenário: %1$s</string>
+    <string name="commitments_scenario_none">O cenário simulado não ocupa este mês.</string>
+    <string name="commitments_scenario_note">Os conhecidos acima continuam sendo só o que foi registrado. O cenário não altera o orçamento.</string>
+    <string name="commitments_scenario_a11y">Simulação, não altera o orçamento. Neste mês, parcela %1$d de %2$d do cenário: %3$s. Conhecidos mais cenário: %4$s.</string>
+
     <!-- Detalhe do compromisso (tela 11) -->
     <string name="commitment_title">Compromisso</string>
     <string name="commitment_not_found_title">Compromisso não encontrado</string>

@@ -100,6 +100,12 @@ object Simulation {
         if (validate(scenario).isNotEmpty()) emptyList()
         else PurchaseSchedule.build(scenario.total, AmountMeaning.Total, scenario.installments, scenario.firstMonth, AssignmentState.Estimated).map { it.invoiceMonth }
 
+    /** A parcela do cenário que cai em [month], ou nulo se o cenário é inválido ou não ocupa esse mês. Usada pela tela 10 para a camada "cenário". */
+    fun partIn(scenario: Scenario, month: YearMonth): app.accord.core.space.InstallmentView? =
+        if (validate(scenario).isNotEmpty()) null
+        else PurchaseSchedule.build(scenario.total, AmountMeaning.Total, scenario.installments, scenario.firstMonth, AssignmentState.Estimated)
+            .firstOrNull { it.invoiceMonth == month }
+
     fun run(scenario: Scenario, baselineOf: (YearMonth) -> MonthBaseline): SimulationResult {
         val errors = validate(scenario)
         if (errors.isNotEmpty()) return SimulationResult.Invalid(errors)

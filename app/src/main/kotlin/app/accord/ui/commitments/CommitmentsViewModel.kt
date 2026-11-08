@@ -4,6 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.accord.SpaceProvider
+import app.accord.core.simulation.Scenario
+import app.accord.core.simulation.ScenarioArg
 import app.accord.core.space.CategoryNode
 import app.accord.core.space.CommitmentDetail
 import app.accord.core.space.CommitmentKind
@@ -30,6 +32,8 @@ data class CommitmentsUiState(
     val month: YearMonth,
     val kind: CommitmentKind = CommitmentKind.All,
     val content: CommitmentsContent = CommitmentsContent.Loading,
+    /** Cenário do simulador (S7), recebido como argumento de navegação e nunca persistido; vira só uma camada rotulada. */
+    val scenario: Scenario? = null,
 )
 
 /**
@@ -45,6 +49,7 @@ class CommitmentsViewModel(
             month = saved.get<String>(KEY_MONTH)?.let(YearMonth::parse) ?: saved.get<String>(ARG_MONTH)?.let(YearMonth::parse)
                 ?: provider.clock.currentMonth(),
             kind = saved.get<String>(KEY_KIND)?.let { runCatching { CommitmentKind.valueOf(it) }.getOrNull() } ?: CommitmentKind.All,
+            scenario = ScenarioArg.decode(saved.get<String>(ARG_SCENARIO)),
         ),
     )
     val state: StateFlow<CommitmentsUiState> = _state.asStateFlow()
@@ -93,6 +98,7 @@ class CommitmentsViewModel(
 
     companion object {
         const val ARG_MONTH = "month"
+        const val ARG_SCENARIO = "scenario"
         private const val KEY_MONTH = "commitmentsMonth"
         private const val KEY_KIND = "commitmentsKind"
     }

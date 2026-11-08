@@ -51,13 +51,18 @@ import app.accord.ui.theme.AccordSpacing
 import com.composables.icons.lucide.R as Lucide
 
 @Composable
-fun SimulatorRoute(viewModel: SimulatorViewModel, padding: PaddingValues, onBack: () -> Unit) {
+fun SimulatorRoute(
+    viewModel: SimulatorViewModel,
+    padding: PaddingValues,
+    onBack: () -> Unit,
+    onOpenMonth: (java.time.YearMonth, app.accord.core.simulation.Scenario) -> Unit,
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     SimulatorScreen(
         state, padding, onBack,
         onTotal = viewModel::setTotal, onInstallments = viewModel::setInstallments, onCategory = viewModel::setCategory,
         onPreviousMonth = { viewModel.shiftFirstMonth(-1) }, onNextMonth = { viewModel.shiftFirstMonth(1) },
-        onUseSuggestion = viewModel::useSuggestedMonth, onSimulate = viewModel::simulate,
+        onUseSuggestion = viewModel::useSuggestedMonth, onSimulate = viewModel::simulate, onOpenMonth = onOpenMonth,
     )
 }
 
@@ -74,6 +79,7 @@ fun SimulatorScreen(
     onNextMonth: () -> Unit,
     onUseSuggestion: () -> Unit,
     onSimulate: () -> Unit,
+    onOpenMonth: (java.time.YearMonth, app.accord.core.simulation.Scenario) -> Unit = { _, _ -> },
 ) {
     var pickingCategory by rememberSaveable { mutableStateOf(false) }
     val totalFocus = remember { FocusRequester() }
@@ -138,7 +144,7 @@ fun SimulatorScreen(
         when (val outcome = state.outcome) {
             SimulatorOutcome.Idle, SimulatorOutcome.Calculating -> Unit
             SimulatorOutcome.Unavailable -> UnavailableBanner(onSimulate)
-            is SimulatorOutcome.Ready -> ResultSection(outcome, state)
+            is SimulatorOutcome.Ready -> ResultSection(outcome, state, onOpenMonth)
         }
     }
 
@@ -161,7 +167,11 @@ private fun UnavailableBanner(onRetry: () -> Unit) {
 }
 
 @Composable
-private fun ResultSection(outcome: SimulatorOutcome.Ready, state: SimulatorUiState) {
+private fun ResultSection(
+    outcome: SimulatorOutcome.Ready,
+    state: SimulatorUiState,
+    onOpenMonth: (java.time.YearMonth, app.accord.core.simulation.Scenario) -> Unit,
+) {
     val months = outcome.result.months
     val count = months.size
     Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
@@ -183,7 +193,7 @@ private fun ResultSection(outcome: SimulatorOutcome.Ready, state: SimulatorUiSta
             else stringResource(R.string.simulator_summary_uneven, first.month.label(), last.month.label(), outcome.result.scenarioTotal.format(), count),
             style = MaterialTheme.typography.titleMedium,
         )
-        months.forEach { MonthCard(it, count, state) }
+        months.forEach { m -> MonthCard(m, count, state) { onOpenMonth(m.month, outcome.scenario) } }
         Text(stringResource(R.string.simulator_stale_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(stringResource(R.string.simulator_disclaimer), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -191,7 +201,7 @@ private fun ResultSection(outcome: SimulatorOutcome.Ready, state: SimulatorUiSta
 
 /** Um mês simulado. A leitura do TalkBack é uma frase única com o rótulo de simulação, o valor e a origem de cada parte. */
 @Composable
-private fun MonthCard(month: SimulatedMonth, count: Int, state: SimulatorUiState) {
+private fun MonthCard(month: SimulatedMonth, count: Int, state: SimulatorUiState, onOpen: () -> Unit) {
     val base = stringResource(
         R.string.simulator_a11y_month, month.month.label(), month.installmentNumber, count,
         month.scenario.format(), month.known.format(), month.totalWithScenario.format(),
@@ -244,6 +254,9 @@ private fun MonthCard(month: SimulatedMonth, count: Int, state: SimulatorUiState
                         }
                     }
                 }
+            }
+            OutlinedButton(onClick = onOpen, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+                Text(stringResource(R.string.simulator_open_month, month.month.label()))
             }
         }
     }

@@ -49,3 +49,27 @@ class SimulationRulesTest {
         assertTrue(Simulation.months(Scenario(Money(-1), 3, nov)).isEmpty())
     }
 }
+
+class ScenarioArgTest {
+    private val nov = YearMonth.of(2026, 11)
+
+    @Test
+    fun `o argumento volta ao mesmo cenário e malformado ou inválido vira nada`() {
+        val s = Scenario(Money(120_000), 6, nov, "cat-1")
+        assertEquals(s, ScenarioArg.decode(ScenarioArg.encode(s)))
+        assertEquals(Scenario(Money(120_000), 6, nov), ScenarioArg.decode("120000:6:2026-11"))
+        assertNull(ScenarioArg.decode(null))
+        assertNull(ScenarioArg.decode("abc"))
+        assertNull(ScenarioArg.decode("0:6:2026-11"))
+        assertNull(ScenarioArg.decode("120000:0:2026-11"))
+        assertNull(ScenarioArg.decode("120000:6:2026-13"))
+    }
+
+    @Test
+    fun `a parcela do cenário em cada mês é a mesma do cronograma e fora dele não há parcela`() {
+        val s = Scenario(Money(100_000), 3, nov)
+        assertEquals(listOf(33_333L, 33_333L, 33_334L), (0..2).map { Simulation.partIn(s, nov.plusMonths(it.toLong()))!!.amount.cents })
+        assertNull(Simulation.partIn(s, nov.minusMonths(1)))
+        assertNull(Simulation.partIn(s, nov.plusMonths(3)))
+    }
+}
