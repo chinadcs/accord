@@ -129,4 +129,31 @@ class LimitsFormTest {
         val ok = assertIs<LimitsDraft.Built.Ok>(d.build(listOf(moved), oct))
         assertEquals(mapOf("market" to brl(100), "delivery" to brl(400)), ok.command.edits.single().edit.split)
     }
+    @Test
+    fun rascunhoGuardaSoOQueDifereDoSalvoERestauraSobreOEstadoAtual() {
+        val typed = draft { it.copy(totals = it.totals + ("food" to "1.500,00"), splits = it.splits + ("food" to (it.splits.getValue("food") + ("market" to "300,00")))) }
+        val fields = typed.toFields(oct, rows)
+        // nada de pet, nem da parte de Delivery, que não mudaram
+        assertEquals(setOf("month", "scope", "total:food", "split:food:market"), fields.keys)
+        assertTrue(LimitsDraft.hasEdits(fields))
+
+        // o outro aparelho mudou o limite de Pet e a parte de Delivery depois; o rascunho não os desfaz
+        val moved = rows.map { if (it.categoryId == "food") it.copy(original = LimitSetting(brl(1200), mapOf("delivery" to brl(450)))) else it }
+        val restored = LimitsDraft.restore(fields, moved)
+        assertEquals("1.500,00", restored.totals["food"])
+        assertEquals("300,00", restored.splits.getValue("food")["market"])
+        assertEquals(moved[0].original.split.getValue("delivery").formatPlain(), restored.splits.getValue("food")["delivery"])
+        assertEquals(LimitScope.FromThisMonth, restored.scope)
+    }
+
+    @Test
+    fun rascunhoIgnoraCategoriaQueDeixouDeExistirESemAlcanceNaoPresumeOpcao() {
+        val fields = mapOf("month" to "2026-10", "total:gone" to "9,00", "split:gone:x" to "1,00", "total:pet" to "80,00")
+        val restored = LimitsDraft.restore(fields, rows)
+        assertEquals(setOf("food", "pet"), restored.totals.keys)
+        assertEquals("80,00", restored.totals["pet"])
+        assertNull(restored.scope)
+        // só o mês, sem texto digitado, não é rascunho
+        assertTrue(!LimitsDraft.hasEdits(mapOf("month" to "2026-10", "scope" to "OnlyThisMonth")))
+    }
 }

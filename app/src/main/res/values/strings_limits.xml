@@ -25,7 +25,13 @@
     <string name="limits_replaced">Esta alteração substitui ajustes que já existiam em %1$s.</string>
     <string name="limits_save">Salvar limites</string>
     <string name="limits_nothing_changed">Nada foi alterado ainda.</string>
-    <string name="limits_discard_body">Os limites digitados aqui ainda não foram salvos.</string>
+    <string name="limits_back_title">Sair sem salvar?</string>
+    <string name="limits_discard_body">Os limites digitados aqui ainda não foram salvos. Você pode guardar um rascunho neste aparelho para continuar depois.</string>
+    <string name="limits_back_draft">Guardar rascunho</string>
+    <string name="limits_back_discard">Descartar</string>
+    <string name="limits_back_keep">Continuar editando</string>
+    <string name="limits_draft_recovered">Rascunho recuperado. Confira os valores antes de salvar; o que você não alterou segue como está salvo hoje.</string>
+    <string name="limits_draft_discard">Descartar rascunho</string>
     <string name="limits_error_negative">O valor não pode ser negativo.</string>
     <string name="limits_error_split_exceeds">A divisão passa do limite principal em %1$s. Ajuste a divisão ou o limite.</string>
     <string name="limits_error_split_without_total">Defina o limite principal antes de dividir.</string>

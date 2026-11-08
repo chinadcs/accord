@@ -236,7 +236,7 @@ data class ForecastDetail(
 
 // ---- rascunhos locais ----
 
-enum class DraftSource { Chat, Form }
+enum class DraftSource { Chat, Form, Limits }
 
 /**
  * Registro sem valor, intenção ou outro campo essencial, ou formulário em edição. Guarda só campos

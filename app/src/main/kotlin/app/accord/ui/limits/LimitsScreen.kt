@@ -66,6 +66,7 @@ fun LimitsRoute(viewModel: LimitsViewModel, padding: PaddingValues, onExit: () -
         state, padding, onBack = viewModel::requestBack, onPrevious = viewModel::previousMonth, onNext = viewModel::nextMonth,
         onRetry = viewModel::retry, onTotal = viewModel::setTotal, onPart = viewModel::setPart, onScope = viewModel::setScope,
         onSave = viewModel::save, onKeepEditing = viewModel::keepEditing, onDiscard = viewModel::discard,
+        onSaveDraft = viewModel::saveDraftAndExit, onDismissRecovered = viewModel::dismissRecoveredDraft,
     )
 }
 
@@ -83,6 +84,8 @@ fun LimitsScreen(
     onSave: () -> Unit,
     onKeepEditing: () -> Unit,
     onDiscard: () -> Unit,
+    onSaveDraft: () -> Unit = {},
+    onDismissRecovered: () -> Unit = {},
 ) {
     Column(Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding()) {
         Column(
@@ -96,6 +99,7 @@ fun LimitsScreen(
                 Text(stringResource(R.string.limits_reference, state.month.label()), style = MaterialTheme.typography.bodyLarge)
                 MonthSelector(state.month, onPrevious, onNext)
             }
+            if (state.recoveredDraft) RecoveredDraftNotice(onDismissRecovered)
             if (state.monthBlocked) Text(stringResource(R.string.limits_month_blocked), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
             when (state.content) {
                 LimitsContent.Loading -> Text(stringResource(R.string.state_loading), style = MaterialTheme.typography.bodyLarge)
@@ -167,11 +171,28 @@ fun LimitsScreen(
     if (state.askDiscard) {
         AlertDialog(
             onDismissRequest = onKeepEditing,
-            title = { Text(stringResource(R.string.edit_discard_title)) },
+            title = { Text(stringResource(R.string.limits_back_title)) },
             text = { Text(stringResource(R.string.limits_discard_body)) },
-            confirmButton = { TextButton(onClick = onDiscard, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.edit_discard_confirm), color = MaterialTheme.colorScheme.error) } },
-            dismissButton = { TextButton(onClick = onKeepEditing, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.edit_discard_keep)) } },
+            confirmButton = { TextButton(onClick = onSaveDraft, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.limits_back_draft)) } },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = onDiscard, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.limits_back_discard), color = MaterialTheme.colorScheme.error) }
+                    TextButton(onClick = onKeepEditing, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.limits_back_keep)) }
+                }
+            },
         )
+    }
+}
+
+@Composable
+private fun RecoveredDraftNotice(onDismiss: () -> Unit) {
+    Surface(color = Accord.colors.attentionContainer, shape = MaterialTheme.shapes.small) {
+        Column(Modifier.fillMaxWidth().padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+            Text(stringResource(R.string.limits_draft_recovered), color = Accord.colors.onAttentionContainer)
+            TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                Text(stringResource(R.string.limits_draft_discard))
+            }
+        }
     }
 }
 

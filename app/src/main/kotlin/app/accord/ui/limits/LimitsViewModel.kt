@@ -12,7 +12,10 @@ import app.accord.core.Money
 import app.accord.core.label
 import app.accord.core.space.CommandId
 import app.accord.core.space.CommandResult
+import app.accord.core.space.DraftSource
 import app.accord.core.space.Envelope
+import app.accord.core.space.FinanceSpace
+import app.accord.core.space.LocalDraft
 import app.accord.core.space.PreviewResult
 import app.accord.core.space.QueryResult
 import kotlinx.coroutines.Job
@@ -47,6 +50,8 @@ data class LimitsUiState(
     /** Trocar o mês com valores digitados os perderia; a tela pede para salvar ou descartar antes. */
     val monthBlocked: Boolean = false,
     val initialSetup: Boolean = false,
+    /** Os valores vieram de um rascunho guardado neste aparelho; a pessoa pode descartá-lo e recomeçar. */
+    val recoveredDraft: Boolean = false,
 ) {
     val rows: List<LimitRow> get() = (content as? LimitsContent.Ready)?.rows.orEmpty()
 
@@ -82,6 +87,9 @@ class LimitsViewModel(
     val exit: StateFlow<Boolean> = _exit.asStateFlow()
 
     private var commandId = CommandId(UUID.randomUUID().toString())
+
+    /** Rascunho local (DraftSource.Limits) em uso, se houver; some ao salvar os limites ou ao descartar. */
+    private var draftId: String? = saved.get<String>(KEY_DRAFT)
     private var previewJob: Job? = null
 
     init {
@@ -101,7 +109,11 @@ class LimitsViewModel(
         // O mês de referência é escolhido antes de digitar: trocá-lo recomeça dos valores salvos.
         saved[KEY_MONTH] = month.toString()
         _state.update { it.copy(month = month) }
-        load()
+        // Sem nada digitado, um rascunho recuperado já não guarda nada e não pode ser apagado ao salvar outro mês.
+        viewModelScope.launch {
+            dropStoredDraft()
+            load()
+        }
     }
 
     fun retry() = load()
@@ -133,14 +145,50 @@ class LimitsViewModel(
                 )
             }
             commandId = CommandId(UUID.randomUUID().toString())
-            _state.update { it.copy(content = LimitsContent.Ready(rows), draft = LimitsDraft.of(rows).let { draft -> if (initialSetup) draft.copy(scope = LimitScope.FromThisMonth) else draft }) }
+            val (restored, recovered) = restoreDraft(space, rows, month)
+            _state.update {
+                it.copy(
+                    content = LimitsContent.Ready(rows), recoveredDraft = recovered,
+                    draft = (restored ?: LimitsDraft.of(rows)).let { draft -> if (initialSetup) draft.copy(scope = LimitScope.FromThisMonth) else draft },
+                )
+            }
         }
+    }
+
+    /**
+     * O que foi digitado volta de dois lugares: do estado salvo da tela, se o sistema recriou o processo, ou do
+     * rascunho guardado no aparelho. Os valores atuais continuam valendo onde o rascunho não mexeu.
+     */
+    private suspend fun restoreDraft(space: FinanceSpace, rows: List<LimitRow>, month: YearMonth): Pair<LimitsDraft?, Boolean> {
+        val monthKey = month.toString()
+        saved.get<HashMap<String, String>>(KEY_FIELDS)?.takeIf { it[LimitsDraft.FIELD_MONTH] == monthKey }
+            ?.let { return LimitsDraft.restore(it, rows) to false }
+        val stored = (space.drafts() as? QueryResult.Data)?.value?.firstOrNull {
+            it.source == DraftSource.Limits && it.fields[LimitsDraft.FIELD_MONTH] == monthKey && LimitsDraft.hasEdits(it.fields)
+        } ?: return null to false
+        draftId = stored.id
+        saved[KEY_DRAFT] = stored.id
+        return LimitsDraft.restore(stored.fields, rows) to true
+    }
+
+    /** Mantém o que foi digitado se o sistema encerrar o processo com a tela aberta. */
+    private fun rememberInFlight() {
+        val s = _state.value
+        if (isDirty) saved[KEY_FIELDS] = HashMap(s.draft.toFields(s.month, s.rows)) else saved.remove<HashMap<String, String>>(KEY_FIELDS)
+    }
+
+    private suspend fun dropStoredDraft() {
+        draftId?.let { provider.space().discardDraft(it) }
+        draftId = null
+        saved.remove<String>(KEY_DRAFT)
+        saved.remove<HashMap<String, String>>(KEY_FIELDS)
     }
 
     // ---- edição ----
 
     private fun edit(change: (LimitsDraft) -> LimitsDraft) {
         _state.update { it.copy(draft = change(it.draft), errors = emptyMap(), serverErrors = emptyList(), nothingChanged = false, monthBlocked = false) }
+        rememberInFlight()
         schedulePreview()
     }
 
@@ -153,6 +201,7 @@ class LimitsViewModel(
     fun setScope(scope: LimitScope) {
         if (initialSetup) return
         _state.update { it.copy(draft = it.draft.copy(scope = scope), scopeMissing = false, serverErrors = emptyList()) }
+        rememberInFlight()
         schedulePreview()
     }
 
@@ -184,7 +233,7 @@ class LimitsViewModel(
             is LimitsDraft.Built.Ok -> {
                 _state.update { it.copy(saving = true, errors = emptyMap(), serverErrors = emptyList(), scopeMissing = false) }
                 viewModelScope.launch {
-                    when (val result = provider.space().execute(Envelope(commandId), built.command)) {
+                    when (val result = provider.space().execute(Envelope(commandId, draftId = draftId), built.command)) {
                         is CommandResult.Applied -> finish(s, result.receipt.operationId, result.receipt.undoable)
                         is CommandResult.AlreadyApplied -> finish(s, result.receipt.operationId, result.receipt.undoable)
                         is CommandResult.Rejected -> _state.update {
@@ -200,6 +249,9 @@ class LimitsViewModel(
     private fun finish(s: LimitsUiState, operationId: String, undoable: Boolean) {
         val message = if (s.draft.scope == LimitScope.OnlyThisMonth) R.string.feedback_limits_only_month else R.string.feedback_limits_from_month
         provider.feedback.post(FeedbackEvent(message, listOf(s.month.label().lowercase()), operationId.takeIf { undoable }))
+        draftId = null
+        saved.remove<String>(KEY_DRAFT)
+        saved.remove<HashMap<String, String>>(KEY_FIELDS)
         _state.update { it.copy(saving = false) }
         _exit.value = true
     }
@@ -207,18 +259,59 @@ class LimitsViewModel(
     // ---- sair ----
 
     fun requestBack() {
-        if (isDirty && !_state.value.saving) _state.update { it.copy(askDiscard = true) } else _exit.value = true
+        if (isDirty && !_state.value.saving) _state.update { it.copy(askDiscard = true) } else leave()
     }
 
     fun keepEditing() = _state.update { it.copy(askDiscard = false) }
 
-    fun discard() {
-        _exit.value = true
+    /** Sai guardando o que foi digitado como rascunho deste aparelho; não é financeiro e não sincroniza. */
+    fun saveDraftAndExit() {
+        val s = _state.value
+        if (s.content !is LimitsContent.Ready) return
+        viewModelScope.launch {
+            val result = provider.space().saveDraft(
+                LocalDraft(
+                    id = draftId.orEmpty(), source = DraftSource.Limits, fields = s.draft.toFields(s.month, s.rows),
+                    reason = "Limites não salvos",
+                ),
+            )
+            if (result is QueryResult.Data) {
+                saved.remove<String>(KEY_DRAFT)
+                saved.remove<HashMap<String, String>>(KEY_FIELDS)
+                _exit.value = true
+            } else {
+                _state.update { it.copy(askDiscard = false, serverErrors = listOf("Não foi possível guardar o rascunho. Nada foi alterado.")) }
+            }
+        }
+    }
+
+    fun discard() = leave()
+
+    private fun leave() {
+        viewModelScope.launch {
+            dropStoredDraft()
+            _exit.value = true
+        }
+    }
+
+    /** Descarta o rascunho recuperado e recomeça dos limites salvos. */
+    fun dismissRecoveredDraft() {
+        viewModelScope.launch {
+            dropStoredDraft()
+            _state.update {
+                it.copy(
+                    recoveredDraft = false, errors = emptyMap(), serverErrors = emptyList(), replacedMonths = emptyList(),
+                    draft = LimitsDraft.of(it.rows).let { base -> if (initialSetup) base.copy(scope = LimitScope.FromThisMonth) else base },
+                )
+            }
+        }
     }
 
     companion object {
         const val ARG_MONTH = "month"
         const val ARG_INITIAL_SETUP = "initialSetup"
+        private const val KEY_DRAFT = "limitsDraftId"
+        private const val KEY_FIELDS = "limitsFields"
         private const val KEY_MONTH = "limitsMonth"
         private const val PREVIEW_DEBOUNCE_MS = 250L
     }

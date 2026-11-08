@@ -117,7 +117,47 @@ data class LimitsDraft(
         return Built.Ok(DefineLimits(month, scope, edits), changed)
     }
 
+    /**
+     * Campos do rascunho local (tela 24): o mês de referência, o alcance e só os textos que diferem do que está salvo.
+     * Guardar o que não mudou faria um rascunho antigo desfazer, ao ser salvo, o que o outro aparelho alterou depois.
+     */
+    fun toFields(month: YearMonth, rows: List<LimitRow>): Map<String, String> {
+        val base = of(rows)
+        return buildMap {
+            put(FIELD_MONTH, month.toString())
+            scope?.let { put(FIELD_SCOPE, it.name) }
+            rows.forEach { row ->
+                totals[row.categoryId]?.takeIf { it != base.totals[row.categoryId] }?.let { put(totalKey(row.categoryId), it) }
+                row.subs.forEach { sub ->
+                    splits[row.categoryId]?.get(sub.id)?.takeIf { it != base.splits[row.categoryId]?.get(sub.id) }
+                        ?.let { put(splitKey(row.categoryId, sub.id), it) }
+                }
+            }
+        }
+    }
+
     companion object {
+        const val FIELD_MONTH = "month"
+        private const val FIELD_SCOPE = "scope"
+        private fun totalKey(categoryId: String) = "total:$categoryId"
+        private fun splitKey(categoryId: String, subId: String) = "split:$categoryId:$subId"
+
+        /** Há algo digitado para recuperar: o mês, sozinho, não é rascunho. */
+        fun hasEdits(fields: Map<String, String>) = fields.keys.any { it.startsWith("total:") || it.startsWith("split:") }
+
+        /**
+         * Aplica o rascunho sobre o que está salvo agora. Categoria ou subcategoria que deixou de existir é ignorada;
+         * o que o rascunho não menciona fica com o valor salvo.
+         */
+        fun restore(fields: Map<String, String>, rows: List<LimitRow>): LimitsDraft {
+            val base = of(rows)
+            return base.copy(
+                totals = base.totals.mapValues { (id, saved) -> fields[totalKey(id)] ?: saved },
+                splits = base.splits.mapValues { (id, parts) -> parts.mapValues { (subId, saved) -> fields[splitKey(id, subId)] ?: saved } },
+                scope = fields[FIELD_SCOPE]?.let { name -> LimitScope.entries.firstOrNull { it.name == name } },
+            )
+        }
+
         fun of(rows: List<LimitRow>) = LimitsDraft(
             totals = rows.associate { it.categoryId to it.original.total?.formatPlain().orEmpty() },
             splits = rows.associate { row -> row.categoryId to row.subs.associate { it.id to row.original.split[it.id]?.formatPlain().orEmpty() } },

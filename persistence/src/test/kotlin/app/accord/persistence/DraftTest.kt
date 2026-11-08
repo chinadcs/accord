@@ -113,4 +113,18 @@ class DraftTest : SpaceTestBase() {
         h.space.saveDraft(draft()).value()
         assertEquals(emptyList(), h.space.operations().value())
     }
+    @Test
+    fun `rascunho de limites guarda o mês e os textos sem ocupar o espaço do rascunho de formulário`() = runBlocking<Unit> {
+        val h = open()
+        h.space.saveDraft(LocalDraft(source = DraftSource.Form, fields = mapOf("description" to "Mercado"))).value()
+        h.space.saveDraft(
+            LocalDraft(source = DraftSource.Limits, fields = mapOf("month" to "2026-11", "total:food" to "1.500,00"), reason = "Limites não salvos"),
+        ).value()
+
+        val all = h.space.drafts().value()
+        assertEquals(setOf(DraftSource.Form, DraftSource.Limits), all.map { it.source }.toSet())
+        val limits = all.single { it.source == DraftSource.Limits }
+        assertEquals("1.500,00", limits.fields["total:food"])
+        assertEquals("2026-11", limits.fields["month"])
+    }
 }

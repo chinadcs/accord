@@ -8,6 +8,7 @@ import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.printToLog
@@ -34,6 +35,7 @@ import app.accord.ui.theme.ThemePreference
 import app.accord.ui.theme.CornerStyle
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -62,6 +64,9 @@ class MoreFlowTest {
     fun seed() = runBlocking {
         val container = (ApplicationProvider.getApplicationContext<AccordApplication>()).container
         val space = container.space()
+        // Rascunhos de Limites de outras execuções mudariam o que a tela abre.
+        (space.drafts() as app.accord.core.space.QueryResult.Data).value
+            .filter { it.source == app.accord.core.space.DraftSource.Limits }.forEach { space.discardDraft(it.id) }
         mainId = create(space, mainName)
         create(space, destName)
         subId = create(space, subName, mainId)
@@ -231,5 +236,60 @@ class MoreFlowTest {
         waitForText("Resumo da alteração")
         compose.onNodeWithText("Salvar limites").performSemanticsAction(SemanticsActions.OnClick)
         waitForText("Limite atualizado a partir de")
+    }
+    /** Valor digitado no limite da categoria; distinto a cada execução, pois a tela lista os limites de todos os testes. */
+    private val typedLimit = "%d,00".format(700 + (tag.hashCode() and 0xFF))
+
+    /** O campo de limite da categoria deste teste tem o [value] digitado ou salvo. */
+    private fun waitForLimitField(value: String, present: Boolean = true) =
+        compose.waitUntil(8_000) {
+            compose.onAllNodes(hasText("Limite de $mainName (R$)") and hasText(value)).fetchSemanticsNodes().isNotEmpty() == present
+        }
+
+    private fun limitsDrafts() = runBlocking {
+        val space = (ApplicationProvider.getApplicationContext<AccordApplication>()).container.space()
+        (space.drafts() as app.accord.core.space.QueryResult.Data).value.filter { it.source == app.accord.core.space.DraftSource.Limits }
+    }
+
+    /** Abre Limites, digita um novo limite da categoria e sai guardando o rascunho. */
+    private fun typeAndKeepDraft() {
+        openMore("Limites do orçamento")
+        waitForText("Total das categorias")
+        scrollTo("Limite de $mainName")
+        compose.onNodeWithText("Limite de $mainName (R$)").performTextReplacement(typedLimit)
+        compose.onNodeWithContentDescription("Voltar").performSemanticsAction(SemanticsActions.OnClick)
+        waitForText("Sair sem salvar?")
+        dialogButton("Guardar rascunho")
+        waitForText("Categorias e subcategorias")
+    }
+
+    @Test
+    fun limitesGuardamRascunhoAoSairERecuperamEleAoVoltarEDescartarRestauraOSalvo() {
+        typeAndKeepDraft()
+        assertEquals(1, limitsDrafts().size)
+
+        tap("Limites do orçamento") // o app voltou para Mais
+        waitForText("Rascunho recuperado")
+        scrollTo("Limite de $mainName")
+        waitForLimitField(typedLimit)
+
+        // descartar recomeça dos limites salvos (R$ 500,00) e apaga o rascunho do aparelho
+        tap("Descartar rascunho")
+        waitGone("Rascunho recuperado")
+        waitForLimitField(typedLimit, present = false)
+        waitForLimitField("500,00")
+        compose.waitUntil(5_000) { limitsDrafts().isEmpty() }
+    }
+
+    @Test
+    fun salvarOsLimitesRecuperadosDoRascunhoApagaORascunhoNaMesmaOperacao() {
+        typeAndKeepDraft()
+        tap("Limites do orçamento")
+        waitForText("Rascunho recuperado")
+        tap("meses seguintes")
+        waitForText("Resumo da alteração")
+        compose.onNodeWithText("Salvar limites").performSemanticsAction(SemanticsActions.OnClick)
+        waitForText("Limite atualizado a partir de")
+        compose.waitUntil(5_000) { limitsDrafts().isEmpty() }
     }
 }
