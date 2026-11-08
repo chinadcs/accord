@@ -46,6 +46,13 @@ O usuário aceitou esta decisão em 07/11/2026, sem alterações, incluindo o pa
 9. **Privacidade.** Intenções (nome, valor, observação) sincronizam como os demais dados financeiros; cenários, mensagens e transcrições do Chat não. Diagnósticos de conversão e sincronização
    registram só identidades, tipos de resultado e contagens.
 
+### Ajustes feitos na implementação (07/11/2026)
+
+- **Identidades da conversão.** Não foi preciso gerar a identidade do compromisso ao abrir a tela 09: a identidade da operação (`CommandId`, já guardada em `SavedStateHandle`) basta para um segundo toque ou uma repetição devolverem o resultado já gravado (`AlreadyApplied`), local e no serviço.
+- **Qual versão conta durante a divergência.** Conta a **já reconhecida** (C1): ao receber a divergência o aparelho aplica C1, oculta localmente C2 (excluído só neste aparelho, sem operação, com o estado guardado no conflito) e o orçamento conta uma compra. Isso dispensa esconder C1, que o aparelho recebe pelo fluxo normal.
+- **Divergência por tipo diferente.** Se C1 e C2 são de tipos diferentes (por exemplo compra no cartão e boleto), só vale "manter a já reconhecida"; "manter a deste aparelho" devolve `KindsDiffer` e orienta registrar de novo depois.
+- **Serviço.** A recusa "conversão já existente" usa o resultado `conflict` já existente, com o estado de C1 em `current`; origem inexistente ou de outro espaço usa a razão nova `OriginNotFound`. Atualização que omite ou troca a origem não a altera (o serviço mantém a guardada).
+
 ## Consequências
 
 - Tipo novo no protocolo (`Intention` em `accord_private.shared_types()`), Room 13 e migração Supabase; campo `originIntentionId` nulo nos registros raiz, sem preenchimento retroativo.

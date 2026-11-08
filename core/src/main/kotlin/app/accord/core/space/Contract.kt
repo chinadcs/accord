@@ -366,6 +366,8 @@ data class RegisterDirectPayment(
     val accountId: String? = null,
     val spentBy: String? = null,
     val isCharge: Boolean = false,
+    /** Intenção de origem (S7, ADR 0048): vínculo imutável definido na criação; no máximo um compromisso por intenção no espaço. */
+    val originIntentionId: String? = null,
 ) : Command
 
 enum class AmountMeaning { Total, PerInstallment }
@@ -396,6 +398,8 @@ data class RegisterCardPurchase(
     val spentBy: String? = null,
     val isCharge: Boolean = false,
     val invoice: YearMonth? = null,
+    /** Intenção de origem (S7, ADR 0048): vínculo imutável definido na criação; no máximo um compromisso por intenção no espaço. */
+    val originIntentionId: String? = null,
 ) : Command
 
 /**
@@ -430,6 +434,8 @@ data class RegisterBoleto(
     val amount: Money,
     val accountId: String? = null,
     val payment: Settlement? = null,
+    /** Intenção de origem (S7, ADR 0048): vínculo imutável definido na criação; no máximo um compromisso por intenção no espaço. */
+    val originIntentionId: String? = null,
 ) : Command
 
 data class PayBoleto(
@@ -476,6 +482,8 @@ data class CreateRecurrence(
     val accountId: String? = null,
     val frequency: Frequency,
     val firstDate: LocalDate,
+    /** Intenção de origem (S7, ADR 0048): vínculo imutável definido na criação; no máximo um compromisso por intenção no espaço. */
+    val originIntentionId: String? = null,
 ) : Command
 
 /**
@@ -919,7 +927,16 @@ data class IntentionView(
     val revision: Long,
     /** "Salvo no aparelho" difere de "reconhecido": se o outro celular já pode ver esta intenção. */
     val sync: ItemSync = ItemSync.SavedOnDevice,
-)
+    /** Compromisso que nasceu desta intenção; nulo enquanto planejada. "Convertida" é derivada deste vínculo, nunca um campo editável. */
+    val conversion: IntentionConversion? = null,
+) {
+    val situation: IntentionSituation get() = if (conversion == null) IntentionSituation.Planned else IntentionSituation.Converted
+}
+
+enum class IntentionSituation { Planned, Converted }
+
+/** O compromisso vinculado: [type] é CardPurchase, Movement, Boleto ou Recurrence, e [id] a identidade da raiz (a compra, o lançamento, o boleto ou a série). */
+data class IntentionConversion(val type: EntityType, val id: String)
 
 data class IncomeCategoryNode(
     val id: String,

@@ -149,6 +149,8 @@
     <string name="conflict_entity_category">Categoria</string>
     <string name="conflict_entity_income_category">Categoria de renda</string>
     <string name="conflict_entity_icon_association">Ícone de lançamento</string>
+    <string name="conflict_conversion_note">Vocês converteram a mesma intenção em compromisso, cada um no seu celular. Só um compromisso vale: o orçamento já conta uma única compra e a sua escolha vale para os dois aparelhos.</string>
+    <string name="conflict_kinds_differ">Os dois compromissos são de tipos diferentes. Só é possível manter o que o serviço já reconheceu; depois, registre de novo o que quiser.</string>
     <string name="conflict_entity_intention">Intenção de compra</string>
     <string name="conflict_entity_import_batch">Importação de documento</string>
     <string name="conflict_entity_alert_event">Aviso de possível excesso</string>

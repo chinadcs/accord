@@ -82,6 +82,8 @@ fun ConflictScreen(
             return@Column
         }
         Text(stringResource(R.string.conflict_intro), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        // ADR 0048: dois compromissos da mesma intenção. Só um vale e o orçamento já conta uma única compra.
+        if (view.entities.any { it.counterpart != null }) MessageBanner(ScreenMessage(MessageKind.Attention, R.string.conflict_conversion_note))
         if (ui.stale) MessageBanner(ScreenMessage(MessageKind.Attention, R.string.conflict_stale))
         if (ui.offline) MessageBanner(ScreenMessage(MessageKind.Neutral, R.string.conflict_offline))
 

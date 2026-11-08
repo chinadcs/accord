@@ -35,6 +35,11 @@ data class ConflictEntity(
     val remote: ConflictVersion?,
     /** Campos do estado que diferem entre as duas versões, só para rotular a comparação. */
     val differingFields: List<String>,
+    /**
+     * Divergência de conversão (ADR 0048): o compromisso já reconhecido pelo serviço para a mesma intenção. [ref] é o compromisso deste aparelho e
+     * [remote] o já reconhecido, com identidade própria. Nulo num conflito comum de versão.
+     */
+    val counterpart: EntityRef? = null,
 )
 
 data class ConflictView(
@@ -60,6 +65,9 @@ sealed interface ResolveResult {
     /** Mudou algo durante a revisão: nada foi aplicado e a comparação foi atualizada. */
     data class Stale(val view: ConflictView) : ResolveResult
     data object NotFound : ResolveResult
+
+    /** Manter o compromisso deste aparelho não vale quando os dois são de tipos diferentes (por exemplo compra no cartão e boleto): só vale manter o já reconhecido. */
+    data object KindsDiffer : ResolveResult
 }
 
 enum class ProblemKind { Conflict, Rejected, Held }

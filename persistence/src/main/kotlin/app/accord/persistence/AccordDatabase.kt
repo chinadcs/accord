@@ -67,6 +67,9 @@ data class IconAssociationRow(
     val revision: Long,
 )
 
+/** Uma intenção e o compromisso raiz que a converteu. */
+data class OriginLink(val intentionId: String, val type: String, val id: String)
+
 /**
  * Intenção de compra do casal (S7, ADR 0048). Não é despesa. [estimatedCents] nulo é "sem valor definido"; [desiredMonth] é `AAAA-MM` e só lembra.
  * A situação "convertida" não fica aqui: é derivada do compromisso que aponta para esta intenção.
@@ -126,6 +129,8 @@ data class MovementEntity(
     val voided: Boolean,
     /** Tarifa ou juros confirmado (ADR 0045): marca do movimento, independente do nome da categoria. Padrão falso: movimentos anteriores e de outro aparelho. */
     @ColumnInfo(defaultValue = "0") val isCharge: Boolean = false,
+    /** Intenção de origem (S7): imutável depois da criação; a conversão da intenção é derivada deste vínculo. */
+    val originIntentionId: String? = null,
 )
 
 @Entity(tableName = "operation", indices = [Index(value = ["operationId"], unique = true)])
@@ -201,6 +206,8 @@ data class CardPurchaseRow(
     val origin: String,
     val revision: Long,
     val voided: Boolean,
+    /** Intenção de origem (S7): imutável depois da criação; a conversão da intenção é derivada deste vínculo. */
+    val originIntentionId: String? = null,
 )
 
 @Entity(
@@ -237,6 +244,8 @@ data class BoletoRow(
     val origin: String,
     val revision: Long,
     val voided: Boolean,
+    /** Intenção de origem (S7): imutável depois da criação; a conversão da intenção é derivada deste vínculo. */
+    val originIntentionId: String? = null,
 )
 
 @Entity(tableName = "income", indices = [Index("expectedEpochDay"), Index("receivedEpochDay")])
@@ -273,6 +282,8 @@ data class RecurrenceRow(
     val origin: String,
     val revision: Long,
     val voided: Boolean,
+    /** Intenção de origem (S7): imutável depois da criação; a conversão da intenção é derivada deste vínculo. */
+    val originIntentionId: String? = null,
 )
 
 /** Modelo vigente a partir de uma ocorrência (S1 §7.6). */
@@ -439,6 +450,15 @@ interface SpaceDao {
     @Upsert suspend fun upsertIntention(row: IntentionRow)
     @Query("SELECT * FROM intention WHERE id = :id") suspend fun intention(id: String): IntentionRow?
     @Query("SELECT * FROM intention ORDER BY updatedAtMillis DESC, id") suspend fun intentions(): List<IntentionRow>
+
+    /** Compromissos raiz que apontam para intenções; exclusão não apaga o vínculo (ADR 0048). */
+    @Query(
+        "SELECT originIntentionId AS intentionId, 'CardPurchase' AS type, id FROM card_purchase WHERE originIntentionId IS NOT NULL " +
+            "UNION ALL SELECT originIntentionId, 'Movement', id FROM movement WHERE originIntentionId IS NOT NULL " +
+            "UNION ALL SELECT originIntentionId, 'Boleto', id FROM boleto WHERE originIntentionId IS NOT NULL " +
+            "UNION ALL SELECT originIntentionId, 'Recurrence', id FROM recurrence WHERE originIntentionId IS NOT NULL",
+    )
+    suspend fun originLinks(): List<OriginLink>
     @Insert suspend fun insertCategory(row: CategoryRow)
     @Query("SELECT * FROM category ORDER BY sortOrder, name") suspend fun categories(): List<CategoryRow>
     @Query("SELECT * FROM category WHERE id = :id") suspend fun category(id: String): CategoryRow?
@@ -475,6 +495,7 @@ interface SpaceDao {
     @Upsert suspend fun upsertPurchase(row: CardPurchaseRow)
     @Insert suspend fun insertInstallments(rows: List<InstallmentRow>)
     @Upsert suspend fun upsertInstallments(rows: List<InstallmentRow>)
+    @Query("DELETE FROM installment WHERE purchaseId = :purchaseId AND number NOT IN (:keep)") suspend fun deleteInstallmentsExcept(purchaseId: String, keep: List<Int>)
     @Query("SELECT * FROM card_purchase WHERE id = :id") suspend fun purchase(id: String): CardPurchaseRow?
     @Query("SELECT * FROM installment WHERE purchaseId = :purchaseId ORDER BY number")
     suspend fun installments(purchaseId: String): List<InstallmentRow>
@@ -733,7 +754,7 @@ interface SpaceDao {
         ImportBatchRow::class, ImportMovementRow::class, ImportDecisionRow::class, ImportPairRow::class,
         AlertEventRow::class, AlertDisplayRow::class, AlertPreferenceRow::class, IconAssociationRow::class, IntentionRow::class,
     ],
-    version = 13,
+    version = 15,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2, spec = Migration1To2::class),
@@ -755,6 +776,12 @@ interface SpaceDao {
         AutoMigration(from = 10, to = 11),
         // ADR 0047: ícone escolhido por lançamento ou por nome (compartilhado).
         AutoMigration(from = 11, to = 12),
+        // S7 / ADR 0048: intenção de compra (compartilhada).
+        AutoMigration(from = 12, to = 13),
+        // S7 / ADR 0048: intenção de origem nos compromissos raiz (compra, lançamento, boleto, série).
+        AutoMigration(from = 13, to = 14),
+        // S7 / ADR 0048: o compromisso já reconhecido, quando a conversão da intenção diverge entre os aparelhos.
+        AutoMigration(from = 14, to = 15),
     ],
 )
 abstract class AccordDatabase : RoomDatabase() {

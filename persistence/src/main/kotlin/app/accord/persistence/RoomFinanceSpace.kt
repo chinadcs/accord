@@ -549,6 +549,7 @@ class RoomFinanceSpace private constructor(
             ?: if (c.isCharge) DeterministicIds.seedCategory(session.spaceId, CategorySeed.FEES_AND_INTEREST) else null
 
         var accountId: String? = null
+        originError(c.originIntentionId)?.let { errors += it }
         if (c.kind == DirectPaymentKind.Cash) {
             if (c.accountId != null) errors += FieldError("accountId", ErrorCode.NotAllowed, "Dinheiro não tem conta.")
         } else {
@@ -579,10 +580,23 @@ class RoomFinanceSpace private constructor(
                 revision = 1,
                 voided = false,
                 isCharge = c.isCharge,
+                originIntentionId = c.originIntentionId,
             )
             dao.insertMovement(row)
             listOf(EntityChange(EntityType.Movement, row.id, null, 1))
         }
+    }
+
+    /**
+     * Conversão de intenção (S7, ADR 0048): a intenção precisa existir e não pode ter outro compromisso, nem excluído, já vinculado neste aparelho.
+     * O serviço impõe o mesmo vínculo único entre os aparelhos; aqui a recusa vem antes de gravar qualquer coisa.
+     */
+    private suspend fun originError(intentionId: String?): FieldError? = when {
+        intentionId == null -> null
+        dao.intention(intentionId) == null -> FieldError("originIntentionId", ErrorCode.UnknownReference, "Intenção não encontrada.")
+        dao.originLinks().any { it.intentionId == intentionId } ->
+            FieldError("originIntentionId", ErrorCode.NotAllowed, "Esta intenção já foi convertida em compromisso.")
+        else -> null
     }
 
     /** Devolve o ID da classificação (nulo é "a classificar") e acumula erro se a categoria não existe. */
@@ -610,6 +624,7 @@ class RoomFinanceSpace private constructor(
         if (c.installments < 1) errors += FieldError("installments", ErrorCode.OutOfRange, "A quantidade de parcelas começa em 1.")
         if (c.amount.cents <= 0) errors += FieldError("amount", ErrorCode.MustBePositive, "O valor precisa ser maior que zero.")
         val chosenId = validateClassification(c.classification, errors)
+        originError(c.originIntentionId)?.let { errors += it }
         if (errors.isNotEmpty()) return stop(errors)
 
         if (c.installments > 1 && c.amountMeaning == null) {
@@ -647,6 +662,7 @@ class RoomFinanceSpace private constructor(
                 origin = origin.name,
                 revision = 1,
                 voided = false,
+                originIntentionId = c.originIntentionId,
             )
             dao.insertPurchase(purchase)
             dao.insertInstallments(views.map { it.toRow(purchase.id) })
@@ -759,6 +775,7 @@ class RoomFinanceSpace private constructor(
         if (c.description.isBlank()) errors += FieldError("description", ErrorCode.Required, "Informe a descrição.")
         if (c.amount.cents <= 0) errors += FieldError("amount", ErrorCode.MustBePositive, "O valor precisa ser maior que zero.")
         val classificationId = validateClassification(c.classification, errors)
+        originError(c.originIntentionId)?.let { errors += it }
         val payment = c.payment
         if (payment != null) validateSettlement(payment, "payment", errors)
         val givenAccount = c.accountId
@@ -789,6 +806,7 @@ class RoomFinanceSpace private constructor(
                 origin = origin.name,
                 revision = 1,
                 voided = false,
+                originIntentionId = c.originIntentionId,
             )
             dao.insertBoleto(row)
             listOf(EntityChange(EntityType.Boleto, row.id, null, 1))
@@ -990,6 +1008,7 @@ class RoomFinanceSpace private constructor(
         if (accountId != null && dao.account(accountId) == null) {
             errors += FieldError("accountId", ErrorCode.UnknownReference, "Conta não encontrada.")
         }
+        originError(c.originIntentionId)?.let { errors += it }
         if (errors.isNotEmpty()) return stop(errors)
 
         return Planned.Go(months = setOf(YearMonth.from(c.firstDate)), undoable = true) {
@@ -1006,6 +1025,7 @@ class RoomFinanceSpace private constructor(
                     origin = origin.name,
                     revision = 1,
                     voided = false,
+                    originIntentionId = c.originIntentionId,
                 ),
             )
             dao.insertSegments(
@@ -1557,9 +1577,16 @@ class RoomFinanceSpace private constructor(
 
     override suspend fun iconAssociations(): QueryResult<List<IconAssociationView>> = query { iconPlanner.viewsOf(dao.iconAssociations()) }
 
-    override suspend fun intentions(): QueryResult<List<IntentionView>> = query { dao.intentions().map { intentionPlanner.viewOf(it, syncStatus.statusOf(EntityType.Intention, it.id)) } }
+    override suspend fun intentions(): QueryResult<List<IntentionView>> = query {
+        val links = dao.originLinks().associateBy { it.intentionId }
+        dao.intentions().map { intentionPlanner.viewOf(it, syncStatus.statusOf(EntityType.Intention, it.id), links[it.id]) }
+    }
 
-    override suspend fun intention(id: String): QueryResult<IntentionView?> = query { dao.intention(id)?.let { intentionPlanner.viewOf(it, syncStatus.statusOf(EntityType.Intention, it.id)) } }
+    override suspend fun intention(id: String): QueryResult<IntentionView?> = query {
+        dao.intention(id)?.let { row ->
+            intentionPlanner.viewOf(row, syncStatus.statusOf(EntityType.Intention, row.id), dao.originLinks().firstOrNull { it.intentionId == row.id })
+        }
+    }
 
     override suspend fun incomeCategories(): QueryResult<List<IncomeCategoryNode>> = query {
         dao.incomeCategories().map { IncomeCategoryNode(it.id, it.name, it.sortOrder, it.iconKey, it.seedKey, it.revision) }

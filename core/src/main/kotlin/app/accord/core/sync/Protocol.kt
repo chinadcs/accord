@@ -84,6 +84,9 @@ enum class RejectReason {
 
     /** Evento de aviso é imutável (ADR 0044): não se altera nem se remove um que o serviço já tem. */
     AlertEventImmutable,
+
+    /** Compromisso com intenção de origem inexistente ou de outro espaço (ADR 0048): nada é aplicado. */
+    OriginNotFound,
 }
 
 sealed interface OperationResult {

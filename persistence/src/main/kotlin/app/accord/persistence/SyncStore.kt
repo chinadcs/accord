@@ -167,14 +167,19 @@ class SyncStore(
         )
         for (change in sync.changesOf(op.operationId)) {
             val remote = remotes.firstOrNull { it.type == change.entityType && it.id == change.entityId }
+            // ADR 0048: outro compromisso, de identidade diferente, já converteu a mesma intenção.
+            val counterpart = if (remote == null) divergentCounterpart(change, remotes) else null
+            val shown = remote ?: counterpart
             sync.upsertConflictEntity(
                 ConflictEntityRow(
                     operationId = op.operationId, entityType = change.entityType, entityId = change.entityId,
                     localState = change.state, localTombstone = change.tombstone,
-                    remoteState = remote?.state, remoteTombstone = remote?.tombstone ?: false,
-                    remoteVersion = remote?.version, remoteAuthorId = remote?.authorId, remoteServiceMillis = remote?.serviceTimeMillis,
+                    remoteState = shown?.state, remoteTombstone = shown?.tombstone ?: false,
+                    remoteVersion = shown?.version, remoteAuthorId = shown?.authorId, remoteServiceMillis = shown?.serviceTimeMillis,
+                    counterpartType = counterpart?.type, counterpartId = counterpart?.id,
                 ),
             )
+            if (counterpart != null) holdDivergentConversion(change, counterpart)
         }
         sync.setOperationState(op.operationId, OpState.CONFLICT, false, null)
     }
@@ -216,6 +221,64 @@ class SyncStore(
      * Adota o estado canônico de um evento de aviso e garante a situação de exibição deste aparelho: a que já existe para a chave é mantida (um aparelho que
      * já exibiu não exibe de novo); sem ela, nasce da origem do conhecimento (S5, [AlertDisplay.onKnown]).
      */
+    // ---- divergência de conversão (ADR 0048) ----
+
+    private val rootTypes = setOf("Movement", "CardPurchase", "Boleto", "Recurrence")
+
+    private fun originOf(state: String): String? = runCatching {
+        (json.parseToJsonElement(state).jsonObject["originIntentionId"] as? kotlinx.serialization.json.JsonPrimitive)
+            ?.takeIf { it !is kotlinx.serialization.json.JsonNull }?.content
+    }.getOrNull()
+
+    /** O compromisso já reconhecido pelo serviço para a mesma intenção, de identidade diferente da deste aparelho. */
+    private fun divergentCounterpart(change: OperationChangeRow, remotes: List<RemoteEntityState>): RemoteEntityState? {
+        if (change.entityType !in rootTypes || change.tombstone) return null
+        val origin = originOf(change.state) ?: return null
+        return remotes.firstOrNull { it.type in rootTypes && it.id != change.entityId && originOf(it.state) == origin }
+    }
+
+    private suspend fun refreshDivergence(remote: RemoteEntityState) {
+        for (conflict in sync.unresolvedConflicts()) {
+            for (row in sync.conflictEntities(conflict.operationId)) {
+                if (row.counterpartType == remote.type && row.counterpartId == remote.id && (row.remoteVersion ?: 0) < remote.version) {
+                    sync.upsertConflictEntity(
+                        row.copy(
+                            remoteState = remote.state, remoteTombstone = remote.tombstone, remoteVersion = remote.version,
+                            remoteAuthorId = remote.authorId, remoteServiceMillis = remote.serviceTimeMillis,
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    /** Operação ainda aberta deste aparelho que converte a mesma intenção com outra identidade, se houver. */
+    private suspend fun divergentLocalOperation(remote: RemoteEntityState): OperationRow? {
+        if (remote.type !in rootTypes) return null
+        val origin = originOf(remote.state) ?: return null
+        return sync.operationsIn(OpState.OPEN).firstOrNull { op ->
+            op.syncState != OpState.CONFLICT && sync.changesOf(op.operationId).any {
+                it.entityType in rootTypes && it.entityId != remote.id && !it.tombstone && originOf(it.state) == origin
+            }
+        }
+    }
+
+    /**
+     * Enquanto a divergência está aberta o orçamento conta uma única compra: a já reconhecida entra aqui e a deste aparelho fica oculta
+     * (excluída só localmente, sem operação), com o estado guardado no conflito para a escolha. A data não decide qual vale.
+     */
+    private suspend fun holdDivergentConversion(change: OperationChangeRow, counterpart: RemoteEntityState) {
+        EntityStates.apply(dao, EntityType.valueOf(counterpart.type), counterpart.id, counterpart.state)
+        dao.upsertSync(listOf(EntitySyncRow(counterpart.type, counterpart.id, counterpart.version)))
+        val type = EntityType.valueOf(change.entityType)
+        val current = EntityStates.read(dao, type, change.entityId) ?: return
+        val hidden = kotlinx.serialization.json.JsonObject(
+            json.parseToJsonElement(current.state).jsonObject.filterKeys { it != "originIntentionId" } +
+                ("voided" to kotlinx.serialization.json.JsonPrimitive(true)),
+        )
+        EntityStates.apply(dao, type, change.entityId, hidden.toString())
+    }
+
     private suspend fun adoptAlertEvent(remote: RemoteEntityState, source: EventSource) {
         EntityStates.apply(dao, EntityType.AlertEvent, remote.id, remote.state)
         dao.upsertSync(listOf(EntitySyncRow(remote.type, remote.id, remote.version)))
@@ -251,6 +314,13 @@ class SyncStore(
                 EntityStates.apply(dao, type, remote.id, remote.state)
                 dao.upsertSync(listOf(EntitySyncRow(remote.type, remote.id, remote.version)))
                 applied += EntityRef(type, remote.id)
+                // ADR 0048: uma divergência em revisão passa a mostrar a versão mais nova do já reconhecido (nova edição exige nova comparação).
+                refreshDivergence(remote)
+                // ADR 0048: chegou o compromisso do outro aparelho para uma intenção que este aparelho também converteu e ainda não enviou.
+                divergentLocalOperation(remote)?.let { local ->
+                    recordConflict(local, listOf(remote))
+                    conflicts++
+                }
             } else {
                 val op = open.first()
                 val existing = sync.conflict(op.operationId)
@@ -259,7 +329,9 @@ class SyncStore(
                     conflicts++
                 } else {
                     // A comparação em andamento passa a mostrar a versão mais nova.
-                    val row = sync.conflictEntities(op.operationId).firstOrNull { it.entityType == remote.type && it.entityId == remote.id }
+                    val row = sync.conflictEntities(op.operationId).firstOrNull {
+                        (it.entityType == remote.type && it.entityId == remote.id) || (it.counterpartType == remote.type && it.counterpartId == remote.id)
+                    }
                     val change = sync.changesOf(op.operationId).firstOrNull { it.entityType == remote.type && it.entityId == remote.id }
                     val base = row ?: change?.let {
                         ConflictEntityRow(
@@ -405,6 +477,7 @@ class SyncStore(
                 local = local,
                 remote = remote,
                 differingFields = if (remote == null) emptyList() else differingFields(e.localState, remote.state),
+                counterpart = e.counterpartId?.let { EntityRef(EntityType.valueOf(checkNotNull(e.counterpartType)), it) },
             )
         }
         val closure = closureOf(op).drop(1).map { it.operationId }
@@ -454,9 +527,13 @@ class SyncStore(
         val adopted = mutableSetOf<String>()
         for (row in rows) {
             val state = row.remoteState ?: continue
-            EntityStates.apply(dao, EntityType.valueOf(row.entityType), row.entityId, state)
-            dao.upsertSync(listOf(EntitySyncRow(row.entityType, row.entityId, checkNotNull(row.remoteVersion))))
-            adopted += key(row.entityType, row.entityId)
+            val targetType = row.counterpartType ?: row.entityType
+            val targetId = row.counterpartId ?: row.entityId
+            EntityStates.apply(dao, EntityType.valueOf(targetType), targetId, state)
+            dao.upsertSync(listOf(EntitySyncRow(targetType, targetId, checkNotNull(row.remoteVersion))))
+            adopted += key(targetType, targetId)
+            // O compromisso deste aparelho nunca foi reconhecido e já está oculto: nada dele volta à fila.
+            if (row.counterpartId != null) adopted += key(row.entityType, row.entityId)
         }
         val keys = changedKeys(closure)
         closure.forEach { sync.setOperationState(it.operationId, OpState.SUPERSEDED, false, null) }
@@ -475,10 +552,20 @@ class SyncStore(
         val (conflict, op, rows) = loadForResolution(operationId) ?: return@transaction ResolveResult.NotFound
         if (isStale(rows, seen)) return@transaction ResolveResult.Stale(view(conflict))
         val closure = closureOf(op)
+        // ADR 0048: manter o compromisso deste aparelho aplica os dados dele como edição do já reconhecido, que conserva a identidade.
+        if (rows.any { it.counterpartId != null && it.counterpartType != it.entityType }) return@transaction ResolveResult.KindsDiffer
+        val renamed = mutableMapOf<String, EntityKey>()
         for (row in rows) {
-            row.remoteVersion?.let { dao.upsertSync(listOf(EntitySyncRow(row.entityType, row.entityId, it))) }
+            val counterpartId = row.counterpartId
+            if (counterpartId != null) {
+                EntityStates.apply(dao, EntityType.valueOf(row.entityType), counterpartId, row.localState.replace(row.entityId, counterpartId))
+                dao.upsertSync(listOf(EntitySyncRow(row.entityType, counterpartId, checkNotNull(row.remoteVersion))))
+                renamed[key(row.entityType, row.entityId)] = EntityKey(row.entityType, counterpartId)
+            } else {
+                row.remoteVersion?.let { dao.upsertSync(listOf(EntitySyncRow(row.entityType, row.entityId, it))) }
+            }
         }
-        val keys = changedKeys(closure)
+        val keys = changedKeys(closure).map { renamed[key(it.type, it.id)] ?: it }.distinct()
         closure.forEach { sync.setOperationState(it.operationId, OpState.SUPERSEDED, false, null) }
         sync.upsertConflict(conflict.copy(status = ConflictStatus.RESOLVED, choice = "LOCAL"))
         val created = createOperation(op, closure, keys)

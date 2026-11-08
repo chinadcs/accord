@@ -5,6 +5,9 @@ import app.accord.core.LimitScope
 import app.accord.core.Money
 import app.accord.core.TotalChange
 import app.accord.core.space.AddAccount
+import app.accord.core.space.AmountMeaning
+import app.accord.core.space.CorrectEntry
+import app.accord.core.space.RegisterCardPurchase
 import app.accord.core.space.BankRef
 import app.accord.core.space.CategoryLimitEdit
 import app.accord.core.space.SetMyDefaultAccount
@@ -144,6 +147,7 @@ class IntentionTest : SpaceTestBase() {
         private val engine = SyncEngine(store, service, access)
         val space get() = handle.space
         suspend fun synced() = assertIs<SyncOutcome.Completed>(engine.syncNow())
+        suspend fun syncOnce() = engine.syncNow()
     }
 
     private lateinit var ana: Device
@@ -208,5 +212,130 @@ class IntentionTest : SpaceTestBase() {
         assertTrue(sentTypes.all { name -> EntityType.entries.any { it.name == name } }, "só tipos compartilhados do protocolo")
         val raw = service.receivedOperations.joinToString { op -> op.changes.joinToString { it.state } }
         assertFalse("scenario" in raw.lowercase() || "transcript" in raw.lowercase(), "nada de cenário ou transcrição no que sai")
+    }
+
+    // ---- conversão: respostas perdidas e conversões concorrentes (cenários 12, 13 e 15) ----
+
+    private fun months() = (0..5).map { nov.plusMonths(it.toLong()) }
+
+    private fun purchase(origin: String, installments: Int = 6, total: Money = brl(1200), description: String = "Televisão") = RegisterCardPurchase(
+        description = description, classification = Classification.Category(seed("eletronicos.equipamentos")), date = d(2026, 10, 24),
+        amount = total, amountMeaning = AmountMeaning.Total, installments = installments, invoice = nov, originIntentionId = origin,
+    )
+
+    private suspend fun Device.convert(intention: String, command: RegisterCardPurchase = purchase(intention)) =
+        space.execute(handle.env(), command).applied().changes.single().id
+
+    private suspend fun Device.knownIn(month: java.time.YearMonth) = space.commitments(month).value().knownTotal
+
+    private suspend fun Device.conversionOf(intention: String) = space.intention(intention).value()!!.conversion
+
+    private suspend fun twoDevicesWithIntention(): String {
+        couple()
+        val intention = ana.space.execute(ana.handle.env(), CreateIntention("Televisão", brl(1200), nov)).applied().changes.single().id
+        ana.synced(); bruno.synced()
+        return intention
+    }
+
+    /** Entidades no serviço além da intenção. */
+    private fun commitmentsOnService() = service.entityCount(spaceId) - 1
+
+    @Test fun `resposta perdida na conversao e reenvio deixam um unico compromisso no servidor`() = runBlocking<Unit> {
+        val intention = twoDevicesWithIntention()
+        val c1 = ana.convert(intention)
+        service.loseNextResponse()
+        assertIs<SyncOutcome.Stopped>(ana.syncOnce())
+        ana.synced()
+        bruno.synced()
+        assertEquals(c1, bruno.conversionOf(intention)!!.id)
+        assertEquals(1, commitmentsOnService())
+        for (m in months()) assertEquals(brl(200), bruno.knownIn(m), "fatura de $m, uma vez só")
+    }
+
+    @Test fun `duas conversoes offline, o servidor fica com uma, o orcamento de quem chegou depois conta a compra uma vez e a escolha vale nos dois`() = runBlocking<Unit> {
+        val intention = twoDevicesWithIntention()
+        val c1 = ana.convert(intention)
+        val c2 = bruno.convert(intention, purchase(intention, installments = 3, total = brl(1200), description = "TV do Bruno"))
+        assertTrue(c1 != c2)
+        ana.synced() // a conversão de Ana é a primeira reconhecida
+        bruno.synced()
+
+        // O servidor tem só C1; Bruno vê a divergência, sem duas televisões no orçamento.
+        assertEquals(1, bruno.store.summary().openConflicts)
+        val view = assertNotNull(bruno.store.conflicts().single())
+        val entity = view.entities.single()
+        assertEquals(c2, entity.ref.id)
+        assertEquals(c1, entity.counterpart!!.id)
+        assertTrue("TV do Bruno" in entity.local.state && "Televisão" in entity.remote!!.state, "as duas versões lado a lado")
+        assertEquals(c1, bruno.conversionOf(intention)!!.id, "enquanto a divergência está aberta a intenção aponta para o já reconhecido")
+        for (m in months()) assertEquals(brl(200), bruno.knownIn(m), "o orçamento de Bruno conta a compra uma só vez em $m")
+        assertEquals(brl(0), bruno.knownIn(nov.plusMonths(6)))
+
+        // Sem pré-seleção: nada muda até a escolha. Manter a já reconhecida.
+        assertIs<ResolveResult.Resolved>(bruno.store.resolveWithRemote(view.operationId, view.seenRemoteVersions))
+        bruno.synced(); ana.synced()
+        for (device in listOf(ana, bruno)) {
+            assertEquals(c1, device.conversionOf(intention)!!.id)
+            for (m in months()) assertEquals(brl(200), device.knownIn(m))
+            assertEquals(1, device.space.commitments(nov).value().items.size, "um só compromisso")
+        }
+        assertEquals(0, bruno.store.summary().openConflicts)
+        assertEquals(1, commitmentsOnService(), "o servidor só tem C1")
+    }
+
+    @Test fun `manter a conversao deste aparelho aplica os dados dela ao ja reconhecido, com a identidade dele`() = runBlocking<Unit> {
+        val intention = twoDevicesWithIntention()
+        val c1 = ana.convert(intention)
+        bruno.convert(intention, purchase(intention, installments = 3, total = brl(1200), description = "TV do Bruno"))
+        ana.synced(); bruno.synced()
+        val view = assertNotNull(bruno.store.conflicts().single())
+
+        assertIs<ResolveResult.Resolved>(bruno.store.resolveWithLocal(view.operationId, view.seenRemoteVersions))
+        bruno.synced(); ana.synced()
+        for (device in listOf(ana, bruno)) {
+            val conversion = device.conversionOf(intention)!!
+            assertEquals(c1, conversion.id, "a identidade do já reconhecido é mantida")
+            val detail = device.space.purchase(c1).value()!!
+            assertEquals("TV do Bruno", detail.description)
+            assertEquals(3, detail.installments.size, "os dados do aparelho de Bruno")
+            assertEquals(brl(400), device.knownIn(nov), "R$ 1.200 em 3 parcelas, uma vez só")
+            assertEquals(brl(0), device.knownIn(nov.plusMonths(3)))
+        }
+        assertEquals(0, bruno.store.summary().openConflicts)
+        assertEquals(1, commitmentsOnService())
+    }
+
+    @Test fun `uma nova edicao do compromisso reconhecido durante a revisao exige nova comparacao`() = runBlocking<Unit> {
+        val intention = twoDevicesWithIntention()
+        val c1 = ana.convert(intention)
+        bruno.convert(intention)
+        ana.synced(); bruno.synced()
+        val view = assertNotNull(bruno.store.conflicts().single())
+
+        // Ana edita C1 enquanto Bruno compara.
+        ana.space.execute(ana.handle.env(), CorrectEntry(c1, description = "Televisão 55")).applied()
+        ana.synced(); bruno.synced()
+        val stale = bruno.store.resolveWithLocal(view.operationId, view.seenRemoteVersions)
+        assertIs<ResolveResult.Stale>(stale)
+        assertTrue(stale.view.entities.single().remote!!.state.contains("Televisão 55"), "a comparação mostra a versão nova")
+
+        assertIs<ResolveResult.Resolved>(bruno.store.resolveWithRemote(stale.view.operationId, stale.view.seenRemoteVersions))
+        bruno.synced(); ana.synced()
+        assertEquals("Televisão 55", bruno.space.purchase(c1).value()!!.description)
+    }
+
+    @Test fun `editar a intencao e converte-la ao mesmo tempo nao gera conflito`() = runBlocking<Unit> {
+        val intention = twoDevicesWithIntention()
+        ana.space.execute(ana.handle.env(), EditIntention(intention, "Televisão 55", brl(1300), nov, null)).applied()
+        val c = bruno.convert(intention)
+        ana.synced(); bruno.synced(); ana.synced()
+        assertEquals(0, ana.store.summary().openConflicts)
+        assertEquals(0, bruno.store.summary().openConflicts)
+        for (device in listOf(ana, bruno)) {
+            val view = device.space.intention(intention).value()!!
+            assertEquals("Televisão 55", view.name)
+            assertEquals(c, view.conversion!!.id)
+            assertEquals("Televisão", device.space.purchase(c).value()!!.description, "o compromisso mantém os dados salvos por quem converteu")
+        }
     }
 }

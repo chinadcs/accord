@@ -125,7 +125,10 @@ internal object EntityStates {
             EntityType.Card -> dao.upsertCard(json.decodeFromJsonElement(CardRow.serializer(), withRevision()))
             EntityType.CardPurchase -> {
                 dao.upsertPurchase(json.decodeFromJsonElement(CardPurchaseRow.serializer(), withRevision()))
-                dao.upsertInstallments(children("installments", InstallmentRow.serializer()).map { it.copy(purchaseId = id) })
+                val installments = children("installments", InstallmentRow.serializer()).map { it.copy(purchaseId = id) }
+                // A versão aplicada pode ter menos parcelas que a anterior (conversão mantida deste aparelho, ADR 0048): as que sobram saem.
+                if (installments.isNotEmpty()) dao.deleteInstallmentsExcept(id, installments.map { it.number })
+                dao.upsertInstallments(installments)
             }
             EntityType.Boleto -> dao.upsertBoleto(json.decodeFromJsonElement(BoletoRow.serializer(), withRevision()))
             EntityType.Income -> dao.upsertIncome(json.decodeFromJsonElement(IncomeRow.serializer(), withRevision()))

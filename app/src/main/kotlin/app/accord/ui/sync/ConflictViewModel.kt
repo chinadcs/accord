@@ -100,6 +100,9 @@ class ConflictViewModel(
                 is ResolveResult.Stale -> _ui.update {
                     it.copy(working = false, view = result.view, selected = null, stale = true)
                 }
+                ResolveResult.KindsDiffer -> _ui.update {
+                    it.copy(working = false, selected = null, message = ScreenMessage(MessageKind.Attention, R.string.conflict_kinds_differ))
+                }
                 ResolveResult.NotFound -> _ui.update {
                     it.copy(working = false, finished = true, message = ScreenMessage(MessageKind.Neutral, R.string.conflict_not_found))
                 }

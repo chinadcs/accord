@@ -69,6 +69,12 @@ data class ConflictEntityRow(
     val remoteVersion: Long?,
     val remoteAuthorId: String?,
     val remoteServiceMillis: Long?,
+    /**
+     * Divergência de conversão (ADR 0048): o serviço já reconheceu outro compromisso para a mesma intenção. [entityId] é o compromisso deste aparelho
+     * (que nunca foi reconhecido) e estes campos identificam o já reconhecido, cujo estado está em [remoteState]. Nulos num conflito comum.
+     */
+    val counterpartType: String? = null,
+    val counterpartId: String? = null,
 )
 
 @Dao

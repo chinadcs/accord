@@ -630,6 +630,101 @@ abstract class SpaceServiceContract {
         assertIs<OperationResult.Applied>(back)
     }
 
+    // ---- vínculo de conversão da intenção (ADR 0048) ----
+
+    private fun intention(id: String) = change(id, state = """{"name":"Televisão"}""", type = "Intention")
+
+    private fun commitment(id: String, origin: String?, type: String = "CardPurchase", base: Long? = null, extra: String = ""): EntityChangeEnvelope {
+        val originField = if (origin != null) "," + quote("originIntentionId") + ":" + quote(origin) else ""
+        return change(id, base, "{" + quote("description") + ":" + quote("Televisão") + extra + originField + "}", type)
+    }
+
+    /** O JSON do estado pode voltar reformatado (o banco guarda jsonb): confere o campo pelo conteúdo, não pelo espaçamento. */
+    private fun hasOrigin(state: String, id: String) = Regex("\"originIntentionId\"\\s*:\\s*\"" + Regex.escape(id) + "\"").containsMatchIn(state)
+
+    private fun quote(text: String) = "\"" + text + "\""
+
+    @Test
+    fun `a primeira conversao da intencao e aplicada e a repeticao devolve o mesmo reconhecimento`() = test {
+        val couple = newCouple()
+        val i = UUID.randomUUID().toString()
+        val c1 = UUID.randomUUID().toString()
+        push(couple.creator, couple.spaceId, op(couple.spaceId, intention(i)))
+        val converted = op(couple.spaceId, commitment(c1, i), id = "op-converter-$c1")
+        val first = push(couple.creator, couple.spaceId, converted).single()
+        assertIs<OperationResult.Applied>(first)
+        val repeated = push(couple.creator, couple.spaceId, converted).single()
+        assertIs<OperationResult.Applied>(repeated)
+        assertTrue(repeated.repeated)
+        assertEquals(first.versions, repeated.versions)
+        assertEquals(1, ok(service.pull(couple.creator.accessToken, couple.spaceId, 0, 100)).changes.count { it.type == "CardPurchase" })
+    }
+
+    @Test
+    fun `o segundo compromisso da mesma intencao volta como conflito com o ja reconhecido e nada e aplicado`() = test {
+        val couple = newCouple()
+        val i = UUID.randomUUID().toString()
+        val c1 = UUID.randomUUID().toString()
+        val c2 = UUID.randomUUID().toString()
+        push(couple.creator, couple.spaceId, op(couple.spaceId, intention(i)))
+        push(couple.creator, couple.spaceId, op(couple.spaceId, commitment(c1, i)))
+        // O outro aparelho, sem saber, converte a mesma intenção (inclusive em outro tipo de compromisso).
+        for (type in listOf("CardPurchase", "Boleto")) {
+            val result = push(couple.partner!!, couple.spaceId, op(couple.spaceId, commitment(c2, i, type))).single()
+            val conflict = assertIs<OperationResult.Conflict>(result)
+            assertEquals(c1, conflict.current.single().id, "a identidade do já reconhecido")
+            assertEquals(1, conflict.current.single().version)
+        }
+        val stored = ok(service.pull(couple.creator.accessToken, couple.spaceId, 0, 100)).changes
+        assertTrue(stored.none { it.id == c2 }, "o segundo compromisso não foi gravado")
+    }
+
+    @Test
+    fun `origem inexistente ou de outro espaco e recusada sem aplicar nada`() = test {
+        val mine = newCouple()
+        val other = newCouple()
+        val foreign = UUID.randomUUID().toString()
+        push(other.creator, other.spaceId, op(other.spaceId, intention(foreign)))
+        val missing = push(mine.creator, mine.spaceId, op(mine.spaceId, commitment(UUID.randomUUID().toString(), UUID.randomUUID().toString()))).single()
+        assertEquals(RejectReason.OriginNotFound, assertIs<OperationResult.Rejected>(missing).reason)
+        val crossed = push(mine.creator, mine.spaceId, op(mine.spaceId, commitment(UUID.randomUUID().toString(), foreign))).single()
+        assertEquals(RejectReason.OriginNotFound, assertIs<OperationResult.Rejected>(crossed).reason)
+        assertTrue(ok(service.pull(mine.creator.accessToken, mine.spaceId, 0, 100)).changes.isEmpty())
+    }
+
+    @Test
+    fun `atualizar o compromisso sem o campo de origem ou com outra origem nao remove nem troca o vinculo`() = test {
+        val couple = newCouple()
+        val i = UUID.randomUUID().toString()
+        val c1 = UUID.randomUUID().toString()
+        push(couple.creator, couple.spaceId, op(couple.spaceId, intention(i)))
+        push(couple.creator, couple.spaceId, op(couple.spaceId, commitment(c1, i)))
+        // Um cliente sem o campo (por exemplo, sem a fase P2) edita o compromisso.
+        val omitted = push(couple.partner!!, couple.spaceId, op(couple.spaceId, commitment(c1, null, base = 1, extra = "," + quote("valor") + ":9000"))).single()
+        assertIs<OperationResult.Applied>(omitted)
+        val stored = ok(service.pull(couple.creator.accessToken, couple.spaceId, 0, 100)).changes.single { it.id == c1 }
+        assertEquals(2, stored.version)
+        assertTrue(hasOrigin(stored.state, i), "o vínculo continua: ${stored.state}")
+        assertTrue(stored.state.contains("9000"), "a edição foi aplicada")
+        // Trocar a origem também não vale.
+        val swapped = push(couple.creator, couple.spaceId, op(couple.spaceId, commitment(c1, UUID.randomUUID().toString(), base = 2))).single()
+        assertIs<OperationResult.Applied>(swapped)
+        val after = ok(service.pull(couple.creator.accessToken, couple.spaceId, 0, 100)).changes.single { it.id == c1 }
+        assertTrue(hasOrigin(after.state, i))
+    }
+
+    @Test
+    fun `compromisso sem origem continua aceito como antes e nao ganha vinculo depois`() = test {
+        val couple = newCouple()
+        val i = UUID.randomUUID().toString()
+        val c = UUID.randomUUID().toString()
+        push(couple.creator, couple.spaceId, op(couple.spaceId, intention(i)))
+        assertIs<OperationResult.Applied>(push(couple.creator, couple.spaceId, op(couple.spaceId, commitment(c, null))).single())
+        assertIs<OperationResult.Applied>(push(couple.creator, couple.spaceId, op(couple.spaceId, commitment(c, i, base = 1))).single())
+        val stored = ok(service.pull(couple.creator.accessToken, couple.spaceId, 0, 100)).changes.single { it.id == c }
+        assertTrue(!stored.state.contains("originIntentionId"), "o vínculo só nasce com o compromisso")
+    }
+
     // ---- evento de aviso (ADR 0044) ----
 
     private fun alert(id: String, total: Int, createIfAbsent: Boolean = true, base: Long? = null, tombstone: Boolean = false) =

@@ -373,6 +373,7 @@ class FakeSpaceService(
             return OperationResult.Conflict(op.operationId, divergent, unchanged)
         }
 
+        conversionRule(op, writes, space)?.let { return it }
         categoryRule(op, space)?.let { return it }
 
         val now = clock()
@@ -381,7 +382,7 @@ class FakeSpaceService(
             val version = (space.entities[key]?.version ?: 0) + 1
             space.cursor += 1
             space.entities[key] = RemoteEntityState(
-                type = change.type, id = change.id, version = version, state = change.state,
+                type = change.type, id = change.id, version = version, state = preserveOrigin(change, space.entities[key]),
                 tombstone = change.tombstone, authorId = account.id, serviceTimeMillis = now, cursor = space.cursor,
             )
             entityOwner[key] = space.id
@@ -390,6 +391,37 @@ class FakeSpaceService(
         val result = OperationResult.Applied(op.operationId, versions, space.cursor, repeated = false, absorbed = absorbed)
         applied[op.operationId] = AppliedRecord(space.id, op.changes, result)
         return result
+    }
+
+    /** Compromissos raiz que podem nascer de uma intenção (ADR 0048). */
+    private val originTypes = setOf("Movement", "CardPurchase", "Boleto", "Recurrence")
+
+    private fun originOf(state: String): String? =
+        ((parse(state) as? kotlinx.serialization.json.JsonObject)?.get("originIntentionId") as? kotlinx.serialization.json.JsonPrimitive)
+            ?.takeIf { it !is kotlinx.serialization.json.JsonNull }?.content
+
+    /**
+     * Vínculo de conversão (ADR 0048), igual ao SQL: o compromisso novo com origem exige a intenção no espaço (OriginNotFound) e o serviço
+     * aceita um só por intenção; o segundo volta como conflito com o compromisso já reconhecido, sem aplicar nada.
+     */
+    private fun conversionRule(op: OperationEnvelope, writes: List<EntityChangeEnvelope>, space: Space): OperationResult? {
+        for (change in writes.filter { it.type in originTypes && !it.tombstone }) {
+            if (space.entities.containsKey(EntityKey(change.type, change.id))) continue // a origem de quem já existe nunca muda
+            val origin = originOf(change.state) ?: continue
+            if (space.entities[EntityKey("Intention", origin)] == null) return reject(op, RejectReason.OriginNotFound, origin)
+            val other = space.entities.values.firstOrNull { it.type in originTypes && originOf(it.state) == origin }
+            if (other != null) return OperationResult.Conflict(op.operationId, listOf(other), emptyList())
+        }
+        return null
+    }
+
+    /** Atualização de compromisso que omite ou troca a origem não a apaga nem a muda: vale a do estado guardado. */
+    private fun preserveOrigin(change: EntityChangeEnvelope, current: RemoteEntityState?): String {
+        if (change.type !in originTypes || current == null) return change.state
+        val incoming = parse(change.state) as? kotlinx.serialization.json.JsonObject ?: return change.state
+        val kept = originOf(current.state)
+        val fields = incoming.filterKeys { it != "originIntentionId" } + (if (kept != null) mapOf("originIntentionId" to kotlinx.serialization.json.JsonPrimitive(kept)) else emptyMap())
+        return kotlinx.serialization.json.JsonObject(fields).toString()
     }
 
     /** Tipos cujo estado aponta para categoria de despesa por `classificationId` (inclusive em trechos de recorrência). */
