@@ -20,6 +20,7 @@ import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import app.accord.core.chat.ChatPayment
+import app.accord.core.chat.CorrectionField
 import app.accord.core.chat.InterpreterFailure
 import app.accord.core.chat.Proposal
 import app.accord.core.chat.QuestionField
@@ -35,6 +36,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -110,6 +112,27 @@ class ChatFlowTest {
         compose.onNodeWithText("Editar").assertIsDisplayed()
         compose.onNodeWithText("Desfazer").performClick()
         waitForText("Desfeito.")
+    }
+
+    @Test
+    fun correcaoPorTextoAtualizaOCardNoLugarMarcaCorrigidoEODesfazerRestauraOAnterior() {
+        val text = "delivery $tag 68 no cartão"
+        TestModel.interpreter.on(text, proposal("delivery $tag", "68", ref("alimentacao.delivery")))
+        send(text)
+        waitForText("Alimentação > Delivery")
+        val fix = "troca para mercado"
+        TestModel.interpreter.on(fix, Proposal.Correct(target = "r1", field = CorrectionField.Category, category = ref("alimentacao.mercado")))
+        send(fix)
+        waitForText("Alimentação > Mercado")
+        // O card vira a versão corrigida, no lugar do original: um só recibo, marcado, e a categoria antiga some.
+        waitForText("Corrigido", substring = false)
+        assertEquals(1, compose.onAllNodesWithText("Ver lançamento").fetchSemanticsNodes().size)
+        assertEquals(0, compose.onAllNodesWithText("Alimentação > Delivery", substring = true).fetchSemanticsNodes().size)
+
+        compose.onNodeWithText("Desfazer").performClick()
+        waitForText("Desfeito.")
+        waitForText("Alimentação > Delivery")
+        assertEquals(0, compose.onAllNodesWithText("Corrigido", substring = false).fetchSemanticsNodes().size)
     }
 
     @Test

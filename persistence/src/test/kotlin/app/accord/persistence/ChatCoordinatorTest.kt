@@ -13,6 +13,7 @@ import app.accord.core.chat.OptionValue
 import app.accord.core.chat.Proposal
 import app.accord.core.chat.QuestionField
 import app.accord.core.chat.QuestionState
+import app.accord.core.chat.ReceiptKind
 import app.accord.core.chat.ReceiptState
 import app.accord.core.chat.RefuseReason
 import app.accord.core.chat.StandardReply
@@ -592,6 +593,36 @@ class ChatCoordinatorTest : ChatTestBase() {
         assertEquals(UndoResult.ChangedAfter, e.coordinator.undo(receipt.id))
         assertEquals("Jantar", e.space.entry(receipt.entryId).value()!!.description)
         assertEquals(ReceiptState.ChangedLater, e.store.receipt(receipt.id)!!.state)
+    }
+
+    @Test
+    fun `edicao fora do chat atualiza o card no lugar e o desfazer do aviso restaura a versao anterior`() = runBlocking<Unit> {
+        val e = env()
+        e.deliveryRegister()
+        e.say("delivery 68 no cartão")
+        val original = e.store.snapshot().undoableReceipt()!!
+        val edit = e.space.execute(e.handle.env(), CorrectEntry(original.entryId, description = "Jantar")).applied()
+        e.coordinator.entryEdited(original.entryId, edit.operationId)
+        e.coordinator.entryEdited(original.entryId, edit.operationId)
+
+        val receipts = e.store.snapshot().receipts
+        val corrected = receipts.single { it.kind == ReceiptKind.Corrected }
+        assertEquals("Jantar", corrected.summary.description)
+        assertEquals(original.id, corrected.supersedes)
+        assertEquals(original.messageId, corrected.messageId)
+        assertEquals(ReceiptState.ChangedLater, e.store.receipt(original.id)!!.state)
+        assertEquals(corrected.id, e.store.snapshot().undoableReceipt()?.id)
+
+        e.coordinator.operationUndone(edit.operationId)
+        assertEquals(ReceiptState.Undone, e.store.receipt(corrected.id)!!.state)
+        assertEquals(ReceiptState.Active, e.store.receipt(original.id)!!.state)
+    }
+
+    @Test
+    fun `edicao de lancamento sem recibo no chat nao cria card`() = runBlocking<Unit> {
+        val e = env()
+        e.coordinator.entryEdited("nao-existe", "op-x")
+        assertTrue(e.store.snapshot().receipts.isEmpty())
     }
 
     @Test

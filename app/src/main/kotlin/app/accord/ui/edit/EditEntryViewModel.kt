@@ -215,7 +215,7 @@ class EditEntryViewModel(
         it.copy(errors = errors, saving = false, focusField = errors.keys.firstOrNull(), focusTick = it.focusTick + 1)
     }
 
-    private fun handle(result: CommandResult, delete: Boolean) {
+    private suspend fun handle(result: CommandResult, delete: Boolean) {
         when (result) {
             is CommandResult.Applied -> finish(result.receipt.operationId, result.receipt.undoable, delete)
             is CommandResult.AlreadyApplied -> finish(result.receipt.operationId, result.receipt.undoable, delete)
@@ -243,7 +243,9 @@ class EditEntryViewModel(
         }
     }
 
-    private fun finish(operationId: String, undoable: Boolean, delete: Boolean) {
+    private suspend fun finish(operationId: String, undoable: Boolean, delete: Boolean) {
+        // O card do Chat acompanha a edição antes de a tela fechar (o escopo da tela é cancelado ao sair).
+        if (!delete) provider.onEntryEdited(entryId, operationId)
         provider.feedback.post(
             FeedbackEvent(if (delete) R.string.feedback_deleted else R.string.feedback_saved_corrected, undoOperationId = operationId.takeIf { undoable }),
         )

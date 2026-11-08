@@ -4,6 +4,8 @@ import app.accord.core.chat.ChatFeedback
 import app.accord.core.chat.ChatMessage
 import app.accord.core.chat.ChatQuestionRecord
 import app.accord.core.chat.ChatReceiptRecord
+import app.accord.core.chat.ReceiptKind
+import app.accord.core.chat.ReceiptState
 import app.accord.core.chat.ChatSnapshot
 import app.accord.core.chat.ConsultSnapshot
 import app.accord.core.chat.StandardReply
@@ -39,6 +41,8 @@ sealed interface ChatItem {
         val suggestedRefs: List<String> = listOfNotNull(suggestedRef),
         /** Joinha vigente deste recibo (accord-8q5), só neste aparelho. */
         val feedback: ChatFeedback? = null,
+        /** Este card é a versão corrigida de um registro anterior, mostrada no lugar dele. */
+        val corrected: Boolean = false,
     ) : ChatItem {
         override val key get() = "r-${receipt.id}"
     }
@@ -69,16 +73,26 @@ sealed interface ChatItem {
 fun buildChatItems(snapshot: ChatSnapshot): List<ChatItem> {
     val undoable = snapshot.undoableReceipt()?.id
     val openQuestions = snapshot.questions.filter { it.state == QuestionState.Open }
+    // Correção (por texto ou pelo botão Editar) não ganha card próprio: a versão corrigida aparece no lugar do original.
+    // Corrigida e depois desfeita, a correção some e o original volta a valer.
+    val corrections = snapshot.receipts.filter { it.kind == ReceiptKind.Corrected && it.supersedes != null }
+    val successor = corrections.filter { it.state != ReceiptState.Undone }.associateBy { it.supersedes }
+    fun head(receipt: ChatReceiptRecord): ChatReceiptRecord {
+        var current = receipt
+        while (true) current = successor[current.id] ?: return current
+    }
+    val hidden = corrections.map { it.id }.toSet()
     return buildList {
         for (message in snapshot.messages.sortedWith(compareBy({ it.createdAtMillis }, { it.id }))) {
             add(ChatItem.User(message))
             when (message.state) {
                 MessageState.Sent, MessageState.Interpreting, MessageState.Applying -> add(ChatItem.Working(message))
                 MessageState.Applied, MessageState.ToClassify -> {
-                    snapshot.receipts.filter { it.messageId == message.id }.sortedBy { it.createdAtMillis }.forEach { receipt ->
+                    snapshot.receipts.filter { it.messageId == message.id && it.id !in hidden }.sortedBy { it.createdAtMillis }.forEach { original ->
+                        val receipt = head(original)
                         val question = openQuestions.firstOrNull { it.link == QuestionLink.Entry(receipt.entryId) }
                         val hints = message.categoryHints.take(3).mapNotNull { id -> question?.options?.firstOrNull { (it.value as? app.accord.core.chat.OptionValue.Category)?.id == id }?.ref }
-                        add(ChatItem.Receipt(receipt, receipt.id == undoable, question, question?.let { suggestedCategoryOption(it, message)?.ref }, hints, snapshot.feedback.firstOrNull { it.receiptId == receipt.id }))
+                        add(ChatItem.Receipt(receipt, receipt.id == undoable, question, question?.let { suggestedCategoryOption(it, message)?.ref }, hints, snapshot.feedback.firstOrNull { it.receiptId == receipt.id }, corrected = receipt.id != original.id))
                     }
                 }
                 MessageState.Asked ->

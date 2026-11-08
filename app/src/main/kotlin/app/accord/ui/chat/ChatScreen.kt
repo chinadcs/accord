@@ -445,6 +445,7 @@ private fun ReceiptCard(
                 }
             }
             ReceiptLines(summary, today)
+            if (item.corrected && receipt.state == ReceiptState.Active) StateTag(stringResource(R.string.receipt_corrected), Lucide.drawable.lucide_ic_pencil)
             if (receipt.state == ReceiptState.ChangedLater) StateTag(stringResource(R.string.receipt_changed_later), Lucide.drawable.lucide_ic_pencil)
             if (receipt.state == ReceiptState.Undone) StateTag(stringResource(R.string.receipt_undone), Lucide.drawable.lucide_ic_undo_2)
             if (receipt.state != ReceiptState.Undone) {

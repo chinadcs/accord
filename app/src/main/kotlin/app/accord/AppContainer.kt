@@ -68,6 +68,9 @@ interface SpaceProvider {
 
     /** O registro manual aberto a partir de uma mensagem do Chat foi salvo: a mensagem deixa de oferecer "Tentar de novo". */
     suspend fun onManualSaved(chatMessageId: String) {}
+
+    /** Um lançamento foi editado fora do Chat: o card dele no Chat passa a mostrar a versão atual. */
+    suspend fun onEntryEdited(entryId: String, operationId: String) {}
 }
 
 /**
@@ -252,9 +255,16 @@ class AppContainer(
         chat.value?.resolveManually(chatMessageId)
     }
 
+    override suspend fun onEntryEdited(entryId: String, operationId: String) {
+        chat.value?.entryEdited(entryId, operationId)
+    }
+
     override suspend fun undo(operationId: String): UndoOutcome =
         when (val result = space().execute(Envelope(CommandId(UUID.randomUUID().toString())), Undo(operationId))) {
-            is CommandResult.Applied, is CommandResult.AlreadyApplied -> UndoOutcome.Done.also { feedback.notifyUndone() }
+            is CommandResult.Applied, is CommandResult.AlreadyApplied -> {
+                chat.value?.operationUndone(operationId)
+                UndoOutcome.Done.also { feedback.notifyUndone() }
+            }
             is CommandResult.Rejected ->
                 if (result.errors.any { it.code == ErrorCode.ChangedAfter }) UndoOutcome.ChangedAfter else UndoOutcome.Failed
             else -> UndoOutcome.Failed

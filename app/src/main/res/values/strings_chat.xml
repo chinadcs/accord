@@ -48,6 +48,7 @@
     <string name="receipt_scope">Aplicado às %d parcelas desta compra.</string>
     <string name="receipt_to_confirm">a conferir</string>
     <string name="receipt_changed_later">Alterado depois</string>
+    <string name="receipt_corrected">Corrigido</string>
     <string name="receipt_undone">Desfeito</string>
     <string name="receipt_saved">Salvo no aparelho</string>
     <string name="receipt_action_view">Ver lançamento</string>

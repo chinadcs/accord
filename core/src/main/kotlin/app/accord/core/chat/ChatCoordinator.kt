@@ -186,26 +186,59 @@ class ChatCoordinator(
     /** Retém os votos por 30 dias; os mais antigos são apagados. */
     suspend fun purgeExpiredFeedback() = store.purgeFeedbackBefore(nowMillis() - FEEDBACK_RETENTION_MILLIS)
 
+    /** Marca o recibo como desfeito, reativa a versão que ele substituiu e ajusta as perguntas do lançamento. */
+    private suspend fun markUndone(receipt: ChatReceiptRecord, questions: List<ChatQuestionRecord>) {
+        store.saveReceipt(receipt.copy(state = ReceiptState.Undone))
+        val supersedes = receipt.supersedes?.let { store.receipt(it) }
+        if (supersedes != null && supersedes.state == ReceiptState.ChangedLater) {
+            store.saveReceipt(supersedes.copy(state = ReceiptState.Active))
+        }
+        questions.filter { it.link == QuestionLink.Entry(receipt.entryId) }.forEach { question ->
+            val next = when {
+                question.state == QuestionState.Open -> QuestionState.Discarded
+                receipt.kind == ReceiptKind.Classified && question.state == QuestionState.Answered -> QuestionState.Open
+                else -> question.state
+            }
+            if (next != question.state) store.saveQuestion(question.copy(state = next))
+        }
+    }
+
+    /**
+     * Uma edição feita fora do Chat (botão "Editar" do recibo, ou qualquer tela) mudou o lançamento: o card passa a mostrar
+     * a versão atual no lugar do original, marcado como corrigido. Lançamento sem recibo ativo no Chat não é assunto daqui.
+     */
+    suspend fun entryEdited(entryId: String, operationId: String) = stateLock.withLock {
+        if (store.receiptByOperation(operationId) != null) return@withLock
+        val original = store.receiptsOfEntry(entryId).filter { it.state == ReceiptState.Active }.maxByOrNull { it.createdAtMillis }
+            ?: return@withLock
+        val detail = space.entry(entryId).get() ?: return@withLock
+        if (detail.voided) return@withLock
+        val summary = summaryOf(entryId, null)
+        if (summary == original.summary) return@withLock
+        store.saveReceipt(original.copy(state = ReceiptState.ChangedLater, undoClosed = true))
+        store.saveReceipt(
+            ChatReceiptRecord(
+                id = newId(), messageId = original.messageId, operationId = operationId, entryId = entryId, summary = summary,
+                kind = ReceiptKind.Corrected, state = ReceiptState.Active, undoClosed = false, supersedes = original.id,
+                createdAtMillis = nowMillis(),
+            ),
+        )
+    }
+
+    /** Um Desfazer de fora do Chat (aviso depois de editar) desfez a operação deste recibo: o card volta à versão anterior. */
+    suspend fun operationUndone(operationId: String) = stateLock.withLock {
+        val receipt = store.receiptByOperation(operationId)?.takeIf { it.state == ReceiptState.Active } ?: return@withLock
+        markUndone(receipt, store.snapshot().questions)
+    }
+
     /** Desfaz a operação do recibo mais recente. Se algo mudou depois, a fachada recusa e nada é apagado. */
     suspend fun undo(receiptId: String): UndoResult = stateLock.withLock {
         val snapshot = store.snapshot()
         val receipt = snapshot.undoableReceipt()?.takeIf { it.id == receiptId } ?: return UndoResult.NotAvailable
         when (val result = space.execute(Envelope(CommandId(newId()), Origin.Chat), Undo(receipt.operationId))) {
             is CommandResult.Applied, is CommandResult.AlreadyApplied -> {
-                store.saveReceipt(receipt.copy(state = ReceiptState.Undone))
                 onFinanceChanged()
-                val supersedes = receipt.supersedes?.let { store.receipt(it) }
-                if (supersedes != null && supersedes.state == ReceiptState.ChangedLater) {
-                    store.saveReceipt(supersedes.copy(state = ReceiptState.Active))
-                }
-                snapshot.questions.filter { it.link == QuestionLink.Entry(receipt.entryId) }.forEach { question ->
-                    val next = when {
-                        question.state == QuestionState.Open -> QuestionState.Discarded
-                        receipt.kind == ReceiptKind.Classified && question.state == QuestionState.Answered -> QuestionState.Open
-                        else -> question.state
-                    }
-                    if (next != question.state) store.saveQuestion(question.copy(state = next))
-                }
+                markUndone(receipt, snapshot.questions)
                 UndoResult.Done
             }
             is CommandResult.Rejected -> {
@@ -663,7 +696,7 @@ class ChatCoordinator(
                 onFinanceChanged()
                 store.saveQuestion(question.copy(state = QuestionState.Answered))
                 supersedeAndSave(
-                    entryId = link.entryId, newEntryId = link.entryId, receipt = receipt, message = message,
+                    entryId = link.entryId, newEntryId = link.entryId, receipt = receipt, messageId = message.id,
                     kind = ReceiptKind.Classified, scope = null,
                 )
                 store.saveMessage(message.copy(state = MessageState.Applied))
@@ -712,7 +745,7 @@ class ChatCoordinator(
                     ?: plan.entryId
                 val scope = (plan.change as? EntryChange.Category ?: plan.change as? EntryChange.Description)
                     ?.let { detail.purchase?.installments?.size?.takeIf { count -> count > 1 } }
-                supersedeAndSave(plan.entryId, newEntryId, receipt, message, ReceiptKind.Corrected, scope)
+                supersedeAndSave(plan.entryId, newEntryId, receipt, message.id, ReceiptKind.Corrected, scope)
                 if (plan.change is EntryChange.Category) {
                     store.snapshot().questions.filter { it.link == QuestionLink.Entry(plan.entryId) && it.state == QuestionState.Open }
                         .forEach { store.saveQuestion(it.copy(state = QuestionState.ResolvedElsewhere)) }
@@ -740,7 +773,7 @@ class ChatCoordinator(
         entryId: String,
         newEntryId: String,
         receipt: Receipt,
-        message: ChatMessage,
+        messageId: String,
         kind: ReceiptKind,
         scope: Int?,
     ) {
@@ -750,7 +783,7 @@ class ChatCoordinator(
         store.saveReceipt(
             ChatReceiptRecord(
                 id = newId(),
-                messageId = message.id,
+                messageId = messageId,
                 operationId = receipt.operationId,
                 entryId = newEntryId,
                 summary = summaryOf(newEntryId, scope),

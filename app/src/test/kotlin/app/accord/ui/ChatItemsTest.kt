@@ -80,6 +80,49 @@ class ChatItemsTest {
         assertTrue(buildChatItems(changed).filterIsInstance<ChatItem.Receipt>().none { it.undoAvailable })
     }
 
+    private fun correction(id: String, messageId: String, at: Long, replaces: String, state: ReceiptState = ReceiptState.Active) =
+        ChatReceiptRecord(id, messageId, "op-$id", "e-r1", summary().copy(description = "Jantar"), ReceiptKind.Corrected, state, false, replaces, at)
+
+    @Test
+    fun `correcao aparece no lugar do original marcada como corrigida e o balao da correcao fica sem card`() {
+        val snapshot = ChatSnapshot(
+            messages = listOf(message("a", 10, MessageState.Applied), message("b", 20, MessageState.Applied)),
+            questions = emptyList(),
+            receipts = listOf(receipt("r1", "a", 11, ReceiptState.ChangedLater), correction("c1", "b", 21, "r1")),
+        )
+        val items = buildChatItems(snapshot)
+        assertEquals(listOf("u-a", "r-c1", "u-b"), items.map { it.key })
+        val card = items.filterIsInstance<ChatItem.Receipt>().single()
+        assertTrue(card.corrected)
+        assertTrue(card.undoAvailable)
+        assertEquals("Jantar", card.receipt.summary.description)
+    }
+
+    @Test
+    fun `correcao desfeita some e o original volta a valer`() {
+        val snapshot = ChatSnapshot(
+            messages = listOf(message("a", 10, MessageState.Applied), message("b", 20, MessageState.Applied)),
+            questions = emptyList(),
+            receipts = listOf(receipt("r1", "a", 11), correction("c1", "b", 21, "r1", ReceiptState.Undone)),
+        )
+        val card = buildChatItems(snapshot).filterIsInstance<ChatItem.Receipt>().single()
+        assertEquals("r1", card.receipt.id)
+        assertTrue(!card.corrected)
+    }
+
+    @Test
+    fun `duas correcoes seguidas mostram so a ultima no lugar do original`() {
+        val snapshot = ChatSnapshot(
+            messages = listOf(message("a", 10, MessageState.Applied), message("b", 20, MessageState.Applied), message("c", 30, MessageState.Applied)),
+            questions = emptyList(),
+            receipts = listOf(
+                receipt("r1", "a", 11, ReceiptState.ChangedLater), correction("c1", "b", 21, "r1", ReceiptState.ChangedLater),
+                correction("c2", "c", 31, "c1"),
+            ),
+        )
+        assertEquals(listOf("u-a", "r-c2", "u-b", "u-c"), buildChatItems(snapshot).map { it.key })
+    }
+
     @Test
     fun `pergunta de categoria fica no recibo a classificar e some depois de respondida`() {
         val open = ChatSnapshot(
