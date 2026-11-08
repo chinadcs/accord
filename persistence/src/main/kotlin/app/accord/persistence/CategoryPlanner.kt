@@ -1,5 +1,8 @@
 package app.accord.persistence
 
+import app.accord.core.space.CategorySeed
+import java.util.UUID
+import app.accord.core.space.CreateCategory
 import app.accord.core.Frequency
 import app.accord.core.LimitApplyResult
 import app.accord.core.LimitTimeline
@@ -38,6 +41,39 @@ internal class CategoryPlanner(
     private val tree: suspend () -> CategoryTree,
     private val currentMonth: () -> YearMonth,
 ) {
+    suspend fun planCreate(c: CreateCategory): Planned {
+        val name = c.name.trim()
+        if (name.isEmpty()) return stop("name", ErrorCode.Required, "Informe o nome da categoria.")
+        val parentId = c.parentId
+        if (parentId != null) {
+            val parent = dao.activeCategory(parentId)
+                ?: return stop("parentId", ErrorCode.UnknownReference, "Categoria principal não encontrada.")
+            if (parent.parentId != null) {
+                return stop("parentId", ErrorCode.NotAllowed, "Subcategoria não pode ter subcategorias.")
+            }
+        }
+        val key = NameKey.of(name)
+        val now = currentMonth()
+        val siblings = tree().childrenAt(parentId, now)
+        if (siblings.any { it.nameKey == key }) {
+            return stop("name", ErrorCode.DuplicateName, "Já existe uma categoria com esse nome neste nível. Escolha outro nome.")
+        }
+        return Planned.Go(months = emptySet()) {
+            val row = CategoryRow(
+                id = UUID.randomUUID().toString(),
+                parentId = parentId,
+                name = name,
+                nameKey = key,
+                sortOrder = (siblings.maxOfOrNull { it.sortOrder } ?: -1) + 1,
+                iconKey = CategorySeed.CUSTOM_ICON,
+                seedKey = null,
+                revision = 1,
+            )
+            dao.insertCategory(row)
+            listOf(EntityChange(EntityType.Category, row.id, null, 1))
+        }
+    }
+
     suspend fun planRename(c: RenameCategory): Planned {
         val categories = tree()
         val row = categories.row(c.categoryId) ?: return stop("categoryId", ErrorCode.UnknownReference, "Categoria não encontrada.")

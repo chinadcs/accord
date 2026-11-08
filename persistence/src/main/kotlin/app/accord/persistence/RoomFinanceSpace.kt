@@ -6,7 +6,6 @@ import app.accord.core.BudgetClock
 import app.accord.core.CardCycle
 import app.accord.core.alerts.AlertPreference
 import app.accord.core.alerts.NotificationAccess
-import app.accord.core.simulation.PurchaseSchedule
 import app.accord.core.space.AlertEventView
 import app.accord.core.space.AlertNotice
 import app.accord.core.space.AlertStatus
@@ -14,34 +13,21 @@ import app.accord.core.space.RecordAlertEvent
 import app.accord.core.forecast.MonthForecast
 import app.accord.core.space.ForecastDetail
 import app.accord.core.Frequency
-import app.accord.core.InvoicePhase
-import app.accord.core.LimitSetting
-import app.accord.core.LimitView
 import app.accord.core.Installments
 import app.accord.core.Money
-import app.accord.core.OccurrenceOverride
 import app.accord.core.Recurrence
-import app.accord.core.RecurrenceEdit
-import app.accord.core.RecurrenceFields
-import app.accord.core.RecurrenceScope
-import app.accord.core.RecurrenceSeries
-import app.accord.core.ShiftResult
-import app.accord.core.Template
 import app.accord.core.space.AccountInfo
 import app.accord.core.space.AccountsView
 import app.accord.core.space.AddAccount
 import app.accord.core.space.EditCategory
 import app.accord.core.space.MoveCategoryEntries
 import app.accord.core.space.RemoveCategory
-import app.accord.core.space.AmountMeaning
 import app.accord.core.space.AssignmentState
 import app.accord.core.space.DateCriterion
-import app.accord.core.space.EntrySummary
 import app.accord.core.space.TotalBalance
 import app.accord.core.space.BankRef
 import app.accord.core.space.BoletoView
 import app.accord.core.space.CardInfo
-import app.accord.core.space.CategoryBudget
 import app.accord.core.space.CategoryLimit
 import app.accord.core.space.CategoryNode
 import app.accord.core.space.CategorySeed
@@ -69,7 +55,6 @@ import app.accord.core.space.IconAssociationView
 import app.accord.core.space.IntentionView
 import app.accord.core.space.SetIconAssociation
 import app.accord.core.space.CreateRecurrence
-import app.accord.core.space.Decision
 import app.accord.core.space.DefineLimits
 import app.accord.core.space.DeleteEntry
 import app.accord.core.space.DeleteRecurrence
@@ -89,23 +74,16 @@ import app.accord.core.space.EntryPage
 import app.accord.core.space.EntrySituation
 import app.accord.core.space.EntityType
 import app.accord.core.space.Envelope
-import app.accord.core.space.ErrorCode
 import app.accord.core.space.FieldError
 import app.accord.core.space.FinanceSpace
 import app.accord.core.space.IncomeSummary
-import app.accord.core.space.ItemSync
 import app.accord.core.space.MonthCommitments
 import app.accord.core.space.PaymentMethod
 import app.accord.core.space.PendingItem
 import app.accord.core.space.ScheduleRow
 import app.accord.core.space.SyncStatusProvider
-import app.accord.core.space.InvoiceStatus
-import app.accord.core.space.InvoiceTotalSource
 import app.accord.core.space.InvoiceView
-import app.accord.core.space.PaymentView
-import app.accord.core.space.IncomeTotals
 import app.accord.core.space.IncomeView
-import app.accord.core.space.InstallmentView
 import app.accord.core.space.LocalDraft
 import app.accord.core.space.LocalOperation
 import app.accord.core.space.MonthBudget
@@ -148,12 +126,9 @@ import app.accord.core.space.RequestInstallmentCancellation
 import app.accord.core.space.Session
 import app.accord.core.space.SessionProvider
 import app.accord.core.space.SetMyDefaultAccount
-import app.accord.core.space.Settlement
-import app.accord.core.space.ToClassifyLine
 import app.accord.core.space.Undo
 import app.accord.core.importing.ImportSession
 import app.accord.core.label
-import app.accord.core.sum
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.isActive
@@ -174,6 +149,11 @@ import java.util.UUID
  *
  * [beforeCommit] roda dentro da transação, depois das gravações: serve a testes que injetam
  * falha para provar que nada fica pela metade.
+ *
+ * A fachada só despacha: o planejamento de cada agregado vive no seu planejador (contas e cartão,
+ * lançamento direto, compra no cartão, boleto, renda, recorrência, categorias, limites, estornos,
+ * importação e desfazer) e as consultas do orçamento e da fatura em `BudgetQueries` e `InvoiceQueries`
+ * (accord-dj6a). Nada mudou em regra financeira, identidade ou sincronização.
  */
 class RoomFinanceSpace private constructor(
     private val db: AccordDatabase,
@@ -191,6 +171,16 @@ class RoomFinanceSpace private constructor(
     private val correctionPlanner = CorrectionPlanner(dao) { cycleOf(sessions.current().spaceId) }
     private val paymentMethodPlanner = PaymentMethodPlanner(dao) { effectiveDefaultAccount(it) }
     private val limitsPlanner = LimitsPlanner(dao) { tree() }
+    private val accountPlanner = AccountPlanner(dao)
+    private val commonRules = CommonRules(dao)
+    private val directPaymentPlanner = DirectPaymentPlanner(dao, commonRules, accountPlanner)
+    private val cardPurchasePlanner = CardPurchasePlanner(dao, commonRules) { cycleOf(it) }
+    private val boletoPlanner = BoletoPlanner(dao, commonRules, accountPlanner)
+    private val incomePlanner = IncomePlanner(dao, commonRules, accountPlanner)
+    private val recurrencePlanner = RecurrencePlanner(dao, commonRules, accountPlanner, sessions) { cycleOf(it) }
+    private val classifyPlanner = ClassifyPlanner(dao)
+    private val invoiceQueries = InvoiceQueries(dao, clock, { recurrencePlanner.occurrencesIn(it) }) { cycleOf(sessions.current().spaceId) }
+    private val budgetQueries = BudgetQueries(dao, { tree() }, { recurrencePlanner.occurrencesIn(it) }, limitsPlanner)
     private val entryQueries = EntryQueries(
         dao,
         tree = { tree() },
@@ -263,30 +253,32 @@ class RoomFinanceSpace private constructor(
         requiredAccount = { session, given, errors -> resolveRequiredAccount(session, given, errors) },
     )
 
+    private val undoPlanner = UndoPlanner(dao, correctionPlanner, paymentMethodPlanner, cancellationPlanner, invoicePlanner)
+
     // ---- planejamento ----
 
     private suspend fun plan(session: Session, origin: Origin, command: Command): Planned = when (command) {
-        is CreateCategory -> planCreateCategory(command)
-        is CreateIncomeCategory -> planCreateIncomeCategory(command)
-        is RenameIncomeCategory -> planRenameIncomeCategory(command)
+        is CreateCategory -> categoryPlanner.planCreate(command)
+        is CreateIncomeCategory -> incomePlanner.planCreateCategory(command)
+        is RenameIncomeCategory -> incomePlanner.planRenameCategory(command)
         is SetIconAssociation -> iconPlanner.planSet(session, command)
         is ClearIconAssociation -> iconPlanner.planClear(session, command)
         is CreateIntention -> intentionPlanner.planCreate(session, command)
         is EditIntention -> intentionPlanner.planEdit(session, command)
-        is AddAccount -> planAddAccount(command)
-        is SetMyDefaultAccount -> planSetDefaultAccount(session, command)
-        is RegisterDirectPayment -> planDirectPayment(session, origin, command)
-        is ConfigureCard -> planConfigureCard(session, command)
-        is RegisterCardPurchase -> planCardPurchase(session, origin, command)
-        is CorrectInvoiceAssignment -> planCorrectInvoice(command)
-        is RegisterBoleto -> planRegisterBoleto(session, origin, command)
-        is PayBoleto -> planPayBoleto(session, command)
-        is RegisterIncome -> planRegisterIncome(session, origin, command)
-        is ReceiveIncome -> planReceiveIncome(session, command)
-        is CreateRecurrence -> planCreateRecurrence(session, origin, command)
-        is EditRecurrence -> planEditRecurrence(command)
-        is DeleteRecurrence -> planDeleteRecurrence(command)
-        is PayOccurrence -> planPayOccurrence(session, command)
+        is AddAccount -> accountPlanner.planAdd(command)
+        is SetMyDefaultAccount -> accountPlanner.planSetDefault(session, command)
+        is RegisterDirectPayment -> directPaymentPlanner.plan(session, origin, command)
+        is ConfigureCard -> accountPlanner.planConfigureCard(session, command)
+        is RegisterCardPurchase -> cardPurchasePlanner.plan(session, origin, command)
+        is CorrectInvoiceAssignment -> cardPurchasePlanner.planCorrectInvoice(command)
+        is RegisterBoleto -> boletoPlanner.planRegister(session, origin, command)
+        is PayBoleto -> boletoPlanner.planPay(session, command)
+        is RegisterIncome -> incomePlanner.planRegister(session, origin, command)
+        is ReceiveIncome -> incomePlanner.planReceive(session, command)
+        is CreateRecurrence -> recurrencePlanner.planCreate(session, origin, command)
+        is EditRecurrence -> recurrencePlanner.planEdit(command)
+        is DeleteRecurrence -> recurrencePlanner.planDelete(command)
+        is PayOccurrence -> recurrencePlanner.planPay(session, command)
         is RegisterRefund -> refundPlanner.planRegister(session, origin, command)
         is ConfirmRefund -> refundPlanner.planConfirm(command)
         is RequestInstallmentCancellation -> cancellationPlanner.planRequest(command)
@@ -303,12 +295,12 @@ class RoomFinanceSpace private constructor(
         is EditCategory -> categoryPlanner.planEdit(command)
         is MoveCategoryEntries -> categoryPlanner.planMoveEntries(session, command)
         is RemoveCategory -> categoryPlanner.planRemove(session, command)
-        is EditAccount -> planEditAccount(command)
-        is ClassifyEntry -> planClassify(command)
+        is EditAccount -> accountPlanner.planEdit(command)
+        is ClassifyEntry -> classifyPlanner.plan(command)
         is RecordAlertEvent -> alertCenter.plan(command, nowMillis())
         is ConfirmImportBatch -> importPlanner.plan(session, command)
         is ResolveImportItem -> importPlanner.planResolve(session, command)
-        is Undo -> planUndo(command)
+        is Undo -> undoPlanner.plan(command)
     }
 
     // ---- execução e prévia ----
@@ -409,888 +401,30 @@ class RoomFinanceSpace private constructor(
             )
         }
 
-    // ---- cadastros ----
+    // ---- apoio compartilhado pelos planejadores e consultas ----
 
     private suspend fun tree() = CategoryTree(dao.categories().filterNot { it.removed }.associateBy { it.id }, dao.categoryMoves())
 
-    private suspend fun planCreateCategory(c: CreateCategory): Planned {
-        val name = c.name.trim()
-        if (name.isEmpty()) return stop("name", ErrorCode.Required, "Informe o nome da categoria.")
-        val parentId = c.parentId
-        if (parentId != null) {
-            val parent = dao.activeCategory(parentId)
-                ?: return stop("parentId", ErrorCode.UnknownReference, "Categoria principal não encontrada.")
-            if (parent.parentId != null) {
-                return stop("parentId", ErrorCode.NotAllowed, "Subcategoria não pode ter subcategorias.")
-            }
-        }
-        val key = NameKey.of(name)
-        val now = clock.currentMonth()
-        val siblings = tree().childrenAt(parentId, now)
-        if (siblings.any { it.nameKey == key }) {
-            return stop("name", ErrorCode.DuplicateName, "Já existe uma categoria com esse nome neste nível. Escolha outro nome.")
-        }
-        return Planned.Go(months = emptySet()) {
-            val row = CategoryRow(
-                id = UUID.randomUUID().toString(),
-                parentId = parentId,
-                name = name,
-                nameKey = key,
-                sortOrder = (siblings.maxOfOrNull { it.sortOrder } ?: -1) + 1,
-                iconKey = CategorySeed.CUSTOM_ICON,
-                seedKey = null,
-                revision = 1,
-            )
-            dao.insertCategory(row)
-            listOf(EntityChange(EntityType.Category, row.id, null, 1))
-        }
-    }
+    private fun cardId(spaceId: String) = cardIdOf(spaceId)
 
-    private fun bankName(bank: BankRef) = when (bank) {
-        is BankRef.Catalog -> bank.name
-        is BankRef.Other -> bank.name
-    }.trim()
+    private suspend fun effectiveDefaultAccount(session: Session) = accountPlanner.effectiveDefault(session)
 
-    private suspend fun planAddAccount(c: AddAccount): Planned {
-        val nickname = c.nickname.trim()
-        val bankName = bankName(c.bank)
-        val errors = buildList {
-            if (bankName.isEmpty()) add(FieldError("bank", ErrorCode.Required, "Escolha o banco."))
-            if (nickname.isEmpty()) add(FieldError("nickname", ErrorCode.Required, "Informe um apelido para a conta."))
-        }
-        if (errors.isNotEmpty()) return stop(errors)
-        return Planned.Go(months = emptySet()) {
-            val row = AccountRow(
-                id = UUID.randomUUID().toString(),
-                bankIspb = (c.bank as? BankRef.Catalog)?.ispb,
-                bankName = bankName,
-                nickname = nickname,
-                revision = 1,
-            )
-            dao.insertAccount(row)
-            listOf(EntityChange(EntityType.Account, row.id, null, 1))
-        }
-    }
+    private suspend fun resolveRequiredAccount(session: Session, given: String?, errors: MutableList<FieldError>) =
+        accountPlanner.resolveRequired(session, given, errors)
 
-    private suspend fun planEditAccount(c: EditAccount): Planned {
-        val account = dao.account(c.accountId) ?: return stop("accountId", ErrorCode.UnknownReference, "Conta não encontrada.")
-        if (c.expectedRevision != null && c.expectedRevision != account.revision) {
-            return Planned.Stop(CommandResult.StaleVersion(account.id, account.revision))
-        }
-        if (c.nickname == null && c.bank == null) return stop("nickname", ErrorCode.Required, "Informe o que mudou.")
-        val nickname = c.nickname?.trim()
-        if (nickname != null && nickname.isEmpty()) return stop("nickname", ErrorCode.Required, "Informe um apelido para a conta.")
-        val bank = c.bank
-        if (bank != null && bankName(bank).isEmpty()) return stop("bank", ErrorCode.Required, "Escolha o banco.")
-        // Correção de cadastro: mesma identidade; lançamentos antigos passam a exibir o banco e o apelido atuais.
-        return Planned.Go(months = emptySet()) {
-            val next = account.copy(
-                nickname = nickname ?: account.nickname,
-                bankIspb = if (bank != null) (bank as? BankRef.Catalog)?.ispb else account.bankIspb,
-                bankName = if (bank != null) bankName(bank) else account.bankName,
-                revision = account.revision + 1,
-            )
-            dao.upsertAccount(next)
-            listOf(EntityChange(EntityType.Account, next.id, null, next.revision))
-        }
-    }
+    private suspend fun occurrencesIn(month: YearMonth) = recurrencePlanner.occurrencesIn(month)
 
-    private suspend fun planSetDefaultAccount(session: Session, c: SetMyDefaultAccount): Planned {
-        dao.account(c.accountId) ?: return stop("accountId", ErrorCode.UnknownReference, "Conta não encontrada.")
-        return Planned.Go(months = emptySet()) {
-            val id = DeterministicIds.preferences(session.spaceId, session.personId)
-            val revision = (dao.preferences(id)?.revision ?: 0) + 1
-            dao.upsertPreferences(PreferencesRow(id, session.personId, c.accountId, revision))
-            listOf(EntityChange(EntityType.Preferences, id, null, revision))
-        }
-    }
+    private suspend fun composition(month: YearMonth) = invoiceQueries.composition(month)
 
-    private suspend fun planConfigureCard(session: Session, c: ConfigureCard): Planned {
-        val bank = c.bank
-        val errors = buildList {
-            if (c.closingDay !in 1..31) add(FieldError("closingDay", ErrorCode.OutOfRange, "O dia de fechamento vai de 1 a 31."))
-            if (c.dueDay !in 1..31) add(FieldError("dueDay", ErrorCode.OutOfRange, "O dia de vencimento vai de 1 a 31."))
-            if (c.nickname.isBlank()) add(FieldError("nickname", ErrorCode.Required, "Informe um apelido para o cartão."))
-            if (bank != null && bankName(bank).isEmpty()) add(FieldError("bank", ErrorCode.Required, "Informe o nome do banco."))
-            if (c.creditLimit?.cents?.let { it <= 0 } == true) add(FieldError("creditLimit", ErrorCode.OutOfRange, "O limite deve ser maior que zero."))
-        }
-        if (errors.isNotEmpty()) return stop(errors)
-        return Planned.Go(months = emptySet()) {
-            // Não remapeia atribuições existentes: só as novas compras usam os dias novos.
-            val id = cardId(session.spaceId)
-            val revision = (dao.card(id)?.revision ?: 0) + 1
-            dao.upsertCard(
-                CardRow(
-                    id = id,
-                    bankIspb = (c.bank as? BankRef.Catalog)?.ispb,
-                    bankName = c.bank?.let(::bankName),
-                    nickname = c.nickname.trim(),
-                    closingDay = c.closingDay,
-                    dueDay = c.dueDay,
-                    revision = revision,
-                    creditLimitCents = c.creditLimit?.cents,
-                ),
-            )
-            listOf(EntityChange(EntityType.Card, id, null, revision))
-        }
-    }
+    private suspend fun invoiceView(month: YearMonth) = invoiceQueries.view(month)
 
-    private fun cardId(spaceId: String) = DeterministicIds.of(spaceId, "card", "main")
+    internal suspend fun loadSeries(row: RecurrenceRow) = recurrencePlanner.loadSeries(row)
 
-    // ---- lançamentos diretos ----
-
-    private suspend fun planDirectPayment(session: Session, origin: Origin, c: RegisterDirectPayment): Planned {
-        val errors = mutableListOf<FieldError>()
-        if (c.description.isBlank()) errors += FieldError("description", ErrorCode.Required, "Informe a descrição.")
-        if (c.amount.cents <= 0) errors += FieldError("amount", ErrorCode.MustBePositive, "O valor precisa ser maior que zero.")
-        val chosenId = validateClassification(c.classification, errors)
-        // Encargo confirmado sem classificação usa Serviços > Tarifas e juros, pela identidade da semente (como na compra no cartão).
-        val classificationId = chosenId
-            ?: if (c.isCharge) DeterministicIds.seedCategory(session.spaceId, CategorySeed.FEES_AND_INTEREST) else null
-
-        var accountId: String? = null
-        originError(c.originIntentionId)?.let { errors += it }
-        if (c.kind == DirectPaymentKind.Cash) {
-            if (c.accountId != null) errors += FieldError("accountId", ErrorCode.NotAllowed, "Dinheiro não tem conta.")
-        } else {
-            val chosen = c.accountId
-                ?: effectiveDefaultAccount(session)
-            when {
-                chosen == null ->
-                    errors += FieldError("accountId", ErrorCode.Required, "Escolha a conta; você ainda não definiu uma conta padrão.")
-                dao.account(chosen) == null ->
-                    errors += FieldError("accountId", ErrorCode.UnknownReference, "Conta não encontrada.")
-                else -> accountId = chosen
-            }
-        }
-        if (errors.isNotEmpty()) return stop(errors)
-
-        return Planned.Go(months = setOf(YearMonth.from(c.date)), undoable = true) {
-            val row = MovementEntity(
-                id = UUID.randomUUID().toString(),
-                kind = c.kind.name,
-                description = c.description.trim(),
-                classificationId = classificationId,
-                epochDay = c.date.toEpochDay(),
-                amountCents = c.amount.cents,
-                accountId = accountId,
-                spentBy = c.spentBy,
-                authorId = session.personId,
-                origin = origin.name,
-                revision = 1,
-                voided = false,
-                isCharge = c.isCharge,
-                originIntentionId = c.originIntentionId,
-            )
-            dao.insertMovement(row)
-            listOf(EntityChange(EntityType.Movement, row.id, null, 1))
-        }
-    }
-
-    /**
-     * Conversão de intenção (S7, ADR 0048): a intenção precisa existir e não pode ter outro compromisso, nem excluído, já vinculado neste aparelho.
-     * O serviço impõe o mesmo vínculo único entre os aparelhos; aqui a recusa vem antes de gravar qualquer coisa.
-     */
-    private suspend fun originError(intentionId: String?): FieldError? = when {
-        intentionId == null -> null
-        dao.intention(intentionId) == null -> FieldError("originIntentionId", ErrorCode.UnknownReference, "Intenção não encontrada.")
-        dao.originLinks().any { it.intentionId == intentionId } ->
-            FieldError("originIntentionId", ErrorCode.NotAllowed, "Esta intenção já foi convertida em compromisso.")
-        else -> null
-    }
-
-    /** Devolve o ID da classificação (nulo é "a classificar") e acumula erro se a categoria não existe. */
-    private suspend fun validateClassification(classification: Classification, errors: MutableList<FieldError>): String? =
-        when (classification) {
-            Classification.ToClassify -> null
-            is Classification.Category -> {
-                if (dao.activeCategory(classification.id) == null) {
-                    errors += FieldError("classification", ErrorCode.UnknownReference, "Categoria não encontrada.")
-                }
-                classification.id
-            }
-        }
-
-    // ---- compra no cartão ----
+    internal fun place(loaded: LoadedSeries, number: Int, cycle: CardCycle) = recurrencePlanner.place(loaded, number, cycle)
 
     private suspend fun cycleOf(spaceId: String): CardCycle {
         val card = dao.card(cardId(spaceId)) ?: error("Cartão do espaço não foi criado")
         return CardCycle(card.closingDay, card.dueDay)
-    }
-
-    private suspend fun planCardPurchase(session: Session, origin: Origin, c: RegisterCardPurchase): Planned {
-        val errors = mutableListOf<FieldError>()
-        if (c.description.isBlank()) errors += FieldError("description", ErrorCode.Required, "Informe a descrição.")
-        if (c.installments < 1) errors += FieldError("installments", ErrorCode.OutOfRange, "A quantidade de parcelas começa em 1.")
-        if (c.amount.cents <= 0) errors += FieldError("amount", ErrorCode.MustBePositive, "O valor precisa ser maior que zero.")
-        val chosenId = validateClassification(c.classification, errors)
-        originError(c.originIntentionId)?.let { errors += it }
-        if (errors.isNotEmpty()) return stop(errors)
-
-        if (c.installments > 1 && c.amountMeaning == null) {
-            return Planned.Stop(CommandResult.DecisionNeeded(Decision.AmountMeaningRequired(c.installments, c.amount)))
-        }
-        // Encargo confirmado sem classificação usa Serviços > Tarifas e juros, pela identidade da semente.
-        val classificationId = chosenId
-            ?: if (c.isCharge) DeterministicIds.seedCategory(session.spaceId, CategorySeed.FEES_AND_INTEREST) else null
-
-        val informedInvoice = c.invoice
-        val (firstMonth, firstState) = if (informedInvoice != null) {
-            informedInvoice to AssignmentState.Confirmed
-        } else {
-            val assigned = cycleOf(session.spaceId).assign(c.date)
-            assigned.dueMonth to if (assigned.toConfirm) AssignmentState.ToConfirm else AssignmentState.Estimated
-        }
-        // Cronograma único com o simulador do S7 (PurchaseSchedule): parcelas, centavos e meses de fatura.
-        val views = try {
-            PurchaseSchedule.build(c.amount, c.amountMeaning, c.installments, firstMonth, firstState)
-        } catch (_: IllegalArgumentException) {
-            return stop("amount", ErrorCode.MustBePositive, "Cada parcela precisa ter ao menos um centavo.")
-        }
-        val months = views.map { it.invoiceMonth }
-
-        return Planned.Go(after = views, months = months.toSet(), undoable = true) {
-            val purchase = CardPurchaseRow(
-                id = UUID.randomUUID().toString(),
-                description = c.description.trim(),
-                classificationId = classificationId,
-                purchaseEpochDay = c.date.toEpochDay(),
-                totalCents = views.sumOf { it.amount.cents },
-                isCharge = c.isCharge,
-                spentBy = c.spentBy,
-                authorId = session.personId,
-                origin = origin.name,
-                revision = 1,
-                voided = false,
-                originIntentionId = c.originIntentionId,
-            )
-            dao.insertPurchase(purchase)
-            dao.insertInstallments(views.map { it.toRow(purchase.id) })
-            listOf(EntityChange(EntityType.CardPurchase, purchase.id, null, 1))
-        }
-    }
-
-    private fun CancelState.rowName() = when (this) {
-        CancelState.Active -> CancellationPlanner.CANCEL_ACTIVE
-        CancelState.CancelRequested -> CancellationPlanner.CANCEL_REQUESTED
-        CancelState.Cancelled -> CancellationPlanner.CANCEL_DONE
-    }
-
-    private fun cancelOf(rowState: String) = when (rowState) {
-        CancellationPlanner.CANCEL_ACTIVE -> CancelState.Active
-        CancellationPlanner.CANCEL_REQUESTED -> CancelState.CancelRequested
-        else -> CancelState.Cancelled
-    }
-
-    private fun InstallmentView.toRow(purchaseId: String) =
-        InstallmentRow(purchaseId, number, amount.cents, invoiceMonth.toString(), assignment.name, cancel.rowName())
-
-    private fun InstallmentRow.toView() =
-        InstallmentView(number, Money(amountCents), YearMonth.parse(invoiceMonth), AssignmentState.valueOf(assignment), cancelOf(cancelState))
-
-    private suspend fun planCorrectInvoice(c: CorrectInvoiceAssignment): Planned {
-        val purchase = dao.purchase(c.purchaseId)
-            ?: return stop("purchaseId", ErrorCode.UnknownReference, "Compra não encontrada.")
-        if (purchase.voided) return stop("purchaseId", ErrorCode.NotAllowed, "Esta compra foi desfeita ou excluída.")
-        if (c.expectedRevision != null && c.expectedRevision != purchase.revision) {
-            return Planned.Stop(CommandResult.StaleVersion(purchase.id, purchase.revision))
-        }
-        if (c.installmentNumber != 1) {
-            return stop(
-                "installmentNumber", ErrorCode.NotAllowed,
-                "Só a 1ª parcela muda de fatura; as seguintes acompanham. Divergência em outra parcela vira pendência para revisão.",
-            )
-        }
-        val rows = dao.installments(purchase.id)
-        val before = rows.map { it.toView() }
-        val cancelled = rows.filter { it.cancelState == CancellationPlanner.CANCEL_DONE }.map { it.number }.toSet()
-        val shift = Installments.shiftFirst(
-            oldFirst = YearMonth.parse(rows.first().invoiceMonth),
-            count = rows.size,
-            newFirst = c.invoice,
-            paidMonths = dao.paidInvoiceMonths().map(YearMonth::parse).toSet(),
-            cancelledNumbers = cancelled,
-        )
-        when (shift) {
-            is ShiftResult.Blocked -> return stop(
-                buildList {
-                    shift.paidMonths.forEach { add(FieldError("invoice", ErrorCode.NotAllowed, "A fatura de $it já foi quitada.")) }
-                    shift.cancelledNumbers.forEach {
-                        add(FieldError("installmentNumber", ErrorCode.NotAllowed, "A parcela $it está cancelada."))
-                    }
-                },
-            )
-            is ShiftResult.Shifted -> {
-                val after = rows.mapIndexed { i, r ->
-                    InstallmentView(
-                        r.number, Money(r.amountCents), shift.after[i],
-                        if (i == 0) AssignmentState.Confirmed else AssignmentState.valueOf(r.assignment),
-                        cancelOf(r.cancelState),
-                    )
-                }
-                val months = (shift.before + shift.after).toSet()
-                return Planned.Go(before = before, after = after, months = months) {
-                    dao.upsertInstallments(after.map { v -> v.toRow(purchase.id) })
-                    val next = purchase.copy(revision = purchase.revision + 1)
-                    dao.upsertPurchase(next)
-                    listOf(EntityChange(EntityType.CardPurchase, next.id, null, next.revision))
-                }
-            }
-        }
-    }
-
-    // ---- boleto e renda ----
-
-    /** Uma única conta já é o padrão; com várias, respeita a escolha individual persistida. */
-    private suspend fun effectiveDefaultAccount(session: Session): String? =
-        dao.preferences(DeterministicIds.preferences(session.spaceId, session.personId))?.defaultAccountId
-            ?: dao.accounts().singleOrNull()?.id
-
-    /** Conta de um pagamento ou recebimento: a informada ou a padrão do autor; obrigatória. */
-    private suspend fun resolveRequiredAccount(session: Session, given: String?, errors: MutableList<FieldError>): String? {
-        val chosen = given
-            ?: effectiveDefaultAccount(session)
-        return when {
-            chosen == null -> {
-                errors += FieldError("accountId", ErrorCode.Required, "Escolha a conta; você ainda não definiu uma conta padrão.")
-                null
-            }
-            dao.account(chosen) == null -> {
-                errors += FieldError("accountId", ErrorCode.UnknownReference, "Conta não encontrada.")
-                null
-            }
-            else -> chosen
-        }
-    }
-
-    private fun validateSettlement(settlement: Settlement, field: String, errors: MutableList<FieldError>) {
-        val amount = settlement.amount
-        if (amount != null && amount.cents <= 0) {
-            errors += FieldError(field, ErrorCode.MustBePositive, "O valor precisa ser maior que zero.")
-        }
-    }
-
-    private suspend fun planRegisterBoleto(session: Session, origin: Origin, c: RegisterBoleto): Planned {
-        val errors = mutableListOf<FieldError>()
-        if (c.description.isBlank()) errors += FieldError("description", ErrorCode.Required, "Informe a descrição.")
-        if (c.amount.cents <= 0) errors += FieldError("amount", ErrorCode.MustBePositive, "O valor precisa ser maior que zero.")
-        val classificationId = validateClassification(c.classification, errors)
-        originError(c.originIntentionId)?.let { errors += it }
-        val payment = c.payment
-        if (payment != null) validateSettlement(payment, "payment", errors)
-        val givenAccount = c.accountId
-        var accountId: String? = null
-        if (payment != null) {
-            accountId = resolveRequiredAccount(session, givenAccount, errors)
-        } else if (givenAccount != null) {
-            if (dao.account(givenAccount) == null) {
-                errors += FieldError("accountId", ErrorCode.UnknownReference, "Conta não encontrada.")
-            } else {
-                accountId = givenAccount
-            }
-        }
-        if (errors.isNotEmpty()) return stop(errors)
-
-        val months = setOfNotNull(YearMonth.from(c.dueDate), payment?.let { YearMonth.from(it.date) })
-        return Planned.Go(months = months, undoable = true) {
-            val row = BoletoRow(
-                id = UUID.randomUUID().toString(),
-                description = c.description.trim(),
-                classificationId = classificationId,
-                dueEpochDay = c.dueDate.toEpochDay(),
-                expectedCents = c.amount.cents,
-                accountId = accountId,
-                paidEpochDay = payment?.date?.toEpochDay(),
-                paidCents = payment?.let { (it.amount ?: c.amount).cents },
-                authorId = session.personId,
-                origin = origin.name,
-                revision = 1,
-                voided = false,
-                originIntentionId = c.originIntentionId,
-            )
-            dao.insertBoleto(row)
-            listOf(EntityChange(EntityType.Boleto, row.id, null, 1))
-        }
-    }
-
-    private suspend fun planPayBoleto(session: Session, c: PayBoleto): Planned {
-        val boleto = dao.boleto(c.boletoId) ?: return stop("boletoId", ErrorCode.UnknownReference, "Boleto não encontrado.")
-        if (boleto.voided) return stop("boletoId", ErrorCode.NotAllowed, "Este boleto foi desfeito ou excluído.")
-        if (c.expectedRevision != null && c.expectedRevision != boleto.revision) {
-            return Planned.Stop(CommandResult.StaleVersion(boleto.id, boleto.revision))
-        }
-        if (boleto.paidEpochDay != null) {
-            return stop("boletoId", ErrorCode.NotAllowed, "Este boleto já está pago. Desfaça o pagamento antes de registrar outro.")
-        }
-        val errors = mutableListOf<FieldError>()
-        validateSettlement(c.payment, "payment", errors)
-        val accountId = resolveRequiredAccount(session, c.accountId, errors)
-        if (errors.isNotEmpty()) return stop(errors)
-
-        val months = setOf(YearMonth.from(LocalDate.ofEpochDay(boleto.dueEpochDay)), YearMonth.from(c.payment.date))
-        return Planned.Go(months = months, undoable = true) {
-            val next = boleto.copy(
-                accountId = accountId,
-                paidEpochDay = c.payment.date.toEpochDay(),
-                paidCents = c.payment.amount?.cents ?: boleto.expectedCents,
-                revision = boleto.revision + 1,
-            )
-            dao.upsertBoleto(next)
-            listOf(EntityChange(EntityType.Boleto, next.id, null, next.revision))
-        }
-    }
-
-    private suspend fun planCreateIncomeCategory(c: CreateIncomeCategory): Planned {
-        val name = c.name.trim()
-        if (name.isEmpty()) return stop("name", ErrorCode.Required, "Informe o nome da categoria de renda.")
-        val key = NameKey.of(name)
-        val all = dao.incomeCategories()
-        if (all.any { it.nameKey == key }) {
-            return stop("name", ErrorCode.DuplicateName, "Já existe uma categoria de renda com esse nome. Escolha outro nome.")
-        }
-        return Planned.Go(months = emptySet()) {
-            val row = IncomeCategoryRow(
-                id = UUID.randomUUID().toString(),
-                name = name,
-                nameKey = key,
-                sortOrder = (all.maxOfOrNull { it.sortOrder } ?: -1) + 1,
-                iconKey = IncomeCategorySeed.CUSTOM_ICON,
-                seedKey = null,
-                revision = 1,
-            )
-            dao.insertIncomeCategory(row)
-            listOf(EntityChange(EntityType.IncomeCategory, row.id, null, 1))
-        }
-    }
-
-    private suspend fun planRenameIncomeCategory(c: RenameIncomeCategory): Planned {
-        val row = dao.incomeCategory(c.categoryId)
-            ?: return stop("categoryId", ErrorCode.UnknownReference, "Categoria de renda não encontrada.")
-        if (c.expectedRevision != null && c.expectedRevision != row.revision) {
-            return Planned.Stop(CommandResult.StaleVersion(row.id, row.revision))
-        }
-        val name = c.name.trim()
-        if (name.isEmpty()) return stop("name", ErrorCode.Required, "Informe o nome da categoria de renda.")
-        val key = NameKey.of(name)
-        if (dao.incomeCategories().any { it.id != row.id && it.nameKey == key }) {
-            return stop("name", ErrorCode.DuplicateName, "Já existe uma categoria de renda com esse nome. Escolha outro nome.")
-        }
-        return Planned.Go(months = emptySet()) {
-            val next = row.copy(name = name, nameKey = key, revision = row.revision + 1)
-            dao.upsertIncomeCategory(next)
-            listOf(EntityChange(EntityType.IncomeCategory, next.id, null, next.revision))
-        }
-    }
-
-    /** Categoria de renda informada: precisa existir; nula é permitida (renda sem categoria). */
-    private suspend fun validateIncomeCategory(id: String?, errors: MutableList<FieldError>) {
-        if (id != null && dao.incomeCategory(id) == null) {
-            errors += FieldError("incomeCategoryId", ErrorCode.UnknownReference, "Categoria de renda não encontrada.")
-        }
-    }
-
-    private suspend fun planRegisterIncome(session: Session, origin: Origin, c: RegisterIncome): Planned {
-        val errors = mutableListOf<FieldError>()
-        if (c.description.isBlank()) errors += FieldError("description", ErrorCode.Required, "Informe a descrição.")
-        if (c.expectedAmount.cents <= 0) {
-            errors += FieldError("expectedAmount", ErrorCode.MustBePositive, "O valor precisa ser maior que zero.")
-        }
-        val received = c.received
-        if (received != null) validateSettlement(received, "received", errors)
-        val accountId = resolveRequiredAccount(session, c.accountId, errors)
-        validateIncomeCategory(c.incomeCategoryId, errors)
-        if (errors.isNotEmpty()) return stop(errors)
-
-        val months = setOfNotNull(YearMonth.from(c.expectedDate), received?.let { YearMonth.from(it.date) })
-        return Planned.Go(months = months, undoable = true) {
-            val row = IncomeRow(
-                id = UUID.randomUUID().toString(),
-                description = c.description.trim(),
-                expectedCents = c.expectedAmount.cents,
-                expectedEpochDay = c.expectedDate.toEpochDay(),
-                accountId = accountId,
-                receivedEpochDay = received?.date?.toEpochDay(),
-                receivedCents = received?.let { (it.amount ?: c.expectedAmount).cents },
-                authorId = session.personId,
-                origin = origin.name,
-                revision = 1,
-                voided = false,
-                incomeCategoryId = c.incomeCategoryId,
-            )
-            dao.insertIncome(row)
-            listOf(EntityChange(EntityType.Income, row.id, null, 1))
-        }
-    }
-
-    private suspend fun planReceiveIncome(session: Session, c: ReceiveIncome): Planned {
-        val income = dao.income(c.incomeId) ?: return stop("incomeId", ErrorCode.UnknownReference, "Renda não encontrada.")
-        if (income.voided) return stop("incomeId", ErrorCode.NotAllowed, "Esta renda foi desfeita ou excluída.")
-        if (c.expectedRevision != null && c.expectedRevision != income.revision) {
-            return Planned.Stop(CommandResult.StaleVersion(income.id, income.revision))
-        }
-        if (income.receivedEpochDay != null) {
-            return stop("incomeId", ErrorCode.NotAllowed, "Esta renda já foi recebida. Desfaça o recebimento antes de registrar outro.")
-        }
-        val errors = mutableListOf<FieldError>()
-        validateSettlement(c.receipt, "receipt", errors)
-        val accountId = resolveRequiredAccount(session, c.accountId ?: income.accountId, errors)
-        if (errors.isNotEmpty()) return stop(errors)
-
-        val months = setOf(YearMonth.from(LocalDate.ofEpochDay(income.expectedEpochDay)), YearMonth.from(c.receipt.date))
-        return Planned.Go(months = months, undoable = true) {
-            val next = income.copy(
-                accountId = accountId,
-                receivedEpochDay = c.receipt.date.toEpochDay(),
-                receivedCents = c.receipt.amount?.cents ?: income.expectedCents,
-                revision = income.revision + 1,
-            )
-            dao.upsertIncome(next)
-            listOf(EntityChange(EntityType.Income, next.id, null, next.revision))
-        }
-    }
-
-    // ---- recorrência ----
-
-    internal data class LoadedSeries(
-        val row: RecurrenceRow,
-        val series: RecurrenceSeries,
-        val settlements: Map<Int, RecurrenceSettlementRow>,
-    )
-
-    internal suspend fun loadSeries(row: RecurrenceRow): LoadedSeries {
-        val segments = dao.segments(row.id).associate {
-            it.fromNumber to Template(it.description, it.classificationId, Money(it.amountCents), it.accountId)
-        }
-        val overrides = dao.overrides(row.id).associate {
-            it.number to OccurrenceOverride(
-                it.deleted,
-                RecurrenceFields(it.description, it.classificationId, it.amountCents?.let(::Money), it.accountId),
-            )
-        }
-        val series = RecurrenceSeries.restore(
-            Recurrence(LocalDate.ofEpochDay(row.anchorEpochDay), Frequency.valueOf(row.frequency)),
-            segments, overrides, row.endsBefore,
-        )
-        return LoadedSeries(row, series, dao.settlements(row.id).associateBy { it.number })
-    }
-
-    private suspend fun saveSeries(id: String, series: RecurrenceSeries) {
-        dao.deleteSegments(id)
-        dao.insertSegments(
-            series.segments.map { (from, t) ->
-                RecurrenceSegmentRow(id, from, t.description, t.classificationId, t.amount.cents, t.accountId)
-            },
-        )
-        dao.deleteOverrides(id)
-        dao.insertOverrides(
-            series.overrides.map { (n, o) ->
-                RecurrenceOverrideRow(id, n, o.deleted, o.fields.description, o.fields.classificationId, o.fields.amount?.cents, o.fields.accountId)
-            },
-        )
-    }
-
-    private suspend fun planCreateRecurrence(session: Session, origin: Origin, c: CreateRecurrence): Planned {
-        val errors = mutableListOf<FieldError>()
-        if (c.description.isBlank()) errors += FieldError("description", ErrorCode.Required, "Informe a descrição.")
-        if (c.amount.cents <= 0) errors += FieldError("amount", ErrorCode.MustBePositive, "O valor precisa ser maior que zero.")
-        val categoryId = c.categoryId
-        when (c.kind) {
-            RecurrenceKind.Expense -> when {
-                categoryId == null -> errors += FieldError("categoryId", ErrorCode.Required, "Escolha a categoria.")
-                dao.activeCategory(categoryId) == null ->
-                    errors += FieldError("categoryId", ErrorCode.UnknownReference, "Categoria não encontrada.")
-            }
-            RecurrenceKind.Income -> if (categoryId != null) {
-                errors += FieldError("categoryId", ErrorCode.NotAllowed, "Renda não tem categoria.")
-            }
-        }
-        val accountId = c.accountId
-        if (accountId != null && dao.account(accountId) == null) {
-            errors += FieldError("accountId", ErrorCode.UnknownReference, "Conta não encontrada.")
-        }
-        originError(c.originIntentionId)?.let { errors += it }
-        if (errors.isNotEmpty()) return stop(errors)
-
-        return Planned.Go(months = setOf(YearMonth.from(c.firstDate)), undoable = true) {
-            val id = UUID.randomUUID().toString()
-            dao.insertRecurrence(
-                RecurrenceRow(
-                    id = id,
-                    kind = c.kind.name,
-                    form = (if (c.kind == RecurrenceKind.Expense) c.form else RecurrenceForm.OffCard).name,
-                    frequency = c.frequency.name,
-                    anchorEpochDay = c.firstDate.toEpochDay(),
-                    endsBefore = null,
-                    authorId = session.personId,
-                    origin = origin.name,
-                    revision = 1,
-                    voided = false,
-                    originIntentionId = c.originIntentionId,
-                ),
-            )
-            dao.insertSegments(
-                listOf(RecurrenceSegmentRow(id, 1, c.description.trim(), categoryId, c.amount.cents, accountId)),
-            )
-            listOf(EntityChange(EntityType.Recurrence, id, null, 1))
-        }
-    }
-
-    /** Carrega a série e checa existência, exclusão e versão; devolve o carregamento ou a parada. */
-    private suspend fun loadForCommand(id: String, expectedRevision: Long?): Pair<LoadedSeries?, Planned.Stop?> {
-        val row = dao.recurrence(id)
-            ?: return null to Planned.Stop(CommandResult.Rejected(listOf(FieldError("recurrenceId", ErrorCode.UnknownReference, "Recorrência não encontrada."))))
-        if (row.voided) {
-            return null to Planned.Stop(CommandResult.Rejected(listOf(FieldError("recurrenceId", ErrorCode.NotAllowed, "Esta recorrência foi desfeita ou excluída."))))
-        }
-        if (expectedRevision != null && expectedRevision != row.revision) {
-            return null to Planned.Stop(CommandResult.StaleVersion(row.id, row.revision))
-        }
-        return loadSeries(row) to null
-    }
-
-    private suspend fun planEditRecurrence(c: EditRecurrence): Planned {
-        val (loaded, stopped) = loadForCommand(c.recurrenceId, c.expectedRevision)
-        if (loaded == null) return stopped!!
-        val scope = c.scope ?: return Planned.Stop(CommandResult.DecisionNeeded(Decision.ScopeRequired))
-        val errors = mutableListOf<FieldError>()
-        if (c.fields.isEmpty) errors += FieldError("fields", ErrorCode.Required, "Informe o que mudou.")
-        c.fields.description?.let { if (it.isBlank()) errors += FieldError("description", ErrorCode.Required, "Informe a descrição.") }
-        c.fields.amount?.let { if (it.cents <= 0) errors += FieldError("amount", ErrorCode.MustBePositive, "O valor precisa ser maior que zero.") }
-        c.fields.classificationId?.let {
-            when {
-                loaded.row.kind == RecurrenceKind.Income.name ->
-                    errors += FieldError("classificationId", ErrorCode.NotAllowed, "Renda não tem categoria.")
-                dao.activeCategory(it) == null ->
-                    errors += FieldError("classificationId", ErrorCode.UnknownReference, "Categoria não encontrada.")
-            }
-        }
-        c.fields.accountId?.let {
-            if (dao.account(it) == null) errors += FieldError("accountId", ErrorCode.UnknownReference, "Conta não encontrada.")
-        }
-        val occurrence = loaded.series.occurrence(c.occurrence)
-        if (occurrence == null) errors += FieldError("occurrence", ErrorCode.UnknownReference, "Ocorrência não encontrada.")
-        if (errors.isNotEmpty()) return stop(errors)
-
-        val outcome = loaded.series.edit(c.occurrence, c.fields, scope, loaded.settlements.keys, c.confirmRealized)
-        if (outcome is RecurrenceEdit.NeedsConfirmation) {
-            return Planned.Stop(CommandResult.DecisionNeeded(Decision.RealizedOccurrences(outcome.realized)))
-        }
-        outcome as RecurrenceEdit.Applied
-        return Planned.Go(months = setOf(YearMonth.from(occurrence!!.date)), replaced = outcome.replacedExceptions) {
-            saveSeries(loaded.row.id, outcome.series)
-            val next = loaded.row.copy(revision = loaded.row.revision + 1)
-            dao.upsertRecurrence(next)
-            listOf(EntityChange(EntityType.Recurrence, next.id, null, next.revision))
-        }
-    }
-
-    private suspend fun planDeleteRecurrence(c: DeleteRecurrence): Planned {
-        val (loaded, stopped) = loadForCommand(c.recurrenceId, c.expectedRevision)
-        if (loaded == null) return stopped!!
-        val scope = c.scope ?: return Planned.Stop(CommandResult.DecisionNeeded(Decision.ScopeRequired))
-        val occurrence = loaded.series.occurrence(c.occurrence)
-            ?: return stop("occurrence", ErrorCode.UnknownReference, "Ocorrência não encontrada.")
-
-        val outcome = loaded.series.delete(c.occurrence, scope, loaded.settlements.keys, c.confirmRealized)
-        if (outcome is RecurrenceEdit.NeedsConfirmation) {
-            return Planned.Stop(CommandResult.DecisionNeeded(Decision.RealizedOccurrences(outcome.realized)))
-        }
-        outcome as RecurrenceEdit.Applied
-        return Planned.Go(months = setOf(YearMonth.from(occurrence.date))) {
-            saveSeries(loaded.row.id, outcome.series)
-            // Ocorrência excluída deixa de existir, inclusive o pagamento que a confirmação autorizou remover.
-            if (scope == RecurrenceScope.OnlyThis) dao.deleteSettlement(loaded.row.id, c.occurrence)
-            else dao.deleteSettlementsFrom(loaded.row.id, c.occurrence)
-            val next = loaded.row.copy(revision = loaded.row.revision + 1, endsBefore = outcome.series.endsBefore)
-            dao.upsertRecurrence(next)
-            listOf(EntityChange(EntityType.Recurrence, next.id, null, next.revision))
-        }
-    }
-
-    private suspend fun planPayOccurrence(session: Session, c: PayOccurrence): Planned {
-        val (loaded, stopped) = loadForCommand(c.recurrenceId, c.expectedRevision)
-        if (loaded == null) return stopped!!
-        val occurrence = loaded.series.occurrence(c.occurrence)
-            ?: return stop("occurrence", ErrorCode.UnknownReference, "Ocorrência não encontrada.")
-        if (loaded.row.kind == RecurrenceKind.Expense.name && loaded.row.form == RecurrenceForm.Card.name) {
-            return stop("occurrence", ErrorCode.NotAllowed, "Ocorrência no cartão é paga pela quitação da fatura.")
-        }
-        if (loaded.settlements.containsKey(c.occurrence)) {
-            return stop("occurrence", ErrorCode.NotAllowed, "Esta ocorrência já foi registrada. Desfaça antes de registrar outra.")
-        }
-        val errors = mutableListOf<FieldError>()
-        validateSettlement(c.settlement, "settlement", errors)
-        val accountId = resolveRequiredAccount(session, c.accountId ?: occurrence.template.accountId, errors)
-        if (errors.isNotEmpty()) return stop(errors)
-
-        val months = setOf(YearMonth.from(occurrence.date), YearMonth.from(c.settlement.date))
-        return Planned.Go(months = months, undoable = true, detail = "occurrence=${c.occurrence}") {
-            dao.upsertSettlement(
-                RecurrenceSettlementRow(
-                    loaded.row.id, c.occurrence, c.settlement.date.toEpochDay(),
-                    (c.settlement.amount ?: occurrence.template.amount).cents, accountId,
-                ),
-            )
-            val next = loaded.row.copy(revision = loaded.row.revision + 1)
-            dao.upsertRecurrence(next)
-            listOf(EntityChange(EntityType.Recurrence, next.id, null, next.revision))
-        }
-    }
-
-    // ---- classificar ----
-
-    private suspend fun planClassify(c: ClassifyEntry): Planned {
-        if (dao.activeCategory(c.category.id) == null) {
-            return stop("category", ErrorCode.UnknownReference, "Categoria não encontrada.")
-        }
-        val purchase = dao.purchase(c.entityId)
-        val movement = if (purchase == null) dao.movement(c.entityId) else null
-        val currentClassification: String?
-        val revision: Long
-        val voided: Boolean
-        when {
-            purchase != null -> { currentClassification = purchase.classificationId; revision = purchase.revision; voided = purchase.voided }
-            movement != null -> { currentClassification = movement.classificationId; revision = movement.revision; voided = movement.voided }
-            else -> return stop("entityId", ErrorCode.UnknownReference, "Lançamento não encontrado.")
-        }
-        if (voided) return stop("entityId", ErrorCode.NotAllowed, "Este lançamento foi desfeito ou excluído.")
-        if (c.expectedRevision != null && c.expectedRevision != revision) {
-            return Planned.Stop(CommandResult.StaleVersion(c.entityId, revision))
-        }
-        if (currentClassification != null) {
-            return stop("entityId", ErrorCode.NotAllowed, "Este lançamento já tem categoria.")
-        }
-        return if (purchase != null) {
-            val months = dao.installments(purchase.id).map { YearMonth.parse(it.invoiceMonth) }.toSet()
-            Planned.Go(months = months, undoable = true) {
-                val next = purchase.copy(classificationId = c.category.id, revision = purchase.revision + 1)
-                dao.upsertPurchase(next)
-                listOf(EntityChange(EntityType.CardPurchase, next.id, null, next.revision))
-            }
-        } else {
-            val m = movement!!
-            Planned.Go(months = setOf(YearMonth.from(LocalDate.ofEpochDay(m.epochDay))), undoable = true) {
-                val next = m.copy(classificationId = c.category.id, revision = m.revision + 1)
-                dao.upsertMovement(next)
-                listOf(EntityChange(EntityType.Movement, next.id, null, next.revision))
-            }
-        }
-    }
-
-    // ---- desfazer ----
-
-    /** Revisão atual de cada entidade tocada por uma operação; nula se a entidade não existe. */
-    private suspend fun currentRevision(change: OperationChangeRow): Long? = when (EntityType.valueOf(change.entityType)) {
-        EntityType.Movement -> dao.movement(change.entityId)?.revision
-        EntityType.CardPurchase -> dao.purchase(change.entityId)?.revision
-        EntityType.Boleto -> dao.boleto(change.entityId)?.revision
-        EntityType.Income -> dao.income(change.entityId)?.revision
-        EntityType.IncomeCategory -> dao.incomeCategory(change.entityId)?.revision
-        EntityType.Recurrence -> dao.recurrence(change.entityId)?.revision
-        EntityType.Refund -> dao.refund(change.entityId)?.revision
-        EntityType.Invoice -> dao.invoiceRows().firstOrNull { it.id == change.entityId }?.revision
-        EntityType.InvoicePayment -> dao.invoicePayment(change.entityId)?.revision
-        else -> null
-    }
-
-    /**
-     * Desfaz uma operação: criações viram registro de exclusão com a mesma identidade; pagamento,
-     * recebimento e classificação voltam ao estado anterior. Nada é apagado, e só se cada entidade
-     * ainda está na revisão que a operação produziu.
-     */
-    private suspend fun planUndo(c: Undo): Planned {
-        val op = dao.operation(c.operationId)
-            ?: return stop("operationId", ErrorCode.UnknownReference, "Operação não encontrada.")
-        if (!op.undoable) return stop("operationId", ErrorCode.NotSupported, "Esta operação não pode ser desfeita.")
-
-        val changes = dao.changesOf(listOf(op.operationId))
-        if (changes.any { currentRevision(it) != it.revision }) {
-            return stop("operationId", ErrorCode.ChangedAfter, "Este lançamento foi alterado depois. Revise antes de desfazer.")
-        }
-        val creation = op.commandType in CREATION_COMMANDS
-        return Planned.Go(months = parseMonths(op.affectedMonths)) {
-            changes.map { ch ->
-                val type = EntityType.valueOf(ch.entityType)
-                if (op.commandType == "CorrectEntry") {
-                    return@map EntityChange(type, ch.entityId, null, correctionPlanner.restore(type, ch.entityId, op.detail!!))
-                }
-                if (op.commandType == "ChangePaymentMethod") {
-                    return@map EntityChange(type, ch.entityId, null, paymentMethodPlanner.restore(type, ch.entityId, op.detail!!))
-                }
-                val revision = when (type) {
-                    EntityType.Movement -> {
-                        val row = dao.movement(ch.entityId)!!
-                        dao.upsertMovement(
-                            if (creation) row.copy(revision = row.revision + 1, voided = true)
-                            else row.copy(revision = row.revision + 1, classificationId = null),
-                        )
-                        row.revision + 1
-                    }
-                    EntityType.CardPurchase -> {
-                        val row = dao.purchase(ch.entityId)!!
-                        when {
-                            creation -> dao.upsertPurchase(row.copy(revision = row.revision + 1, voided = true))
-                            op.commandType == "ClassifyEntry" ->
-                                dao.upsertPurchase(row.copy(revision = row.revision + 1, classificationId = null))
-                            else -> {
-                                // Pedido de cancelamento ou confirmação de não cobrança: restaura o estado anterior.
-                                cancellationPlanner.restore(row.id, op.detail!!)
-                                dao.upsertPurchase(row.copy(revision = row.revision + 1))
-                            }
-                        }
-                        row.revision + 1
-                    }
-                    EntityType.Invoice -> {
-                        val row = dao.invoiceRows().first { it.id == ch.entityId }
-                        if (op.commandType == "RegisterInvoiceTotal") {
-                            invoicePlanner.restoreTotal(YearMonth.parse(row.dueMonth), op.detail!!)
-                        } else {
-                            dao.upsertInvoice(row.copy(revision = row.revision + 1))
-                        }
-                        row.revision + 1
-                    }
-                    EntityType.InvoicePayment -> {
-                        val row = dao.invoicePayment(ch.entityId)!!
-                        dao.upsertInvoicePayment(row.copy(revision = row.revision + 1, voided = true))
-                        row.revision + 1
-                    }
-                    EntityType.Refund -> {
-                        val row = dao.refund(ch.entityId)!!
-                        dao.upsertRefund(row.copy(revision = row.revision + 1, voided = true))
-                        row.revision + 1
-                    }
-                    EntityType.Boleto -> {
-                        val row = dao.boleto(ch.entityId)!!
-                        dao.upsertBoleto(
-                            if (creation) row.copy(revision = row.revision + 1, voided = true)
-                            else row.copy(revision = row.revision + 1, paidEpochDay = null, paidCents = null),
-                        )
-                        row.revision + 1
-                    }
-                    EntityType.Income -> {
-                        val row = dao.income(ch.entityId)!!
-                        dao.upsertIncome(
-                            if (creation) row.copy(revision = row.revision + 1, voided = true)
-                            else row.copy(revision = row.revision + 1, receivedEpochDay = null, receivedCents = null),
-                        )
-                        row.revision + 1
-                    }
-                    EntityType.Recurrence -> {
-                        val row = dao.recurrence(ch.entityId)!!
-                        if (creation) {
-                            dao.upsertRecurrence(row.copy(revision = row.revision + 1, voided = true))
-                        } else {
-                            // Pagamento de ocorrência: devolve a previsão ao mês original.
-                            dao.deleteSettlement(row.id, op.detail!!.removePrefix("occurrence=").toInt())
-                            dao.upsertRecurrence(row.copy(revision = row.revision + 1))
-                        }
-                        row.revision + 1
-                    }
-                    else -> error("Operação sobre ${ch.entityType} não é desfazível")
-                }
-                EntityChange(type, ch.entityId, null, revision)
-            }
-        }
     }
 
     // ---- recibos e operações ----
@@ -1306,9 +440,6 @@ class RoomFinanceSpace private constructor(
 
     private fun OperationChangeRow.toChange() =
         EntityChange(EntityType.valueOf(entityType), entityId, baseVersion, revision)
-
-    private fun parseMonths(text: String): Set<YearMonth> =
-        if (text.isEmpty()) emptySet() else text.split(",").map(YearMonth::parse).toSet()
 
     // ---- lista, detalhe, compromissos e pendências ----
 
@@ -1644,55 +775,6 @@ class RoomFinanceSpace private constructor(
 
     // ---- faturas ----
 
-    private data class Composition(val purchases: Money, val charges: Money, val credits: Money, val linksToConfirm: Int) {
-        val known get() = purchases + charges - credits
-    }
-
-    /** Composição conhecida da fatura: compras e parcelas, encargos e créditos, separados. */
-    private suspend fun composition(month: YearMonth): Composition {
-        val parts = dao.invoiceParts(month.toString())
-        val recurring = occurrencesIn(month).filter { it.kind == RecurrenceKind.Expense && it.form == RecurrenceForm.Card }
-        return Composition(
-            purchases = Money(parts.purchasesCents + recurring.sumOf { it.expectedAmount.cents }),
-            charges = Money(parts.chargesCents),
-            credits = Money(dao.invoiceCredits(month.toString())),
-            linksToConfirm = dao.linksToConfirm(month.toString()) + recurring.count { it.assignment == AssignmentState.ToConfirm },
-        )
-    }
-
-    private suspend fun invoiceView(month: YearMonth): InvoiceView {
-        val parts = composition(month)
-        val row = dao.invoice(month.toString())
-        val payments = dao.invoicePayments(month.toString())
-        val checked = row?.checkedCents?.let(::Money)
-        val conferred = checked != null && checked == parts.known
-        val accepted = payments.firstOrNull { it.accepted }
-        val phase = clock.today().let { today -> cycleOf(sessions.current().spaceId).phase(month, today) }
-        return InvoiceView(
-            dueMonth = month,
-            purchases = parts.purchases,
-            charges = parts.charges,
-            credits = parts.credits,
-            knownTotal = parts.known,
-            checkedTotal = checked,
-            checkedSource = row?.checkedSource?.let(InvoiceTotalSource::valueOf),
-            conferred = conferred,
-            totalDifference = if (checked != null && !conferred) checked - parts.known else null,
-            paid = accepted != null,
-            paidDate = accepted?.let { LocalDate.ofEpochDay(it.epochDay) },
-            status = when {
-                checked != null -> InvoiceStatus.Closed
-                phase == InvoicePhase.Open -> InvoiceStatus.Open
-                else -> InvoiceStatus.ClosedEstimated
-            },
-            linksToConfirm = parts.linksToConfirm,
-            divergentPayments = payments.filterNot { it.accepted }.map {
-                PaymentView(it.id, Money(it.amountCents), LocalDate.ofEpochDay(it.epochDay), it.accountId, accepted = false)
-            },
-            revision = row?.revision ?: 0,
-        )
-    }
-
     override suspend fun invoice(dueMonth: YearMonth): QueryResult<InvoiceView> = query { invoiceView(dueMonth) }
 
     override suspend fun invoices(): QueryResult<List<InvoiceView>> = query {
@@ -1731,46 +813,6 @@ class RoomFinanceSpace private constructor(
         }
     }
 
-    /** Ocorrência de [series] já posicionada no orçamento; nula se a ocorrência não existe. */
-    internal fun place(loaded: LoadedSeries, number: Int, cycle: CardCycle): OccurrenceView? {
-        val occurrence = loaded.series.occurrence(number) ?: return null
-        val settled = loaded.settlements[number]
-        val kind = RecurrenceKind.valueOf(loaded.row.kind)
-        val form = RecurrenceForm.valueOf(loaded.row.form)
-        val settledDate = settled?.let { LocalDate.ofEpochDay(it.epochDay) }
-        val onCard = kind == RecurrenceKind.Expense && form == RecurrenceForm.Card
-        val assignment = if (onCard) cycle.assign(occurrence.date) else null
-        return OccurrenceView(
-            recurrenceId = loaded.row.id,
-            number = number,
-            kind = kind,
-            form = form,
-            scheduledDate = occurrence.date,
-            description = occurrence.template.description,
-            categoryId = occurrence.template.classificationId,
-            expectedAmount = occurrence.template.amount,
-            accountId = settled?.accountId ?: occurrence.template.accountId,
-            settledDate = settledDate,
-            settledAmount = settled?.let { Money(it.cents) },
-            budgetMonth = assignment?.dueMonth ?: YearMonth.from(settledDate ?: occurrence.date),
-            paid = settled != null,
-            assignment = assignment?.let { if (it.toConfirm) AssignmentState.ToConfirm else AssignmentState.Estimated },
-        )
-    }
-
-    private suspend fun occurrencesIn(month: YearMonth): List<OccurrenceView> {
-        val cycle = cycleOf(sessions.current().spaceId)
-        return dao.activeRecurrences().flatMap { row ->
-            val loaded = loadSeries(row)
-            // O mês de uma ocorrência pode diferir do mês da data prevista (pagamento antecipado ou
-            // atrasado, fatura seguinte): olha os meses vizinhos e os pagamentos registrados.
-            val candidates = listOf(month.minusMonths(1), month, month.plusMonths(1))
-                .mapNotNull { loaded.series.recurrence.numberIn(it) }.toSet() +
-                loaded.settlements.filterValues { YearMonth.from(LocalDate.ofEpochDay(it.epochDay)) == month }.keys
-            candidates.mapNotNull { place(loaded, it, cycle) }.filter { it.budgetMonth == month }
-        }.sortedWith(compareBy({ it.scheduledDate }, { it.recurrenceId }, { it.number }))
-    }
-
     override suspend fun occurrences(month: YearMonth): QueryResult<List<OccurrenceView>> = query { occurrencesIn(month) }
 
     override suspend fun boleto(id: String): QueryResult<BoletoView?> = query {
@@ -1794,136 +836,11 @@ class RoomFinanceSpace private constructor(
         }
     }
 
-    private fun IncomeRow.toView(): IncomeView {
-        val expected = LocalDate.ofEpochDay(expectedEpochDay)
-        val received = receivedEpochDay?.let(LocalDate::ofEpochDay)
-        return IncomeView(
-            id = id,
-            description = description,
-            expectedAmount = Money(expectedCents),
-            expectedDate = expected,
-            receivedDate = received,
-            receivedAmount = receivedCents?.let(::Money),
-            accountId = accountId,
-            budgetMonth = YearMonth.from(received ?: expected),
-            revision = revision,
-            voided = voided,
-            incomeCategoryId = incomeCategoryId,
-        )
-    }
-
     override suspend fun income(id: String): QueryResult<IncomeView?> = query { dao.income(id)?.toView() }
 
-    private suspend fun incomeSummary(month: YearMonth): IncomeSummary {
-        val recurring = occurrencesIn(month).filter { it.kind == RecurrenceKind.Income }.map {
-            IncomeView(
-                id = "${it.recurrenceId}:${it.number}",
-                description = it.description,
-                expectedAmount = it.expectedAmount,
-                expectedDate = it.scheduledDate,
-                receivedDate = it.settledDate,
-                receivedAmount = it.settledAmount,
-                accountId = it.accountId,
-                budgetMonth = it.budgetMonth,
-                revision = dao.recurrence(it.recurrenceId)?.revision ?: 0,
-                voided = false,
-            )
-        }
-        val items = dao.incomesBetween(month.atDay(1).toEpochDay(), month.atEndOfMonth().toEpochDay()).map { it.toView() } + recurring
-        return IncomeSummary(
-            received = items.mapNotNull { it.receivedAmount }.sum(),
-            toReceive = items.filter { it.receivedDate == null }.map { it.expectedAmount }.sum(),
-            items = items,
-        )
-    }
+    override suspend fun incomes(month: YearMonth): QueryResult<IncomeSummary> = query { budgetQueries.incomes(month) }
 
-    override suspend fun incomes(month: YearMonth): QueryResult<IncomeSummary> = query { incomeSummary(month) }
-
-    private data class Credit(val classificationId: String?, val cents: Long, val reducesPaid: Boolean)
-
-    /** Crédito de um estorno confirmado; nulo se a origem foi desfeita ou excluída (o crédito some com ela). */
-    private suspend fun creditOf(refund: RefundRow): Credit? = when (refund.originType) {
-        RefundPlanner.ORIGIN_PURCHASE ->
-            dao.purchase(refund.originId)?.takeIf { !it.voided }?.let {
-                // Crédito de cartão só desconta do pago quando a fatura que o recebe está quitada.
-                Credit(it.classificationId, refund.amountCents, reducesPaid = refund.creditMonth?.let { m -> dao.isInvoicePaid(m) } == true)
-            }
-        RefundPlanner.ORIGIN_MOVEMENT ->
-            dao.movement(refund.originId)?.takeIf { !it.voided }?.let { Credit(it.classificationId, refund.amountCents, reducesPaid = true) }
-        else ->
-            dao.boleto(refund.originId)?.takeIf { !it.voided }?.let { Credit(it.classificationId, refund.amountCents, reducesPaid = true) }
-    }
-
-    /** Soma do mês por classificação; [paid] é o que já está pago dentro de [total]. */
-    private data class Aggregate(val classificationId: String?, val total: Long, val paid: Long, val count: Int)
-
-    override suspend fun budget(month: YearMonth): QueryResult<MonthBudget> = query {
-        val from = month.atDay(1).toEpochDay()
-        val to = month.atEndOfMonth().toEpochDay()
-        val categories = tree()
-        val recurringExpenses = occurrencesIn(month).filter { it.kind == RecurrenceKind.Expense }
-
-        // Pix, débito e dinheiro já nascem pagos; parcelas só passam a pagas com a quitação da fatura.
-        val invoicePaid = dao.isInvoicePaid(month.toString())
-        val aggregates = dao.sumsByClassification(from, to).map { Aggregate(it.classificationId, it.totalCents, it.totalCents, it.count) } +
-            dao.installmentSums(month.toString()).map { Aggregate(it.classificationId, it.totalCents, if (invoicePaid) it.totalCents else 0, it.count) } +
-            dao.boletoSums(from, to).map { Aggregate(it.classificationId, it.totalCents, it.paidCents, it.count) } +
-            recurringExpenses.map {
-                val amount = (it.settledAmount ?: it.expectedAmount).cents
-                val onCard = it.form == RecurrenceForm.Card
-                Aggregate(it.categoryId, amount, if (it.paid || (onCard && invoicePaid)) amount else 0, 1)
-            }
-        val income = incomeSummary(month)
-
-        val toClassify = aggregates.filter { it.classificationId == null }
-        val perCategory = aggregates.filter { it.classificationId != null }
-            .groupBy { categories.mainAt(it.classificationId!!, month) }
-
-        // Crédito de estorno confirmado abate a categoria da origem no mês do crédito. Crédito de
-        // cartão ainda não desconta do pago: isso depende da quitação da fatura que o recebe.
-        val credits = dao.confirmedRefundsIn(month.toString()).mapNotNull { refund -> creditOf(refund) }
-        val creditsByMain = credits.filter { it.classificationId != null }
-            .groupBy { categories.mainAt(it.classificationId!!, month) }
-        val unclassifiedCredit = credits.filter { it.classificationId == null }.sumOf { it.cents }
-
-        val limitSettings = categories.mains.associate { it.id to limitsPlanner.timeline(it.id).settingFor(month) }
-
-        MonthBudget(
-            month = month,
-            committed = Money(aggregates.sumOf { it.total }),
-            totalLimits = LimitView.totalOfLimits(limitSettings.values),
-            paid = Money(aggregates.sumOf { it.paid } - credits.filter { it.reducesPaid }.sumOf { it.cents }),
-            toClassify = ToClassifyLine(Money(toClassify.sumOf { it.total } - unclassifiedCredit), toClassify.sumOf { it.count }),
-            credits = Money(credits.sumOf { it.cents }),
-            invoiceLinksToConfirm = dao.linksToConfirm(month.toString()) +
-                recurringExpenses.count { it.assignment == AssignmentState.ToConfirm },
-            income = IncomeTotals(income.received, income.toReceive),
-            categories = categories.mains.map { main ->
-                val rows = perCategory[main.id].orEmpty()
-                val gross = Money(rows.sumOf { it.total })
-                val mainCredits = creditsByMain[main.id].orEmpty()
-                val credit = Money(mainCredits.sumOf { it.cents })
-                CategoryBudget(
-                    categoryId = main.id,
-                    gross = gross,
-                    credits = credit,
-                    net = gross - credit,
-                    paid = Money(rows.sumOf { it.paid } - mainCredits.filter { it.reducesPaid }.sumOf { it.cents }),
-                    bySubcategory = rows.groupBy { r -> categories.subAt(r.classificationId!!, month) }
-                        .mapValues { (_, group) -> Money(group.sumOf { it.total }) },
-                    limit = LimitView.of(
-                        limitSettings.getValue(main.id),
-                        categoryNet = gross - credit,
-                        subNet = rows.filter { categories.subAt(it.classificationId!!, month) != null }
-                            .groupBy { it.classificationId!! }
-                            .mapValues { (id, group) ->
-                                Money(group.sumOf { it.total } - mainCredits.filter { c -> c.classificationId == id }.sumOf { it.cents })
-                            },
-                    ),
-                )
-            },
-        )
-    }
+    override suspend fun budget(month: YearMonth): QueryResult<MonthBudget> = query { budgetQueries.budget(month) }
 
     override suspend fun alertNotices(preference: AlertPreference, access: NotificationAccess): QueryResult<List<AlertNotice>> =
         query { alertCenter.notices(preference, access) }
@@ -1961,11 +878,6 @@ class RoomFinanceSpace private constructor(
     }
 
     companion object {
-        private val CREATION_COMMANDS = setOf(
-            "RegisterDirectPayment", "RegisterCardPurchase", "RegisterBoleto", "RegisterIncome",
-            "RegisterRefund", "CreateRecurrence",
-        )
-
         /**
          * Abre a fachada e garante as categorias iniciais e o cartão. A semente tem identidade
          * determinística e não gera operação: todo aparelho do espaço chega às mesmas linhas.

@@ -26,11 +26,11 @@ internal class SubscriptionQueries(
     private val dao: SpaceDao,
     private val tree: suspend () -> CategoryTree,
     private val subscriptionsMainId: suspend () -> String,
-    private val load: suspend (RecurrenceRow) -> RoomFinanceSpace.LoadedSeries,
-    private val place: suspend (RoomFinanceSpace.LoadedSeries, Int) -> OccurrenceView?,
+    private val load: suspend (RecurrenceRow) -> LoadedSeries,
+    private val place: suspend (LoadedSeries, Int) -> OccurrenceView?,
     private val month: () -> YearMonth,
 ) {
-    private class Candidate(val loaded: RoomFinanceSpace.LoadedSeries, val categoryId: String?)
+    private class Candidate(val loaded: LoadedSeries, val categoryId: String?)
 
     /** Séries de despesa vivas cuja categoria atual (a do modelo mais recente) é Assinaturas ou uma de suas subcategorias. */
     private suspend fun candidates(onlyId: String? = null): List<Candidate> {
@@ -43,7 +43,7 @@ internal class SubscriptionQueries(
             .filter { c -> c.categoryId != null && tree.row(c.categoryId) != null && tree.mainAt(c.categoryId, now) == main }
     }
 
-    private fun charges(loaded: RoomFinanceSpace.LoadedSeries): List<SubscriptionCharge> =
+    private fun charges(loaded: LoadedSeries): List<SubscriptionCharge> =
         loaded.settlements.values.map {
             SubscriptionCharge(loaded.row.id, it.number, LocalDate.ofEpochDay(it.epochDay), Money(it.cents))
         }.sortedBy { it.number }
