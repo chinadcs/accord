@@ -22,6 +22,29 @@ supabase stop
 A chave secreta (`service_role`/`SECRET_KEY`) existe só no ambiente do responsável pelo piloto e
 destes testes locais. O aplicativo leva somente a URL do projeto e a chave pública (publishable).
 
+## Projeto hospedado (Free) e release
+
+Projeto hospedado criado pelo usuário (ref `SEU_PROJECT_REF`). Em 08/11/2026 as 8 migrações
+foram aplicadas com `supabase db push --db-url <connect string>` (senha do banco só no ambiente da
+sessão, nunca em arquivo) e confirmado: RLS ligada nas 6 tabelas de `public`, `anon` sem EXECUTE nas
+funções do Accord. **Não** usar `supabase config push`: o `config.toml` tem valores de
+desenvolvimento (`site_url` local). Auth se ajusta no painel: **Confirm email desligado**, sem SMTP,
+sem login anônimo (Confirm email desligado pelo usuário em 08/11/2026). Fumaça feita pelo usuário
+em 08/11/2026 nos Galaxy S20 FE e S23 FE com o release: duas contas, espaço, convite, sincronização
+nos dois sentidos e edição em modo avião reconciliada depois (banco: 2 usuários, 1 espaço, 2 membros,
+4 registros). O roteiro completo do `accord-chf` (Doze, TalkBack, conflito offline etc.) segue por fazer.
+
+O APK release lê `accord.release.supabase.url`, `accord.release.supabase.publishableKey` e a
+assinatura (`accord.release.storeFile`, `storePassword`, `keyAlias`, `keyPassword`) de
+`local.properties` ou das variáveis `ACCORD_RELEASE_*`; sem elas `:app:assembleRelease` falha. A
+keystore fica fora do repositório (guardar cópia: perdê-la obriga a reinstalar o app e apaga os
+dados locais).
+
+```powershell
+.\gradlew.bat :app:assembleRelease     # app\build\outputs\apk\release\app-release.apk
+adb -s <serial> install -r app\build\outputs\apk\release\app-release.apk
+```
+
 ## Procedimento: redefinir a senha de uma pessoa (piloto sem e-mails)
 
 Quem esquece a senha recorre ao responsável pelo piloto, fora do aplicativo. Como o e-mail não

@@ -14,6 +14,23 @@ fun serviceSetting(name: String, env: String): String {
     return (local.getProperty(name) ?: providers.gradleProperty(name).orNull ?: System.getenv(env) ?: "")
 }
 
+// Release: serviço HOSPEDADO e assinatura próprios, lidos de chaves `accord.release.*` (local.properties ou ambiente
+// ACCORD_RELEASE_*), nunca das chaves do debug, que apontam para o Supabase local. Sem elas o release não é gerado.
+val releaseServiceUrl = serviceSetting("accord.release.supabase.url", "ACCORD_RELEASE_SUPABASE_URL")
+val releaseServiceKey = serviceSetting("accord.release.supabase.publishableKey", "ACCORD_RELEASE_SUPABASE_PUBLISHABLE_KEY")
+val releaseStoreFile = serviceSetting("accord.release.storeFile", "ACCORD_RELEASE_STORE_FILE")
+val releaseStorePassword = serviceSetting("accord.release.storePassword", "ACCORD_RELEASE_STORE_PASSWORD")
+val releaseKeyAlias = serviceSetting("accord.release.keyAlias", "ACCORD_RELEASE_KEY_ALIAS")
+val releaseKeyPassword = serviceSetting("accord.release.keyPassword", "ACCORD_RELEASE_KEY_PASSWORD")
+val verifyReleaseConfig = tasks.register("verifyReleaseConfig") {
+    val values = listOf(releaseServiceUrl, releaseServiceKey, releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword)
+    val url = releaseServiceUrl
+    doLast {
+        check(values.none { it.isBlank() }) { "Release exige accord.release.supabase.url/publishableKey e storeFile/storePassword/keyAlias/keyPassword (local.properties ou ACCORD_RELEASE_*)." }
+        check(url.startsWith("https://")) { "A URL do release deve ser HTTPS (não o Supabase local)." }
+    }
+}
+
 // "true": piloto com interpretador fake (4 frases). "rules": sugestor de categorias com o interpretador por regras (ADR 0036).
 val categoryPilotMode = providers.gradleProperty("accord.categoryPilot").orNull
 val categoryPilotEnabled = categoryPilotMode == "true" || categoryPilotMode == "rules"
@@ -53,6 +70,15 @@ android {
         buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"${serviceSetting("accord.supabase.publishableKey", "ACCORD_SUPABASE_PUBLISHABLE_KEY")}\"")
     }
 
+    signingConfigs {
+        if (releaseStoreFile.isNotBlank()) create("release") {
+            storeFile = file(releaseStoreFile)
+            storePassword = releaseStorePassword
+            keyAlias = releaseKeyAlias
+            keyPassword = releaseKeyPassword
+        }
+    }
+
     buildFeatures {
         compose = true
         buildConfig = true
@@ -67,6 +93,9 @@ android {
             if (uiValidationIsolated) applicationIdSuffix = ".uivalidation"
         }
         getByName("release") {
+            buildConfigField("String", "SUPABASE_URL", "\"$releaseServiceUrl\"")
+            buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"$releaseServiceKey\"")
+            signingConfigs.findByName("release")?.let { signingConfig = it }
             buildConfigField("boolean", "CATEGORY_PILOT", "false")
             buildConfigField("boolean", "CATEGORY_PILOT_RULES", "false")
             buildConfigField("boolean", "PHASE_P2", "false")
@@ -83,6 +112,8 @@ android {
         unitTests.all { it.useJUnitPlatform() }
     }
 }
+
+tasks.matching { it.name == "preReleaseBuild" }.configureEach { dependsOn(verifyReleaseConfig) }
 
 if (categoryPilotEnabled) tasks.configureEach {
     if (name == "mergeDebugAssets") dependsOn(prepareCategoryPilotAssets)
