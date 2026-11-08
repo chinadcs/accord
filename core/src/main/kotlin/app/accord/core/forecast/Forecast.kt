@@ -23,11 +23,12 @@ object Forecast {
     private const val MAX_LOOKBACK = 24
 
     fun compute(request: ForecastRequest): MonthForecast {
-        val closure = closureOf(request)
+        val closures = request.cards.map { closureOf(request.copy(cycle = it.cycle, invoiceConferredClosed = it.conferredClosed)) }
+        val closure = if (closures.isEmpty()) closureOf(request) else InvoiceClosure(closures.all { it.closed }, if (closures.all { it.source == ClosureSource.Conferred }) ClosureSource.Conferred else ClosureSource.Configuration)
         val categories = request.categories.map { forecastOf(it, request, closure) }
         return MonthForecast(
             month = request.month,
-            ruleVersion = RULE_VERSION,
+            ruleVersion = if (request.cards.isEmpty()) RULE_VERSION else "forecast-v2-multicard",
             invoice = closure,
             categories = categories,
             toClassify = ToClassifySummary(request.quality.toClassifyCount, request.quality.toClassifyCents),
@@ -53,7 +54,12 @@ object Forecast {
     // ---- uma categoria ----
 
     private fun forecastOf(input: CategoryForecastInput, r: ForecastRequest, closure: InvoiceClosure): CategoryForecast {
-        val channels = Channel.entries.map { channelOf(it, input, r, closure) }
+        val channels = if (r.cards.isEmpty()) Channel.entries.map { channelOf(it, input, r, closure) } else
+            r.cards.map { card ->
+                val cardRequest = r.copy(cycle = card.cycle, invoiceConferredClosed = card.conferredClosed)
+                channelOf(Channel.Card, input.copy(spends = input.spends.filter { it.cardId == card.id }), cardRequest, closureOf(cardRequest))
+                    .copy(cardId = card.id, cardLabel = card.label)
+            } + channelOf(Channel.Other, input, r, closure)
         val estimate = estimateOf(channels)
         val estimated = (estimate as? Estimate.Value)?.cents ?: 0L
         val total = input.knownCents + estimated
@@ -129,7 +135,8 @@ object Forecast {
         // Pendências sem categoria podem pertencer a qualquer uma: reduzem a confiança de todas.
         if (q.pendingWithoutCategory > 0 || (q.pendingByCategory[input.categoryId] ?: 0) > 0) reasons += ConfidenceReason.OpenPendings
         if (q.toClassifyCount > 0) reasons += ConfidenceReason.ToClassifyInPeriod
-        if (closure.closed && closure.source == ClosureSource.Configuration && channels.any { it.channel == Channel.Card && (it.state == ChannelState.InvoiceClosed || it.state == ChannelState.Ended) }) {
+        if ((closure.closed && closure.source == ClosureSource.Configuration && channels.any { it.channel == Channel.Card && (it.state == ChannelState.InvoiceClosed || it.state == ChannelState.Ended) }) ||
+            channels.any { channel -> channel.cardId != null && (channel.state == ChannelState.InvoiceClosed || channel.state == ChannelState.Ended) && r.cards.any { it.id == channel.cardId && !it.conferredClosed } }) {
             reasons += ConfidenceReason.InvoiceClosedByConfigurationOnly
         }
         if (q.sharedViewPossiblyStale) reasons += ConfidenceReason.SharedViewPossiblyStale
@@ -140,7 +147,7 @@ object Forecast {
 enum class Channel { Card, Other }
 
 /** Gasto variável efetivo: [date] é a data da compra no cartão ou da movimentação nos demais meios; [cents] positivo. */
-data class VariableSpend(val date: LocalDate, val channel: Channel, val cents: Long)
+data class VariableSpend(val date: LocalDate, val channel: Channel, val cents: Long, val cardId: String? = null)
 
 /**
  * [limitCents] nulo é limite ausente (diferente de zero). [knownCents] é o comprometido do mês da categoria pelo motor de S1 (parcelas na fatura atribuída,
@@ -176,6 +183,7 @@ data class ForecastRequest(
     val quality: DataQuality = DataQuality(),
     val invoiceConferredClosed: Boolean? = null,
     val periods: Int = Forecast.DEFAULT_PERIODS,
+    val cards: List<CardForecastConfig> = emptyList(),
 )
 
 /** Intervalo de datas com fim exclusivo. */
@@ -206,6 +214,8 @@ data class ChannelExplanation(
     val requestedPeriods: Int,
     val samples: List<PeriodSample>,
     val estimateCents: Long?,
+    val cardId: String? = null,
+    val cardLabel: String? = null,
 )
 
 enum class UnavailableReason { NoCompletePeriod }
@@ -260,3 +270,5 @@ data class MonthForecast(
     /** Instante do cálculo (relógio do aparelho), preenchido pela fachada; a regra pura não lê relógio. */
     val calculatedAtMillis: Long = 0,
 )
+
+data class CardForecastConfig(val id: String, val label: String, val cycle: CardCycle, val conferredClosed: Boolean)

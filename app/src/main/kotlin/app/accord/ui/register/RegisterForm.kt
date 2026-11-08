@@ -74,6 +74,7 @@ data class RegisterForm(
     val moreOptions: Boolean = false,
     /** Conversão de intenção (S7, ADR 0048): o compromisso nasce desta intenção e fica vinculado a ela. Só despesa. */
     val originIntentionId: String? = null,
+    val cardId: String? = null,
 ) {
     val installments: Int? get() = installmentsText.trim().toIntOrNull()
 
@@ -138,6 +139,7 @@ data class RegisterForm(
                 form = if (form == ExpenseForm.Card) RecurrenceForm.Card else RecurrenceForm.OffCard,
                 accountId = account,
                 frequency = frequency,
+                cardId = cardId,
                 firstDate = date,
                 originIntentionId = originIntentionId,
             )
@@ -146,6 +148,7 @@ data class RegisterForm(
                 description = description.trim(), classification = Classification.Category(categoryId!!), date = date, amount = amount,
                 amountMeaning = amountMeaning.takeIf { (count ?: 1) > 1 }, installments = count ?: 1, invoice = invoice,
                 originIntentionId = originIntentionId,
+                cardId = cardId,
             )
             form == ExpenseForm.Boleto -> RegisterBoleto(
                 description.trim(), Classification.Category(categoryId!!), dueDate = date, amount = amount,

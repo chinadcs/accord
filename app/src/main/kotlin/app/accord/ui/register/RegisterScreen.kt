@@ -170,6 +170,13 @@ fun RegisterScreen(
                 emphasized = true, leadingIcon = Lucide.drawable.lucide_ic_banknote,
             )
 
+            if (form.kind == FormKind.Expense && form.form == ExpenseForm.Card) {
+                Text(stringResource(R.string.import_origin_card), style = MaterialTheme.typography.titleMedium)
+                state.cards.filter { it.configured }.forEach { card ->
+                    FilterChip(selected = form.cardId == card.id, onClick = { onChange { it.copy(cardId = card.id) } },
+                        label = { Text(card.nickname) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin))
+                }
+            }
             if (form.kind == FormKind.Expense && form.form != ExpenseForm.Card) {
                 Text(stringResource(R.string.register_payment), style = MaterialTheme.typography.titleLarge)
                 FlowRow(

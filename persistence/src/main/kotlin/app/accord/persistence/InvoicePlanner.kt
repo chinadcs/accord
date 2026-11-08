@@ -21,20 +21,26 @@ import java.util.UUID
  */
 internal class InvoicePlanner(
     private val dao: SpaceDao,
-    private val knownTotal: suspend (YearMonth) -> Money,
+    private val knownTotal: suspend (YearMonth, String) -> Money,
+    private val accounts: AccountPlanner,
     private val requiredAccount: suspend (Session, String?, MutableList<FieldError>) -> String?,
 ) {
-    fun invoiceId(spaceId: String, month: YearMonth) = DeterministicIds.of(spaceId, "invoice", month.toString())
+    fun invoiceId(spaceId: String, month: YearMonth, cardId: String = cardIdOf(spaceId)) =
+        if (cardId == cardIdOf(spaceId)) DeterministicIds.of(spaceId, "invoice", month.toString())
+        else DeterministicIds.of(spaceId, "invoice", "$cardId:$month")
 
     suspend fun planTotal(session: Session, c: RegisterInvoiceTotal): Planned {
         if (c.total.cents < 0) return stop("total", ErrorCode.MustBePositive, "O total da fatura não pode ser negativo.")
-        val id = invoiceId(session.spaceId, c.invoice)
-        val existing = dao.invoice(c.invoice.toString())
+        val errors = mutableListOf<FieldError>()
+        val cardId = accounts.resolveCard(session, c.cardId, errors)
+        if (errors.isNotEmpty()) return stop(errors)
+        val id = invoiceId(session.spaceId, c.invoice, cardId)
+        val existing = dao.invoice(c.invoice.toString(), cardId)
         // O total anterior fica na operação: é o que o desfazer restaura.
         val previous = existing?.checkedCents?.let { "$it:${existing.checkedSource}" } ?: "none"
         return Planned.Go(months = setOf(c.invoice), undoable = true, detail = "prev=$previous") {
             val revision = (existing?.revision ?: 0) + 1
-            dao.upsertInvoice(InvoiceRow(id, c.invoice.toString(), c.total.cents, c.source.name, revision))
+            dao.upsertInvoice(InvoiceRow(id, c.invoice.toString(), c.total.cents, c.source.name, revision, cardId))
             listOf(EntityChange(EntityType.Invoice, id, null, revision))
         }
     }
@@ -42,26 +48,28 @@ internal class InvoicePlanner(
     suspend fun planPay(session: Session, origin: Origin, c: PayInvoice): Planned {
         val errors = mutableListOf<FieldError>()
         if (c.amount.cents <= 0) errors += FieldError("amount", ErrorCode.MustBePositive, "O valor precisa ser maior que zero.")
-        val accountId = requiredAccount(session, c.accountId, errors)
+        val cardId = accounts.resolveCard(session, c.cardId, errors)
+        val accountId = requiredAccount(session, c.accountId ?: dao.card(cardId)?.accountId, errors)
         if (errors.isNotEmpty()) return stop(errors)
-        if (dao.isInvoicePaid(c.invoice.toString())) {
+        if (dao.isInvoicePaid(c.invoice.toString(), cardId)) {
             return stop("invoice", ErrorCode.NotAllowed, "Esta fatura já está paga. Desfaça a quitação antes de registrar outra.")
         }
 
-        val existing = dao.invoice(c.invoice.toString())
+        val existing = dao.invoice(c.invoice.toString(), cardId)
         val checked = existing?.checkedCents
         // Só a quitação integral de fatura conferida é aceita; o resto é preservado em revisão.
-        val accepted = checked != null && checked == knownTotal(c.invoice).cents && checked == c.amount.cents
+        val accepted = checked != null && checked == knownTotal(c.invoice, cardId).cents && checked == c.amount.cents
 
         return Planned.Go(months = setOf(c.invoice), undoable = true) {
-            val id = invoiceId(session.spaceId, c.invoice)
+            val id = invoiceId(session.spaceId, c.invoice, cardId)
             val revision = (existing?.revision ?: 0) + 1
             dao.upsertInvoice(
-                InvoiceRow(id, c.invoice.toString(), existing?.checkedCents, existing?.checkedSource, revision),
+                InvoiceRow(id, c.invoice.toString(), existing?.checkedCents, existing?.checkedSource, revision, cardId),
             )
             val payment = InvoicePaymentRow(
                 id = UUID.randomUUID().toString(),
                 dueMonth = c.invoice.toString(),
+                cardId = cardId,
                 amountCents = c.amount.cents,
                 epochDay = c.date.toEpochDay(),
                 accountId = accountId,
@@ -80,8 +88,8 @@ internal class InvoicePlanner(
     }
 
     /** Restaura o total anterior a partir do `detail` da operação de [RegisterInvoiceTotal]. */
-    suspend fun restoreTotal(month: YearMonth, detail: String) {
-        val row = dao.invoice(month.toString()) ?: return
+    suspend fun restoreTotal(month: YearMonth, detail: String, cardId: String? = null) {
+        val row = dao.invoice(month.toString(), cardId) ?: return
         val previous = detail.removePrefix("prev=")
         val next = if (previous == "none") row.copy(checkedCents = null, checkedSource = null)
         else row.copy(

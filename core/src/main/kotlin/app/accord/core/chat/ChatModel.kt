@@ -78,6 +78,9 @@ data class ChatContext(
      * conhece a chave. Vazio nos contextos de teste, onde id e chave são a mesma coisa.
      */
     val seedKeys: Map<String, String> = emptyMap(),
+    val cards: List<AccountItem> = emptyList(),
+    val myDefaultCardId: String? = null,
+    val cardAliases: Map<String, List<String>> = emptyMap(),
 ) {
     /**
      * Mesmo texto de antes de [phase] existir: os corpora congelados (baterias da Etapa 0) calculam o hash com `context.toString()`, e a
@@ -119,7 +122,12 @@ data class PartialEntry(
     val spentBy: String? = null,
     /** Dúvidas já detectadas na leitura (valor ambíguo, data futura...), por campo. */
     val issues: Map<QuestionField, ChatQuestion.Reason> = emptyMap(),
-)
+    val cardId: String? = null,
+) {
+    // Preserve the canonical text used by the frozen pre-multicard benchmark corpora.
+    override fun toString(): String = "PartialEntry(nature=$nature, description=$description, amount=$amount, role=$role, installments=$installments, date=$date, categoryId=$categoryId, payment=$payment, accountId=$accountId, spentBy=$spentBy, issues=$issues" +
+        (cardId?.let { ", cardId=$it" } ?: "") + ")"
+}
 
 /** Lançamento pronto para virar comando da fachada S1. Categoria nula = "a classificar". */
 data class CompleteEntry(
@@ -134,7 +142,12 @@ data class CompleteEntry(
     val payment: ChatPayment?,
     val accountId: String?,
     val spentBy: String?,
-)
+    val cardId: String? = null,
+) {
+    // Preserve the canonical text used by the frozen pre-multicard benchmark corpora.
+    override fun toString(): String = "CompleteEntry(nature=$nature, description=$description, amount=$amount, role=$role, installments=$installments, date=$date, categoryId=$categoryId, payment=$payment, accountId=$accountId, spentBy=$spentBy" +
+        (cardId?.let { ", cardId=$it" } ?: "") + ")"
+}
 
 /** O que muda numa correção do recibo. */
 sealed interface EntryChange {

@@ -75,20 +75,20 @@ reset role;
 -- ---- envio: idempotência, conflito, divergência, atomicidade ----
 select tests.as_user('00000000-0000-0000-0000-000000000001');
 insert into tests.ctx select 'p1', public.push_operations('00000000-0000-0000-0000-0000000000e1',
-  '[{"operationId":"op-1","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":1,"installationId":"i1","localTimeMillis":1,
+  '[{"operationId":"op-1","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":2,"installationId":"i1","localTimeMillis":1,
      "changes":[{"type":"Movement","id":"l1","baseVersion":null,"state":"{\"valor\":6800}","tombstone":false}]}]');
 insert into tests.ctx select 'p1b', public.push_operations('00000000-0000-0000-0000-0000000000e1',
-  '[{"operationId":"op-1","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":1,"installationId":"i1","localTimeMillis":99,
+  '[{"operationId":"op-1","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":2,"installationId":"i1","localTimeMillis":99,
      "changes":[{"type":"Movement","id":"l1","baseVersion":null,"state":"{\"valor\":6800}","tombstone":false}]}]');
 select is((select v -> 'results' -> 0 ->> 'repeated' from tests.ctx where k = 'p1'), 'false', 'primeira aplicação');
 select is((select v -> 'results' -> 0 ->> 'repeated' from tests.ctx where k = 'p1b'), 'true', 'reenvio devolve a mesma operação como repetida');
 select is((select v -> 'results' -> 0 -> 'versions' from tests.ctx where k = 'p1b'), (select v -> 'results' -> 0 -> 'versions' from tests.ctx where k = 'p1'), 'com as mesmas versões');
 select is((public.push_operations('00000000-0000-0000-0000-0000000000e1',
-  '[{"operationId":"op-1","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":1,"installationId":"i1","localTimeMillis":1,
+  '[{"operationId":"op-1","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":2,"installationId":"i1","localTimeMillis":1,
      "changes":[{"type":"Movement","id":"l1","baseVersion":null,"state":"{\"valor\":8000}","tombstone":false}]}]')) -> 'results' -> 0 ->> 'reason',
   'DivergentOperation', 'mesmo ID com conteúdo alterado é recusado');
 select is((public.push_operations('00000000-0000-0000-0000-0000000000e1',
-  '[{"operationId":"op-2","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":1,"installationId":"i1","localTimeMillis":1,
+  '[{"operationId":"op-2","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":2,"installationId":"i1","localTimeMillis":1,
      "changes":[{"type":"Movement","id":"l2","baseVersion":null,"state":"{}","tombstone":false},
                 {"type":"Movement","id":"l1","baseVersion":null,"state":"{\"valor\":1}","tombstone":false}]}]')) -> 'results' -> 0 ->> 'result',
   'conflict', 'criação sobre identidade existente colide');
@@ -98,26 +98,26 @@ select is((public.pull_changes('00000000-0000-0000-0000-0000000000e1', 0, 100)) 
 
 -- ---- categoria de renda (ADR 0038): tipo aceito; tipo desconhecido continua recusado ----
 select is((public.push_operations('00000000-0000-0000-0000-0000000000e1',
-  '[{"operationId":"op-ic","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":1,"installationId":"i1","localTimeMillis":1,
+  '[{"operationId":"op-ic","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":2,"installationId":"i1","localTimeMillis":1,
      "changes":[{"type":"IncomeCategory","id":"ic1","baseVersion":null,"state":"{}","tombstone":false}]}]')) -> 'results' -> 0 ->> 'result',
   'applied', 'categoria de renda é um tipo sincronizável');
 -- ---- lote de importação confirmado (ADR 0040): tipo aceito ----
 select is((public.push_operations('00000000-0000-0000-0000-0000000000e1',
-  '[{"operationId":"op-ib","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":1,"installationId":"i1","localTimeMillis":1,
+  '[{"operationId":"op-ib","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":2,"installationId":"i1","localTimeMillis":1,
      "changes":[{"type":"ImportBatch","id":"ib1","baseVersion":null,"state":"{}","tombstone":false}]}]')) -> 'results' -> 0 ->> 'result',
   'applied', 'lote de importação confirmado é um tipo sincronizável');
 -- ---- ícone escolhido por lançamento ou nome (ADR 0047): tipo aceito ----
 select is((public.push_operations('00000000-0000-0000-0000-0000000000e1',
-  '[{"operationId":"op-ia","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":1,"installationId":"i1","localTimeMillis":1,
+  '[{"operationId":"op-ia","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":2,"installationId":"i1","localTimeMillis":1,
      "changes":[{"type":"IconAssociation","id":"ia1","baseVersion":null,"state":"{}","tombstone":false}]}]')) -> 'results' -> 0 ->> 'result',
   'applied', 'ícone escolhido é um tipo sincronizável');
 -- ---- intenção de compra (ADR 0048): tipo aceito ----
 select is((public.push_operations('00000000-0000-0000-0000-0000000000e1',
-  '[{"operationId":"op-in","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":1,"installationId":"i1","localTimeMillis":1,
+  '[{"operationId":"op-in","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":2,"installationId":"i1","localTimeMillis":1,
      "changes":[{"type":"Intention","id":"in1","baseVersion":null,"state":"{}","tombstone":false}]}]')) -> 'results' -> 0 ->> 'result',
   'applied', 'intenção de compra é um tipo sincronizável');
 select is((public.push_operations('00000000-0000-0000-0000-0000000000e1',
-  '[{"operationId":"op-xx","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":1,"installationId":"i1","localTimeMillis":1,
+  '[{"operationId":"op-xx","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":2,"installationId":"i1","localTimeMillis":1,
      "changes":[{"type":"Inexistente","id":"x1","baseVersion":null,"state":"{}","tombstone":false}]}]')) -> 'results' -> 0 ->> 'result',
   'rejected', 'tipo desconhecido continua recusado');
 

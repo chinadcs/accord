@@ -110,7 +110,11 @@ internal object EntityStates {
      * então uma edição aberta antes da chegada recebe "versão desatualizada" no próximo comando.
      */
     suspend fun apply(dao: SpaceDao, type: EntityType, id: String, state: String) {
-        val root = json.parseToJsonElement(state).jsonObject
+        val parsed = json.parseToJsonElement(state).jsonObject
+        val legacyCard = dao.cards().firstOrNull()?.id
+        val root = if ((type in setOf(EntityType.CardPurchase, EntityType.Invoice, EntityType.InvoicePayment) || (type == EntityType.Recurrence && (parsed["form"] as? JsonPrimitive)?.contentOrNull == "Card")) &&
+            (parsed["cardId"] == null || parsed["cardId"] == kotlinx.serialization.json.JsonNull) && legacyCard != null)
+            JsonObject(parsed + ("cardId" to JsonPrimitive(legacyCard))) else parsed
         val revision = revisionOf(dao, type, id) + 1
         fun withRevision(): JsonObject = JsonObject(root + (REVISION to JsonPrimitive(revision)))
         fun <T> children(key: String, serializer: kotlinx.serialization.KSerializer<T>): List<T> =
@@ -127,7 +131,7 @@ internal object EntityStates {
             EntityType.Card -> dao.upsertCard(json.decodeFromJsonElement(CardRow.serializer(), withRevision()))
             EntityType.CardPurchase -> {
                 dao.upsertPurchase(json.decodeFromJsonElement(CardPurchaseRow.serializer(), withRevision()))
-                val installments = children("installments", InstallmentRow.serializer()).map { it.copy(purchaseId = id) }
+                val installments = children("installments", InstallmentRow.serializer()).map { it.copy(purchaseId = id, cardId = (root["cardId"] as? JsonPrimitive)?.contentOrNull) }
                 // A versão aplicada pode ter menos parcelas que a anterior (conversão mantida deste aparelho, ADR 0048): as que sobram saem.
                 if (installments.isNotEmpty()) dao.deleteInstallmentsExcept(id, installments.map { it.number })
                 dao.upsertInstallments(installments)
@@ -151,7 +155,7 @@ internal object EntityStates {
                 dao.deleteSegments(id)
                 dao.insertSegments(children("segments", RecurrenceSegmentRow.serializer()).map { it.copy(recurrenceId = id) })
                 dao.deleteOverrides(id)
-                dao.insertOverrides(children("overrides", RecurrenceOverrideRow.serializer()).map { it.copy(recurrenceId = id) })
+                dao.insertOverrides(children("overrides", RecurrenceOverrideRow.serializer()).map { it.copy(recurrenceId = id, cardId = (root["cardId"] as? JsonPrimitive)?.contentOrNull) })
                 dao.deleteSettlementsFrom(id, 0)
                 dao.upsertSettlements(children("settlements", RecurrenceSettlementRow.serializer()).map { it.copy(recurrenceId = id) })
             }
@@ -175,6 +179,8 @@ internal object EntityStates {
         "parentId" to EntityType.Category,
         "accountId" to EntityType.Account,
         "defaultAccountId" to EntityType.Account,
+        "cardId" to EntityType.Card,
+        "defaultCardId" to EntityType.Card,
     )
 
     private val originTypes = mapOf(

@@ -24,12 +24,12 @@ internal class RefundPlanner(
     private val dao: SpaceDao,
     private val cycle: suspend () -> CardCycle,
 ) {
-    private data class OriginInfo(val type: String, val totalCents: Long, val onCard: Boolean)
+    private data class OriginInfo(val type: String, val totalCents: Long, val onCard: Boolean, val cardId: String? = null)
 
     private suspend fun origin(id: String): Pair<OriginInfo?, Planned.Stop?> {
         dao.purchase(id)?.let {
             if (it.voided) return null to voidedOrigin()
-            return OriginInfo(ORIGIN_PURCHASE, it.totalCents, onCard = true) to null
+            return OriginInfo(ORIGIN_PURCHASE, it.totalCents, onCard = true, cardId = it.cardId) to null
         }
         dao.movement(id)?.let {
             if (it.voided) return null to voidedOrigin()
@@ -44,8 +44,8 @@ internal class RefundPlanner(
 
     private fun voidedOrigin() = stop("originId", ErrorCode.NotAllowed, "Este lançamento foi desfeito ou excluído.")
 
-    private suspend fun creditMonth(onCard: Boolean, date: LocalDate, invoice: YearMonth?): YearMonth =
-        if (onCard) invoice ?: cycle().assign(date).dueMonth else YearMonth.from(date)
+    private suspend fun creditMonth(onCard: Boolean, date: LocalDate, invoice: YearMonth?, cardId: String?): YearMonth =
+        if (onCard) invoice ?: (cardId?.let { dao.card(it) }?.let { CardCycle(it.closingDay, it.dueDay) } ?: cycle()).assign(date).dueMonth else YearMonth.from(date)
 
     private fun exceeds(remaining: Long) = FieldError(
         "amount", ErrorCode.ExceedsRemaining,
@@ -67,7 +67,7 @@ internal class RefundPlanner(
         val remaining = info.totalCents - used
         if (c.amount.cents > remaining) return stop(listOf(exceeds(remaining)))
 
-        val month = if (c.status == RefundStatus.Confirmed) creditMonth(info.onCard, c.date!!, c.invoice) else null
+        val month = if (c.status == RefundStatus.Confirmed) creditMonth(info.onCard, c.date!!, c.invoice, info.cardId) else null
         return Planned.Go(months = setOfNotNull(month), undoable = true) {
             val row = RefundRow(
                 id = UUID.randomUUID().toString(),
@@ -104,7 +104,7 @@ internal class RefundPlanner(
         val remaining = info.totalCents - others
         if (c.amount.cents > remaining) return stop(listOf(exceeds(remaining)))
 
-        val month = creditMonth(info.onCard, c.date, c.invoice)
+        val month = creditMonth(info.onCard, c.date, c.invoice, info.cardId)
         return Planned.Go(months = setOf(month)) {
             val next = refund.copy(
                 amountCents = c.amount.cents,

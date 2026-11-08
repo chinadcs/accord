@@ -84,6 +84,7 @@ data class ImportFileUiState(
     val file: FileSummary? = null,
     val kind: DocumentKind? = null,
     val accounts: List<AccountInfo> = emptyList(),
+    val cards: List<app.accord.core.space.CardInfo> = emptyList(),
     val cardId: String? = null,
     val cardName: String? = null,
     val originId: String? = null,
@@ -137,8 +138,9 @@ class ImportFileViewModel(
     private suspend fun loadOrigins() {
         val space = provider.space()
         val accounts = (space.accounts() as? QueryResult.Data)?.value?.accounts.orEmpty()
-        val card = (space.card() as? QueryResult.Data)?.value
-        _state.update { it.copy(accounts = accounts, cardId = card?.id, cardName = card?.nickname) }
+        val cards = (space.cards() as? QueryResult.Data)?.value.orEmpty()
+        val card = cards.firstOrNull { it.isDefault }
+        _state.update { it.copy(accounts = accounts, cards = cards, cardId = card?.id, cardName = card?.nickname) }
     }
 
     fun onFilePicked(uri: Uri?) {
@@ -180,7 +182,7 @@ class ImportFileViewModel(
         _state.update {
             // O tipo e a origem já foram escolhidos antes do arquivo e valem; o arquivo só avisa quando parece outra coisa.
             val kind = it.kind
-            val named = md.originName?.let { n -> CsvMapping.resolveOrigin(n, it.accounts.map { a -> a.id to a.nickname }, it.cardId?.let { id -> id to it.cardName.orEmpty() }) }
+            val named = md.originName?.let { n -> CsvMapping.resolveOrigins(n, it.accounts.map { a -> a.id to a.nickname }, it.cards.map { c -> c.id to c.nickname }) }
             val message = when {
                 result.movements.isEmpty() -> ScreenMessage(MessageKind.Attention, R.string.import_no_movements)
                 md.kind != null && md.kind != kind -> ScreenMessage(MessageKind.Attention, if (md.kind == DocumentKind.Card) R.string.import_kind_mismatch_card else R.string.import_kind_mismatch_account)

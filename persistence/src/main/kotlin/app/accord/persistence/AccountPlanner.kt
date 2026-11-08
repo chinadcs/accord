@@ -53,6 +53,29 @@ internal class AccountPlanner(private val dao: SpaceDao) {
         }
     }
 
+    suspend fun effectiveCard(session: Session): String =
+        dao.preferences(DeterministicIds.preferences(session.spaceId, session.personId))?.defaultCardId
+            ?.takeIf { dao.card(it) != null }
+            ?: dao.cards().filter { it.revision > 0 }.singleOrNull()?.id
+            ?: cardIdOf(session.spaceId)
+
+    suspend fun resolveCard(session: Session, given: String?, errors: MutableList<FieldError>): String {
+        val id = given ?: effectiveCard(session)
+        if (dao.card(id) == null) errors += FieldError("cardId", ErrorCode.UnknownReference, "Cartao nao encontrado.")
+        return id
+    }
+
+    suspend fun planSetDefaultCard(session: Session, c: app.accord.core.space.SetMyDefaultCard): Planned {
+        dao.card(c.cardId) ?: return stop("cardId", ErrorCode.UnknownReference, "Cartao nao encontrado.")
+        return Planned.Go(months = emptySet()) {
+            val id = DeterministicIds.preferences(session.spaceId, session.personId)
+            val old = dao.preferences(id) ?: PreferencesRow(id, session.personId, null, 0)
+            val next = old.copy(defaultCardId = c.cardId, revision = old.revision + 1)
+            dao.upsertPreferences(next)
+            listOf(EntityChange(EntityType.Preferences, id, null, next.revision))
+        }
+    }
+
     private fun bankName(bank: BankRef) = when (bank) {
         is BankRef.Catalog -> bank.name
         is BankRef.Other -> bank.name
@@ -182,7 +205,7 @@ internal class AccountPlanner(private val dao: SpaceDao) {
         return Planned.Go(months = emptySet()) {
             val id = DeterministicIds.preferences(session.spaceId, session.personId)
             val revision = (dao.preferences(id)?.revision ?: 0) + 1
-            dao.upsertPreferences(PreferencesRow(id, session.personId, c.accountId, revision))
+            dao.upsertPreferences((dao.preferences(id) ?: PreferencesRow(id, session.personId, null, 0)).copy(defaultAccountId = c.accountId, revision = revision))
             listOf(EntityChange(EntityType.Preferences, id, null, revision))
         }
     }
@@ -190,6 +213,7 @@ internal class AccountPlanner(private val dao: SpaceDao) {
     suspend fun planConfigureCard(session: Session, c: ConfigureCard): Planned {
         val bank = c.bank
         val errors = buildList {
+            if (c.createNew && bank == null) add(FieldError("bank", ErrorCode.Required, "Escolha o banco do novo cart\u00e3o."))
             if (c.closingDay !in 1..31) add(FieldError("closingDay", ErrorCode.OutOfRange, "O dia de fechamento vai de 1 a 31."))
             if (c.dueDay !in 1..31) add(FieldError("dueDay", ErrorCode.OutOfRange, "O dia de vencimento vai de 1 a 31."))
             if (c.nickname.isBlank()) add(FieldError("nickname", ErrorCode.Required, "Informe um apelido para o cartão."))
@@ -197,9 +221,19 @@ internal class AccountPlanner(private val dao: SpaceDao) {
             if (c.creditLimit?.cents?.let { it <= 0 } == true) add(FieldError("creditLimit", ErrorCode.OutOfRange, "O limite deve ser maior que zero."))
         }
         if (errors.isNotEmpty()) return stop(errors)
+        val id = if (c.createNew) UUID.randomUUID().toString() else c.cardId ?: cardIdOf(session.spaceId)
+        val old = dao.card(id)
+        if (!c.createNew && old == null) return stop("cardId", ErrorCode.UnknownReference, "Cartao nao encontrado.")
+        if (c.expectedRevision != null && old?.revision != c.expectedRevision) return Planned.Stop(CommandResult.StaleVersion(id, old?.revision ?: 0))
         return Planned.Go(months = emptySet()) {
+            val changes = mutableListOf<EntityChange>()
+            val account = if (bank != null) dao.bankAccounts().firstOrNull {
+                if (bank is BankRef.Catalog) it.bankIspb == bank.ispb else it.bankIspb == null && it.bankName.equals(bankName(bank), ignoreCase = true)
+            } ?: AccountRow(UUID.randomUUID().toString(), (bank as? BankRef.Catalog)?.ispb, bankName(bank), bankName(bank), 1).also {
+                dao.insertAccount(it)
+                changes += EntityChange(EntityType.Account, it.id, null, 1)
+            } else old?.accountId?.let { dao.account(it) }
             // Não remapeia atribuições existentes: só as novas compras usam os dias novos.
-            val id = cardIdOf(session.spaceId)
             val revision = (dao.card(id)?.revision ?: 0) + 1
             dao.upsertCard(
                 CardRow(
@@ -211,12 +245,13 @@ internal class AccountPlanner(private val dao: SpaceDao) {
                     dueDay = c.dueDay,
                     revision = revision,
                     creditLimitCents = c.creditLimit?.cents,
+                    accountId = account?.id,
                 ),
             )
-            listOf(EntityChange(EntityType.Card, id, null, revision))
+            changes + EntityChange(EntityType.Card, id, null, revision)
         }
     }
 }
 
-/** Um cartão por espaço; a identidade é determinística para que todo aparelho chegue à mesma linha. */
+/** Identidade historica do primeiro cartao; os demais recebem UUID na criacao (ADR 0052). */
 internal fun cardIdOf(spaceId: String) = DeterministicIds.of(spaceId, "card", "main")

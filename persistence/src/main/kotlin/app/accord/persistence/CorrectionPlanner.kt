@@ -149,7 +149,7 @@ internal class CorrectionPlanner(
         refundFloor(p.id, c.amount, errors)
         if (errors.isNotEmpty()) return stop(errors)
         val months = installments.map { YearMonth.parse(it.invoiceMonth) }.toSet()
-        needsExtra(c, p.origin == Origin.Import.name, months.any { dao.isInvoicePaid(it.toString()) })?.let { return it }
+        needsExtra(c, p.origin == Origin.Import.name, months.any { dao.isInvoicePaid(it.toString(), p.cardId) })?.let { return it }
 
         val single = installments.size == 1
         val first = installments.first()
@@ -158,7 +158,8 @@ internal class CorrectionPlanner(
         val newDate = c.date
         val newAmount = c.amount
         if (newDate != null) {
-            val assigned = cycle().assign(newDate)
+            val row = p.cardId?.let { dao.card(it) }
+            val assigned = (row?.let { CardCycle(it.closingDay, it.dueDay) } ?: cycle()).assign(newDate)
             if (single) {
                 // À vista: reestima só a atribuição ainda estimada; a confirmada pela pessoa não muda.
                 if (first.assignment != AssignmentState.Confirmed.name) {

@@ -66,6 +66,7 @@ data class ImportReviewUiState(
     val filter: ReviewFilter = ReviewFilter.All,
     val categories: Map<String, CategoryNode> = emptyMap(),
     val accounts: List<AccountInfo> = emptyList(),
+    val cards: List<app.accord.core.space.CardInfo> = emptyList(),
     val cardId: String? = null,
     val cardName: String? = null,
     /** Não nulo enquanto a pessoa corrige o tipo, a origem ou a fatura do documento. */
@@ -118,10 +119,11 @@ class ImportReviewViewModel(
             val space = provider.space()
             val categories = ((space.categories() as? QueryResult.Data)?.value.orEmpty()).associateBy { it.id }
             val accounts = (space.accounts() as? QueryResult.Data)?.value?.accounts.orEmpty()
-            val card = (space.card() as? QueryResult.Data)?.value
+            val cards = (space.cards() as? QueryResult.Data)?.value.orEmpty()
+        val card = cards.firstOrNull { it.isDefault }
             _state.update {
                 it.copy(
-                    categories = categories, accounts = accounts, cardId = card?.id, cardName = card?.nickname,
+                    categories = categories, accounts = accounts, cards = cards, cardId = card?.id, cardName = card?.nickname,
                     content = when (review) {
                         is QueryResult.Failure -> ReviewContent.Failed
                         is QueryResult.Data -> review.value?.let(ReviewContent::Ready) ?: ReviewContent.Missing

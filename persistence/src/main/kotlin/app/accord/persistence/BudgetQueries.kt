@@ -52,7 +52,7 @@ internal class BudgetQueries(
         RefundPlanner.ORIGIN_PURCHASE ->
             dao.purchase(refund.originId)?.takeIf { !it.voided }?.let {
                 // Crédito de cartão só desconta do pago quando a fatura que o recebe está quitada.
-                Credit(it.classificationId, refund.amountCents, reducesPaid = refund.creditMonth?.let { m -> dao.isInvoicePaid(m) } == true)
+                Credit(it.classificationId, refund.amountCents, reducesPaid = refund.creditMonth?.let { m -> dao.isInvoicePaid(m, it.cardId) } == true)
             }
         RefundPlanner.ORIGIN_MOVEMENT ->
             dao.movement(refund.originId)?.takeIf { !it.voided }?.let { Credit(it.classificationId, refund.amountCents, reducesPaid = true) }
@@ -70,14 +70,17 @@ internal class BudgetQueries(
         val recurringExpenses = occurrences(month).filter { it.kind == RecurrenceKind.Expense }
 
         // Pix, débito e dinheiro já nascem pagos; parcelas só passam a pagas com a quitação da fatura.
-        val invoicePaid = dao.isInvoicePaid(month.toString())
         val aggregates = dao.sumsByClassification(from, to).map { Aggregate(it.classificationId, it.totalCents, it.totalCents, it.count) } +
-            dao.installmentSums(month.toString()).map { Aggregate(it.classificationId, it.totalCents, if (invoicePaid) it.totalCents else 0, it.count) } +
+            dao.installmentsInMonths(month.toString(), month.toString()).filter { it.cancelState != CancellationPlanner.CANCEL_DONE }.mapNotNull { i ->
+                dao.purchase(i.purchaseId)?.takeIf { !it.voided }?.let { p ->
+                    Aggregate(p.classificationId, i.amountCents, if (dao.isInvoicePaid(i.invoiceMonth, p.cardId)) i.amountCents else 0, 1)
+                }
+            } +
             dao.boletoSums(from, to).map { Aggregate(it.classificationId, it.totalCents, it.paidCents, it.count) } +
             recurringExpenses.map {
                 val amount = (it.settledAmount ?: it.expectedAmount).cents
                 val onCard = it.form == RecurrenceForm.Card
-                Aggregate(it.categoryId, amount, if (it.paid || (onCard && invoicePaid)) amount else 0, 1)
+                Aggregate(it.categoryId, amount, if (it.paid || (onCard && dao.isInvoicePaid(month.toString(), it.cardId))) amount else 0, 1)
             }
         val income = incomes(month)
 
@@ -101,7 +104,7 @@ internal class BudgetQueries(
             paid = Money(aggregates.sumOf { it.paid } - credits.filter { it.reducesPaid }.sumOf { it.cents }),
             toClassify = ToClassifyLine(Money(toClassify.sumOf { it.total } - unclassifiedCredit), toClassify.sumOf { it.count }),
             credits = Money(credits.sumOf { it.cents }),
-            invoiceLinksToConfirm = dao.linksToConfirm(month.toString()) +
+            invoiceLinksToConfirm = dao.cards().sumOf { dao.linksToConfirm(month.toString(), it.id) } +
                 recurringExpenses.count { it.assignment == AssignmentState.ToConfirm },
             income = IncomeTotals(income.received, income.toReceive),
             categories = categories.mains.map { main ->

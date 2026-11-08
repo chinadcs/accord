@@ -56,7 +56,7 @@ fun CardRoute(
     viewModel: CardViewModel,
     padding: PaddingValues,
     onBack: () -> Unit,
-    onOpenInvoice: (YearMonth) -> Unit,
+    onOpenInvoice: (YearMonth, String) -> Unit,
     onToConfirm: () -> Unit,
     initialSetup: Boolean = false,
 ) {
@@ -64,9 +64,9 @@ fun CardRoute(
     val edit by viewModel.edit.collectAsStateWithLifecycle()
     RefreshOnResume(viewModel::refresh)
     CardScreen(
-        content, edit, padding, onBack, onRetry = { viewModel.load() }, onOpenInvoice = onOpenInvoice, onToConfirm = onToConfirm,
+        content, edit, padding, onBack, onRetry = { viewModel.load() }, onOpenInvoice = { month -> (content as? CardContent.Ready)?.data?.card?.id?.let { onOpenInvoice(month, it) } }, onToConfirm = onToConfirm,
         onStartEdit = viewModel::startEdit, onCancelEdit = viewModel::cancelEdit, onChange = viewModel::change, onSave = viewModel::save,
-        initialSetup = initialSetup,
+        initialSetup = initialSetup, onSelectCard = viewModel::selectCard, onAddCard = viewModel::addCard, onDefaultCard = viewModel::setDefault,
     )
 }
 
@@ -84,6 +84,9 @@ fun CardScreen(
     onChange: ((CardForm) -> CardForm) -> Unit,
     onSave: () -> Unit,
     initialSetup: Boolean = false,
+    onSelectCard: (String) -> Unit = {},
+    onAddCard: () -> Unit = {},
+    onDefaultCard: () -> Unit = {},
 ) {
     Column(
         Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
@@ -97,6 +100,16 @@ fun CardScreen(
                 OutlinedButton(onClick = onRetry, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.action_retry)) }
             }
             is CardContent.Ready -> {
+                if (!initialSetup && edit == null) {
+                    content.data.cards.filter { it.configured }.forEach { card ->
+                        OutlinedButton(onClick = { onSelectCard(card.id) }, modifier = Modifier.fillMaxWidth()) {
+                            Text(if (card.id == content.data.card.id) stringResource(R.string.cards_selected, card.nickname) else card.nickname)
+                        }
+                    }
+                    OutlinedButton(onClick = onAddCard, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.cards_add)) }
+                    if (content.data.card.isDefault) Text(stringResource(R.string.cards_my_default))
+                    else OutlinedButton(onClick = onDefaultCard, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.cards_set_default)) }
+                }
                 if (edit != null) {
                     CardEditor(edit, onChange, onSave, onCancelEdit, initialSetup)
                 } else if (content.data.card.configured) {
@@ -157,6 +170,7 @@ private fun CardSummary(data: CardData, onStartEdit: () -> Unit) {
                         color = Accord.colors.onFinanceSurface)
                 }
             }
+            data.accounts.firstOrNull { it.id == card.accountId }?.let { Text(stringResource(R.string.cards_linked_account, it.nickname), color = Accord.colors.onFinanceSurface) }
             card.creditLimit?.let { limit ->
                 Text(stringResource(R.string.card_credit_limit_value, limit.format()), style = MaterialTheme.typography.bodyLarge,
                     color = Accord.colors.onFinanceSurface)

@@ -36,6 +36,7 @@ object EntryCompleter {
             if (entry.installments > 1 && payment != ChatPayment.Card) return ChatDecision.Refuse(RefuseReason.InstallmentsNeedCard, entry)
             when (payment) {
                 ChatPayment.Card -> {
+                    if (entry.cardId != null && context.cards.none { it.id == entry.cardId }) return ChatDecision.Refuse(RefuseReason.NoCard, entry)
                     if (!context.hasCard) return ChatDecision.Refuse(RefuseReason.NoCard, entry)
                     accountId = null
                 }
@@ -66,6 +67,7 @@ object EntryCompleter {
                 payment = payment,
                 accountId = accountId,
                 spentBy = entry.spentBy,
+                cardId = if (payment == ChatPayment.Card) entry.cardId ?: context.myDefaultCardId else null,
             ),
         )
     }

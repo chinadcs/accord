@@ -805,7 +805,8 @@ class ChatCoordinatorTest : ChatTestBase() {
     fun `o texto da mensagem nunca chega a fachada nem a fila nem ao diagnostico`() = runBlocking<Unit> {
         val e = env()
         val marker = "ZQXMARCADORUNICO"
-        val text = "delivery 68 no cartão $marker"
+        // O marcador e uma nota, nao o nome de um cartao (ADR 0052).
+        val text = "delivery 68 no cartão ($marker)"
         e.fake.on(text, reg("delivery", "68", category = e.categoryRef("alimentacao.delivery"), payment = ChatPayment.Card))
         val markerAsk = "Amazon 150 $marker"
         e.fake.on(markerAsk, reg("Amazon", "150"))

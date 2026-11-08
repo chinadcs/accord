@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cards_add">Adicionar cartão</string>
+    <string name="cards_my_default">Seu cartão padrão</string>
+    <string name="cards_set_default">Usar como meu cartão padrão</string>
+    <string name="cards_selected">%1$s (selecionado)</string>
+    <string name="cards_payment_account">Conta da quitação</string>
+    <string name="cards_account_selected">%1$s (selecionada)</string>
+    <string name="cards_linked_account">Conta vinculada: %1$s</string>
+    <string name="cards_choose_bank">Escolha o banco do novo cartão.</string>
+    <string name="cards_import_confirm">Confirmo o cartão: %1$s</string>
+</resources>

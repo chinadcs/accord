@@ -79,8 +79,8 @@ internal fun ImportFacts.linkable(): List<LinkableEntry> = entries.filter { !it.
 internal class ImportEvaluator(
     private val dao: SpaceDao,
     private val sessions: SessionProvider,
-    private val cycle: suspend () -> CardCycle,
-    private val invoice: suspend (YearMonth) -> InvoiceView,
+    private val cycle: suspend (String?) -> CardCycle,
+    private val invoice: suspend (YearMonth, String?) -> InvoiceView,
     private val cardId: (String) -> String,
     /** Whether the common validator would accept the command now (planning only, nothing is written). */
     private val applicable: suspend (Command) -> Boolean,
@@ -142,7 +142,7 @@ internal class ImportEvaluator(
     private suspend fun sourceExists(kind: DocumentKind?, originId: String, spaceId: String): Boolean = when {
         originId.isBlank() -> false
         kind == DocumentKind.Account -> dao.account(originId) != null
-        kind == DocumentKind.Card -> originId == cardId(spaceId)
+        kind == DocumentKind.Card -> dao.card(originId) != null
         else -> false
     }
 
@@ -166,12 +166,12 @@ internal class ImportEvaluator(
         val pairs = dao.confirmedImportPairs().map { DistinctPair(it.key, it.entryId) }.toSet()
 
         val entries = entriesFor(kind, originId, spaceId, dates, withOrigin)
-        val cycle = cycle()
+        val cycle = cycle(originId.takeIf { kind == DocumentKind.Card })
         val billing = BillingContext(
             cycle = cycle,
             documentInvoice = documentInvoice,
             chargesCategoryId = DeterministicIds.seedCategory(spaceId, CategorySeed.FEES_AND_INTEREST),
-            purchases = dao.installmentPurchases().map { p ->
+            purchases = dao.installmentPurchases().filter { kind != DocumentKind.Card || it.cardId == originId }.map { p ->
                 val rows = dao.installments(p.id)
                 CardPurchaseRecord(
                     p.id, p.description,
@@ -184,10 +184,13 @@ internal class ImportEvaluator(
                     },
                 )
             },
-            invoices = dao.invoiceMonthsWithData().distinct().sorted().map { month ->
-                val ym = YearMonth.parse(month)
-                val view = invoice(ym)
-                InvoiceRecord(ym, cycle.dueDateOfInvoice(ym), view.checkedTotal?.cents.takeIf { view.conferred }, view.paid)
+            invoices = dao.cards().filter { kind != DocumentKind.Card || it.id == originId }.flatMap { card ->
+                dao.invoiceMonthsWithData().distinct().sorted().map { month ->
+                    val ym = YearMonth.parse(month)
+                    val view = invoice(ym, card.id)
+                    val cc = CardCycle(card.closingDay, card.dueDay)
+                    InvoiceRecord(ym, cc.dueDateOfInvoice(ym), view.checkedTotal?.cents.takeIf { view.conferred }, view.paid, card.id)
+                }
             },
             boletos = dao.unpaidBoletos().map { BoletoRecord(it.id, it.expectedCents, LocalDate.ofEpochDay(it.dueEpochDay), paid = false) },
         )
@@ -224,7 +227,7 @@ internal class ImportEvaluator(
             kind == DocumentKind.Account -> dao.movementsOfAccount(originId, from, to).map {
                 ExistingEntry(it.id, originId, LocalDate.ofEpochDay(it.epochDay), -it.amountCents, it.description, hasOrigin = ("Movement" to it.id) in withOrigin)
             }
-            kind == DocumentKind.Card && originId == cardId(spaceId) -> dao.purchasesBetween(from, to).mapNotNull { p ->
+            kind == DocumentKind.Card && dao.card(originId) != null -> dao.purchasesBetween(from, to).filter { it.cardId == originId }.mapNotNull { p ->
                 val installments = dao.installments(p.id)
                 val first = installments.singleOrNull() ?: return@mapNotNull null
                 ExistingEntry(

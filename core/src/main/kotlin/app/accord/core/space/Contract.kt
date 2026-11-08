@@ -63,6 +63,7 @@ interface FinanceSpace {
     /** Limite vigente de cada categoria principal em [month], com a origem da vigência. */
     suspend fun limits(month: YearMonth): QueryResult<List<CategoryLimit>>
     suspend fun card(): QueryResult<CardInfo>
+    suspend fun cards(): QueryResult<List<CardInfo>>
     suspend fun boleto(id: String): QueryResult<BoletoView?>
     suspend fun income(id: String): QueryResult<IncomeView?>
     suspend fun incomes(month: YearMonth): QueryResult<IncomeSummary>
@@ -76,10 +77,10 @@ interface FinanceSpace {
     suspend fun purchase(id: String): QueryResult<PurchaseDetail?>
 
     /** Fatura pelo mês de vencimento, mesmo sem itens: composição, conferência, quitação e pendências. */
-    suspend fun invoice(dueMonth: YearMonth): QueryResult<InvoiceView>
+    suspend fun invoice(dueMonth: YearMonth, cardId: String? = null): QueryResult<InvoiceView>
 
     /** Faturas com algum dado (itens, total registrado ou pagamento), da mais antiga para a mais nova. */
-    suspend fun invoices(): QueryResult<List<InvoiceView>>
+    suspend fun invoices(cardId: String? = null): QueryResult<List<InvoiceView>>
 
     /** Lançamentos que ocupam o [month] do orçamento, do mais recente para o mais antigo. */
     suspend fun movements(month: YearMonth): QueryResult<List<MovementRow>>
@@ -412,7 +413,7 @@ data class RegisterDirectPayment(
 
 enum class AmountMeaning { Total, PerInstallment }
 
-/** Um único cartão por espaço no P0; os dias sugerem a fatura sem garantir a atribuição do emissor. */
+/** Cadastro ou edição de um cartão (ADR 0052); os dias sugerem a fatura sem garantir a atribuição do emissor. */
 data class ConfigureCard(
     val bank: BankRef?,
     val nickname: String,
@@ -420,6 +421,9 @@ data class ConfigureCard(
     val dueDay: Int,
     /** Limite contratado, usado apenas para alertar quando o total em faturas não pagas o exceder. */
     val creditLimit: Money? = null,
+    val cardId: String? = null,
+    val createNew: Boolean = false,
+    val expectedRevision: Long? = null,
 ) : Command
 
 /**
@@ -440,6 +444,7 @@ data class RegisterCardPurchase(
     val invoice: YearMonth? = null,
     /** Intenção de origem (S7, ADR 0048): vínculo imutável definido na criação; no máximo um compromisso por intenção no espaço. */
     val originIntentionId: String? = null,
+    val cardId: String? = null,
 ) : Command
 
 /**
@@ -536,6 +541,7 @@ data class CreateRecurrence(
     val firstDate: LocalDate,
     /** Intenção de origem (S7, ADR 0048): vínculo imutável definido na criação; no máximo um compromisso por intenção no espaço. */
     val originIntentionId: String? = null,
+    val cardId: String? = null,
 ) : Command
 
 /**
@@ -642,6 +648,7 @@ data class RegisterInvoiceTotal(
     val invoice: YearMonth,
     val total: Money,
     val source: InvoiceTotalSource = InvoiceTotalSource.Person,
+    val cardId: String? = null,
 ) : Command
 
 /**
@@ -656,6 +663,7 @@ data class PayInvoice(
     val date: LocalDate,
     /** Padrão do autor quando omitida. */
     val accountId: String? = null,
+    val cardId: String? = null,
 ) : Command
 
 /**
@@ -1032,6 +1040,9 @@ data class CardInfo(
     val creditLimit: Money? = null,
     /** Verdadeiro depois que alguém configurou o cartão (aqui ou no outro aparelho); a semente 8/15 não conta. */
     val configured: Boolean = true,
+    val accountId: String? = null,
+    val isDefault: Boolean = false,
+    val revision: Long = 0,
 )
 
 /** Estado da atribuição de fatura de uma parcela (S1 §6). */
@@ -1137,6 +1148,7 @@ data class OccurrenceView(
     val assignment: AssignmentState?,
     /** Fatura estimada pelo ciclo do cartão; nula fora do cartão. Difere de [budgetMonth] quando a pessoa escolheu outra. */
     val estimatedInvoice: YearMonth? = null,
+    val cardId: String? = null,
 )
 
 /** Fase exibida da fatura; "fechada" quando um total foi registrado (pessoa ou importação). */
@@ -1165,6 +1177,7 @@ data class InvoiceView(
     /** Pagamentos preservados em revisão: a fatura não foi paga por eles. */
     val divergentPayments: List<PaymentView>,
     val revision: Long,
+    val cardId: String? = null,
 )
 
 // ---- lançamentos, detalhe, compromissos e pendências ----
@@ -1201,6 +1214,7 @@ data class EntryFilter(
     /** Quem registrou ou quem gastou; filtro auxiliar, sem orçamento individual. */
     val person: String? = null,
     val search: String? = null,
+    val cardId: String? = null,
 )
 
 data class EntryRow(
@@ -1219,6 +1233,7 @@ data class EntryRow(
     val installmentCount: Int?,
     val situations: Set<EntrySituation>,
     val authorId: String?,
+    val cardId: String? = null,
 )
 
 /**
@@ -1292,6 +1307,7 @@ data class EntryDetail(
     val income: IncomeView?,
     val occurrence: OccurrenceView?,
     val refunds: List<RefundView>,
+    val cardId: String? = null,
 )
 
 enum class CommitmentKind { All, Installments, Recurrences, Bills }
@@ -1367,6 +1383,7 @@ sealed interface PendingItem {
         val description: String,
         val amount: Money,
         override val month: YearMonth,
+        val cardId: String? = null,
     ) : PendingItem
 
     /** Pagamento de fatura preservado pelo valor real, sem baixa parcial. */
@@ -1375,10 +1392,11 @@ sealed interface PendingItem {
         val amount: Money,
         val date: LocalDate,
         override val month: YearMonth,
+        val cardId: String? = null,
     ) : PendingItem
 
     /** Total registrado diverge da composição conhecida; nada é ajustado automaticamente. */
-    data class InvoiceTotalDifference(val difference: Money, override val month: YearMonth) : PendingItem
+    data class InvoiceTotalDifference(val difference: Money, override val month: YearMonth, val cardId: String? = null) : PendingItem
 }
 
 data class AccountInfo(val id: String, val bank: BankRef, val nickname: String, val isWallet: Boolean = false)
@@ -1594,5 +1612,8 @@ val PendingItem.reviewId: String
         is PendingItem.CategoryToClarify -> "classify:$entryId"
         is PendingItem.InvoiceLink -> "link:$purchaseId"
         is PendingItem.DivergentInvoicePayment -> "payment:$paymentId"
-        is PendingItem.InvoiceTotalDifference -> "difference:$month"
+        is PendingItem.InvoiceTotalDifference -> "difference:${cardId.orEmpty()}:$month"
     }
+
+/** Preferencia individual sincronizada. */
+data class SetMyDefaultCard(val cardId: String) : Command

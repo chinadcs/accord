@@ -71,7 +71,7 @@ internal object BillingRules {
         if (!hinted) return if (equal.size == 1) Outcome(reasons = setOf(DoubtReason.PossibleInvoicePayment)) else null
         val near = unpaid.filter { abs(ChronoUnit.DAYS.between(it.dueDate, date)) <= b.paymentWindowDays }
         return when {
-            equal.size == 1 -> Outcome(ProposedEffect.PayInvoiceInFull(equal.single().dueMonth))
+            equal.size == 1 -> Outcome(ProposedEffect.PayInvoiceInFull(equal.single().dueMonth, equal.single().cardId))
             equal.size > 1 -> Outcome(reasons = setOf(DoubtReason.PossibleMatch))
             near.isEmpty() -> null
             near.any { it.confirmedTotalCents == null } -> Outcome(reasons = setOf(DoubtReason.InvoiceTotalNotConfirmed))

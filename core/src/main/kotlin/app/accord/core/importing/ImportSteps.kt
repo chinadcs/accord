@@ -103,7 +103,7 @@ object ImportSteps {
                         listOf(
                             if (card) RegisterCardPurchase(
                                 description = m.description, classification = ChosenCategory.Category(effect.categoryId), date = date, amount = amount,
-                                installments = 1, isCharge = effect.categoryId == billing.chargesCategoryId, invoice = effect.invoiceDueMonth,
+                                cardId = originId, installments = 1, isCharge = effect.categoryId == billing.chargesCategoryId, invoice = effect.invoiceDueMonth,
                             ) else RegisterDirectPayment(
                                 kind = directKind(m.description), description = m.description, classification = ChosenCategory.Category(effect.categoryId),
                                 date = date, amount = amount, accountId = originId,
@@ -128,7 +128,7 @@ object ImportSteps {
                     }
                     is ProposedEffect.PayInvoiceInFull -> ConfirmStep(
                         item, Resolution.InvoicePaid,
-                        listOf(PayInvoice(invoice = effect.dueMonth, amount = amount, date = date, accountId = originId)),
+                        listOf(PayInvoice(cardId = effect.cardId, invoice = effect.dueMonth, amount = amount, date = date, accountId = originId)),
                         createsType = EntityType.InvoicePayment,
                     )
                     is ProposedEffect.PayBoleto -> ConfirmStep(

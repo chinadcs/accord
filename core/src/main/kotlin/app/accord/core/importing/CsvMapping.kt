@@ -30,10 +30,14 @@ object CsvMapping {
 
     /** [accounts] são (id, apelido); [card] é (id, apelido) do cartão. Apelido repetido, ou igual ao do cartão, é ambíguo. */
     fun resolveOrigin(name: String, accounts: List<Pair<String, String>>, card: Pair<String, String>?): Origin? {
+        return resolveOrigins(name, accounts, listOfNotNull(card))
+    }
+
+    fun resolveOrigins(name: String, accounts: List<Pair<String, String>>, cards: List<Pair<String, String>>): Origin? {
         val wanted = fold(name)
         if (wanted.isEmpty()) return null
         val found = accounts.filter { fold(it.second) == wanted }.map { Origin(DocumentKind.Account, it.first) } +
-            listOfNotNull(card?.takeIf { fold(it.second) == wanted }?.let { Origin(DocumentKind.Card, it.first) })
+            cards.filter { fold(it.second) == wanted }.map { Origin(DocumentKind.Card, it.first) }
         return found.singleOrNull()
     }
 

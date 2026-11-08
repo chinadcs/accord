@@ -33,7 +33,7 @@ internal class DeletePlanner(private val dao: SpaceDao) {
             val months = installments.map { YearMonth.parse(it.invoiceMonth) }.toSet()
             return Target(
                 EntityType.CardPurchase, p.revision, p.voided, p.origin == Origin.Import.name, months,
-                paidInvoice = months.any { dao.isInvoicePaid(it.toString()) },
+                paidInvoice = months.any { dao.isInvoicePaid(it.toString(), p.cardId) },
             ) {
                 dao.upsertPurchase(p.copy(revision = p.revision + 1, voided = true))
                 p.revision + 1

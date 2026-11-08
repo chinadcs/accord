@@ -31,7 +31,7 @@ import java.util.UUID
 
 // ---- Cartão e faturas (tela 12) ----
 
-data class CardData(val card: CardInfo, val invoices: List<InvoiceView>) {
+data class CardData(val card: CardInfo, val invoices: List<InvoiceView>, val cards: List<CardInfo> = listOf(card), val accounts: List<app.accord.core.space.AccountInfo> = emptyList()) {
     /** Compras cuja fatura ainda é só uma estimativa a conferir. */
     val linksToConfirm: Int get() = invoices.sumOf { it.linksToConfirm }
 }
@@ -64,11 +64,14 @@ data class CardEditState(
     val errors: Map<CardField, String> = emptyMap(),
     val message: String? = null,
     val saving: Boolean = false,
+    val cardId: String? = null,
+    val createNew: Boolean = false,
+    val revision: Long? = null,
 )
 
 class CardViewModel(
     private val provider: SpaceProvider,
-    @Suppress("unused") saved: SavedStateHandle,
+    private val saved: SavedStateHandle,
 ) : ViewModel() {
     private val _content = MutableStateFlow<CardContent>(CardContent.Loading)
     val content: StateFlow<CardContent> = _content.asStateFlow()
@@ -89,9 +92,10 @@ class CardViewModel(
         if (showLoading) _content.value = CardContent.Loading
         viewModelScope.launch {
             val space = provider.space()
-            val card = (space.card() as? QueryResult.Data)?.value
-            val invoices = (space.invoices() as? QueryResult.Data)?.value
-            _content.value = if (card == null || invoices == null) CardContent.Failed else CardContent.Ready(CardData(card, invoices))
+            val cards = (space.cards() as? QueryResult.Data)?.value.orEmpty()
+            val card = cards.firstOrNull { it.id == saved.get<String>("selectedCard") } ?: cards.firstOrNull { it.isDefault } ?: cards.firstOrNull()
+            val invoices = (space.invoices(card?.id) as? QueryResult.Data)?.value
+            _content.value = if (card == null || invoices == null) CardContent.Failed else CardContent.Ready(CardData(card, invoices, cards, (space.accounts() as? QueryResult.Data)?.value?.accounts.orEmpty()))
             if (card != null && !card.configured && _edit.value == null) startEdit()
         }
     }
@@ -99,7 +103,25 @@ class CardViewModel(
     fun startEdit() {
         val card = (_content.value as? CardContent.Ready)?.data?.card ?: return
         commandId = CommandId(UUID.randomUUID().toString())
-        _edit.value = CardEditState(CardForm.of(card))
+        _edit.value = CardEditState(CardForm.of(card), cardId = card.id, revision = card.revision)
+    }
+
+    fun selectCard(id: String) {
+        saved["selectedCard"] = id
+        load(showLoading = false)
+    }
+
+    fun addCard() {
+        commandId = CommandId(UUID.randomUUID().toString())
+        _edit.value = CardEditState(CardForm("", null, "", ""), createNew = true)
+    }
+
+    fun setDefault() {
+        val card = (_content.value as? CardContent.Ready)?.data?.card ?: return
+        viewModelScope.launch {
+            provider.space().execute(Envelope(CommandId(UUID.randomUUID().toString())), app.accord.core.space.SetMyDefaultCard(card.id))
+            load(showLoading = false)
+        }
     }
 
     fun cancelEdit() {
@@ -117,6 +139,7 @@ class CardViewModel(
         val limitText = state.form.creditLimitText.trim()
         val creditLimit = if (limitText.isBlank()) null else (Money.parse(limitText) as? MoneyParse.Ok)?.money
         val errors = buildMap {
+            if (state.createNew && state.form.bank == null) put(CardField.Nickname, "Escolha o banco do novo cart\u00e3o.")
             if (nickname.isBlank()) put(CardField.Nickname, "Escolha o banco ou informe um apelido para o cartão.")
             if (closing == null || closing !in 1..31) put(CardField.Closing, "O dia de fechamento vai de 1 a 31.")
             if (due == null || due !in 1..31) put(CardField.Due, "O dia de vencimento vai de 1 a 31.")
@@ -128,10 +151,10 @@ class CardViewModel(
         }
         _edit.update { it?.copy(saving = true, errors = emptyMap(), message = null) }
         viewModelScope.launch {
-            val command = ConfigureCard(state.form.bank, nickname, closing, due, creditLimit)
+            val command = ConfigureCard(state.form.bank, nickname, closing, due, creditLimit, state.cardId, state.createNew, state.revision)
             when (val result = provider.space().execute(Envelope(commandId), command)) {
-                is CommandResult.Applied -> saved(result.receipt.operationId, result.receipt.undoable)
-                is CommandResult.AlreadyApplied -> saved(result.receipt.operationId, result.receipt.undoable)
+                is CommandResult.Applied -> saved(result.receipt.operationId, result.receipt.undoable, result.receipt.changes.firstOrNull { it.type == app.accord.core.space.EntityType.Card }?.id)
+                is CommandResult.AlreadyApplied -> saved(result.receipt.operationId, result.receipt.undoable, result.receipt.changes.firstOrNull { it.type == app.accord.core.space.EntityType.Card }?.id)
                 is CommandResult.Rejected -> _edit.update {
                     it?.copy(
                         saving = false,
@@ -152,7 +175,8 @@ class CardViewModel(
         }
     }
 
-    private fun saved(operationId: String, undoable: Boolean) {
+    private fun saved(operationId: String, undoable: Boolean, cardId: String?) {
+        if (cardId != null) saved["selectedCard"] = cardId
         provider.feedback.post(FeedbackEvent(R.string.feedback_card_saved, undoOperationId = operationId.takeIf { undoable }))
         _edit.value = null
         load(showLoading = false)
@@ -178,13 +202,17 @@ data class InvoiceDialogState(
     val date: LocalDate,
     val error: String? = null,
     val working: Boolean = false,
+    val accountId: String? = null,
+    val accounts: List<app.accord.core.space.AccountInfo> = emptyList(),
 )
 
 class InvoiceViewModel(
     private val provider: SpaceProvider,
     saved: SavedStateHandle,
 ) : ViewModel() {
-    val month: YearMonth = YearMonth.parse(checkNotNull(saved[ARG_MONTH]))
+    val month: YearMonth = YearMonth.parse(checkNotNull(saved.get<String>(ARG_MONTH)))
+    private var cardId: String? = saved.get<String>("cardId")
+    val selectedCardId: String? get() = cardId
 
     private val _content = MutableStateFlow<InvoiceContent>(InvoiceContent.Loading)
     val content: StateFlow<InvoiceContent> = _content.asStateFlow()
@@ -205,8 +233,9 @@ class InvoiceViewModel(
         if (showLoading) _content.value = InvoiceContent.Loading
         viewModelScope.launch {
             val space = provider.space()
-            val invoice = (space.invoice(month) as? QueryResult.Data)?.value
-            val card = (space.card() as? QueryResult.Data)?.value
+            val invoice = (space.invoice(month, cardId) as? QueryResult.Data)?.value
+            val card = (space.cards() as? QueryResult.Data)?.value?.let { cards -> cards.firstOrNull { it.id == cardId } ?: cards.firstOrNull { it.isDefault } }
+            cardId = card?.id
             _content.value = if (invoice == null || card == null) InvoiceContent.Failed else InvoiceContent.Ready(invoice, card)
         }
     }
@@ -221,8 +250,15 @@ class InvoiceViewModel(
 
     private fun open(dialog: InvoiceDialog, amount: String) {
         commandId = CommandId(UUID.randomUUID().toString())
-        _dialog.value = InvoiceDialogState(dialog, amount, provider.clock.today())
+        val ready = _content.value as? InvoiceContent.Ready ?: return
+        _dialog.value = InvoiceDialogState(dialog, amount, provider.clock.today(), accountId = ready.card.accountId)
+        viewModelScope.launch {
+            val accounts = (provider.space().accounts() as? QueryResult.Data)?.value?.accounts.orEmpty()
+            _dialog.update { it?.copy(accounts = accounts) }
+        }
     }
+
+    fun chooseAccount(id: String) = _dialog.update { it?.copy(accountId = id) }
 
     fun close() {
         _dialog.value = null
@@ -246,8 +282,8 @@ class InvoiceViewModel(
         _dialog.update { it?.copy(working = true, error = null) }
         viewModelScope.launch {
             val command = when (state.dialog) {
-                InvoiceDialog.Total -> RegisterInvoiceTotal(month, amount, InvoiceTotalSource.Person)
-                InvoiceDialog.Pay -> PayInvoice(month, amount, state.date)
+                InvoiceDialog.Total -> RegisterInvoiceTotal(month, amount, InvoiceTotalSource.Person, cardId)
+                InvoiceDialog.Pay -> PayInvoice(month, amount, state.date, state.accountId, cardId)
             }
             when (val result = provider.space().execute(Envelope(commandId), command)) {
                 is CommandResult.Applied -> done(state.dialog, result.receipt.operationId, result.receipt.undoable)
@@ -260,8 +296,8 @@ class InvoiceViewModel(
 
     private suspend fun done(dialog: InvoiceDialog, operationId: String, undoable: Boolean) {
         _dialog.value = null
-        val invoice = (provider.space().invoice(month) as? QueryResult.Data)?.value
-        val card = (provider.space().card() as? QueryResult.Data)?.value
+        val invoice = (provider.space().invoice(month, cardId) as? QueryResult.Data)?.value
+        val card = (provider.space().cards() as? QueryResult.Data)?.value?.firstOrNull { it.id == cardId }
         if (invoice != null && card != null) _content.value = InvoiceContent.Ready(invoice, card)
         // Pagamento que não é a quitação integral conferida fica em revisão: a fatura não vira "paga".
         val message = when {

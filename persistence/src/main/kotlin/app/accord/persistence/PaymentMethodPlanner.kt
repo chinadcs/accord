@@ -79,7 +79,7 @@ internal class PaymentMethodPlanner(
 
     private suspend fun planPurchase(session: Session, c: ChangePaymentMethod, p: CardPurchaseRow): Planned {
         val installments = dao.installments(p.id)
-        val paidInvoice = installments.any { dao.isInvoicePaid(it.invoiceMonth) }
+        val paidInvoice = installments.any { dao.isInvoicePaid(it.invoiceMonth, p.cardId) }
         when {
             p.voided -> return stop("entityId", ErrorCode.NotAllowed, "Este lançamento foi excluído ou desfeito.")
             c.expectedRevision != null && c.expectedRevision != p.revision -> return Planned.Stop(CommandResult.StaleVersion(p.id, p.revision))

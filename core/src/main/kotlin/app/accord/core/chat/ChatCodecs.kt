@@ -17,6 +17,7 @@ object DraftCodec {
         entry.date?.let { put("date", it.toString()) }
         entry.categoryId?.let { put("categoryId", it) }
         entry.payment?.let { put("payment", it.name) }
+        entry.cardId?.let { put("cardId", it) }
         entry.accountId?.let { put("accountId", it) }
         entry.spentBy?.let { put("spentBy", it) }
         if (entry.issues.isNotEmpty()) put("issues", entry.issues.entries.joinToString(",") { "${it.key.name}:${it.value.name}" })
@@ -32,6 +33,7 @@ object DraftCodec {
         categoryId = fields["categoryId"],
         payment = fields["payment"]?.let { runCatching { ChatPayment.valueOf(it) }.getOrNull() },
         accountId = fields["accountId"],
+        cardId = fields["cardId"],
         spentBy = fields["spentBy"],
         issues = fields["issues"]?.split(",")?.mapNotNull { pair ->
             val field = runCatching { QuestionField.valueOf(pair.substringBefore(':')) }.getOrNull()

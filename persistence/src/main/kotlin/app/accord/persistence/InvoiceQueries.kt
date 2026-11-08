@@ -20,34 +20,36 @@ internal class InvoiceQueries(
     private val dao: SpaceDao,
     private val clock: BudgetClock,
     private val occurrences: suspend (YearMonth) -> List<OccurrenceView>,
-    private val cycle: suspend () -> CardCycle,
+    private val cycle: suspend (String?) -> CardCycle,
 ) {
     data class Composition(val purchases: Money, val charges: Money, val credits: Money, val linksToConfirm: Int) {
         val known get() = purchases + charges - credits
     }
 
     /** Composição conhecida da fatura: compras e parcelas, encargos e créditos, separados. */
-    suspend fun composition(month: YearMonth): Composition {
-        val parts = dao.invoiceParts(month.toString())
-        val recurring = occurrences(month).filter { it.kind == RecurrenceKind.Expense && it.form == RecurrenceForm.Card }
+    suspend fun composition(month: YearMonth, cardId: String? = null): Composition {
+        val legacyId = dao.cards().firstOrNull()?.id
+        val parts = dao.invoiceParts(month.toString(), cardId)
+        val recurring = occurrences(month).filter { it.kind == RecurrenceKind.Expense && it.form == RecurrenceForm.Card && (it.cardId ?: legacyId) == (cardId ?: legacyId) }
         return Composition(
             purchases = Money(parts.purchasesCents + recurring.sumOf { it.expectedAmount.cents }),
             charges = Money(parts.chargesCents),
-            credits = Money(dao.invoiceCredits(month.toString())),
-            linksToConfirm = dao.linksToConfirm(month.toString()) + recurring.count { it.assignment == AssignmentState.ToConfirm },
+            credits = Money(dao.invoiceCredits(month.toString(), cardId)),
+            linksToConfirm = dao.linksToConfirm(month.toString(), cardId) + recurring.count { it.assignment == AssignmentState.ToConfirm },
         )
     }
 
-    suspend fun view(month: YearMonth): InvoiceView {
-        val parts = composition(month)
-        val row = dao.invoice(month.toString())
-        val payments = dao.invoicePayments(month.toString())
+    suspend fun view(month: YearMonth, cardId: String? = null): InvoiceView {
+        val parts = composition(month, cardId)
+        val row = dao.invoice(month.toString(), cardId)
+        val payments = dao.invoicePayments(month.toString(), cardId)
         val checked = row?.checkedCents?.let(::Money)
         val conferred = checked != null && checked == parts.known
         val accepted = payments.firstOrNull { it.accepted }
-        val phase = clock.today().let { today -> cycle().phase(month, today) }
+        val phase = clock.today().let { today -> cycle(cardId).phase(month, today) }
         return InvoiceView(
             dueMonth = month,
+            cardId = cardId ?: dao.cards().firstOrNull()?.id,
             purchases = parts.purchases,
             charges = parts.charges,
             credits = parts.credits,

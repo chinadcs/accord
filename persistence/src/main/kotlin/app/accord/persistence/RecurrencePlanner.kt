@@ -71,7 +71,7 @@ internal class RecurrencePlanner(
             series.overrides.map { (n, o) ->
                 RecurrenceOverrideRow(
                     id, n, o.deleted, o.fields.description, o.fields.classificationId, o.fields.amount?.cents, o.fields.accountId,
-                    o.invoice?.toString(),
+                    o.invoice?.toString(), dao.recurrence(id)?.cardId,
                 )
             },
         )
@@ -92,6 +92,7 @@ internal class RecurrencePlanner(
                 errors += FieldError("categoryId", ErrorCode.NotAllowed, "Renda não tem categoria.")
             }
         }
+        val cardId = if (c.form == RecurrenceForm.Card) accounts.resolveCard(session, c.cardId, errors) else null
         val accountId = c.accountId
         if (accountId != null && dao.account(accountId) == null) {
             errors += FieldError("accountId", ErrorCode.UnknownReference, "Conta não encontrada.")
@@ -114,6 +115,7 @@ internal class RecurrencePlanner(
                     revision = 1,
                     voided = false,
                     originIntentionId = c.originIntentionId,
+                    cardId = cardId,
                 ),
             )
             dao.insertSegments(
@@ -208,7 +210,7 @@ internal class RecurrencePlanner(
         if (loaded.row.kind != RecurrenceKind.Expense.name || loaded.row.form != RecurrenceForm.Card.name) {
             return stop("occurrence", ErrorCode.NotAllowed, "Só a ocorrência de uma despesa no cartão tem fatura.")
         }
-        val cycleOfSpace = cycle(sessions.current().spaceId)
+        val cycleOfSpace = cycle(loaded.row.cardId ?: cardIdOf(sessions.current().spaceId))
         val view = place(loaded, c.occurrence, cycleOfSpace)!!
         val estimate = view.estimatedInvoice!!
         val current = view.budgetMonth
@@ -289,6 +291,7 @@ internal class RecurrencePlanner(
             settledAmount = settled?.let { Money(it.cents) },
             budgetMonth = chosen ?: estimate?.dueMonth ?: YearMonth.from(settledDate ?: occurrence.date),
             paid = settled != null,
+            cardId = loaded.row.cardId,
             assignment = estimate?.let {
                 when {
                     chosen != null -> AssignmentState.Confirmed
@@ -301,7 +304,6 @@ internal class RecurrencePlanner(
     }
 
     suspend fun occurrencesIn(month: YearMonth): List<OccurrenceView> {
-        val spaceCycle = cycle(sessions.current().spaceId)
         return dao.activeRecurrences().flatMap { row ->
             val loaded = loadSeries(row)
             // O mês de uma ocorrência pode diferir do mês da data prevista (pagamento antecipado ou
@@ -310,7 +312,7 @@ internal class RecurrencePlanner(
             val candidates = listOf(month.minusMonths(3), month.minusMonths(2), month.minusMonths(1), month, month.plusMonths(1))
                 .mapNotNull { loaded.series.recurrence.numberIn(it) }.toSet() +
                 loaded.settlements.filterValues { YearMonth.from(LocalDate.ofEpochDay(it.epochDay)) == month }.keys
-            candidates.mapNotNull { place(loaded, it, spaceCycle) }.filter { it.budgetMonth == month }
+            candidates.mapNotNull { place(loaded, it, cycle(row.cardId ?: cardIdOf(sessions.current().spaceId))) }.filter { it.budgetMonth == month }
         }.sortedWith(compareBy({ it.scheduledDate }, { it.recurrenceId }, { it.number }))
     }
 }

@@ -183,25 +183,25 @@ class RoomFinanceSpace private constructor(
     private val accountPlanner = AccountPlanner(dao)
     private val commonRules = CommonRules(dao)
     private val directPaymentPlanner = DirectPaymentPlanner(dao, commonRules, accountPlanner)
-    private val cardPurchasePlanner = CardPurchasePlanner(dao, commonRules) { cycleOf(it) }
+    private val cardPurchasePlanner = CardPurchasePlanner(dao, commonRules, accountPlanner) { cardCycle(it) }
     private val boletoPlanner = BoletoPlanner(dao, commonRules, accountPlanner)
     private val incomePlanner = IncomePlanner(dao, commonRules, accountPlanner)
-    private val recurrencePlanner = RecurrencePlanner(dao, commonRules, accountPlanner, sessions) { cycleOf(it) }
+    private val recurrencePlanner = RecurrencePlanner(dao, commonRules, accountPlanner, sessions) { cardCycle(it) }
     private val classifyPlanner = ClassifyPlanner(dao)
-    private val invoiceQueries = InvoiceQueries(dao, clock, { recurrencePlanner.occurrencesIn(it) }) { cycleOf(sessions.current().spaceId) }
+    private val invoiceQueries = InvoiceQueries(dao, clock, { recurrencePlanner.occurrencesIn(it) }) { id -> cardCycle(id ?: accountPlanner.effectiveCard(sessions.current())) }
     private val budgetQueries = BudgetQueries(dao, { tree() }, { recurrencePlanner.occurrencesIn(it) }, limitsPlanner)
     private val entryQueries = EntryQueries(
         dao,
         tree = { tree() },
         cycle = { cycleOf(sessions.current().spaceId) },
         occurrences = { occurrencesIn(it) },
-        invoiceDifference = { invoiceView(it).totalDifference },
+        invoiceDifference = { month, card -> invoiceQueries.view(month, card).totalDifference },
         today = { clock.today() },
     )
     internal val importEvaluator = ImportEvaluator(
         dao, sessions,
-        cycle = { cycleOf(sessions.current().spaceId) },
-        invoice = { invoiceView(it) },
+        cycle = { id -> if (id == null) cycleOf(sessions.current().spaceId) else cardCycle(id) },
+        invoice = { month, card -> invoiceQueries.view(month, card) },
         cardId = { cardId(it) },
         applicable = { command -> plan(sessions.current(), Origin.Import, command) is Planned.Go },
     )
@@ -223,7 +223,7 @@ class RoomFinanceSpace private constructor(
         tree = { tree() },
         subscriptionsMainId = { DeterministicIds.seedCategory(sessions.current().spaceId, "assinaturas") },
         load = { loadSeries(it) },
-        place = { loaded, number -> place(loaded, number, cycleOf(sessions.current().spaceId)) },
+        place = { loaded, number -> place(loaded, number, cardCycle(loaded.row.cardId ?: cardIdOf(sessions.current().spaceId))) },
         month = { clock.currentMonth() },
     )
     private val comparisonQueries = ComparisonQueries(
@@ -258,7 +258,8 @@ class RoomFinanceSpace private constructor(
     private val categoryPlanner = CategoryPlanner(dao, limitsPlanner, { tree() }) { clock.currentMonth() }
     private val invoicePlanner = InvoicePlanner(
         dao,
-        knownTotal = { composition(it).known },
+        knownTotal = { month, card -> invoiceQueries.composition(month, card).known },
+        accounts = accountPlanner,
         requiredAccount = { session, given, errors -> resolveRequiredAccount(session, given, errors) },
     )
 
@@ -280,6 +281,7 @@ class RoomFinanceSpace private constructor(
         is TransferBetweenAccounts -> accountPlanner.planTransfer(session, origin, command)
         is AdjustAccountBalance -> accountPlanner.planAdjust(session, origin, command)
         is RegisterDirectPayment -> directPaymentPlanner.plan(session, origin, command)
+        is app.accord.core.space.SetMyDefaultCard -> accountPlanner.planSetDefaultCard(session, command)
         is ConfigureCard -> accountPlanner.planConfigureCard(session, command)
         is RegisterCardPurchase -> cardPurchasePlanner.plan(session, origin, command)
         is CorrectInvoiceAssignment -> cardPurchasePlanner.planCorrectInvoice(command)
@@ -429,16 +431,16 @@ class RoomFinanceSpace private constructor(
 
     private suspend fun occurrencesIn(month: YearMonth) = recurrencePlanner.occurrencesIn(month)
 
-    private suspend fun composition(month: YearMonth) = invoiceQueries.composition(month)
-
-    private suspend fun invoiceView(month: YearMonth) = invoiceQueries.view(month)
+    private suspend fun invoiceView(month: YearMonth) = invoiceQueries.view(month, accountPlanner.effectiveCard(sessions.current()))
 
     internal suspend fun loadSeries(row: RecurrenceRow) = recurrencePlanner.loadSeries(row)
 
     internal fun place(loaded: LoadedSeries, number: Int, cycle: CardCycle) = recurrencePlanner.place(loaded, number, cycle)
 
-    private suspend fun cycleOf(spaceId: String): CardCycle {
-        val card = dao.card(cardId(spaceId)) ?: error("Cartão do espaço não foi criado")
+    private suspend fun cycleOf(spaceId: String): CardCycle = cardCycle(accountPlanner.effectiveCard(sessions.current()))
+
+    private suspend fun cardCycle(id: String): CardCycle {
+        val card = dao.card(id) ?: error("Cartão do espaço não foi criado")
         return CardCycle(card.closingDay, card.dueDay)
     }
 
@@ -501,7 +503,7 @@ class RoomFinanceSpace private constructor(
 
     private suspend fun occurrenceView(recurrenceId: String, number: Int): OccurrenceView? {
         val row = dao.recurrence(recurrenceId)?.takeIf { !it.voided } ?: return null
-        return place(loadSeries(row), number, cycleOf(sessions.current().spaceId))
+        return place(loadSeries(row), number, cardCycle(row.cardId ?: cardIdOf(sessions.current().spaceId)))
     }
 
     override suspend fun entry(id: String): QueryResult<EntryDetail?> = query { entryDetail(id) }
@@ -515,6 +517,7 @@ class RoomFinanceSpace private constructor(
             val number = id.substringAfter('#').toIntOrNull() ?: return null
             val purchase = unwrap(purchase(purchaseId)) ?: return null
             val installment = purchase.installments.firstOrNull { it.number == number } ?: return null
+            val card = cardCycle(dao.purchase(purchaseId)?.cardId ?: cardIdOf(sessions.current().spaceId))
             return EntryDetail(
                 id = id, kind = EntryKind.CardInstallment, description = purchase.description,
                 classification = purchase.classification, amount = installment.amount,
@@ -524,6 +527,7 @@ class RoomFinanceSpace private constructor(
                 origin = dao.purchase(purchaseId)?.origin?.let(Origin::valueOf),
                 revision = purchase.revision, voided = purchase.voided, sync = sync(EntityType.CardPurchase, purchaseId),
                 purchase = purchase, boleto = null, income = null, occurrence = null,
+                cardId = dao.purchase(purchaseId)?.cardId,
                 refunds = unwrap(refunds(purchaseId)),
             )
         }
@@ -558,7 +562,7 @@ class RoomFinanceSpace private constructor(
             return EntryDetail(
                 id = id, kind = EntryKind.CardPurchase, description = p.description, classification = detail.classification,
                 amount = Money(p.totalCents), purchaseDate = LocalDate.ofEpochDay(p.purchaseEpochDay), dueDate = null, settledDate = null,
-                method = PaymentMethod.Card, accountId = null, authorId = p.authorId, spentBy = p.spentBy,
+                method = PaymentMethod.Card, accountId = null, cardId = p.cardId, authorId = p.authorId, spentBy = p.spentBy,
                 origin = Origin.valueOf(p.origin), revision = p.revision, voided = p.voided, sync = sync(EntityType.CardPurchase, id),
                 purchase = detail, boleto = null, income = null, occurrence = null, refunds = unwrap(refunds(id)),
             )
@@ -623,7 +627,9 @@ class RoomFinanceSpace private constructor(
         if ('#' in id) {
             val purchase = unwrap(purchase(id.substringBefore('#'))) ?: return null
             if (purchase.voided) return null
-            val paidMonths = dao.paidInvoiceMonths().toSet()
+            val cardId = dao.purchase(purchase.id)?.cardId
+            val card = cardCycle(cardId ?: cardIdOf(sessions.current().spaceId))
+            val paidMonths = dao.paidInvoiceMonths(cardId).toSet()
             return CommitmentDetail.Installments(
                 id = id, purchase = purchase,
                 schedule = purchase.installments.map { i ->
@@ -644,6 +650,7 @@ class RoomFinanceSpace private constructor(
             val number = id.substringAfter(':').toIntOrNull() ?: return null
             val row = dao.recurrence(recurrenceId)?.takeIf { !it.voided } ?: return null
             val loaded = loadSeries(row)
+            val card = cardCycle(row.cardId ?: cardIdOf(sessions.current().spaceId))
             val current = place(loaded, number, card) ?: return null
             // Recorrência não tem total: só frequência e a próxima ocorrência que ainda existe.
             val next = (number + 1..number + 120).firstNotNullOfOrNull { place(loaded, it, card) }
@@ -765,11 +772,18 @@ class RoomFinanceSpace private constructor(
         }
     }
 
-    override suspend fun card(): QueryResult<CardInfo> = query {
-        val row = dao.card(cardId(sessions.current().spaceId)) ?: error("Cartão do espaço não foi criado")
+    private suspend fun cardInfo(row: CardRow): CardInfo {
         val bank = row.bankName?.let { if (row.bankIspb != null) BankRef.Catalog(row.bankIspb, it) else BankRef.Other(it) }
-        CardInfo(row.id, bank, row.nickname, row.closingDay, row.dueDay, row.creditLimitCents?.let(::Money), configured = row.revision > 0)
+        return CardInfo(row.id, bank, row.nickname, row.closingDay, row.dueDay, row.creditLimitCents?.let(::Money),
+            configured = row.revision > 0, accountId = row.accountId,
+            isDefault = row.id == accountPlanner.effectiveCard(sessions.current()), revision = row.revision)
     }
+
+    override suspend fun card(): QueryResult<CardInfo> = query {
+        cardInfo(dao.card(accountPlanner.effectiveCard(sessions.current())) ?: error("Cartao nao encontrado"))
+    }
+
+    override suspend fun cards(): QueryResult<List<CardInfo>> = query { dao.cards().map { cardInfo(it) } }
 
     override suspend fun purchase(id: String): QueryResult<PurchaseDetail?> = query {
         dao.purchase(id)?.let { p ->
@@ -805,10 +819,10 @@ class RoomFinanceSpace private constructor(
 
     // ---- faturas ----
 
-    override suspend fun invoice(dueMonth: YearMonth): QueryResult<InvoiceView> = query { invoiceView(dueMonth) }
+    override suspend fun invoice(dueMonth: YearMonth, cardId: String?): QueryResult<InvoiceView> = query { invoiceQueries.view(dueMonth, cardId ?: accountPlanner.effectiveCard(sessions.current())) }
 
-    override suspend fun invoices(): QueryResult<List<InvoiceView>> = query {
-        dao.invoiceMonthsWithData().map(YearMonth::parse).sorted().map { invoiceView(it) }
+    override suspend fun invoices(cardId: String?): QueryResult<List<InvoiceView>> = query {
+        dao.invoiceMonthsWithData().map(YearMonth::parse).sorted().map { invoiceQueries.view(it, cardId ?: accountPlanner.effectiveCard(sessions.current())) }.filter { it.knownTotal.cents != 0L || it.checkedTotal != null || it.paid || it.divergentPayments.isNotEmpty() }
     }
 
     override suspend fun limits(month: YearMonth): QueryResult<List<CategoryLimit>> = query { limitsPlanner.views(month) }

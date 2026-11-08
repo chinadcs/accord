@@ -247,6 +247,7 @@ private fun Channel(channel: ChannelExplanation) {
     val from = channel.exposure.start.shortLabel()
     val to = channel.exposure.endExclusive.minusDays(1).shortLabel()
     Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+        channel.cardLabel?.let { Text(it, style = MaterialTheme.typography.titleMedium) }
         Text(
             if (channel.channel == app.accord.core.forecast.Channel.Card) {
                 stringResource(R.string.forecast_how_channel_card, YearMonth.from(channel.exposure.endExclusive.minusDays(1)).let { "%02d/%d".format(it.monthValue, it.year) }, from, to)

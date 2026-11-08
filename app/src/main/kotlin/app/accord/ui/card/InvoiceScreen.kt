@@ -62,7 +62,7 @@ fun InvoiceRoute(
     InvoiceScreen(
         viewModel.month, content, dialog, padding, onBack, onRetry = { viewModel.load() }, onSeeEntries = onSeeEntries,
         onOpenTotal = viewModel::openTotal, onOpenPay = viewModel::openPay, onChange = viewModel::change,
-        onSubmit = viewModel::submit, onClose = viewModel::close,
+        onSubmit = viewModel::submit, onClose = viewModel::close, onAccount = viewModel::chooseAccount,
     )
 }
 
@@ -80,6 +80,7 @@ fun InvoiceScreen(
     onChange: (amountText: String?, date: java.time.LocalDate?) -> Unit,
     onSubmit: () -> Unit,
     onClose: () -> Unit,
+    onAccount: (String) -> Unit = {},
 ) {
     Column(
         Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
@@ -95,7 +96,7 @@ fun InvoiceScreen(
             is InvoiceContent.Ready -> InvoiceBody(content.invoice, content.card, onSeeEntries, onOpenTotal, onOpenPay)
         }
     }
-    dialog?.let { InvoiceDialogs(it, onChange, onSubmit, onClose) }
+    dialog?.let { InvoiceDialogs(it, onChange, onSubmit, onClose, onAccount) }
 }
 
 @Composable
@@ -106,6 +107,7 @@ private fun InvoiceBody(
     onOpenTotal: () -> Unit,
     onOpenPay: () -> Unit,
 ) {
+    Text(card.nickname, style = MaterialTheme.typography.titleMedium)
     val body = MaterialTheme.typography.bodyLarge
     val due = invoice.dueMonth.atDay(card.dueDay.coerceAtMost(invoice.dueMonth.lengthOfMonth()))
     Text(stringResource(R.string.invoice_due_line, due.fullLabel(), invoiceStatusLine(invoice)), style = body)
@@ -192,6 +194,7 @@ private fun InvoiceDialogs(
     onChange: (String?, java.time.LocalDate?) -> Unit,
     onSubmit: () -> Unit,
     onClose: () -> Unit,
+    onAccount: (String) -> Unit,
 ) {
     var pickingDate by remember { mutableStateOf(false) }
     val bring = remember { BringIntoViewRequester() }
@@ -208,6 +211,12 @@ private fun InvoiceDialogs(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth(),
                 )
                 if (paying) {
+                    Text(stringResource(R.string.cards_payment_account), style = MaterialTheme.typography.titleSmall)
+                    state.accounts.forEach { account ->
+                        OutlinedButton(onClick = { onAccount(account.id) }, modifier = Modifier.fillMaxWidth()) {
+                            Text(if (account.id == state.accountId) stringResource(R.string.cards_account_selected, account.nickname) else account.nickname)
+                        }
+                    }
                     PickerField(label = stringResource(R.string.invoice_pay_date), value = state.date.fullLabel(), error = null, bring = bring) { pickingDate = true }
                     Text(stringResource(R.string.invoice_pay_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {

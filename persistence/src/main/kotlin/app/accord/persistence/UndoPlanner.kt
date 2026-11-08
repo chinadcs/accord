@@ -97,7 +97,7 @@ internal class UndoPlanner(
                     EntityType.Invoice -> {
                         val row = dao.invoiceRows().first { it.id == ch.entityId }
                         if (op.commandType == "RegisterInvoiceTotal") {
-                            invoices.restoreTotal(YearMonth.parse(row.dueMonth), op.detail!!)
+                            invoices.restoreTotal(YearMonth.parse(row.dueMonth), op.detail!!, row.cardId)
                         } else {
                             dao.upsertInvoice(row.copy(revision = row.revision + 1))
                         }

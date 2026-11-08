@@ -573,11 +573,13 @@ abstract class SpaceServiceContract {
         val couple = newCouple()
         val results = push(
             couple.creator, couple.spaceId,
+            op(couple.spaceId, change(), protocol = 1),
             op(couple.spaceId, change(), protocol = PROTOCOL_VERSION + 1),
             op(couple.spaceId, change()),
         )
         assertEquals(RejectReason.ProtocolUnsupported, (results[0] as OperationResult.Rejected).reason)
-        assertIs<OperationResult.Applied>(results[1])
+        assertEquals(RejectReason.ProtocolUnsupported, (results[1] as OperationResult.Rejected).reason)
+        assertIs<OperationResult.Applied>(results[2])
     }
 
     @Test

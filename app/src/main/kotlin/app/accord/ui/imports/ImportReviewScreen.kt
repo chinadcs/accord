@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
@@ -168,6 +169,7 @@ fun ImportReviewScreen(
                 ) {
                     item { DetailHeader(stringResource(R.string.import_review_title), onBack, subtitle = fileLine(review)) }
                     item { Summary(review, state.working, onOpenSource) }
+                    if (review.info.source.kind == DocumentKind.Card) item { Text(state.cards.firstOrNull { it.id == review.info.source.originId }?.nickname.orEmpty(), style = MaterialTheme.typography.titleMedium) }
                     state.message?.let { message -> item { MessageBanner(message) } }
                     item { Filters(state.filter, onFilter) }
                     item { BulkActions(review, state, onAcceptAll, onPickCategory, onClearDefault) }
@@ -205,7 +207,8 @@ fun ImportReviewScreen(
                     CategoryDialog(state.categories, selected = null, onPick = onCategory, onDismiss = onDismissCategory)
                 }
                 state.source?.let { SourceDialog(it, state, onSourceKind, onSourceOrigin, onSourcePrevious, onSourceNext, onSourceInvoiceByDate, onApplySource, onCloseSource) }
-                if (state.summaryOpen) SummaryDialog(review.summary, state.working, onConfirm, onCloseSummary)
+                if (state.summaryOpen) SummaryDialog(review.summary, state.working, onConfirm, onCloseSummary,
+                    state.cards.firstOrNull { review.info.source.kind == DocumentKind.Card && it.id == review.info.source.originId }?.nickname, review.token)
                 if (state.discardOpen) DiscardDialog(onDiscard, onCancelDiscard)
             }
         }
@@ -506,7 +509,7 @@ private fun SourceDialog(
                     }
                     DocumentKind.Card -> Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
                         Text(stringResource(R.string.import_origin_card), style = MaterialTheme.typography.titleMedium)
-                        Text(state.cardName ?: stringResource(R.string.import_card_default), style = MaterialTheme.typography.bodyLarge)
+                        state.cards.filter { it.configured }.forEach { card -> ChoiceRow(card.nickname, draft.originId == card.id, enabled) { onOrigin(card.id) } }
                         InvoiceChoice(draft.invoice, enabled, onInvoiceByDate, onPrevious, onNext)
                     }
                 }
@@ -551,12 +554,19 @@ private fun entryLine(entry: LinkableEntry): String =
     )
 
 @Composable
-private fun SummaryDialog(summary: ConfirmationSummary, working: Boolean, onConfirm: () -> Unit, onClose: () -> Unit) {
+private fun SummaryDialog(summary: ConfirmationSummary, working: Boolean, onConfirm: () -> Unit, onClose: () -> Unit, cardName: String?, token: String) {
+    var cardConfirmed by remember(token) { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = onClose,
         title = { Text(stringResource(R.string.import_summary_title)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                if (cardName != null) {
+                    Row(Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).toggleable(value = cardConfirmed, role = Role.Checkbox, onValueChange = { cardConfirmed = it }), verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.material3.Checkbox(checked = cardConfirmed, onCheckedChange = null)
+                        Text(stringResource(R.string.cards_import_confirm, cardName), modifier = Modifier.weight(1f))
+                    }
+                }
                 summaryLine(R.plurals.import_summary_creates, summary.creates)
                 summaryLine(R.plurals.import_summary_links, summary.links)
                 summaryLine(R.plurals.import_summary_corrections, summary.invoiceCorrections)
@@ -577,7 +587,7 @@ private fun SummaryDialog(summary: ConfirmationSummary, working: Boolean, onConf
                 Text(stringResource(R.string.import_summary_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         },
-        confirmButton = { Button(onClick = onConfirm, enabled = !working) { Text(stringResource(R.string.import_summary_confirm)) } },
+        confirmButton = { Button(onClick = onConfirm, enabled = !working && (cardName == null || cardConfirmed)) { Text(stringResource(R.string.import_summary_confirm)) } },
         dismissButton = { TextButton(onClick = onClose, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.import_cancel)) } },
     )
 }

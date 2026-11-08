@@ -78,7 +78,7 @@ select tests.back();
 -- ---- U3 (espaço E2) não vê nem altera o espaço E1, mesmo conhecendo os identificadores ----
 select tests.as_user('00000000-0000-0000-0000-0000000000a1');
 select public.push_operations('00000000-0000-0000-0000-0000000000e1',
-  '[{"operationId":"op-e1-1","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":1,"installationId":"i1","localTimeMillis":1,
+  '[{"operationId":"op-e1-1","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":2,"installationId":"i1","localTimeMillis":1,
      "changes":[{"type":"Movement","id":"mov-1","baseVersion":null,"state":"{\"valor\":6800}","tombstone":false}]}]');
 select tests.back();
 
@@ -97,12 +97,12 @@ select is((public.create_space('00000000-0000-0000-0000-0000000000e1', 'Tomada')
   'quem já tem espaço recebe o próprio, e não toma o de outra pessoa');
 select is(
   (public.push_operations('00000000-0000-0000-0000-0000000000e2',
-    '[{"operationId":"op-e2-1","spaceId":"00000000-0000-0000-0000-0000000000e2","protocolVersion":1,"installationId":"i3","localTimeMillis":1,
+    '[{"operationId":"op-e2-1","spaceId":"00000000-0000-0000-0000-0000000000e2","protocolVersion":2,"installationId":"i3","localTimeMillis":1,
        "changes":[{"type":"Movement","id":"mov-1","baseVersion":1,"state":"{\"valor\":1}","tombstone":false}]}]')) -> 'results' -> 0 ->> 'reason',
   'ForeignSpace', 'U3 não altera a entidade de E1 por uma operação de E2');
 select is(
   (public.push_operations('00000000-0000-0000-0000-0000000000e2',
-    '[{"operationId":"op-e2-2","spaceId":"00000000-0000-0000-0000-0000000000e2","protocolVersion":1,"installationId":"i3","localTimeMillis":1,
+    '[{"operationId":"op-e2-2","spaceId":"00000000-0000-0000-0000-0000000000e2","protocolVersion":2,"installationId":"i3","localTimeMillis":1,
        "changes":[{"type":"Movement","id":"mov-9","baseVersion":null,"state":"{}","tombstone":false,"references":[{"type":"Movement","id":"mov-1"}]}]}]')) -> 'results' -> 0 ->> 'reason',
   'ForeignSpace', 'U3 não cita a entidade de E1 numa operação de E2');
 
@@ -168,7 +168,7 @@ select is((select count(*)::int from public.space_members where space_id = '0000
 select tests.as_user('00000000-0000-0000-0000-0000000000a2');
 select is((select count(*)::int from public.space_entities where space_id = '00000000-0000-0000-0000-0000000000e1'), 1, 'U2 lê as entidades de E1');
 select is((public.push_operations('00000000-0000-0000-0000-0000000000e1',
-  '[{"operationId":"op-e1-2","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":1,"installationId":"i2","localTimeMillis":1,
+  '[{"operationId":"op-e1-2","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":2,"installationId":"i2","localTimeMillis":1,
      "changes":[{"type":"Movement","id":"mov-1","baseVersion":1,"state":"{\"valor\":9000}","tombstone":false}]}]')) -> 'results' -> 0 ->> 'result', 'applied', 'U2 edita o que U1 criou');
 select tests.back();
 

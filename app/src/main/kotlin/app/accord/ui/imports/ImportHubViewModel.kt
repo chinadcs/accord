@@ -58,8 +58,8 @@ class ImportHubViewModel(private val provider: SpaceProvider) : ViewModel() {
             }
             val space = provider.space()
             val accounts = (space.accounts() as? QueryResult.Data)?.value?.accounts.orEmpty().associate { it.id to it.nickname }
-            val card = (space.card() as? QueryResult.Data)?.value
-            fun nameOf(id: String?): String? = id?.let { accounts[it] ?: card?.takeIf { c -> c.id == id }?.nickname }
+            val cards = (space.cards() as? QueryResult.Data)?.value.orEmpty().associate { it.id to it.nickname }
+            fun nameOf(id: String?): String? = id?.let { accounts[it] ?: cards[it] }
 
             val confirmed = batches.filter { it.status == BatchStatus.Confirmed }.map { info ->
                 val pending = (imports.result(info.id) as? QueryResult.Data)?.value?.count(app.accord.core.importing.Resolution.Pending) ?: 0

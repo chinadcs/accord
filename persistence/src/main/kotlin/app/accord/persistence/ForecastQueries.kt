@@ -1,5 +1,6 @@
 package app.accord.persistence
 
+import app.accord.core.space.RecurrenceForm
 import app.accord.core.CardCycle
 import app.accord.core.LimitSetting
 import app.accord.core.Money
@@ -60,6 +61,14 @@ internal class ForecastQueries(
                 CategoryForecastInput(it.categoryId, limit(it.categoryId, month).total?.cents, it.net.cents, spends[it.categoryId].orEmpty())
             },
             quality = quality(month, budget, tree),
+            cards = dao.cards().takeIf { it.size > 1 }.orEmpty().map { card ->
+                val invoice = dao.invoice(month.toString(), card.id)
+                val parts = dao.invoiceParts(month.toString(), card.id)
+                val recurring = occurrences(month).filter { it.form == RecurrenceForm.Card && it.cardId == card.id }.sumOf { it.expectedAmount.cents }
+                val total = parts.purchasesCents + parts.chargesCents + recurring - dao.invoiceCredits(month.toString(), card.id)
+                app.accord.core.forecast.CardForecastConfig(card.id, card.nickname, CardCycle(card.closingDay, card.dueDay),
+                    dao.isInvoicePaid(month.toString(), card.id) || invoice?.checkedCents == total)
+            },
             invoiceConferredClosed = invoiceConferredClosed(month).takeIf { it },
         )
         return Forecast.compute(request).copy(calculatedAtMillis = nowMillis())
@@ -124,7 +133,7 @@ internal class ForecastQueries(
             main(m.classificationId)?.let { it to VariableSpend(LocalDate.ofEpochDay(m.epochDay), Channel.Other, m.amountCents) }
         }
         val card = dao.singlePurchasesBetween(from.toEpochDay(), today.toEpochDay()).mapNotNull { p ->
-            main(p.classificationId)?.let { it to VariableSpend(LocalDate.ofEpochDay(p.purchaseEpochDay), Channel.Card, p.totalCents) }
+            main(p.classificationId)?.let { it to VariableSpend(LocalDate.ofEpochDay(p.purchaseEpochDay), Channel.Card, p.totalCents, p.cardId) }
         }
         return (direct + card).groupBy({ it.first }, { it.second })
     }
@@ -161,8 +170,7 @@ internal class ForecastQueries(
      * lote é o período declarado; na falta dele, o das datas dos movimentos; e, na fatura, também o mês de vencimento. Lote sem nenhuma data não toca.
      */
     private suspend fun coverageComplete(month: YearMonth): Boolean {
-        val cycle = cycle()
-        val start = minOf(cycle.closingDateOfInvoice(month.minusMonths(1)), month.atDay(1)).toEpochDay()
+        val start = (dao.cards().map { CardCycle(it.closingDay, it.dueDay).closingDateOfInvoice(month.minusMonths(1)) } + month.atDay(1)).min().toEpochDay()
         val end = month.atEndOfMonth().toEpochDay()
         val withPending = dao.batchesWithPending().toSet()
         return dao.confirmedImportBatches().none { batch ->

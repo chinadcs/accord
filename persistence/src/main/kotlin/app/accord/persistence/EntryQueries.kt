@@ -44,7 +44,7 @@ internal class EntryQueries(
     private val tree: suspend () -> CategoryTree,
     private val cycle: suspend () -> CardCycle,
     private val occurrences: suspend (YearMonth) -> List<OccurrenceView>,
-    private val invoiceDifference: suspend (YearMonth) -> Money?,
+    private val invoiceDifference: suspend (YearMonth, String?) -> Money?,
     private val today: () -> LocalDate,
 ) {
     private companion object {
@@ -103,12 +103,12 @@ internal class EntryQueries(
                 val p = purchases.getOrPut(i.purchaseId) { dao.purchase(i.purchaseId)!! }
                 val count = counts.getOrPut(i.purchaseId) { dao.installments(i.purchaseId).size }
                 val month = YearMonth.parse(i.invoiceMonth)
-                val paid = paidInvoices.getOrPut(i.invoiceMonth) { dao.isInvoicePaid(i.invoiceMonth) }
+                val paid = paidInvoices.getOrPut("${p.cardId}:${i.invoiceMonth}") { dao.isInvoicePaid(i.invoiceMonth, p.cardId) }
                 built += Built(
                     EntryRow(
                         id = "${p.id}#${i.number}", kind = EntryKind.CardInstallment, description = p.description,
                         categoryId = p.classificationId, amount = Money(i.amountCents), date = LocalDate.ofEpochDay(p.purchaseEpochDay),
-                        dueDate = card.dueDateOfInvoice(month), method = PaymentMethod.Card,
+                        dueDate = (p.cardId?.let { dao.card(it) }?.let { app.accord.core.CardCycle(it.closingDay, it.dueDay) } ?: card).dueDateOfInvoice(month), method = PaymentMethod.Card,
                         installmentNumber = i.number, installmentCount = count,
                         situations = setOfNotNull(
                             if (paid) EntrySituation.Paid else EntrySituation.NotPaid,
@@ -235,11 +235,11 @@ internal class EntryQueries(
                         id = "${o.recurrenceId}:${o.number}", kind = EntryKind.RecurrenceOccurrence, description = o.description,
                         categoryId = o.categoryId, amount = o.settledAmount ?: o.expectedAmount,
                         date = if (byBudget) date else o.scheduledDate,
-                        dueDate = if (onCard) card.dueDateOfInvoice(o.budgetMonth) else o.scheduledDate,
+                        dueDate = if (onCard) (o.cardId?.let { dao.card(it) }?.let { app.accord.core.CardCycle(it.closingDay, it.dueDay) } ?: card).dueDateOfInvoice(o.budgetMonth) else o.scheduledDate,
                         method = if (onCard) PaymentMethod.Card else null,
                         installmentNumber = null, installmentCount = null,
                         situations = setOfNotNull(
-                            if (o.paid) EntrySituation.Paid else EntrySituation.NotPaid,
+                            if (o.paid || (onCard && dao.isInvoicePaid(o.budgetMonth.toString(), o.cardId))) EntrySituation.Paid else EntrySituation.NotPaid,
                             EntrySituation.Overdue.takeIf { !o.paid && !onCard && o.scheduledDate.isBefore(today()) },
                             EntrySituation.InvoiceLinkToConfirm.takeIf { o.assignment == AssignmentState.ToConfirm },
                         ),
@@ -250,7 +250,17 @@ internal class EntryQueries(
                 )
             }
         }
-        return built
+        return built.map { b ->
+            val row = b.row
+            val cardId = when (row.kind) {
+                EntryKind.CardInstallment, EntryKind.CardPurchase -> dao.purchase(row.id.substringBefore('#'))?.cardId
+                EntryKind.RecurrenceOccurrence -> dao.recurrence(row.id.substringBefore(':'))?.cardId
+                EntryKind.InvoicePayment -> dao.invoicePayment(row.id)?.cardId
+                EntryKind.Refund -> dao.refund(row.id)?.let { dao.purchase(it.originId)?.cardId }
+                else -> null
+            }
+            Built(row.copy(cardId = cardId), b.bucket, b.month, b.spentBy)
+        }
     }
 
     suspend fun entries(f: EntryFilter, cursor: Int, pageSize: Int): EntryPage {
@@ -340,6 +350,7 @@ internal class EntryQueries(
 
     private fun matches(b: Built, f: EntryFilter, tree: CategoryTree): Boolean {
         val row = b.row
+        if (f.cardId != null && row.cardId != f.cardId) return false
         f.categoryId?.let { wanted ->
             val classification = row.categoryId ?: return false
             if (classification != wanted && tree.mainAt(classification, b.month) != wanted) return false
@@ -358,7 +369,6 @@ internal class EntryQueries(
         val items = mutableListOf<Commitment>()
 
         if (kind == CommitmentKind.All || kind == CommitmentKind.Installments) {
-            val paid = dao.isInvoicePaid(month.toString())
             val purchases = mutableMapOf<String, CardPurchaseRow>()
             val counts = mutableMapOf<String, Int>()
             dao.installmentsInMonths(month.toString(), month.toString())
@@ -367,10 +377,10 @@ internal class EntryQueries(
                     val p = purchases.getOrPut(i.purchaseId) { dao.purchase(i.purchaseId)!! }
                     items += Commitment(
                         id = "${p.id}#${i.number}", nature = CommitmentNature.Finite, description = p.description,
-                        categoryId = p.classificationId, amount = Money(i.amountCents), dueDate = card.dueDateOfInvoice(month),
+                        categoryId = p.classificationId, amount = Money(i.amountCents), dueDate = (p.cardId?.let { dao.card(it) }?.let { app.accord.core.CardCycle(it.closingDay, it.dueDay) } ?: card).dueDateOfInvoice(month),
                         number = i.number, count = counts.getOrPut(p.id) { dao.installments(p.id).size },
                         situations = setOfNotNull(
-                            if (paid) EntrySituation.Paid else EntrySituation.NotPaid,
+                            if (dao.isInvoicePaid(month.toString(), p.cardId)) EntrySituation.Paid else EntrySituation.NotPaid,
                             EntrySituation.CancelRequested.takeIf { i.cancelState == CancellationPlanner.CANCEL_REQUESTED },
                             EntrySituation.InvoiceLinkToConfirm.takeIf { i.assignment == AssignmentState.ToConfirm.name },
                         ),
@@ -385,10 +395,10 @@ internal class EntryQueries(
                 items += Commitment(
                     id = "${o.recurrenceId}:${o.number}", nature = CommitmentNature.Recurring, description = o.description,
                     categoryId = o.categoryId, amount = o.settledAmount ?: o.expectedAmount,
-                    dueDate = if (onCard) card.dueDateOfInvoice(o.budgetMonth) else o.scheduledDate,
+                    dueDate = if (onCard) (o.cardId?.let { dao.card(it) }?.let { app.accord.core.CardCycle(it.closingDay, it.dueDay) } ?: card).dueDateOfInvoice(o.budgetMonth) else o.scheduledDate,
                     number = null, count = null,
                     situations = setOfNotNull(
-                        if (o.paid) EntrySituation.Paid else EntrySituation.NotPaid,
+                        if (o.paid || (onCard && dao.isInvoicePaid(o.budgetMonth.toString(), o.cardId))) EntrySituation.Paid else EntrySituation.NotPaid,
                         EntrySituation.Overdue.takeIf { !o.paid && !onCard && o.scheduledDate.isBefore(today()) },
                         EntrySituation.InvoiceLinkToConfirm.takeIf { o.assignment == AssignmentState.ToConfirm },
                     ),
@@ -435,14 +445,14 @@ internal class EntryQueries(
         }
         dao.installmentsToConfirm().forEach { i ->
             val p = dao.purchase(i.purchaseId)!!
-            items += PendingItem.InvoiceLink(p.id, p.description, Money(i.amountCents), YearMonth.parse(i.invoiceMonth))
+            items += PendingItem.InvoiceLink(p.id, p.description, Money(i.amountCents), YearMonth.parse(i.invoiceMonth), p.cardId)
         }
         dao.divergentPayments().forEach {
-            items += PendingItem.DivergentInvoicePayment(it.id, Money(it.amountCents), LocalDate.ofEpochDay(it.epochDay), YearMonth.parse(it.dueMonth))
+            items += PendingItem.DivergentInvoicePayment(it.id, Money(it.amountCents), LocalDate.ofEpochDay(it.epochDay), YearMonth.parse(it.dueMonth), it.cardId)
         }
         dao.invoiceRows().forEach { row ->
             val month = YearMonth.parse(row.dueMonth)
-            invoiceDifference(month)?.let { items += PendingItem.InvoiceTotalDifference(it, month) }
+            invoiceDifference(month, row.cardId)?.let { items += PendingItem.InvoiceTotalDifference(it, month, row.cardId) }
         }
         return items.sortedBy { it.month }
     }

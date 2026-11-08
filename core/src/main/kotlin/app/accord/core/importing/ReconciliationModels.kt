@@ -143,7 +143,7 @@ data class InstallmentRecord(
 data class CardPurchaseRecord(val purchaseId: String, val description: String, val installments: List<InstallmentRecord>)
 
 /** [confirmedTotalCents] is null until the total is conferred (typed by the person or imported). */
-data class InvoiceRecord(val dueMonth: YearMonth, val dueDate: LocalDate, val confirmedTotalCents: Long?, val paid: Boolean)
+data class InvoiceRecord(val dueMonth: YearMonth, val dueDate: LocalDate, val confirmedTotalCents: Long?, val paid: Boolean, val cardId: String? = null)
 
 data class BoletoRecord(val id: String, val cents: Long, val dueDate: LocalDate, val paid: Boolean)
 
@@ -173,7 +173,7 @@ sealed interface ProposedEffect {
     data class CreateEntry(val categoryId: String, val invoiceDueMonth: YearMonth?) : ProposedEffect
     data class LinkEntry(val entryId: String, val correctInvoiceTo: YearMonth? = null, val clearToConfirm: Boolean = false) : ProposedEffect
     data class LinkInstallment(val purchaseId: String, val number: Int, val entryId: String, val shift: InstallmentShift? = null) : ProposedEffect
-    data class PayInvoiceInFull(val dueMonth: YearMonth) : ProposedEffect
+    data class PayInvoiceInFull(val dueMonth: YearMonth, val cardId: String? = null) : ProposedEffect
     data class PayBoleto(val boletoId: String) : ProposedEffect
     /**
      * A received income (S1 `RegisterIncome` with its receipt) at the date and value of the movement. [incomeCategorySeedKey] names the

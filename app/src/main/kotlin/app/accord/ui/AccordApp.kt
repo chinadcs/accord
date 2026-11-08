@@ -713,8 +713,9 @@ private fun MainApp(container: AppContainer, startRoute: String) {
 
             // Lista aberta por outra tela: filtros já aplicados e voltar retorna à origem; a aba mantém a sua lista.
             composable(
-                "$ROUTE_ENTRIES_FILTERED?$ARG_FILTER_MONTH={$ARG_FILTER_MONTH}&$ARG_FILTER_CATEGORY={$ARG_FILTER_CATEGORY}&$ARG_FILTER_SITUATION={$ARG_FILTER_SITUATION}&$ARG_FILTER_CRITERION={$ARG_FILTER_CRITERION}",
+                "$ROUTE_ENTRIES_FILTERED?$ARG_FILTER_MONTH={$ARG_FILTER_MONTH}&$ARG_FILTER_CATEGORY={$ARG_FILTER_CATEGORY}&$ARG_FILTER_SITUATION={$ARG_FILTER_SITUATION}&$ARG_FILTER_CRITERION={$ARG_FILTER_CRITERION}&filterCardId={filterCardId}",
                 arguments = listOf(
+                    navArgument("filterCardId") { type = NavType.StringType; nullable = true; defaultValue = null },
                     navArgument(ARG_FILTER_CRITERION) { type = NavType.StringType; nullable = true; defaultValue = null },
                     navArgument(ARG_FILTER_MONTH) { type = NavType.StringType; nullable = true; defaultValue = null },
                     navArgument(ARG_FILTER_CATEGORY) { type = NavType.StringType; nullable = true; defaultValue = null },
@@ -1120,7 +1121,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 PullToRefresh(viewModel::refresh) {
                     CardRoute(
                         viewModel, padding, onBack = { navController.popBackStack() },
-                        onOpenInvoice = { month -> navController.navigate("$ROUTE_INVOICE/$month") },
+                        onOpenInvoice = { month, card -> navController.navigate("$ROUTE_INVOICE/$month?cardId=$card") },
                         onToConfirm = { navController.openFilteredEntries(container.clock.currentMonth(), null, EntrySituation.InvoiceLinkToConfirm) },
                         initialSetup = cardEntry.arguments?.getBoolean("initialSetup") == true,
                     )
@@ -1136,8 +1137,8 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 )
             }
             composable(
-                "$ROUTE_INVOICE/{${InvoiceViewModel.ARG_MONTH}}",
-                arguments = listOf(navArgument(InvoiceViewModel.ARG_MONTH) { type = NavType.StringType }),
+                "$ROUTE_INVOICE/{${InvoiceViewModel.ARG_MONTH}}?cardId={cardId}",
+                arguments = listOf(navArgument(InvoiceViewModel.ARG_MONTH) { type = NavType.StringType }, navArgument("cardId") { type = NavType.StringType; nullable = true; defaultValue = null }),
             ) {
                 val viewModel: InvoiceViewModel = viewModel(
                     factory = viewModelFactory { initializer { InvoiceViewModel(container, createSavedStateHandle()) } },
@@ -1145,7 +1146,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 PullToRefresh(viewModel::refresh) {
                     InvoiceRoute(
                         viewModel, padding, onBack = { navController.popBackStack() },
-                        onSeeEntries = { month -> navController.openFilteredEntries(month, null, null) },
+                        onSeeEntries = { month -> navController.openFilteredEntries(month, null, null, cardId = viewModel.selectedCardId) },
                     )
                 }
             }
@@ -1197,7 +1198,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     onOpenImport = { id, ordinal -> navController.navigate("$ROUTE_PENDING_ITEM/${Uri.encode(id)}/$ordinal") },
                     onOpenConflict = { id -> navController.navigate("$ROUTE_CONFLICT/${Uri.encode(id)}") },
                     onOpenEntry = openEntry,
-                    onOpenInvoice = { month -> navController.navigate("$ROUTE_INVOICE/$month") },
+                    onOpenInvoice = { month, card -> navController.navigate("$ROUTE_INVOICE/$month" + (card?.let { "?cardId=$it" } ?: "")) },
                     onOpenChat = { navController.openRoot(Root.Chat) },
                 )
             }
@@ -1347,8 +1348,9 @@ private fun NavHostController.openRoot(root: Root) = navigate(root.graph) {
     restoreState = true
 }
 
-private fun NavHostController.openFilteredEntries(month: YearMonth, categoryId: String?, situation: EntrySituation?, criterion: DateCriterion? = null) {
+private fun NavHostController.openFilteredEntries(month: YearMonth, categoryId: String?, situation: EntrySituation?, criterion: DateCriterion? = null, cardId: String? = null) {
     val query = buildList {
+        cardId?.let { add("filterCardId=$it") }
         add("$ARG_FILTER_MONTH=$month")
         criterion?.let { add("$ARG_FILTER_CRITERION=${it.name}") }
         categoryId?.let { add("$ARG_FILTER_CATEGORY=${Uri.encode(it)}") }
@@ -1360,7 +1362,7 @@ private fun NavHostController.openFilteredEntries(month: YearMonth, categoryId: 
 private fun NavBackStackEntry.initialFilter(default: YearMonth): EntriesFilterState {
     val month = arguments?.getString(ARG_FILTER_MONTH)?.let(YearMonth::parse) ?: default
     return EntriesFilterState(
-        from = month, to = month,
+        from = month, to = month, cardId = arguments?.getString("filterCardId"),
         criterion = arguments?.getString(ARG_FILTER_CRITERION)?.let { DateCriterion.valueOf(it) } ?: DateCriterion.BudgetMonth,
         categoryId = arguments?.getString(ARG_FILTER_CATEGORY),
         situations = arguments?.getString(ARG_FILTER_SITUATION)?.let { setOf(EntrySituation.valueOf(it)) }.orEmpty(),

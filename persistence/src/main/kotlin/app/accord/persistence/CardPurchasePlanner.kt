@@ -27,6 +27,7 @@ import java.util.UUID
 internal class CardPurchasePlanner(
     private val dao: SpaceDao,
     private val rules: CommonRules,
+    private val accounts: AccountPlanner,
     private val cycle: suspend (String) -> CardCycle,
 ) {
     suspend fun plan(session: Session, origin: Origin, c: RegisterCardPurchase): Planned {
@@ -34,6 +35,7 @@ internal class CardPurchasePlanner(
         if (c.description.isBlank()) errors += FieldError("description", ErrorCode.Required, "Informe a descrição.")
         if (c.installments < 1) errors += FieldError("installments", ErrorCode.OutOfRange, "A quantidade de parcelas começa em 1.")
         if (c.amount.cents <= 0) errors += FieldError("amount", ErrorCode.MustBePositive, "O valor precisa ser maior que zero.")
+        val cardId = accounts.resolveCard(session, c.cardId, errors)
         val chosenId = rules.validateClassification(c.classification, errors)
         rules.originError(c.originIntentionId)?.let { errors += it }
         if (errors.isNotEmpty()) return stop(errors)
@@ -49,7 +51,7 @@ internal class CardPurchasePlanner(
         val (firstMonth, firstState) = if (informedInvoice != null) {
             informedInvoice to AssignmentState.Confirmed
         } else {
-            val assigned = cycle(session.spaceId).assign(c.date)
+            val assigned = cycle(cardId).assign(c.date)
             assigned.dueMonth to if (assigned.toConfirm) AssignmentState.ToConfirm else AssignmentState.Estimated
         }
         // Cronograma único com o simulador do S7 (PurchaseSchedule): parcelas, centavos e meses de fatura.
@@ -74,9 +76,10 @@ internal class CardPurchasePlanner(
                 revision = 1,
                 voided = false,
                 originIntentionId = c.originIntentionId,
+                cardId = cardId,
             )
             dao.insertPurchase(purchase)
-            dao.insertInstallments(views.map { it.toRow(purchase.id) })
+            dao.insertInstallments(views.map { it.toRow(purchase.id, purchase.cardId) })
             listOf(EntityChange(EntityType.CardPurchase, purchase.id, null, 1))
         }
     }
@@ -101,7 +104,7 @@ internal class CardPurchasePlanner(
             oldFirst = YearMonth.parse(rows.first().invoiceMonth),
             count = rows.size,
             newFirst = c.invoice,
-            paidMonths = dao.paidInvoiceMonths().map(YearMonth::parse).toSet(),
+            paidMonths = dao.paidInvoiceMonths(purchase.cardId).map(YearMonth::parse).toSet(),
             cancelledNumbers = cancelled,
         )
         when (shift) {
@@ -123,7 +126,7 @@ internal class CardPurchasePlanner(
                 }
                 val months = (shift.before + shift.after).toSet()
                 return Planned.Go(before = before, after = after, months = months) {
-                    dao.upsertInstallments(after.map { v -> v.toRow(purchase.id) })
+                    dao.upsertInstallments(after.map { v -> v.toRow(purchase.id, purchase.cardId) })
                     val next = purchase.copy(revision = purchase.revision + 1)
                     dao.upsertPurchase(next)
                     listOf(EntityChange(EntityType.CardPurchase, next.id, null, next.revision))
@@ -146,8 +149,8 @@ internal fun cancelOf(rowState: String) = when (rowState) {
     else -> CancelState.Cancelled
 }
 
-internal fun InstallmentView.toRow(purchaseId: String) =
-    InstallmentRow(purchaseId, number, amount.cents, invoiceMonth.toString(), assignment.name, cancel.rowName())
+internal fun InstallmentView.toRow(purchaseId: String, cardId: String? = null) =
+    InstallmentRow(purchaseId, number, amount.cents, invoiceMonth.toString(), assignment.name, cancel.rowName(), cardId)
 
 internal fun InstallmentRow.toView() =
     InstallmentView(number, Money(amountCents), YearMonth.parse(invoiceMonth), AssignmentState.valueOf(assignment), cancelOf(cancelState))

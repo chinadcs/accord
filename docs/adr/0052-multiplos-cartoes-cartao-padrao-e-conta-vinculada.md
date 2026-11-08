@@ -38,4 +38,33 @@ do estado precisa cobrir. Verificar se o protocolo recusa versão antiga de clie
 ## Fontes e evidências
 
 - [Plano](../plano-melhorias-2026-11.md), etapa 5; Beads `accord-k9zy` (depende de `accord-ihok`).
-- Decisão do usuário em 08/11/2026; aceito em 08/11/2026 ("Aceito todos os ADRs"). Nada implementado.
+- Decisão do usuário em 08/11/2026; aceito em 08/11/2026 ("Aceito todos os ADRs").
+
+## Implementação local — 08/11/2026
+
+`accord-k9zy`: Room 19 adiciona a identidade do cartão aos agregados e preserva os IDs antigos,
+inclusive da fatura. A migração atribui dados anteriores ao primeiro cartão e vincula a conta do
+mesmo banco quando ela já existe; cartões novos criam ou reaproveitam uma conta na mesma operação.
+As preferências de conta e cartão permanecem individuais e independentes.
+
+O protocolo passa a **2** no cliente, fake e migração SQL local
+`20261108140000_protocolo_multicartao.sql`. Clientes com protocolo 1 são recusados na escrita:
+permiti-los apagaria a identidade do cartão ao regravar agregados. A fila local preserva IDs,
+estados e versões-base; o transporte usa a versão atual. Estados antigos recebidos sem `cardId`
+são associados ao primeiro cartão, sem reinterpretar mensagens ou duplicar compras.
+
+Cartão/fatura, registro, Chat, importação e Pendências carregam a identidade selecionada.
+O orçamento continua compartilhado, mas a baixa de parcelas depende da quitação de seu cartão.
+Previsões com vários cartões calculam a exposição de cada ciclo separadamente e estimam o canal
+fora do cartão uma só vez (`forecast-v2-multicard`); o caminho e as baterias históricas de um
+cartão permanecem preservados.
+
+Validação financeira, migração, estados recebidos, Chat e importação estão nos testes
+`MultiCardTest`, `MultiCardMigrationTest`, `MultiCardChatTest` e `MultiCardForecastTest`;
+os formulários estão em `MultiCardUiTest`. Evidências finais no Beads. Validação física e
+TalkBack: `accord-2lyu`. **A migração hospedada não foi aplicada**: distribuir este cliente para
+sincronização hospedada exige atualizar o serviço e os aparelhos em uma entrega autorizada.
+
+Resultado local: 698 testes core, 653 persistence, 136 remote (fake e Supabase local obrigatório),
+164 testes do app, 126 pgTAP e dois instrumentados no AVD `Accord_Rapido_API_33` passaram.
+Capturas dos formulários revisadas em `app/build/multicard-review/`, sem validação física implícita.

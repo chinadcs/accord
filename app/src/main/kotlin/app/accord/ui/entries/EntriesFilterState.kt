@@ -19,26 +19,28 @@ data class EntriesFilterState(
     val methods: Set<PaymentMethod> = emptySet(),
     val situations: Set<EntrySituation> = emptySet(),
     val search: String = "",
+    val cardId: String? = null,
 ) {
     /** Quantos filtros do painel estão ativos (a busca e o critério aparecem à parte). */
     val activeCount: Int
-        get() = listOf(categoryId != null, methods.isNotEmpty(), situations.isNotEmpty()).count { it }
+        get() = listOf(categoryId != null, methods.isNotEmpty(), situations.isNotEmpty(), cardId != null).count { it }
 
     /** Há algo além do período padrão restringindo a lista. */
     val isFiltered: Boolean get() = activeCount > 0 || search.isNotBlank()
 
     fun toQuery() = EntryFilter(
         from = from, to = to, criterion = criterion, categoryId = categoryId,
-        methods = methods, situations = situations, search = search.trim().ifEmpty { null },
+        cardId = cardId, methods = methods, situations = situations, search = search.trim().ifEmpty { null },
     )
 
     /** "Limpar filtros" mantém o período e o critério; só tira o que restringe. */
-    fun cleared() = copy(categoryId = null, methods = emptySet(), situations = emptySet(), search = "")
+    fun cleared() = copy(cardId = null, categoryId = null, methods = emptySet(), situations = emptySet(), search = "")
 
     fun saveTo(handle: SavedStateHandle) {
         handle[K_FROM] = from.toString()
         handle[K_TO] = to.toString()
         handle[K_CRITERION] = criterion.name
+        handle["filteredCardId"] = cardId
         handle[K_CATEGORY] = categoryId
         handle[K_METHODS] = ArrayList(methods.map { it.name })
         handle[K_SITUATIONS] = ArrayList(situations.map { it.name })
@@ -59,6 +61,7 @@ data class EntriesFilterState(
             val from = handle.get<String>(K_FROM)?.let(YearMonth::parse) ?: default.from
             val to = handle.get<String>(K_TO)?.let(YearMonth::parse) ?: default.to
             return EntriesFilterState(
+                cardId = if (handle.contains("filteredCardId")) handle.get<String>("filteredCardId") else default.cardId,
                 from = from,
                 to = to,
                 criterion = handle.get<String>(K_CRITERION)?.let(DateCriterion::valueOf) ?: default.criterion,

@@ -51,6 +51,7 @@ data class RegisterUiState(
     val categories: Map<String, CategoryNode> = emptyMap(),
     val incomeCategories: List<IncomeCategoryNode> = emptyList(),
     val accounts: List<AccountInfo> = emptyList(),
+    val cards: List<app.accord.core.space.CardInfo> = emptyList(),
     val defaultAccountId: String? = null,
     /** Cronograma e fatura vindos da prévia da fachada, para compra no cartão. */
     val preview: List<InstallmentView> = emptyList(),
@@ -120,6 +121,7 @@ class RegisterViewModel(
             val space = provider.space()
             val categories = (space.categories() as? QueryResult.Data)?.value
             val accounts = (space.accounts() as? QueryResult.Data)?.value
+            val cards = (space.cards() as? QueryResult.Data)?.value.orEmpty()
             val incomeCategories = (space.incomeCategories() as? QueryResult.Data)?.value.orEmpty()
             val origin = _state.value.form.originIntentionId?.let { id ->
                 val intention = (space.intention(id) as? QueryResult.Data)?.value
@@ -154,13 +156,14 @@ class RegisterViewModel(
                     categories = categories.associateBy { c -> c.id },
                     incomeCategories = incomeCategories,
                     accounts = accounts.accounts,
+                    cards = cards,
                     defaultAccountId = accounts.myDefaultAccountId,
                     loading = false,
                     recoveredDraft = recovered,
                     origin = origin,
                     // O nome da intenção é a descrição de partida; a pessoa pode trocá-la.
                     form = withDefaultAccount(
-                        if (origin?.name != null && it.form.description.isBlank()) it.form.copy(description = origin.name) else it.form,
+                        (if (origin?.name != null && it.form.description.isBlank()) it.form.copy(description = origin.name) else it.form).let { f -> if (f.cardId == null) f.copy(cardId = cards.firstOrNull { c -> c.isDefault }?.id) else f },
                         accounts.myDefaultAccountId,
                     ),
                 )
@@ -256,6 +259,7 @@ class RegisterViewModel(
         val count = f.installments ?: return null
         if (amount.cents <= 0 || count < 1 || (count > 1 && f.amountMeaning == null)) return null
         return RegisterCardPurchase(
+            cardId = f.cardId,
             description = "prévia", classification = Classification.ToClassify, date = f.date, amount = amount,
             amountMeaning = f.amountMeaning.takeIf { count > 1 }, installments = count, invoice = f.invoice,
         )

@@ -56,7 +56,7 @@ fun PendingQueueRoute(
     onOpenImport: (batchId: String, ordinal: Int) -> Unit,
     onOpenConflict: (String) -> Unit,
     onOpenEntry: (String) -> Unit,
-    onOpenInvoice: (YearMonth) -> Unit,
+    onOpenInvoice: (YearMonth, String?) -> Unit,
     onOpenChat: () -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -70,7 +70,9 @@ fun PendingQueueRoute(
                 is QueueItem.ChatCategory -> onOpenChat()
                 is QueueItem.Record -> when (val p = item.item) {
                     is PendingItem.CategoryToClarify -> onOpenEntry(p.entryId)
-                    is PendingItem.InvoiceLink, is PendingItem.DivergentInvoicePayment, is PendingItem.InvoiceTotalDifference -> onOpenInvoice(p.month)
+                    is PendingItem.InvoiceLink -> onOpenInvoice(p.month, p.cardId)
+                    is PendingItem.DivergentInvoicePayment -> onOpenInvoice(p.month, p.cardId)
+                    is PendingItem.InvoiceTotalDifference -> onOpenInvoice(p.month, p.cardId)
                 }
             }
         },

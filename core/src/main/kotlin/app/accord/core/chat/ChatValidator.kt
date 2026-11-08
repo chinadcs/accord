@@ -174,7 +174,18 @@ object ChatValidator {
         }
         if (reading.badFormat) return ChatDecision.Refuse(RefuseReason.BadFormat, reading.entry)
         if (reading.unanchored) return ChatDecision.Refuse(RefuseReason.Unanchored, reading.entry)
-        val decision = EntryCompleter.complete(reading.entry, context)
+        val entry = reading.entry
+        val namedCards = if (entry.payment == ChatPayment.Card) context.cards.filter { ChatText.fold(it.label) !in setOf("cartao", "credito", "cartao de credito") && ChatText.named(text, it.label) } else emptyList()
+        val candidates = if (namedCards.isNotEmpty() || entry.payment != ChatPayment.Card) namedCards else
+            context.cards.filter { card -> context.cardAliases[card.id].orEmpty().any { ChatText.named(text, it) } }
+        val suffix = Regex("\\bcartao\\s+(?:(?:do|da|de)\\s+)?([a-z]+|[0-9]+)").find(ChatText.fold(text))?.groupValues?.get(1)
+        val generic = setOf("credito", "em", "e", "no", "na", "com", "para", "por", "hoje", "ontem", "amanha", "agora", "mesmo", "foi", "eu", "sem", "depois", "ja")
+        if (entry.payment == ChatPayment.Card && context.cards.isNotEmpty() && candidates.isEmpty() && suffix != null && suffix !in generic)
+            return ChatDecision.Refuse(RefuseReason.Unanchored, entry)
+        if (candidates.size > 1) return ChatDecision.Refuse(RefuseReason.Unanchored, entry)
+        if (entry.payment == ChatPayment.Card && QuestionField.Account in entry.issues && candidates.isEmpty() && context.cards.isNotEmpty())
+            return ChatDecision.Refuse(RefuseReason.Unanchored, entry)
+        val decision = EntryCompleter.complete(entry.copy(cardId = candidates.singleOrNull()?.id ?: entry.cardId), context)
         if (decision is ChatDecision.Register && hints.isNotEmpty()) {
             return decision.copy(categoryHints = hints.mapNotNull { context.category(it)?.id })
         }

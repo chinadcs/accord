@@ -134,6 +134,7 @@ data class PreferencesRow(
     val personId: String,
     val defaultAccountId: String?,
     val revision: Long,
+    val defaultCardId: String? = null,
 )
 
 @Entity(tableName = "movement", indices = [Index("epochDay")])
@@ -214,6 +215,7 @@ data class CardRow(
     val dueDay: Int,
     val revision: Long,
     val creditLimitCents: Long? = null,
+    val accountId: String? = null,
 )
 
 /** Compra no cartão (entidade raiz); as parcelas derivam descrição e classificação dela. */
@@ -234,6 +236,7 @@ data class CardPurchaseRow(
     val voided: Boolean,
     /** Intenção de origem (S7): imutável depois da criação; a conversão da intenção é derivada deste vínculo. */
     val originIntentionId: String? = null,
+    val cardId: String? = null,
 )
 
 @Entity(
@@ -252,6 +255,7 @@ data class InstallmentRow(
     val assignment: String,
     /** ACTIVE, CANCEL_REQUESTED ou CANCELLED. */
     val cancelState: String,
+    val cardId: String? = null,
 )
 
 @Entity(tableName = "boleto", indices = [Index("dueEpochDay"), Index("paidEpochDay")])
@@ -310,6 +314,7 @@ data class RecurrenceRow(
     val voided: Boolean,
     /** Intenção de origem (S7): imutável depois da criação; a conversão da intenção é derivada deste vínculo. */
     val originIntentionId: String? = null,
+    val cardId: String? = null,
 )
 
 /** Modelo vigente a partir de uma ocorrência (S1 §7.6). */
@@ -337,6 +342,7 @@ data class RecurrenceOverrideRow(
     val accountId: String?,
     /** Fatura do cartão (mês de vencimento) escolhida para esta ocorrência; nulo segue o ciclo (ADR 0049). */
     val invoiceMonth: String? = null,
+    val cardId: String? = null,
 )
 
 /** Pagamento (ou recebimento) efetivo de uma ocorrência; o previsto continua no modelo da série. */
@@ -372,7 +378,7 @@ data class RefundRow(
 )
 
 /** Fatura pelo mês de vencimento; identidade determinística por espaço + mês. */
-@Entity(tableName = "invoice", indices = [Index(value = ["dueMonth"], unique = true)])
+@Entity(tableName = "invoice", indices = [Index(value = ["cardId", "dueMonth"], unique = true)])
 @Serializable
 data class InvoiceRow(
     @PrimaryKey val id: String,
@@ -382,6 +388,7 @@ data class InvoiceRow(
     /** [app.accord.core.space.InvoiceTotalSource] por nome. */
     val checkedSource: String?,
     val revision: Long,
+    val cardId: String? = null,
 )
 
 /** Pagamento de fatura: aceito (quitação integral conferida) ou preservado em revisão. */
@@ -398,6 +405,7 @@ data class InvoicePaymentRow(
     val origin: String,
     val revision: Long,
     val voided: Boolean,
+    val cardId: String? = null,
 )
 
 data class InvoiceParts(val purchasesCents: Long, val chargesCents: Long)
@@ -533,6 +541,7 @@ interface SpaceDao {
     // cartão e compras
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insertSeedCard(row: CardRow)
     @Upsert suspend fun upsertCard(row: CardRow)
+    @Query("SELECT * FROM card ORDER BY rowid") suspend fun cards(): List<CardRow>
     @Query("SELECT * FROM card WHERE id = :id") suspend fun card(id: String): CardRow?
     @Insert suspend fun insertPurchase(row: CardPurchaseRow)
     @Upsert suspend fun upsertPurchase(row: CardPurchaseRow)
@@ -573,9 +582,9 @@ interface SpaceDao {
     suspend fun singlePurchasesBetween(from: Long, to: Long): List<CardPurchaseRow>
     @Query(
         "SELECT COUNT(*) FROM installment i JOIN card_purchase p ON p.id = i.purchaseId " +
-            "WHERE p.voided = 0 AND i.invoiceMonth = :month AND i.assignment = 'ToConfirm' AND i.cancelState != 'CANCELLED'",
+            "WHERE p.voided = 0 AND i.invoiceMonth = :month AND i.assignment = 'ToConfirm' AND i.cancelState != 'CANCELLED' AND p.cardId = COALESCE(:cardId, (SELECT id FROM card ORDER BY rowid LIMIT 1))",
     )
-    suspend fun linksToConfirm(month: String): Int
+    suspend fun linksToConfirm(month: String, cardId: String? = null): Int
 
     // boletos
     @Insert suspend fun insertBoleto(row: BoletoRow)
@@ -627,29 +636,29 @@ interface SpaceDao {
 
     // faturas
     @Upsert suspend fun upsertInvoice(row: InvoiceRow)
-    @Query("SELECT * FROM invoice WHERE dueMonth = :month") suspend fun invoice(month: String): InvoiceRow?
+    @Query("SELECT * FROM invoice WHERE dueMonth = :month AND cardId = COALESCE(:cardId, (SELECT id FROM card ORDER BY rowid LIMIT 1))") suspend fun invoice(month: String, cardId: String? = null): InvoiceRow?
     @Query("SELECT * FROM invoice") suspend fun invoiceRows(): List<InvoiceRow>
     @Insert suspend fun insertInvoicePayment(row: InvoicePaymentRow)
     @Upsert suspend fun upsertInvoicePayment(row: InvoicePaymentRow)
     @Query("SELECT * FROM invoice_payment WHERE id = :id") suspend fun invoicePayment(id: String): InvoicePaymentRow?
-    @Query("SELECT * FROM invoice_payment WHERE dueMonth = :month AND voided = 0 ORDER BY rowid")
-    suspend fun invoicePayments(month: String): List<InvoicePaymentRow>
-    @Query("SELECT COUNT(*) > 0 FROM invoice_payment WHERE dueMonth = :month AND accepted = 1 AND voided = 0")
-    suspend fun isInvoicePaid(month: String): Boolean
-    @Query("SELECT DISTINCT dueMonth FROM invoice_payment WHERE accepted = 1 AND voided = 0")
-    suspend fun paidInvoiceMonths(): List<String>
+    @Query("SELECT * FROM invoice_payment WHERE dueMonth = :month AND voided = 0 AND cardId = COALESCE(:cardId, (SELECT id FROM card ORDER BY rowid LIMIT 1)) ORDER BY rowid")
+    suspend fun invoicePayments(month: String, cardId: String? = null): List<InvoicePaymentRow>
+    @Query("SELECT COUNT(*) > 0 FROM invoice_payment WHERE dueMonth = :month AND accepted = 1 AND voided = 0 AND cardId = COALESCE(:cardId, (SELECT id FROM card ORDER BY rowid LIMIT 1))")
+    suspend fun isInvoicePaid(month: String, cardId: String? = null): Boolean
+    @Query("SELECT DISTINCT dueMonth FROM invoice_payment WHERE accepted = 1 AND voided = 0 AND cardId = COALESCE(:cardId, (SELECT id FROM card ORDER BY rowid LIMIT 1))")
+    suspend fun paidInvoiceMonths(cardId: String? = null): List<String>
     @Query(
         "SELECT COALESCE(SUM(CASE WHEN p.isCharge = 0 THEN i.amountCents ELSE 0 END), 0) AS purchasesCents, " +
             "COALESCE(SUM(CASE WHEN p.isCharge = 1 THEN i.amountCents ELSE 0 END), 0) AS chargesCents " +
             "FROM installment i JOIN card_purchase p ON p.id = i.purchaseId " +
-            "WHERE p.voided = 0 AND i.invoiceMonth = :month AND i.cancelState != 'CANCELLED'",
+            "WHERE p.voided = 0 AND i.invoiceMonth = :month AND i.cancelState != 'CANCELLED' AND p.cardId = COALESCE(:cardId, (SELECT id FROM card ORDER BY rowid LIMIT 1))",
     )
-    suspend fun invoiceParts(month: String): InvoiceParts
+    suspend fun invoiceParts(month: String, cardId: String? = null): InvoiceParts
     @Query(
         "SELECT COALESCE(SUM(r.amountCents), 0) FROM refund r JOIN card_purchase p ON p.id = r.originId " +
-            "WHERE r.voided = 0 AND r.status = 'Confirmed' AND r.creditMonth = :month AND r.originType = 'CARD_PURCHASE' AND p.voided = 0",
+            "WHERE r.voided = 0 AND r.status = 'Confirmed' AND r.creditMonth = :month AND r.originType = 'CARD_PURCHASE' AND p.voided = 0 AND p.cardId = COALESCE(:cardId, (SELECT id FROM card ORDER BY rowid LIMIT 1))",
     )
-    suspend fun invoiceCredits(month: String): Long
+    suspend fun invoiceCredits(month: String, cardId: String? = null): Long
     @Query(
         "SELECT invoiceMonth FROM installment UNION SELECT dueMonth FROM invoice UNION SELECT dueMonth FROM invoice_payment " +
             "UNION SELECT creditMonth FROM refund WHERE originType = 'CARD_PURCHASE' AND creditMonth IS NOT NULL",
@@ -798,7 +807,7 @@ interface SpaceDao {
         AlertEventRow::class, AlertDisplayRow::class, AlertPreferenceRow::class, IconAssociationRow::class, IntentionRow::class,
         AccountMoveRow::class,
     ],
-    version = 18,
+    version = 19,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2, spec = Migration1To2::class),
@@ -832,6 +841,7 @@ interface SpaceDao {
         AutoMigration(from = 16, to = 17),
         // ADR 0051: saldo inicial, data de corte e Carteira na conta; transferência e ajuste de saldo (compartilhados).
         AutoMigration(from = 17, to = 18),
+        AutoMigration(from = 18, to = 19, spec = Migration18To19::class),
     ],
 )
 abstract class AccordDatabase : RoomDatabase() {
@@ -844,5 +854,18 @@ abstract class AccordDatabase : RoomDatabase() {
 class Migration1To2 : AutoMigrationSpec {
     override fun onPostMigrate(connection: SQLiteConnection) {
         connection.execSQL("UPDATE operation SET syncState = 'ACKNOWLEDGED' WHERE acknowledged = 1")
+    }
+}
+
+/** Preserva IDs historicos e atribui todas as linhas antigas ao primeiro cartao do espaco. */
+class Migration18To19 : AutoMigrationSpec {
+    override fun onPostMigrate(connection: androidx.sqlite.SQLiteConnection) {
+        for (table in listOf("card_purchase", "installment", "invoice", "invoice_payment")) {
+            connection.prepare("UPDATE $table SET cardId = (SELECT id FROM card ORDER BY rowid LIMIT 1) WHERE cardId IS NULL").use { it.step() }
+        }
+        connection.prepare("UPDATE recurrence SET cardId = (SELECT id FROM card ORDER BY rowid LIMIT 1) WHERE form = 'Card' AND cardId IS NULL").use { it.step() }
+        connection.prepare("UPDATE recurrence_override SET cardId = (SELECT r.cardId FROM recurrence r WHERE r.id = recurrenceId) WHERE cardId IS NULL").use { it.step() }
+        connection.prepare("UPDATE card SET accountId = (SELECT a.id FROM account a WHERE a.isWallet = 0 AND ((card.bankIspb IS NOT NULL AND a.bankIspb = card.bankIspb) OR (card.bankIspb IS NULL AND card.bankName IS NOT NULL AND a.bankName = card.bankName)) ORDER BY a.rowid LIMIT 1) WHERE accountId IS NULL").use { it.step() }
+
     }
 }

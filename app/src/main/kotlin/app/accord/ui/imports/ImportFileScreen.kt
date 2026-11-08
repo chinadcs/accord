@@ -206,7 +206,9 @@ private fun OriginChoice(state: ImportFileUiState, onOrigin: (String) -> Unit, o
         }
         DocumentKind.Card -> Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             Text(stringResource(R.string.import_origin_card), style = MaterialTheme.typography.titleMedium)
-            Text(state.cardName ?: stringResource(R.string.import_card_default), style = MaterialTheme.typography.bodyLarge)
+            state.cards.filter { it.configured }.forEach { card ->
+                ChoiceRow(card.nickname, state.originId == card.id, enabled = state.canChange) { onOrigin(card.id) }
+            }
             InvoiceChoice(state.documentInvoice, state.canChange, onInvoiceByDate, onPrevious, onNext)
         }
     }

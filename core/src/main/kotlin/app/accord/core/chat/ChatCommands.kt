@@ -37,6 +37,7 @@ object ChatCommands {
         }
         return when (val payment = checkNotNull(entry.payment)) {
             ChatPayment.Card -> RegisterCardPurchase(
+                cardId = entry.cardId,
                 description = entry.description,
                 classification = classification,
                 date = entry.date,

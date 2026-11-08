@@ -116,6 +116,7 @@ data class ReceiptSummary(
     val expectedIncome: Boolean = false,
     /** Correção de categoria ou descrição aplicada a todas as parcelas: quantas. */
     val scopeInstallments: Int? = null,
+    val cardLabel: String? = null,
 )
 
 data class ChatReceiptRecord(

@@ -24,6 +24,7 @@ object FormCodec {
         put("date", f.date.toString())
         f.categoryId?.let { put("categoryId", it) }
         f.incomeCategoryId?.let { put("incomeCategoryId", it) }
+        f.cardId?.let { put("cardId", it) }
         f.accountId?.let { put("accountId", it) }
         put("installments", f.installmentsText)
         f.amountMeaning?.let { put("amountMeaning", it.name) }
@@ -44,6 +45,7 @@ object FormCodec {
         categoryId = fields["categoryId"],
         incomeCategoryId = fields["incomeCategoryId"],
         accountId = fields["accountId"],
+        cardId = fields["cardId"],
         installmentsText = fields["installments"] ?: "1",
         amountMeaning = fields["amountMeaning"]?.let { runCatching { AmountMeaning.valueOf(it) }.getOrNull() },
         frequency = fields["frequency"]?.let { runCatching { Frequency.valueOf(it) }.getOrNull() },

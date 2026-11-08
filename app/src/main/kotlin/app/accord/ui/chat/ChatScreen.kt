@@ -597,7 +597,7 @@ private fun ReceiptLines(summary: ReceiptSummary, today: LocalDate) {
 @Composable
 private fun paymentText(summary: ReceiptSummary): String? {
     val method = when (summary.payment) {
-        ChatPayment.Card -> stringResource(R.string.receipt_payment_card)
+        ChatPayment.Card -> summary.cardLabel ?: stringResource(R.string.receipt_payment_card)
         ChatPayment.Pix -> stringResource(R.string.receipt_payment_pix)
         ChatPayment.Debit -> stringResource(R.string.receipt_payment_debit)
         ChatPayment.Cash -> stringResource(R.string.receipt_payment_cash)

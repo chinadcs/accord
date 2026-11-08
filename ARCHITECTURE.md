@@ -231,7 +231,7 @@ Vocabulário do plano §§3–5 e do índice das telas; não é descrição exau
   o mês do pagamento efetivo, retirando a previsão anterior e preservando as duas datas.
   Cartão usa fatura atribuída; fechamento dia 8 e vencimento dia 15 são configuração inicial,
   sem garantir atribuição do emissor. Atividade P1 usa data original, sem outra despesa.
-  Vários cartões, cada um com fechamento, vencimento e limite próprios, cartão padrão individual e conta vinculada ([ADR 0052](docs/adr/0052-multiplos-cartoes-cartao-padrao-e-conta-vinculada.md), aceito em 08/11/2026; **ainda não implementado**: hoje há um cartão).
+  Vários cartões, cada um com fechamento, vencimento e limite próprios, cartão padrão individual e conta vinculada ([ADR 0052](docs/adr/0052-multiplos-cartoes-cartao-padrao-e-conta-vinculada.md), aceito em 08/11/2026; implementação local em `accord-k9zy`, Room 19 e protocolo 2; migração hospedada e validação física pendentes).
 - **Limites:** soma destinada às subcategorias não supera o principal. Sem distribuir difere de
   restante após gastos; subcategoria sem divisão não recebe limite zero presumido. Excesso não
   amplia nem redistribui limites. Cada edição escolhe só o mês ou esse mês e os seguintes,

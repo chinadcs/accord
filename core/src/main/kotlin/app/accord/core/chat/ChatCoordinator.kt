@@ -801,13 +801,16 @@ class ChatCoordinator(
 
     private suspend fun summaryOf(entryId: String, scope: Int?): ReceiptSummary {
         val detail = checkNotNull(space.entry(entryId).get()) { "Lançamento $entryId sumiu" }
-        return ReceiptSummaries.from(detail, space.categories().get(), space.accounts().get(), scope)
+        return ReceiptSummaries.from(detail, space.categories().get(), space.accounts().get(), scope).copy(
+            cardLabel = detail.cardId?.let { id -> space.cards().get().firstOrNull { it.id == id }?.nickname },
+        )
     }
 
     private suspend fun buildContext(): ChatContext {
         val categories = space.categories().get()
         val accounts = space.accounts().get()
         val card = space.card().get()
+        val cards = space.cards().get()
         val openQuestion = store.openQuestions().maxByOrNull { it.createdAtMillis }
         val receipts = store.activeReceipts(RECENT_RECEIPTS)
         return ChatContext(
@@ -815,6 +818,9 @@ class ChatCoordinator(
             categories = categories.mapIndexed { index, node -> CategoryItem("c${index + 1}", node.id, node.name, node.parentId) },
             hasCard = true,
             cardLabel = card.nickname,
+            cards = cards.filter { it.configured || cards.none { c -> c.configured } }.mapIndexed { index, c -> AccountItem("card${index+1}", c.id, c.nickname) },
+            myDefaultCardId = card.id,
+            cardAliases = cards.associate { it.id to listOfNotNull(it.bank?.let(::bankName)) },
             accounts = accounts.accounts.mapIndexed { index, account ->
                 AccountItem("a${index + 1}", account.id, ReceiptSummaries.accountLabel(bankName(account.bank), account.nickname))
             },
@@ -865,6 +871,7 @@ internal object PartialEntryOf {
         categoryId = entry.categoryId,
         payment = entry.payment,
         accountId = entry.accountId,
+        cardId = entry.cardId,
         spentBy = entry.spentBy,
     )
 }
