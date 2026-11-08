@@ -33,8 +33,8 @@ fun commandLabel(commandType: String): Int = when (commandType) {
     "DefineLimits" -> R.string.op_limits
     "PayInvoice" -> R.string.op_pay_invoice
     "RegisterInvoiceTotal" -> R.string.op_invoice_total
-    "PayBoleto" -> R.string.op_pay_boleto
-    "ReceiveIncome" -> R.string.op_receive_income
+    "PayBoleto", "UndoBoletoPayment" -> R.string.op_pay_boleto
+    "ReceiveIncome", "UndoIncomeReceipt" -> R.string.op_receive_income
     "RegisterRefund", "ConfirmRefund" -> R.string.op_refund
     "RequestInstallmentCancellation", "ConfirmNonCharge" -> R.string.op_cancellation
     "CreateCategory", "RenameCategory", "ReorderCategories", "MoveSubcategory" -> R.string.op_category

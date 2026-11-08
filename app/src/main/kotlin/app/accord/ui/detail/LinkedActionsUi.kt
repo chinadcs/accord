@@ -16,6 +16,8 @@ import androidx.compose.material3.MaterialTheme
 import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -26,6 +28,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
+import app.accord.core.Money
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
@@ -233,5 +237,45 @@ private fun ChoiceRow(label: String, selected: Boolean, onClick: () -> Unit) {
     ) {
         RadioButton(selected = selected, onClick = null)
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = AccordSpacing.s2))
+    }
+}
+
+/**
+ * Interruptor Recebido/Pago. A linha inteira é o alvo (48 dp) e o TalkBack lê rótulo e estado juntos; o texto abaixo diz o que
+ * acontece ao ligar ou o que foi registrado, para o estado nunca depender só do interruptor.
+ */
+@Composable
+fun SettleSwitchCard(settle: SettleSwitch, amount: Money, onToggle: (Boolean) -> Unit, onAdjust: () -> Unit) {
+    val label = stringResource(if (settle.receiving) R.string.settle_switch_received else R.string.settle_switch_paid)
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+        Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)
+                    .toggleable(value = settle.on, role = Role.Switch, onValueChange = onToggle)
+                    .testTag("settle-switch"),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(label, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                Switch(checked = settle.on, onCheckedChange = null)
+            }
+            if (settle.on) {
+                val date = settle.doneDate?.fullLabel().orEmpty()
+                val res = if (settle.receiving) R.string.settle_switch_received_on else R.string.settle_switch_paid_on
+                Text(
+                    stringResource(res, date, (settle.doneAmount ?: amount).format()),
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Text(stringResource(R.string.settle_switch_off_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            } else {
+                Text(
+                    stringResource(R.string.settle_switch_off_summary, settle.expectedAmount.format()),
+                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                TextButton(onClick = onAdjust, modifier = Modifier.heightIn(min = AccordSpacing.touchMin).testTag("settle-adjust")) {
+                    Text(stringResource(R.string.settle_switch_adjust))
+                }
+            }
+        }
     }
 }

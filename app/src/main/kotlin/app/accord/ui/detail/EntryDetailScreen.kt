@@ -80,7 +80,8 @@ fun EntryDetailRoute(
         onRetry = viewModel::load, onRequestDelete = viewModel::requestDelete, onCancelDelete = viewModel::cancelDelete,
         onConfirmDelete = viewModel::confirmDelete,
         onOpenCommitment = onOpenCommitment, onOpenIntention = onOpenIntention,
-        linked = linked, onOpenAction = viewModel::openAction, onLinkedChange = viewModel::updateLinked,
+        linked = linked, onOpenAction = viewModel::openAction, onToggleSettle = viewModel::toggleSettle, onAdjustSettle = viewModel::adjustSettle,
+        onLinkedChange = viewModel::updateLinked,
         onLinkedSubmit = viewModel::submitLinked, onLinkedClose = viewModel::closeLinked,
     )
 }
@@ -100,6 +101,8 @@ fun EntryDetailScreen(
     onOpenIntention: (String) -> Unit = {},
     linked: LinkedState? = null,
     onOpenAction: (LinkedAction) -> Unit = {},
+    onToggleSettle: (Boolean) -> Unit = {},
+    onAdjustSettle: () -> Unit = {},
     onLinkedChange: ((LinkedForm) -> LinkedForm) -> Unit = {},
     onLinkedSubmit: () -> Unit = {},
     onLinkedClose: () -> Unit = {},
@@ -126,7 +129,7 @@ fun EntryDetailScreen(
             }
             is DetailContent.Ready -> {
                 app.accord.ui.intentions.OriginIntentionLink(content.data.origin, onOpenIntention)
-                ReadyDetail(content.data, onEdit, onRequestDelete, onOpenAction, onOpenCommitment)
+                ReadyDetail(content.data, onEdit, onRequestDelete, onOpenAction, onOpenCommitment, onToggleSettle, onAdjustSettle)
             }
         }
     }
@@ -141,6 +144,8 @@ private fun ReadyDetail(
     onRequestDelete: () -> Unit,
     onOpenAction: (LinkedAction) -> Unit,
     onOpenCommitment: (String) -> Unit,
+    onToggleSettle: (Boolean) -> Unit,
+    onAdjustSettle: () -> Unit,
 ) {
     val d = data.detail
     var choosingIcon by remember { mutableStateOf(false) }
@@ -216,6 +221,8 @@ private fun ReadyDetail(
     }
 
     if (d.refunds.isNotEmpty()) RefundsBlock(d.refunds)
+
+    data.settleSwitch?.let { SettleSwitchCard(it, data.detail.amount, onToggleSettle, onAdjustSettle) }
 
     LinkedActionsBlock(data.actions, onOpenAction)
 

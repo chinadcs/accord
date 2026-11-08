@@ -8,6 +8,7 @@ import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
@@ -117,21 +118,36 @@ class LinkedFlowTest {
     }
 
     @Test
-    fun pagarBoletoSemValorConfirmaOPrevistoEOdetalheMostraPago() {
+    fun interruptorPagoRegistraHojeNoValorPrevistoEDesligarVoltaAPrevisto() {
         openDetail(power)
-        tap("Registrar pagamento")
+        waitForText("Ao ligar: hoje")
+        compose.onNodeWithTag("settle-switch").performSemanticsAction(SemanticsActions.OnClick)
+        waitForText("Pagamento registrado.")
+        waitForText("Pago em")
+        waitForText("Pagamento: ")
+        // pago: o resumo do que acontece ao ligar some e o botão de ajustar também
+        waitGone("Ao ligar: hoje")
+        waitGone("Ajustar")
+
+        compose.onNodeWithTag("settle-switch").performSemanticsAction(SemanticsActions.OnClick)
+        waitForText("Pagamento desfeito.")
+        waitForText("Ao ligar: hoje")
+    }
+
+    @Test
+    fun ajustarDoInterruptorAbreOFormularioEConfirmaOPrevisto() {
+        openDetail(power)
+        tap("Ajustar")
         waitForText("Valor efetivo")
         dialogButton("Confirmar")
         waitForText("Pagamento registrado.")
-        waitForText("Pagamento: ")
-        // pago: a ação some do detalhe
-        waitGone("Registrar pagamento")
+        waitForText("Pago em")
     }
 
     @Test
     fun pagarBoletoComValorAmbiguoMostraErroNoCampoESemFecharODialogo() {
         openDetail(power)
-        tap("Registrar pagamento")
+        tap("Ajustar")
         waitForText("Valor efetivo")
         compose.onNodeWithText("Valor efetivo (R$)").performTextInput("1.20")
         dialogButton("Confirmar")

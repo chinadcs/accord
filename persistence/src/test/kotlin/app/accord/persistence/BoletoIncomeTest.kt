@@ -13,6 +13,8 @@ import app.accord.core.space.RegisterIncome
 import app.accord.core.space.SetMyDefaultAccount
 import app.accord.core.space.Settlement
 import app.accord.core.space.Undo
+import app.accord.core.space.UndoBoletoPayment
+import app.accord.core.space.UndoIncomeReceipt
 import kotlinx.coroutines.runBlocking
 import java.time.LocalDate
 import kotlin.test.Test
@@ -257,5 +259,58 @@ class BoletoIncomeTest : SpaceTestBase() {
         h.withDefaultAccount()
         val bad = h.space.execute(h.env(), RegisterIncome("", Money.ZERO, d(2026, 10, 5)))
         assertEquals(setOf("description", "expectedAmount"), assertIs<CommandResult.Rejected>(bad).errors.map { it.field }.toSet())
+    }
+
+    // ---- interruptor Pago/Recebido: desligar volta ao previsto ----
+
+    @Test
+    fun `desligar o pago do boleto volta a previsto no vencimento com as duas datas e depois religa`() = runBlocking<Unit> {
+        val h = open()
+        h.withDefaultAccount()
+        val id = h.registerBoleto(boleto(d(2026, 10, 30)))
+        h.space.execute(h.env(), PayBoleto(id, Settlement(d(2026, 11, 3)))).applied()
+        val paidRevision = h.space.boleto(id).value()!!.revision
+
+        h.space.execute(h.env(), UndoBoletoPayment(id, expectedRevision = paidRevision)).applied()
+
+        val view = h.space.boleto(id).value()!!
+        assertNull(view.paidDate)
+        assertEquals(d(2026, 10, 30), view.dueDate)
+        assertEquals(brl(100), h.space.budget(ym(2026, 10)).value().committed)
+        assertEquals(Money.ZERO, h.space.budget(ym(2026, 10)).value().paid)
+        assertEquals(Money.ZERO, h.space.budget(ym(2026, 11)).value().committed)
+
+        h.space.execute(h.env(), PayBoleto(id, Settlement(d(2026, 11, 4)), expectedRevision = view.revision)).applied()
+        assertEquals(d(2026, 11, 4), h.space.boleto(id).value()!!.paidDate)
+    }
+
+    @Test
+    fun `desligar o recebido da renda volta a prevista e recusa renda ainda nao recebida`() = runBlocking<Unit> {
+        val h = open()
+        h.withDefaultAccount()
+        val id = h.space.execute(h.env(), income(brl(1000), d(2026, 10, 30))).applied().changes.single().id
+        val notReceived = h.space.execute(h.env(), UndoIncomeReceipt(id))
+        assertEquals("incomeId", assertIs<CommandResult.Rejected>(notReceived).errors.single().field)
+
+        h.space.execute(h.env(), ReceiveIncome(id, Settlement(d(2026, 11, 3)))).applied()
+        assertEquals(brl(1000), h.space.incomes(ym(2026, 11)).value().received)
+
+        h.space.execute(h.env(), UndoIncomeReceipt(id)).applied()
+
+        val view = h.space.income(id).value()!!
+        assertNull(view.receivedDate)
+        assertEquals(d(2026, 10, 30), view.expectedDate)
+        assertEquals(Money.ZERO, h.space.incomes(ym(2026, 11)).value().received)
+        assertEquals(brl(1000), h.space.incomes(ym(2026, 10)).value().toReceive)
+    }
+
+    @Test
+    fun `desligar com versao antiga recusa por conflito e nao desfaz`() = runBlocking<Unit> {
+        val h = open()
+        h.withDefaultAccount()
+        val id = h.registerBoleto(boleto(d(2026, 10, 30)))
+        h.space.execute(h.env(), PayBoleto(id, Settlement(d(2026, 11, 3)))).applied()
+        assertIs<CommandResult.StaleVersion>(h.space.execute(h.env(), UndoBoletoPayment(id, expectedRevision = 1)))
+        assertEquals(d(2026, 11, 3), h.space.boleto(id).value()!!.paidDate)
     }
 }

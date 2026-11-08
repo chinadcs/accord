@@ -51,6 +51,15 @@
     <!-- Ações vinculadas no detalhe -->
     <string name="feedback_paid">Pagamento registrado.</string>
     <string name="feedback_received">Recebimento registrado.</string>
+    <string name="feedback_payment_undone">Pagamento desfeito. O boleto voltou a previsto.</string>
+    <string name="feedback_receipt_undone">Recebimento desfeito. A renda voltou a prevista.</string>
+    <string name="settle_switch_paid">Pago</string>
+    <string name="settle_switch_received">Recebido</string>
+    <string name="settle_switch_off_summary">Ao ligar: hoje, %1$s previsto, na sua conta padrão.</string>
+    <string name="settle_switch_adjust">Ajustar</string>
+    <string name="settle_switch_paid_on">Pago em %1$s, %2$s.</string>
+    <string name="settle_switch_received_on">Recebido em %1$s, %2$s.</string>
+    <string name="settle_switch_off_hint">Desligar volta ao previsto.</string>
     <string name="feedback_refund_registered">Estorno registrado.</string>
     <string name="feedback_refund_confirmed">Estorno confirmado.</string>
     <string name="feedback_cancel_requested">Cancelamento solicitado.</string>

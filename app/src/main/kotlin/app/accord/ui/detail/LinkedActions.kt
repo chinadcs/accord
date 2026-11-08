@@ -20,6 +20,8 @@ import app.accord.core.space.RefundView
 import app.accord.core.space.RegisterRefund
 import app.accord.core.space.RequestInstallmentCancellation
 import app.accord.core.space.Settlement
+import app.accord.core.space.UndoBoletoPayment
+import app.accord.core.space.UndoIncomeReceipt
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -194,4 +196,45 @@ fun availableActions(detail: EntryDetail): List<LinkedAction> {
         if (requested.isNotEmpty()) actions += LinkedAction.Cancellation(purchase.id, requested, nonCharge = true, revision = purchase.revision)
     }
     return actions
+}
+
+/**
+ * Interruptor "Recebido" (renda) ou "Pago" (boleto) do detalhe. Ligar registra hoje, pelo valor previsto e na conta padrão;
+ * o link "ajustar" abre o formulário completo. Desligar desfaz o recebimento ou o pagamento, voltando ao previsto.
+ */
+data class SettleSwitch(
+    val kind: LinkedAction.Settle.Kind,
+    val targetId: String,
+    val on: Boolean,
+    val expectedAmount: Money,
+    val doneDate: LocalDate?,
+    val doneAmount: Money?,
+    val revision: Long,
+) {
+    val receiving: Boolean get() = kind == LinkedAction.Settle.Kind.Income
+
+    /** O formulário completo, para ajustar data, valor ou conta ao ligar. */
+    fun adjustAction() = LinkedAction.Settle(kind, targetId, expectedAmount, revision = revision)
+
+    /** Comando de ligar (hoje, valor previsto, conta padrão da fachada) ou de desligar. */
+    fun command(turnOn: Boolean, today: LocalDate): Command = when {
+        turnOn && receiving -> ReceiveIncome(targetId, Settlement(today, null), expectedRevision = revision)
+        turnOn -> PayBoleto(targetId, Settlement(today, null), expectedRevision = revision)
+        receiving -> UndoIncomeReceipt(targetId, expectedRevision = revision)
+        else -> UndoBoletoPayment(targetId, expectedRevision = revision)
+    }
+}
+
+/** O interruptor só existe para renda e boleto vivos; ocorrências de série têm o próprio caminho. */
+fun settleSwitch(detail: EntryDetail): SettleSwitch? {
+    if (detail.voided) return null
+    return when (detail.kind) {
+        EntryKind.Boleto -> detail.boleto?.let {
+            SettleSwitch(LinkedAction.Settle.Kind.Boleto, it.id, it.paidDate != null, it.expectedAmount, it.paidDate, it.paidAmount, it.revision)
+        }
+        EntryKind.Income -> detail.income?.let {
+            SettleSwitch(LinkedAction.Settle.Kind.Income, it.id, it.receivedDate != null, it.expectedAmount, it.receivedDate, it.receivedAmount, it.revision)
+        }
+        else -> null
+    }
 }

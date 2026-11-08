@@ -15,6 +15,7 @@ import app.accord.core.space.ReceiveIncome
 import app.accord.core.space.RegisterIncome
 import app.accord.core.space.RenameIncomeCategory
 import app.accord.core.space.Session
+import app.accord.core.space.UndoIncomeReceipt
 import java.time.LocalDate
 import java.time.YearMonth
 import java.util.UUID
@@ -129,6 +130,22 @@ internal class IncomePlanner(
                 receivedCents = c.receipt.amount?.cents ?: income.expectedCents,
                 revision = income.revision + 1,
             )
+            dao.upsertIncome(next)
+            listOf(EntityChange(EntityType.Income, next.id, null, next.revision))
+        }
+    }
+
+    /** Desliga o "Recebido": a renda volta a prevista e o mês do recebimento deixa de contá-la como confirmada. */
+    suspend fun planUndoReceive(c: UndoIncomeReceipt): Planned {
+        val income = dao.income(c.incomeId) ?: return stop("incomeId", ErrorCode.UnknownReference, "Renda não encontrada.")
+        if (income.voided) return stop("incomeId", ErrorCode.NotAllowed, "Esta renda foi desfeita ou excluída.")
+        if (c.expectedRevision != null && c.expectedRevision != income.revision) {
+            return Planned.Stop(CommandResult.StaleVersion(income.id, income.revision))
+        }
+        val received = income.receivedEpochDay ?: return stop("incomeId", ErrorCode.NotAllowed, "Esta renda ainda não foi recebida.")
+        val months = setOf(YearMonth.from(LocalDate.ofEpochDay(income.expectedEpochDay)), YearMonth.from(LocalDate.ofEpochDay(received)))
+        return Planned.Go(months = months, undoable = true) {
+            val next = income.copy(receivedEpochDay = null, receivedCents = null, revision = income.revision + 1)
             dao.upsertIncome(next)
             listOf(EntityChange(EntityType.Income, next.id, null, next.revision))
         }

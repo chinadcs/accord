@@ -24,6 +24,8 @@ import app.accord.core.space.RefundView
 import app.accord.core.space.RegisterRefund
 import app.accord.core.space.RequestInstallmentCancellation
 import app.accord.ui.detail.LinkedAction
+import app.accord.ui.detail.SettleSwitch
+import app.accord.ui.detail.settleSwitch
 import app.accord.ui.detail.LinkedBuilt
 import app.accord.ui.detail.LinkedError
 import app.accord.ui.detail.LinkedField
@@ -36,6 +38,11 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import app.accord.core.space.UndoBoletoPayment
+import app.accord.core.space.UndoIncomeReceipt
+import kotlin.test.assertNotNull
+import kotlin.test.assertFalse
+import app.accord.core.space.Settlement
 import kotlin.test.assertTrue
 
 class LinkedActionsTest {
@@ -71,6 +78,35 @@ class LinkedActionsTest {
         assertIs<LinkedAction.Settle>(unpaid.first())
         assertTrue(unpaid.none { it is LinkedAction.Settle && it.receiving })
         assertTrue(availableActions(detail(EntryKind.Boleto, boleto = boleto(paid = true))).none { it is LinkedAction.Settle })
+    }
+
+    @Test
+    fun interruptorSoExisteParaBoletoERendaVivosEReflitaPagoERecebido() {
+        val off = assertNotNull(settleSwitch(detail(EntryKind.Boleto, boleto = boleto(paid = false))))
+        assertFalse(off.on)
+        assertFalse(off.receiving)
+        assertEquals(Money(10_000), off.expectedAmount)
+        val on = assertNotNull(settleSwitch(detail(EntryKind.Boleto, boleto = boleto(paid = true))))
+        assertTrue(on.on)
+        assertEquals(today, on.doneDate)
+        assertNull(settleSwitch(detail(EntryKind.Boleto, boleto = boleto(false), voided = true)))
+        assertNull(settleSwitch(detail(EntryKind.DirectPayment)))
+    }
+
+    @Test
+    fun ligarUsaHojeEValorPrevistoEDesligarDesfazComARevisaoVista() {
+        val boletoOff = assertNotNull(settleSwitch(detail(EntryKind.Boleto, boleto = boleto(paid = false))))
+        val pay = assertIs<PayBoleto>(boletoOff.command(turnOn = true, today))
+        assertEquals(Settlement(today, null), pay.payment)
+        assertEquals(7L, pay.expectedRevision)
+        assertNull(pay.accountId)
+        val unpay = assertIs<UndoBoletoPayment>(boletoOff.command(turnOn = false, today))
+        assertEquals("b", unpay.boletoId)
+
+        val incomeOn = SettleSwitch(LinkedAction.Settle.Kind.Income, "i", true, Money(500), today, Money(500), 3)
+        assertIs<ReceiveIncome>(incomeOn.command(turnOn = true, today))
+        assertEquals("i", assertIs<UndoIncomeReceipt>(incomeOn.command(turnOn = false, today)).incomeId)
+        assertEquals(LinkedAction.Settle.Kind.Income, incomeOn.adjustAction().kind)
     }
 
     @Test

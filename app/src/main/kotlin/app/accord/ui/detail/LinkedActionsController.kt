@@ -83,6 +83,50 @@ class LinkedActionsController(
         }
     }
 
+    /** Impede um segundo toque no interruptor enquanto o primeiro ainda grava. */
+    private var toggling = false
+
+    /**
+     * Liga ou desliga o interruptor Recebido/Pago. Ligar usa hoje, o valor previsto e a conta padrão; se a fachada recusar (por exemplo,
+     * sem conta padrão), abre o formulário completo com o motivo, para a pessoa escolher. Desligar volta ao previsto.
+     */
+    fun toggleSettle(settle: SettleSwitch, turnOn: Boolean) {
+        if (toggling) return
+        toggling = true
+        scope.launch {
+            try {
+                val id = CommandId(UUID.randomUUID().toString())
+                when (val result = provider.space().execute(Envelope(id), settle.command(turnOn, provider.clock.today()))) {
+                    is CommandResult.Applied -> toggled(settle, turnOn, result.receipt.operationId, result.receipt.undoable)
+                    is CommandResult.AlreadyApplied -> toggled(settle, turnOn, result.receipt.operationId, result.receipt.undoable)
+                    is CommandResult.Rejected -> {
+                        if (turnOn) {
+                            open(settle.adjustAction())
+                            _state.update { it?.copy(message = result.errors.joinToString(" ") { e -> e.message }) }
+                        } else {
+                            onChanged()
+                        }
+                    }
+                    is CommandResult.StaleVersion -> onChanged()
+                    is CommandResult.DecisionNeeded -> onChanged()
+                }
+            } finally {
+                toggling = false
+            }
+        }
+    }
+
+    private fun toggled(settle: SettleSwitch, turnOn: Boolean, operationId: String, undoable: Boolean) {
+        val message = when {
+            turnOn && settle.receiving -> R.string.feedback_received
+            turnOn -> R.string.feedback_paid
+            settle.receiving -> R.string.feedback_receipt_undone
+            else -> R.string.feedback_payment_undone
+        }
+        provider.feedback.post(FeedbackEvent(message, undoOperationId = operationId.takeIf { undoable }))
+        onChanged()
+    }
+
     private fun done(action: LinkedAction, operationId: String, undoable: Boolean) {
         val message = when (action) {
             is LinkedAction.Settle -> if (action.receiving) R.string.feedback_received else R.string.feedback_paid

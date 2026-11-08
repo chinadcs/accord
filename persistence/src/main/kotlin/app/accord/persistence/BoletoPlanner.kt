@@ -8,6 +8,7 @@ import app.accord.core.space.FieldError
 import app.accord.core.space.Origin
 import app.accord.core.space.PayBoleto
 import app.accord.core.space.RegisterBoleto
+import app.accord.core.space.UndoBoletoPayment
 import app.accord.core.space.Session
 import java.time.LocalDate
 import java.time.YearMonth
@@ -84,6 +85,22 @@ internal class BoletoPlanner(
                 paidCents = c.payment.amount?.cents ?: boleto.expectedCents,
                 revision = boleto.revision + 1,
             )
+            dao.upsertBoleto(next)
+            listOf(EntityChange(EntityType.Boleto, next.id, null, next.revision))
+        }
+    }
+
+    /** Desliga o "Pago": o boleto volta a ser previsto pelo vencimento e o mês do pagamento deixa de contá-lo. */
+    suspend fun planUndoPay(c: UndoBoletoPayment): Planned {
+        val boleto = dao.boleto(c.boletoId) ?: return stop("boletoId", ErrorCode.UnknownReference, "Boleto não encontrado.")
+        if (boleto.voided) return stop("boletoId", ErrorCode.NotAllowed, "Este boleto foi desfeito ou excluído.")
+        if (c.expectedRevision != null && c.expectedRevision != boleto.revision) {
+            return Planned.Stop(CommandResult.StaleVersion(boleto.id, boleto.revision))
+        }
+        val paid = boleto.paidEpochDay ?: return stop("boletoId", ErrorCode.NotAllowed, "Este boleto ainda não está pago.")
+        val months = setOf(YearMonth.from(LocalDate.ofEpochDay(boleto.dueEpochDay)), YearMonth.from(LocalDate.ofEpochDay(paid)))
+        return Planned.Go(months = months, undoable = true) {
+            val next = boleto.copy(paidEpochDay = null, paidCents = null, revision = boleto.revision + 1)
             dao.upsertBoleto(next)
             listOf(EntityChange(EntityType.Boleto, next.id, null, next.revision))
         }

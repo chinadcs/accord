@@ -446,6 +446,12 @@ data class PayBoleto(
     val expectedRevision: Long? = null,
 ) : Command
 
+/** Desliga o "Pago" do boleto: volta a previsto pelo vencimento, com valor e datas previstos intactos (switch Pago do detalhe). */
+data class UndoBoletoPayment(
+    val boletoId: String,
+    val expectedRevision: Long? = null,
+) : Command
+
 /** Renda prevista (ou já recebida, se [received] vier junto). Conta no mês do recebimento efetivo. */
 data class RegisterIncome(
     val description: String,
@@ -461,6 +467,12 @@ data class ReceiveIncome(
     val incomeId: String,
     val receipt: Settlement,
     val accountId: String? = null,
+    val expectedRevision: Long? = null,
+) : Command
+
+/** Desliga o "Recebido" da renda: volta a prevista, com valor e data previstos intactos (switch Recebido do detalhe). */
+data class UndoIncomeReceipt(
+    val incomeId: String,
     val expectedRevision: Long? = null,
 ) : Command
 

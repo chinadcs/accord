@@ -37,7 +37,11 @@ data class DetailData(
     val canDelete: Boolean
         get() = !detail.voided && detail.kind in DELETABLE
 
-    val actions: List<LinkedAction> get() = availableActions(detail)
+    /** Boleto e renda têm o interruptor; os demais pagamentos seguem como botão. */
+    val settleSwitch: SettleSwitch? get() = settleSwitch(detail)
+
+    val actions: List<LinkedAction>
+        get() = availableActions(detail).filterNot { sw -> sw is LinkedAction.Settle && sw.targetId == settleSwitch?.targetId }
 
     /** Estorno e quitação de fatura têm caminhos próprios; o resto abre a edição. */
     val canEdit: Boolean
@@ -154,6 +158,16 @@ class EntryDetailViewModel(
     // ---- ações vinculadas (pagar, receber, estornar, cancelar parcelas) ----
 
     fun openAction(action: LinkedAction) = controller.open(action)
+
+    fun toggleSettle(turnOn: Boolean) {
+        val settle = (_content.value as? DetailContent.Ready)?.data?.settleSwitch ?: return
+        controller.toggleSettle(settle, turnOn)
+    }
+
+    fun adjustSettle() {
+        val settle = (_content.value as? DetailContent.Ready)?.data?.settleSwitch ?: return
+        controller.open(settle.adjustAction())
+    }
 
     fun updateLinked(change: (LinkedForm) -> LinkedForm) = controller.update(change)
 
