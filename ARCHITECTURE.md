@@ -316,6 +316,24 @@ simulação e pistas. Não criar dependência escondida de P1/P2 para concluir P
 sem alterar limites ou janela dos alertas. Conversão P2 cria um compromisso vinculado por intenção,
 inclusive com tentativas nos dois aparelhos; dispensar pista não exclui nem estorna despesas.
 
+### P2 (S7): intenções, conversão e simulação — estado real
+
+Decisões no [ADR 0048](docs/adr/0048-intencoes-de-compra-conversao-e-simulacao.md) (aceito em 07/11/2026). Tudo fica atrás da fase P2 (`ProductPhase.P2`, flag de
+build `-Paccord.p2=true` só em debug; sem ela nenhum controle aparece). **Implementado e testado em JVM e no emulador; nada foi medido nos dois celulares.**
+
+- **Simulador (tela 36), consulta pura.** `core/simulation/`: `PurchaseSchedule` é o único lugar que monta parcelas, centavos e meses de fatura (o registro real
+  de compra no cartão e o simulador o usam); `ScenarioSimulator` só chama consultas da fachada (nunca `execute`), então simular não grava, não entra na fila,
+  não gera evento de alerta nem consome a cota semanal. O cenário vive só na tela; vai à tela 10 como argumento não persistido (`ScenarioArg`) e aparece como
+  camada rotulada sem somar ao total real. Só compra parcelada no cartão (máximo de 120 parcelas, como o Chat).
+- **Intenção (telas 34 e 35).** Agregado sincronizado `Intention` (Room 13, `shared_types()` no Supabase). Versão inteira em conflito (A ou B, sem mesclar).
+  Sem excluir nem arquivar. Rascunho do formulário só neste aparelho (`IntentionDrafts`).
+- **Conversão.** `originIntentionId` imutável no registro raiz do compromisso (compra, lançamento avulso, boleto, série; Room 14). "Convertida" é derivada
+  do vínculo; excluir o compromisso mantém o vínculo. O serviço (fake e SQL `20261107140000`) recusa origem inexistente ou de outro espaço (`OriginNotFound`),
+  aceita um só compromisso por intenção (o segundo volta como `conflict` com o já reconhecido) e preserva a origem em atualizações. No cliente (Room 15) a
+  divergência oculta o compromisso local, o orçamento conta a compra reconhecida, e a escolha é explícita (manter a reconhecida, ou aplicar os dados deste
+  aparelho a ela, com a identidade dela; tipos diferentes só permitem manter a reconhecida).
+- **Pistas (telas 37 e 38) não existem:** os limiares dependem de dados do piloto (`accord-9y6.12` a `.16`).
+
 ## Interface e validação futura
 
 Chat é a tela inicial. Barra inferior: Lançamentos, Orçamento, Chat (ícone Astroid, sem rótulo visual), Revisar e Mais. Detalhes preservam
