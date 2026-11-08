@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 recorded_at: 2026-11-08
-decision_date: null
+decision_date: 2026-11-08
 ---
 
 # ADR 0049 — Fatura escolhida para uma ocorrência de recorrência no cartão
@@ -19,7 +19,7 @@ Restrição do projeto: não estender alcance de edição por suposição (AGENT
 
 ## Decisão
 
-Alcance **aceito pelo usuário em 08/11/2026** (opção "só esta ocorrência", em resposta à pergunta do `accord-6w8w`). Os itens 2 a 6 são o desenho técnico proposto para esse alcance.
+Alcance aceito pelo usuário em 08/11/2026 (opção "só esta ocorrência", em resposta à pergunta do `accord-6w8w`); o desenho técnico dos itens 2 a 7 foi aceito pelo usuário no mesmo dia ("aceito o 049").
 
 1. **A pessoa pode confirmar ou corrigir a fatura de uma só ocorrência.** A escolha é uma **exceção da ocorrência** (a mesma família das exceções de campo do ADR 0011), nunca um campo da série e nunca vale
    para as próximas: as demais ocorrências continuam seguindo o ciclo, inclusive as que também caem na janela. "Esta e as próximas" para fatura **não** existe e só entraria por nova decisão do usuário.
@@ -49,6 +49,6 @@ pendência novo; (d) o desfazer, se o desfazer de série passar a restaurar exce
 ## Fontes e evidências
 
 - [ADR 0011](0011-alcance-de-recorrencias.md), [ADR 0018](0018-conflitos-com-escolha-explicita.md), [ADR 0024](0024-protocolo-por-agregados-e-cursor.md), [ADR 0025](0025-projecoes-financeiras-derivadas.md); plano §7.2 e S1 §7.6.
-- Beads `accord-6w8w` (origem `accord-abv`). Aceite do alcance: resposta do usuário em 08/11/2026.
+- Beads `accord-6w8w` (origem `accord-abv`). Aceite do alcance e do desenho: usuário, 08/11/2026.
 - Implementação e validação locais: `CorrectOccurrenceInvoice`, `RecurrencePlanner.planCorrectInvoice`, `RecurrenceTest` (8 casos novos), `EntityStatesRoundTripTest`, `LinkedActionsTest` e `LinkedFlowTest` no AVD.
-  Sem validação nos Galaxy S20 FE e S23 FE e sem teste contra o Supabase hospedado. O desenho técnico (itens 2 a 7) ainda não foi aceito pelo usuário.
+  Sem validação nos Galaxy S20 FE e S23 FE e sem teste contra o Supabase hospedado. O aceite não prova validação em aparelho nem implantação.
