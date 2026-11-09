@@ -73,3 +73,5 @@ jurídico segue responsabilidade do usuário, como no ADR 0054. Sem deploy hospe
   fumaça Auth/Edge/RPC de exportação e exclusão aprovada, com fixtures removidas. S20 FE
   atualizado, S23 FE indisponível. [Relatório](../s8-implantacao-hospedada-2026-11-09.md),
   `accord-0grs.6.1`; atualização do S23 permanece no pai `accord-0grs.6`.
+- Na continuidade de 09/11/2026 o usuário conectou o S23 FE: APK protocolo 3 instalado sobre
+  a instalação existente, concluindo `accord-0grs.6`. Validação física tem aceite separado.

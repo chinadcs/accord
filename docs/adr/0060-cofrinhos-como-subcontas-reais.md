@@ -69,3 +69,5 @@ próprio da conta além do disponível pelas regras comuns; isso nunca consome c
   migrações alinhadas e fumaça HTTP de cofrinhos/reenvio/conflito/exportação/exclusão aprovada.
   S20 FE atualizado; S23 FE indisponível, atualização pendente no pai `accord-0grs.6`.
   [Relatório](../s8-implantacao-hospedada-2026-11-09.md), entrega `accord-0grs.6.1`.
+- S23 FE conectado e atualizado na continuidade de 09/11/2026, preservando dados da instalação;
+  coordenação do protocolo 3 concluída em `accord-0grs.6`, sem substituir o aceite físico.

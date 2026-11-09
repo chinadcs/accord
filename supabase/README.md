@@ -54,8 +54,8 @@ destes testes locais. O aplicativo leva somente a URL do projeto e a chave públ
 
 **S8, 09/11/2026:** as migrações `20261108200000`, `20261108210000` e `20261109010000`
 e a Edge Function `privacy` foram publicadas com autorização explícita. As 15 migrações
-locais/remotas estão alinhadas; o serviço recebe protocolo **3** (cofrinhos). S20 FE atualizado
-sem limpeza; S23 FE indisponível, atualização ainda pendente em `accord-0grs.6`. Protocolos
+locais/remotas estão alinhadas; o serviço recebe protocolo **3** (cofrinhos). S20 FE e S23 FE
+atualizados sem limpeza, concluindo `accord-0grs.6`. Protocolos
 1/2 são recusados até atualizar o cliente. A configuração
 `verify_jwt=false` de `privacy` depende da validação explícita no handler: sessão + reautenticação
 nas ações normais; continuação de exclusão apenas com comprovante secreto persistido.
