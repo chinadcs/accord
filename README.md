@@ -7,6 +7,11 @@ compromissos conversando com o app ou preenchendo um formulário.
 Feito em **Kotlin e Jetpack Compose**, com banco e fila locais (**Room**) e **Supabase** (Auth e
 PostgreSQL) para sincronizar os dados financeiros entre os dois celulares.
 
+**Licença:** código disponível para consulta e uso não comercial (*source available*).
+A redistribuição por terceiros é proibida, inclusive gratuita e de versões modificadas,
+com exceção de forks no GitHub nos limites dos termos da plataforma. Veja a
+[licença completa](LICENSE.md). Componentes de terceiros mantêm suas próprias licenças.
+
 > **Estado:** em desenvolvimento. Build, testes e fumaça local não substituem
 > a validação nos Galaxy S20 FE e S23 FE, ainda pendente. Veja [Estado do projeto](#estado-do-projeto).
 

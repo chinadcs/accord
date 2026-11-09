@@ -167,6 +167,7 @@ observada em 24/10/2026. Os estados abaixo são de decisão, não de conclusão 
 | [0059](0059-conversas-locais-e-feedback-por-resultado.md) | Conversas locais independentes e feedback por resultado | accepted |
 | [0060](0060-cofrinhos-como-subcontas-reais.md) | Cofrinhos como subcontas reais, saldos e protocolo 3 | accepted |
 | [0061](0061-distribuicao-por-github-releases-e-obtainium.md) | Distribuição por GitHub Releases e Obtainium | accepted |
+| [0062](0062-codigo-publico-nao-comercial-e-sem-redistribuicao.md) | Código público, uso não comercial e sem redistribuição | accepted |
 
 Questões ainda sem decisão, como modelo/motor, leitores bancários, acesso local, retenção de
 idempotência e validação financeira no serviço, permanecem nos Beads/specs S2–S4. Suas tarefas
