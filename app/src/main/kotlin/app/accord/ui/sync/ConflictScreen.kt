@@ -82,6 +82,8 @@ fun ConflictScreen(
             return@Column
         }
         Text(stringResource(R.string.conflict_intro), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (view.entities.any { it.ref.type in setOf(app.accord.core.space.EntityType.SavingsPocket, app.accord.core.space.EntityType.SavingsMove) })
+            MessageBanner(ScreenMessage(MessageKind.Attention, R.string.savings_conflict_note))
         // ADR 0048: dois compromissos da mesma intenção. Só um vale e o orçamento já conta uma única compra.
         if (view.entities.any { it.counterpart != null }) MessageBanner(ScreenMessage(MessageKind.Attention, R.string.conflict_conversion_note))
         if (ui.stale) MessageBanner(ScreenMessage(MessageKind.Attention, R.string.conflict_stale))
@@ -194,6 +196,7 @@ private fun EntityBlock(entity: ConflictEntity, version: ConflictVersion?, looku
 fun fieldText(value: FieldValue, lookup: ConflictLookup): String {
     val none = stringResource(R.string.value_none)
     return when (value) {
+        is FieldValue.Resource -> stringResource(value.id)
         is FieldValue.Text -> value.text?.takeIf { it.isNotBlank() } ?: none
         is FieldValue.Cents -> value.cents?.let { Money(it).format() } ?: none
         is FieldValue.Day -> value.epochDay?.let { LocalDate.ofEpochDay(it).fullLabel() } ?: none

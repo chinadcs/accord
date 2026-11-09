@@ -24,6 +24,7 @@ internal class UndoPlanner(
     private val paymentMethod: PaymentMethodPlanner,
     private val cancellation: CancellationPlanner,
     private val invoices: InvoicePlanner,
+    private val savings: SavingsPlanner,
 ) {
     private companion object {
         val CREATION_COMMANDS = setOf(
@@ -56,6 +57,7 @@ internal class UndoPlanner(
         val op = dao.operation(c.operationId)
             ?: return stop("operationId", ErrorCode.UnknownReference, "Operação não encontrada.")
         if (!op.undoable) return stop("operationId", ErrorCode.NotSupported, "Esta operação não pode ser desfeita.")
+        if (op.commandType == "MoveSavingsPocket") return savings.undo(op)
 
         val changes = dao.changesOf(listOf(op.operationId))
         if (changes.any { currentRevision(it) != it.revision }) {

@@ -30,7 +30,7 @@ reset role;
 
 
 create function tests.clue_op(op text, eid text, base bigint default null, gone boolean default false) returns jsonb language sql as $$
- select jsonb_build_array(jsonb_build_object('operationId',op,'spaceId','00000000-0000-0000-0000-0000000000e1','protocolVersion',2,
+ select jsonb_build_array(jsonb_build_object('operationId',op,'spaceId','00000000-0000-0000-0000-0000000000e1','protocolVersion',3,
  'installationId','i1','localTimeMillis',1,'changes',jsonb_build_array(jsonb_build_object('type','ClueEvaluation','id',eid,
  'baseVersion',base,'state','{"clueKey":"same","fingerprint":"v1"}','tombstone',gone))));
 $$;

@@ -471,6 +471,14 @@ data class KindSum(val classificationId: String?, val multi: Boolean, val totalC
 
 @Dao
 interface SpaceDao {
+    @Query("SELECT * FROM savings_pocket ORDER BY archived, name, id") suspend fun savingsPockets(): List<SavingsPocketRow>
+    @Query("SELECT * FROM savings_pocket WHERE id = :id") suspend fun savingsPocket(id: String): SavingsPocketRow?
+    @Upsert suspend fun upsertSavingsPocket(row: SavingsPocketRow)
+    @Query("SELECT * FROM savings_move ORDER BY epochDay DESC, id") suspend fun savingsMoves(): List<SavingsMoveRow>
+    @Query("SELECT * FROM savings_move WHERE id = :id") suspend fun savingsMove(id: String): SavingsMoveRow?
+    @Upsert suspend fun upsertSavingsMove(row: SavingsMoveRow)
+    @Query("DELETE FROM savings_move WHERE id = :id") suspend fun discardUnrecognizedSavingsMove(id: String)
+    @Query("DELETE FROM savings_pocket WHERE id = :id") suspend fun discardUnrecognizedSavingsPocket(id: String)
     @Upsert suspend fun upsertClueEvaluation(row: ClueEvaluationRow)
     @Query("SELECT * FROM clue_evaluation WHERE id = :id") suspend fun clueEvaluation(id: String): ClueEvaluationRow?
     @Query("SELECT * FROM clue_evaluation ORDER BY evaluatedAtMillis DESC, id") suspend fun clueEvaluations(): List<ClueEvaluationRow>
@@ -808,9 +816,9 @@ interface SpaceDao {
         ChatMessageRow::class, ChatAttemptRow::class, ChatQuestionRow::class, ChatReceiptRow::class, ChatFeedbackRow::class, ChatConversationRow::class,
         ImportBatchRow::class, ImportMovementRow::class, ImportDecisionRow::class, ImportPairRow::class,
         AlertEventRow::class, AlertDisplayRow::class, AlertPreferenceRow::class, IconAssociationRow::class, IntentionRow::class,
-        AccountMoveRow::class, ClueEvaluationRow::class,
+        AccountMoveRow::class, ClueEvaluationRow::class, SavingsPocketRow::class, SavingsMoveRow::class,
     ],
-    version = 21,
+    version = 22,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2, spec = Migration1To2::class),
@@ -847,6 +855,7 @@ interface SpaceDao {
         AutoMigration(from = 18, to = 19, spec = Migration18To19::class),
         AutoMigration(from = 19, to = 20),
         AutoMigration(from = 20, to = 21, spec = Migration20To21::class),
+        AutoMigration(from = 21, to = 22),
     ],
 )
 abstract class AccordDatabase : RoomDatabase() {

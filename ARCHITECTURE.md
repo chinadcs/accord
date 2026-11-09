@@ -1,6 +1,6 @@
 # Arquitetura do Accord
 
-Conversas locais (S8, ADR 0059): Room 21 preserva identidade, nome, última seleção, rascunho e
+Conversas locais (S8, ADR 0059): a partir de Room 21, preserva identidade, nome, última seleção, rascunho e
 posição por conversa. O coordenador monta contexto por conversa e serializa exclusão com aplicação
 financeira; perguntas estruturadas sobrevivem em Revisar sem o texto apagado. Feedback admite
 múltiplos motivos opcionais por versão do resultado, sem aprendizado automático. Transferência
@@ -50,6 +50,15 @@ Conforme o [ADR 0035](docs/adr/0035-meta-de-latencia-desejada-sem-corte-eliminat
 isoladamente não reprova candidato nem bloqueia integração; os critérios de segurança/qualidade permanecem.
 
 ## Mapa atual do repositório
+
+Cofrinhos ([ADR 0060](docs/adr/0060-cofrinhos-como-subcontas-reais.md)): Room 22 adiciona
+`savings_pocket` e `savings_move`, com conta vinculada fixa. `SavingsPlanner` valida comandos;
+`BalanceReader` soma as transferências no saldo próprio e mostra reservas/total sem duplicação.
+Os dois tipos entram no protocolo 3, exportação e exclusão financeira. PostgreSQL recalcula
+relações e saldos na transação do espaço. Divergência monetária também abre comparação explícita;
+escolher o serviço descarta movimentos locais ainda não reconhecidos e não os reenvia isolados.
+Sem alteração de orçamento, comandos Chat, rendimentos ou pagamento direto pela reserva.
+Migração/serviço exercitados localmente; implantação hospedada e Galaxy pendentes.
 
 Proteção local ([ADR 0057](docs/adr/0057-bloqueio-local-com-credencial-do-android.md),
 [S8](docs/specs/S8-protecao-dados-conversas-cofrinhos.md)): `MainActivity` protege a entrada com

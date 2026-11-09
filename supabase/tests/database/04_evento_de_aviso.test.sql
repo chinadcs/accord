@@ -31,7 +31,7 @@ reset role;
 -- 1. Um membro cria o evento.
 select tests.as_user('00000000-0000-0000-0000-000000000001');
 insert into tests.ctx select 'a', public.push_operations('00000000-0000-0000-0000-0000000000e1',
-  '[{"operationId":"a-1","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":2,"installationId":"i1","localTimeMillis":1,
+  '[{"operationId":"a-1","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":3,"installationId":"i1","localTimeMillis":1,
      "changes":[{"type":"AlertEvent","id":"ev-1","baseVersion":null,"createIfAbsent":true,"state":"{\"categoryId\":\"c1\",\"windowMonday\":\"2026-10-19\",\"totalCents\":130000}","tombstone":false}]}]');
 select is((select v -> 'results' -> 0 ->> 'result' from tests.ctx where k = 'a'), 'applied', 'o membro cria o evento');
 select is((select v -> 'results' -> 0 -> 'versions' -> 0 ->> 'version' from tests.ctx where k = 'a'), '1', 'a versão do evento é 1');
@@ -41,7 +41,7 @@ reset role;
 -- 2. O outro membro, com outra operação e outro conteúdo, recebe o canônico: sem escrita, sem versão nova, sem conflito.
 select tests.as_user('00000000-0000-0000-0000-000000000002');
 insert into tests.ctx select 'b', public.push_operations('00000000-0000-0000-0000-0000000000e1',
-  '[{"operationId":"b-1","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":2,"installationId":"i2","localTimeMillis":2,
+  '[{"operationId":"b-1","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":3,"installationId":"i2","localTimeMillis":2,
      "changes":[{"type":"AlertEvent","id":"ev-1","baseVersion":null,"createIfAbsent":true,"state":"{\"categoryId\":\"c1\",\"windowMonday\":\"2026-10-19\",\"totalCents\":135000}","tombstone":false}]}]');
 select is((select v -> 'results' -> 0 ->> 'result' from tests.ctx where k = 'b'), 'applied', 'a segunda inserção da chave não vira conflito');
 select is((select v -> 'results' -> 0 -> 'absorbed' -> 0 ->> 'id' from tests.ctx where k = 'b'), 'ev-1', 'a resposta traz o evento existente');
@@ -55,7 +55,7 @@ select is((select author_id from public.space_entities where id = 'ev-1'), '0000
 -- 3. Reenvio da mesma operação: o mesmo resultado, sem segunda inserção.
 select tests.as_user('00000000-0000-0000-0000-000000000002');
 select is((public.push_operations('00000000-0000-0000-0000-0000000000e1',
-  '[{"operationId":"b-1","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":2,"installationId":"i2","localTimeMillis":2,
+  '[{"operationId":"b-1","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":3,"installationId":"i2","localTimeMillis":2,
      "changes":[{"type":"AlertEvent","id":"ev-1","baseVersion":null,"createIfAbsent":true,"state":"{\"categoryId\":\"c1\",\"windowMonday\":\"2026-10-19\",\"totalCents\":135000}","tombstone":false}]}]')) -> 'results' -> 0 ->> 'repeated',
   'true', 'o reenvio devolve o resultado já registrado');
 reset role;
@@ -63,19 +63,19 @@ reset role;
 -- 4. Imutável: alterar, remover ou recriar sem createIfAbsent é recusado.
 select tests.as_user('00000000-0000-0000-0000-000000000001');
 select is((public.push_operations('00000000-0000-0000-0000-0000000000e1',
-  '[{"operationId":"c-1","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":2,"installationId":"i1","localTimeMillis":3,
+  '[{"operationId":"c-1","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":3,"installationId":"i1","localTimeMillis":3,
      "changes":[{"type":"AlertEvent","id":"ev-1","baseVersion":1,"state":"{\"totalCents\":1}","tombstone":false}]}]')) -> 'results' -> 0 ->> 'reason',
   'AlertEventImmutable', 'alterar o evento é recusado');
 select is((public.push_operations('00000000-0000-0000-0000-0000000000e1',
-  '[{"operationId":"c-2","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":2,"installationId":"i1","localTimeMillis":4,
+  '[{"operationId":"c-2","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":3,"installationId":"i1","localTimeMillis":4,
      "changes":[{"type":"AlertEvent","id":"ev-1","baseVersion":1,"state":"{}","tombstone":true}]}]')) -> 'results' -> 0 ->> 'reason',
   'AlertEventImmutable', 'remover o evento é recusado');
 select is((public.push_operations('00000000-0000-0000-0000-0000000000e1',
-  '[{"operationId":"c-3","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":2,"installationId":"i1","localTimeMillis":5,
+  '[{"operationId":"c-3","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":3,"installationId":"i1","localTimeMillis":5,
      "changes":[{"type":"AlertEvent","id":"ev-1","baseVersion":null,"state":"{\"totalCents\":1}","tombstone":false}]}]')) -> 'results' -> 0 ->> 'reason',
   'AlertEventImmutable', 'recriar sem createIfAbsent também é recusado');
 select is((public.push_operations('00000000-0000-0000-0000-0000000000e1',
-  '[{"operationId":"c-4","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":2,"installationId":"i1","localTimeMillis":6,
+  '[{"operationId":"c-4","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":3,"installationId":"i1","localTimeMillis":6,
      "changes":[{"type":"Movement","id":"mov-1","baseVersion":null,"createIfAbsent":true,"state":"{}","tombstone":false}]}]')) -> 'results' -> 0 ->> 'reason',
   'InvalidEnvelope', 'createIfAbsent só vale para o evento de aviso');
 reset role;
@@ -85,7 +85,7 @@ select is((select (state::jsonb) ->> 'totalCents' from public.space_entities whe
 select tests.as_user('00000000-0000-0000-0000-000000000003');
 select is((select count(*)::int from public.space_entities where type = 'AlertEvent'), 0, 'não membro não lê o evento');
 select is((public.push_operations('00000000-0000-0000-0000-0000000000e1',
-  '[{"operationId":"d-1","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":2,"installationId":"i3","localTimeMillis":7,
+  '[{"operationId":"d-1","spaceId":"00000000-0000-0000-0000-0000000000e1","protocolVersion":3,"installationId":"i3","localTimeMillis":7,
      "changes":[{"type":"AlertEvent","id":"ev-2","baseVersion":null,"createIfAbsent":true,"state":"{}","tombstone":false}]}]')) ->> 'error',
   'not_member', 'não membro não insere');
 reset role;

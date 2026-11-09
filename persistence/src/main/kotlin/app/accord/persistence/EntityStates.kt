@@ -59,6 +59,8 @@ internal object EntityStates {
             EntityType.IconAssociation -> dao.iconAssociation(id)?.let { obj(IconAssociationRow.serializer(), it, true) }
             EntityType.Intention -> dao.intention(id)?.let { obj(IntentionRow.serializer(), it, true) }
             EntityType.AccountMove -> dao.accountMove(id)?.let { obj(AccountMoveRow.serializer(), it, true) }
+            EntityType.SavingsPocket -> dao.savingsPocket(id)?.let { obj(SavingsPocketRow.serializer(), it, true) }
+            EntityType.SavingsMove -> dao.savingsMove(id)?.let { obj(SavingsMoveRow.serializer(), it, true) }
             EntityType.ImportBatch -> dao.importBatch(id)?.let {
                 obj(ImportBatchRow.serializer(), it, true).with(
                     "movements" to list(ImportMovementRow.serializer(), dao.importMovements(id)),
@@ -100,6 +102,8 @@ internal object EntityStates {
         EntityType.IconAssociation -> dao.iconAssociation(id)?.revision
         EntityType.Intention -> dao.intention(id)?.revision
         EntityType.AccountMove -> dao.accountMove(id)?.revision
+        EntityType.SavingsPocket -> dao.savingsPocket(id)?.revision
+        EntityType.SavingsMove -> dao.savingsMove(id)?.revision
         EntityType.Recurrence -> dao.recurrence(id)?.revision
         EntityType.Refund -> dao.refund(id)?.revision
         EntityType.Invoice -> dao.invoiceById(id)?.revision
@@ -146,6 +150,8 @@ internal object EntityStates {
             EntityType.IconAssociation -> dao.upsertIconAssociation(json.decodeFromJsonElement(IconAssociationRow.serializer(), withRevision()))
             EntityType.Intention -> dao.upsertIntention(json.decodeFromJsonElement(IntentionRow.serializer(), withRevision()))
             EntityType.AccountMove -> dao.upsertAccountMove(json.decodeFromJsonElement(AccountMoveRow.serializer(), withRevision()))
+            EntityType.SavingsPocket -> dao.upsertSavingsPocket(json.decodeFromJsonElement(SavingsPocketRow.serializer(), withRevision()))
+            EntityType.SavingsMove -> dao.upsertSavingsMove(json.decodeFromJsonElement(SavingsMoveRow.serializer(), withRevision()))
             EntityType.ImportBatch -> {
                 dao.upsertImportBatch(json.decodeFromJsonElement(ImportBatchRow.serializer(), withRevision()))
                 dao.deleteImportMovements(id)
@@ -181,6 +187,7 @@ internal object EntityStates {
         "categoryId" to EntityType.Category,
         "parentId" to EntityType.Category,
         "accountId" to EntityType.Account,
+        "pocketId" to EntityType.SavingsPocket,
         "defaultAccountId" to EntityType.Account,
         "cardId" to EntityType.Card,
         "defaultCardId" to EntityType.Card,

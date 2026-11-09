@@ -113,7 +113,7 @@ class FakeSpaceService(
 
     private fun scrubAuthor(value: JsonElement, accountId: String): JsonElement = when (value) {
         is JsonObject -> JsonObject(value.mapValues { (key, child) ->
-            if (key in setOf("authorId", "personId", "accountId", "author_id", "account_id") && child == JsonPrimitive(accountId)) JsonPrimitive("deleted")
+            if (key in setOf("authorId", "personId", "createdBy", "accountId", "author_id", "account_id") && child == JsonPrimitive(accountId)) JsonPrimitive("deleted")
             else scrubAuthor(child, accountId)
         })
         is JsonArray -> JsonArray(value.map { scrubAuthor(it, accountId) })
@@ -542,6 +542,14 @@ class FakeSpaceService(
 
         conversionRule(op, writes, space)?.let { return it }
         categoryRule(op, space)?.let { return it }
+        app.accord.core.sync.SavingsServiceRules.validate(space.entities.values.toList(), writes, account.id,
+            java.time.Instant.ofEpochMilli(clock()).atZone(java.time.ZoneId.of("America/Sao_Paulo")).toLocalDate())
+            ?.let {
+                if (it in setOf("Saldo próprio insuficiente.", "Saldo insuficiente no cofrinho.", "Saldo do cofrinho inválido.", "Saldo próprio não informado.")) {
+                    return OperationResult.Conflict(op.operationId, writes.mapNotNull { c -> space.entities[EntityKey(c.type,c.id)] }, emptyList())
+                }
+                return reject(op, RejectReason.SavingsInvalid, it)
+            }
 
         val now = clock()
         val versions = writes.map { change ->

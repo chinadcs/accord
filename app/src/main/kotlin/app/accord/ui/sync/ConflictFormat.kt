@@ -17,6 +17,7 @@ import kotlinx.serialization.json.longOrNull
 /** Valor de um campo de uma das versões, antes de virar texto (a tradução usa nomes de categorias e contas). */
 sealed interface FieldValue {
     data class Text(val text: String?) : FieldValue
+    data class Resource(@StringRes val id: Int) : FieldValue
     data class Cents(val cents: Long?) : FieldValue
     data class Day(val epochDay: Long?) : FieldValue
     data class MonthValue(val month: String?) : FieldValue
@@ -42,7 +43,7 @@ data class FieldLine(@StringRes val label: Int, val value: FieldValue, val diffe
 object ConflictFormat {
     private val json = Json { ignoreUnknownKeys = true }
 
-    private enum class Kind { Text, Cents, Day, Month, Category, IncomeCategory, Account, Flag, Deleted, Installments, Limits, Count }
+    private enum class Kind { Text, Cents, Day, Month, Category, IncomeCategory, Account, Flag, Deleted, Installments, Limits, Count, SavingsDirection }
 
     private data class Spec(val key: String, @StringRes val label: Int, val kind: Kind)
 
@@ -126,12 +127,25 @@ object ConflictFormat {
             Spec("epochDay", R.string.field_date, Kind.Day),
             Spec("voided", R.string.field_status, Kind.Deleted),
         ),
+        EntityType.SavingsPocket to listOf(
+            Spec("name", R.string.savings_name, Kind.Text), Spec("accountId", R.string.field_account, Kind.Account),
+            Spec("initialCents", R.string.savings_initial, Kind.Cents), Spec("cutoffEpochDay", R.string.field_date, Kind.Day),
+            Spec("goalCents", R.string.savings_goal, Kind.Cents), Spec("deadlineEpochDay", R.string.savings_deadline, Kind.Day),
+            Spec("archived", R.string.savings_archived, Kind.Flag),
+        ),
+        EntityType.SavingsMove to listOf(
+            Spec("direction", R.string.savings_move, Kind.SavingsDirection), Spec("amountCents", R.string.field_amount, Kind.Cents),
+            Spec("epochDay", R.string.field_date, Kind.Day), Spec("accountId", R.string.field_account, Kind.Account),
+            Spec("voided", R.string.field_status, Kind.Deleted),
+        ),
     )
 
     @StringRes
     fun entityLabel(type: EntityType): Int = when (type) {
         EntityType.ClueEvaluation -> R.string.clue_evaluation
         EntityType.AccountMove -> R.string.balance_move
+        EntityType.SavingsPocket -> R.string.savings_pocket
+        EntityType.SavingsMove -> R.string.savings_move
         EntityType.Movement -> R.string.conflict_entity_movement
         EntityType.CardPurchase -> R.string.conflict_entity_card_purchase
         EntityType.Boleto -> R.string.conflict_entity_boleto
@@ -171,6 +185,7 @@ object ConflictFormat {
     private fun value(spec: Spec, element: JsonElement?): FieldValue {
         val primitive = element.primitive()
         return when (spec.kind) {
+            Kind.SavingsDirection -> FieldValue.Resource(if (primitive?.contentOrNull == "Deposit") R.string.savings_deposit else R.string.savings_withdraw)
             Kind.Text -> FieldValue.Text(primitive?.contentOrNull)
             Kind.Cents -> FieldValue.Cents(primitive?.longOrNull)
             Kind.Day -> FieldValue.Day(primitive?.longOrNull)

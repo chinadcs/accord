@@ -42,7 +42,7 @@ import app.accord.ui.theme.AccordSpacing
 import com.composables.icons.lucide.R as Lucide
 
 @Composable
-fun AccountsRoute(viewModel: AccountsViewModel, padding: PaddingValues, onBack: () -> Unit) {
+fun AccountsRoute(viewModel: AccountsViewModel, padding: PaddingValues, onBack: () -> Unit, onSavings: (String) -> Unit = {}) {
     val content by viewModel.content.collectAsStateWithLifecycle()
     val form by viewModel.form.collectAsStateWithLifecycle()
     RefreshOnResume(viewModel::refresh)
@@ -50,6 +50,7 @@ fun AccountsRoute(viewModel: AccountsViewModel, padding: PaddingValues, onBack: 
         content, form, padding, onBack, onRetry = { viewModel.load() }, onAdd = viewModel::startAdd, onEdit = viewModel::startEdit,
         onSetDefault = viewModel::setDefault, onChange = viewModel::change, onSave = viewModel::save, onCancel = viewModel::cancel,
         onBalance = viewModel::openBalance,
+        onSavings = onSavings,
     )
     BalanceDialog(viewModel, content)
 }
@@ -68,6 +69,7 @@ fun AccountsScreen(
     onSave: () -> Unit,
     onCancel: () -> Unit,
     onBalance: (String, String) -> Unit = { _, _ -> },
+    onSavings: (String) -> Unit = {},
 ) {
     Column(
         Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
@@ -91,10 +93,12 @@ fun AccountsScreen(
                     content.view.accounts.forEach { account ->
                         AccountRow(account, account.id == content.view.myDefaultAccountId, { onEdit(account.id) }, { onSetDefault(account.id) })
                         BalanceActions(account, content, onBalance)
+                        OutlinedButton(onClick = { onSavings(account.id) }) { Text(stringResource(R.string.savings_title)) }
                     }
                     content.view.wallet?.let { wallet ->
                         Text(stringResource(R.string.balance_wallet), style = MaterialTheme.typography.titleMedium)
                         BalanceActions(wallet, content, onBalance)
+                        OutlinedButton(onClick = { onSavings(wallet.id) }) { Text(stringResource(R.string.savings_title)) }
                     }
                     Button(onClick = onAdd, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
                         Text(stringResource(R.string.accounts_add))
@@ -110,7 +114,7 @@ private fun BalanceActions(account: AccountInfo, content: AccountsContent.Ready,
     val balance = content.balances.firstOrNull { it.accountId == account.id }
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
         Text(stringResource(R.string.balance_calculated), style = MaterialTheme.typography.bodyMedium)
-        Text(balance?.balance?.format() ?: stringResource(R.string.balance_unknown), style = MaterialTheme.typography.titleMedium)
+        app.accord.ui.savings.BalanceSummary(balance ?: app.accord.core.space.AccountBalanceView(account.id, null, null, null))
         OutlinedButton(onClick = { onBalance("initial", account.id) }) { Text(stringResource(R.string.balance_initial)) }
         OutlinedButton(onClick = { onBalance("transfer", account.id) }) { Text(stringResource(R.string.balance_transfer)) }
         if (balance?.configured == true) OutlinedButton(onClick = { onBalance("adjust", account.id) }) { Text(stringResource(R.string.balance_adjust)) }

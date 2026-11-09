@@ -62,6 +62,8 @@ interface FinanceSpace {
 
     /** Saldo derivado de cada conta e da Carteira (ADR 0051); contas sem saldo inicial vêm com [AccountBalanceView.balance] nulo. */
     suspend fun accountBalances(): QueryResult<List<AccountBalanceView>>
+    suspend fun savingsPockets(): QueryResult<List<SavingsPocket>>
+    suspend fun savingsMoves(pocketId: String): QueryResult<List<SavingsMove>>
 
     /** Transferências e ajustes de saldo, sem os desfeitos, do mais recente para o mais antigo. */
     suspend fun accountMoves(): QueryResult<List<AccountMoveView>>
@@ -936,7 +938,7 @@ data class FieldError(
     val month: YearMonth? = null,
 )
 
-enum class EntityType { Category, Account, Preferences, Movement, Card, CardPurchase, Boleto, Income, Recurrence, Refund, Invoice, InvoicePayment, LimitPlan, IncomeCategory, ImportBatch, AlertEvent, IconAssociation, Intention, AccountMove, ClueEvaluation }
+enum class EntityType { Category, Account, Preferences, Movement, Card, CardPurchase, Boleto, Income, Recurrence, Refund, Invoice, InvoicePayment, LimitPlan, IncomeCategory, ImportBatch, AlertEvent, IconAssociation, Intention, AccountMove, ClueEvaluation, SavingsPocket, SavingsMove }
 
 data class EntityRef(val type: EntityType, val id: String)
 

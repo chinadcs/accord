@@ -59,6 +59,7 @@ data class MoreActions(
     val onAppearance: () -> Unit = {},
     val onSecurity: () -> Unit = {},
     val onPrivacy: () -> Unit = {},
+    val onSavings: () -> Unit = {},
     val onArchivedChats: (() -> Unit)? = null,
     val onAlertPreferences: () -> Unit = {},
     val onForecasts: () -> Unit = {},
@@ -134,6 +135,7 @@ fun MoreScreen(
         Section(R.string.more_group_space) {
             MoreRow(R.string.more_space, Lucide.drawable.lucide_ic_users, actions.onSpace)
             MoreRow(R.string.more_accounts, Lucide.drawable.lucide_ic_landmark, actions.onAccounts)
+            MoreRow(R.string.savings_title, Lucide.drawable.lucide_ic_wallet, actions.onSavings)
             if (syncStatus != null) {
                 val summary = syncStatus.summary
                 MoreRow(

@@ -33,8 +33,11 @@ data class AccountBalanceView(
     val balance: Money?,
     /** Eventos que contam a partir do corte, do mais recente para o mais antigo. */
     val events: List<BalanceEvent> = emptyList(),
+    val pocketsBalance: Money = Money(0),
+    val revision: Long = 0,
 ) {
     val configured: Boolean get() = balance != null
+    val totalBalance: Money? get() = balance?.plus(pocketsBalance)
 }
 
 /** Movimento entre contas ou ajuste de saldo: não é despesa nem renda e não mexe no orçamento (ADR 0051). */

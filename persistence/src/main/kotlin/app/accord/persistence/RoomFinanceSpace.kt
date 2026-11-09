@@ -181,6 +181,7 @@ class RoomFinanceSpace private constructor(
     private val paymentMethodPlanner = PaymentMethodPlanner(dao) { effectiveDefaultAccount(it) }
     private val limitsPlanner = LimitsPlanner(dao) { tree() }
     private val accountPlanner = AccountPlanner(dao)
+    private val savingsPlanner = SavingsPlanner(dao, clock)
     private val commonRules = CommonRules(dao)
     private val directPaymentPlanner = DirectPaymentPlanner(dao, commonRules, accountPlanner)
     private val cardPurchasePlanner = CardPurchasePlanner(dao, commonRules, accountPlanner) { cardCycle(it) }
@@ -263,7 +264,7 @@ class RoomFinanceSpace private constructor(
         requiredAccount = { session, given, errors -> resolveRequiredAccount(session, given, errors) },
     )
 
-    private val undoPlanner = UndoPlanner(dao, correctionPlanner, paymentMethodPlanner, cancellationPlanner, invoicePlanner)
+    private val undoPlanner = UndoPlanner(dao, correctionPlanner, paymentMethodPlanner, cancellationPlanner, invoicePlanner, savingsPlanner)
 
     // ---- planejamento ----
 
@@ -277,6 +278,10 @@ class RoomFinanceSpace private constructor(
         is CreateIntention -> intentionPlanner.planCreate(session, command)
         is EditIntention -> intentionPlanner.planEdit(session, command)
         is AddAccount -> accountPlanner.planAdd(command)
+        is app.accord.core.space.CreateSavingsPocket -> savingsPlanner.create(session, command)
+        is app.accord.core.space.EditSavingsPocket -> savingsPlanner.edit(command)
+        is app.accord.core.space.ArchiveSavingsPocket -> savingsPlanner.archive(command)
+        is app.accord.core.space.MoveSavingsPocket -> savingsPlanner.move(session, command)
         is SetMyDefaultAccount -> accountPlanner.planSetDefault(session, command)
         is SetAccountBalance -> accountPlanner.planSetBalance(command)
         is TransferBetweenAccounts -> accountPlanner.planTransfer(session, origin, command)
@@ -333,7 +338,9 @@ class RoomFinanceSpace private constructor(
     /** Cadastros de conta e de categoria de renda não mudam número nenhum do orçamento; o próprio registro do evento nunca dispara avaliação. */
     private fun changesBudgetNumbers(command: Command) = command !is RecordAlertEvent && command !is AddAccount && command !is SetMyDefaultAccount &&
         command !is CreateIncomeCategory && command !is RenameIncomeCategory && command !is SetIconAssociation && command !is ClearIconAssociation &&
-        command !is CreateIntention && command !is EditIntention && command !is app.accord.core.space.DismissClue
+        command !is CreateIntention && command !is EditIntention && command !is app.accord.core.space.DismissClue &&
+        command !is app.accord.core.space.CreateSavingsPocket && command !is app.accord.core.space.EditSavingsPocket &&
+        command !is app.accord.core.space.ArchiveSavingsPocket && command !is app.accord.core.space.MoveSavingsPocket
 
     /**
      * Avaliação dos avisos de possível excesso (S5, ADR 0044). Só mudança nos dados avalia: a fachada a chama depois dos comandos confirmados e o motor de
@@ -792,6 +799,15 @@ class RoomFinanceSpace private constructor(
                 it.id, AccountMoveKind.valueOf(it.kind), it.fromAccountId, it.toAccountId, Money(it.amountCents),
                 LocalDate.ofEpochDay(it.epochDay), it.note, it.revision, it.voided,
             )
+        }
+    }
+
+    override suspend fun savingsPockets(): QueryResult<List<app.accord.core.space.SavingsPocket>> = query {
+        dao.savingsPockets().map { savingsPlanner.view(it) }
+    }
+    override suspend fun savingsMoves(pocketId: String): QueryResult<List<app.accord.core.space.SavingsMove>> = query {
+        dao.savingsMoves().filter { it.pocketId == pocketId }.map {
+            app.accord.core.space.SavingsMove(it.id, it.pocketId, it.accountId, app.accord.core.space.SavingsDirection.valueOf(it.direction), Money(it.amountCents), LocalDate.ofEpochDay(it.epochDay), it.authorId, it.voided, it.revision)
         }
     }
 

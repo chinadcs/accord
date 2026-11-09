@@ -51,6 +51,15 @@ destes testes locais. O aplicativo leva somente a URL do projeto e a chave públ
 
 ## Projeto hospedado (Free) e release
 
+**S8, 09/11/2026:** as migrações `20261108200000`, `20261108210000` e `20261109010000`
+e a Edge Function `privacy` foram exercitadas somente no Supabase local nesta entrega.
+O aplicativo agora envia protocolo **3** (cofrinhos); o serviço hospedado descrito abaixo
+ainda exige atualização coordenada com os clientes antes do uso desta versão. Não foi feito
+deploy, `db push`, `functions deploy` ou instalação em Galaxy nesta entrega. A configuração
+`verify_jwt=false` de `privacy` depende da validação explícita no handler: sessão + reautenticação
+nas ações normais; continuação de exclusão apenas com comprovante secreto persistido.
+Não publicar apenas o APK sem atualizar serviço e função. Roteiro/aceite em S8/ADRs 0058 e 0060.
+
 Projeto hospedado criado pelo usuário (ref `SEU_PROJECT_REF`). Em 08/11/2026 as 8 migrações
 foram aplicadas com `supabase db push --db-url <connect string>` (senha do banco só no ambiente da
 sessão, nunca em arquivo) e confirmado: RLS ligada nas 6 tabelas de `public`, `anon` sem EXECUTE nas

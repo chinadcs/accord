@@ -688,6 +688,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             onAppearance = { navController.navigate("appearance") },
                             onSecurity = { navController.navigate("security") },
                             onPrivacy = { navController.navigate("privacy") },
+                            onSavings = { navController.navigate("savings") },
                             onArchivedChats = if (access.archivedSpaces.isNotEmpty()) ({ navController.navigate("archived_chats") }) else null,
                             onAlertPreferences = { navController.navigate(ROUTE_ALERT_PREFS) },
                             onForecasts = { navController.navigate(ROUTE_FORECASTS) },
@@ -1160,7 +1161,13 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 val viewModel: AccountsViewModel = viewModel(
                     factory = viewModelFactory { initializer { AccountsViewModel(container, createSavedStateHandle()) } },
                 )
-                AccountsRoute(viewModel, padding, onBack = { navController.popBackStack() })
+                AccountsRoute(viewModel, padding, onBack = { navController.popBackStack() }, onSavings = { navController.navigate("savings?account=${Uri.encode(it)}") })
+            }
+            composable("savings?account={account}", arguments = listOf(navArgument("account") { type = NavType.StringType; nullable = true; defaultValue = null })) {
+                val vm: app.accord.ui.savings.SavingsViewModel = viewModel(factory = viewModelFactory {
+                    initializer { app.accord.ui.savings.SavingsViewModel(container, createSavedStateHandle()) }
+                })
+                app.accord.ui.savings.SavingsRoute(vm, padding, onBack = { navController.popBackStack() }, memberNames = container.memberNames())
             }
             composable(
                 "$ROUTE_LIMITS?$ARG_MONTH={$ARG_MONTH}&initialSetup={initialSetup}",

@@ -828,4 +828,80 @@ abstract class SpaceServiceContract {
         val failure = failure(service.push(stranger.accessToken, couple.spaceId, listOf(op(couple.spaceId, alert(UUID.randomUUID().toString(), 1)))))
         assertEquals(RemoteFailure.NotMember, failure)
     }
+
+    private fun savingsAccount(id: String, base: Long? = null) = change(id, base, type = "Account",
+        state = """{"id":"$id","bankIspb":null,"bankName":"Banco fictício","nickname":"Conta","initialBalanceCents":100000,"balanceCutoffEpochDay":10000,"isWallet":false}""")
+    private fun savingsPocket(id: String, account: String, actor: String, base: Long? = null, initial: Long = 50000, archived: Boolean = false) = change(id, base, type = "SavingsPocket",
+        state = """{"id":"$id","accountId":"$account","name":"Viagem","initialCents":$initial,"cutoffEpochDay":10000,"goalCents":60000,"deadlineEpochDay":null,"archived":$archived,"createdBy":"$actor"}""")
+    private fun savingsMove(id: String, pocket: String, account: String, actor: String, amount: Long, direction: String = "Deposit", base: Long? = null, voided: Boolean = false) = change(id, base, type = "SavingsMove", tombstone = voided,
+        state = """{"id":"$id","pocketId":"$pocket","accountId":"$account","direction":"$direction","amountCents":$amount,"epochDay":10001,"authorId":"$actor","voided":$voided}""")
+
+    @Test fun `campos opcionais malformados de cofrinho sao recusados sem quebrar leitura posterior`() = test {
+        val c=newSpace(); val a=UUID.randomUUID().toString(); val p=UUID.randomUUID().toString()
+        val pocket=savingsPocket(p,a,c.creator.accountId)
+        val badStates=listOf(
+            pocket.state.replace("\"goalCents\":60000","\"goalCents\":\"errado\""),
+            pocket.state.replace("\"deadlineEpochDay\":null","\"deadlineEpochDay\":\"errado\""),
+            pocket.state.replace("\"archived\":false","\"archived\":\"false\""),
+            pocket.state.replace("\"deadlineEpochDay\":null,", ""),
+        )
+        for (state in badStates) {
+            assertIs<OperationResult.Rejected>(push(c.creator,c.spaceId,op(c.spaceId,savingsAccount(a),pocket.copy(state=state))).single())
+            assertTrue(ok(service.pull(c.creator.accessToken,c.spaceId,0,100)).changes.isEmpty())
+        }
+    }
+
+    @Test fun `cofrinho permite guardar e desfazer com repeticao idempotente`() = test {
+        val c = newCouple(); val a = UUID.randomUUID().toString(); val p = UUID.randomUUID().toString(); val m = UUID.randomUUID().toString()
+        val actor = c.creator.accountId
+        assertIs<OperationResult.Applied>(push(c.creator,c.spaceId,op(c.spaceId,savingsAccount(a),savingsPocket(p,a,actor))).single())
+        val deposit = op(c.spaceId,savingsAccount(a,1),savingsPocket(p,a,actor,1),savingsMove(m,p,a,actor,20000))
+        assertIs<OperationResult.Applied>(push(c.creator,c.spaceId,deposit).single())
+        assertTrue(assertIs<OperationResult.Applied>(push(c.creator,c.spaceId,deposit).single()).repeated)
+        val undo = op(c.spaceId,savingsAccount(a,2),savingsPocket(p,a,actor,2),savingsMove(m,p,a,actor,20000,base=1,voided=true))
+        assertIs<OperationResult.Applied>(push(c.partner!!,c.spaceId,undo).single())
+        val stored = ok(service.pull(c.creator.accessToken,c.spaceId,0,100)).changes
+        assertEquals(3,stored.size); assertTrue(stored.single { it.id==m }.tombstone)
+    }
+
+    @Test fun `cofrinho rejeita dinheiro insuficiente vinculo mutavel e arquivo com saldo sem gravar parcialmente`() = test {
+        val c=newCouple(); val a=UUID.randomUUID().toString(); val p=UUID.randomUUID().toString(); val actor=c.creator.accountId
+        assertIs<OperationResult.Applied>(push(c.creator,c.spaceId,op(c.spaceId,savingsAccount(a),savingsPocket(p,a,actor))).single())
+        for ((amount,direction) in listOf(100001L to "Deposit",50001L to "Withdraw")) {
+            val bad=op(c.spaceId,savingsAccount(a,1),savingsPocket(p,a,actor,1),savingsMove(UUID.randomUUID().toString(),p,a,actor,amount,direction))
+            assertIs<OperationResult.Conflict>(push(c.creator,c.spaceId,bad).single())
+        }
+        assertEquals(RejectReason.SavingsInvalid,assertIs<OperationResult.Rejected>(push(c.creator,c.spaceId,op(c.spaceId,savingsPocket(p,a,actor,1,archived=true))).single()).reason)
+        assertEquals(RejectReason.SavingsInvalid,assertIs<OperationResult.Rejected>(push(c.creator,c.spaceId,op(c.spaceId,savingsPocket(p,a,actor,1,initial=60000))).single()).reason)
+        val transferWithoutVersions=op(c.spaceId,savingsMove(UUID.randomUUID().toString(),p,a,actor,1))
+        assertEquals(RejectReason.SavingsInvalid,assertIs<OperationResult.Rejected>(push(c.creator,c.spaceId,transferWithoutVersions).single()).reason)
+        val direct=op(c.spaceId,change(state="""{"accountId":"$p","amountCents":1}"""))
+        assertEquals(RejectReason.SavingsInvalid,assertIs<OperationResult.Rejected>(push(c.creator,c.spaceId,direct).single()).reason)
+        assertTrue(ok(service.pull(c.creator.accessToken,c.spaceId,0,100)).changes.all { it.version==1L })
+    }
+
+    @Test fun `guardar concorrente exige escolha de versao e estranho nao pode mover reservas`() = test {
+        val c=newCouple(); val a=UUID.randomUUID().toString(); val p=UUID.randomUUID().toString(); val actor=c.creator.accountId
+        assertIs<OperationResult.Applied>(push(c.creator,c.spaceId,op(c.spaceId,savingsAccount(a),savingsPocket(p,a,actor))).single())
+        val ops=listOf(c.creator,c.partner!!).map { author ->
+            author to op(c.spaceId,savingsAccount(a,1),savingsPocket(p,a,actor,1),savingsMove(UUID.randomUUID().toString(),p,a,author.accountId,80000))
+        }
+        val results=kotlinx.coroutines.coroutineScope { ops.map { (author,operation) -> async { push(author,c.spaceId,operation).single() } }.awaitAll() }
+        assertEquals(1,results.count { it is OperationResult.Applied }); assertEquals(1,results.count { it is OperationResult.Conflict })
+        val stranger=signUp()
+        assertEquals(RemoteFailure.NotMember,failure(service.push(stranger.accessToken,c.spaceId,listOf(ops.first().second))))
+        val oldProtocol=op(c.spaceId,savingsAccount(UUID.randomUUID().toString()),protocol=2)
+        assertEquals(RejectReason.ProtocolUnsupported,assertIs<OperationResult.Rejected>(push(c.creator,c.spaceId,oldProtocol).single()).reason)
+    }
+
+    @Test fun `guardar usa despesas efetivas da conta e nunca renda prevista`() = test {
+        val c=newSpace(); val a=UUID.randomUUID().toString(); val p=UUID.randomUUID().toString(); val actor=c.creator.accountId
+        assertIs<OperationResult.Applied>(push(c.creator,c.spaceId,op(c.spaceId,savingsAccount(a),savingsPocket(p,a,actor))).single())
+        assertIs<OperationResult.Applied>(push(c.creator,c.spaceId,op(c.spaceId,
+            change(type="Movement",state="""{"accountId":"$a","amountCents":100000,"epochDay":10001,"kind":"Pix","voided":false}"""),
+            change(type="Income",state="""{"accountId":"$a","expectedCents":999999,"receivedCents":null,"receivedEpochDay":null,"voided":false}""")
+        )).single())
+        val deposit=op(c.spaceId,savingsAccount(a,1),savingsPocket(p,a,actor,1),savingsMove(UUID.randomUUID().toString(),p,a,actor,1))
+        assertIs<OperationResult.Conflict>(push(c.creator,c.spaceId,deposit).single())
+    }
 }

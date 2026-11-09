@@ -536,6 +536,26 @@ class SyncStore(
             if (row.counterpartId != null) adopted += key(row.entityType, row.entityId)
         }
         val keys = changedKeys(closure)
+        // Uma criação que não existe no serviço também não sobra como cofrinho zerado.
+        // O snapshot da operação substituída conserva o diagnóstico da tentativa descartada.
+        for (k in keys.filter { it.type == EntityType.SavingsPocket.name && dao.serviceVersion(it.type,it.id) == null }) {
+            for (move in dao.savingsMoves().filter { it.pocketId == k.id }) {
+                if (dao.serviceVersion(EntityType.SavingsMove.name,move.id) == null) {
+                    dao.discardUnrecognizedSavingsMove(move.id)
+                    adopted += key(EntityType.SavingsMove.name,move.id)
+                }
+            }
+            dao.discardUnrecognizedSavingsPocket(k.id)
+            adopted += key(k.type,k.id)
+        }
+        // Cofrinho é uma unidade atômica: escolher o serviço também descarta os movimentos
+        // novos que ele nunca reconheceu. Eles não podem sobrar como transferências avulsas.
+        for (k in keys.filter { it.type == EntityType.SavingsMove.name }) {
+            if (dao.serviceVersion(k.type,k.id) == null) {
+                dao.savingsMove(k.id)?.let { dao.upsertSavingsMove(it.copy(voided = true, revision = it.revision + 1)) }
+                adopted += key(k.type,k.id)
+            }
+        }
         closure.forEach { sync.setOperationState(it.operationId, OpState.SUPERSEDED, false, null) }
         sync.upsertConflict(conflict.copy(status = ConflictStatus.RESOLVED, choice = "REMOTE"))
         val leftovers = keys.filter { key(it.type, it.id) !in adopted }

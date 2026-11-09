@@ -7,7 +7,7 @@ import app.accord.core.space.EntityType
  * a porta [RemoteSpaceService] os troca com o serviço, e o fake e o adaptador Supabase os
  * implementam. Tempos são milissegundos da época; os do serviço vêm do relógio dele.
  */
-const val PROTOCOL_VERSION = 2
+const val PROTOCOL_VERSION = 3
 
 /**
  * Tipos que podem ser sincronizados. A exclusão de Chat, rascunhos e arquivos vem da construção:
@@ -89,6 +89,8 @@ enum class RejectReason {
 
     /** Compromisso com intenção de origem inexistente ou de outro espaço (ADR 0048): nada é aplicado. */
     OriginNotFound,
+    /** Cofrinho/vínculo/saldo inválido; operação local permanece para revisão explícita. */
+    SavingsInvalid,
 }
 
 sealed interface OperationResult {

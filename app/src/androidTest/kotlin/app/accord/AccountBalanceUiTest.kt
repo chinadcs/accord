@@ -65,7 +65,7 @@ class AccountBalanceUiTest {
                     onBalance = { action, id -> requested = "$action/$id" })
             }
         }
-        compose.onNodeWithText("Saldo inicial não informado").assertIsDisplayed()
+        compose.onNodeWithText("Saldo da conta: Saldo inicial não informado").assertIsDisplayed()
         compose.onNodeWithText("Transferir entre contas").performScrollTo().performClick()
         assertEquals("transfer/wallet", requested)
         compose.onNodeWithText("Ajustar saldo").assertDoesNotExist()
@@ -82,7 +82,7 @@ class AccountBalanceUiTest {
                     onBalance = { action, id -> requested = "$action/$id" })
             }
         }
-        compose.onNodeWithText(Money(-12345).format()).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Saldo da conta: ${Money(-12345).format()}").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Ajustar saldo").performScrollTo().performClick()
         assertEquals("adjust/bank", requested)
     }
