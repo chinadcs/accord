@@ -4,8 +4,9 @@ param(
     [Parameter(Mandatory = $true)][ValidatePattern('^[A-Za-z0-9._:-]+$')][string]$Serial,
     [ValidateSet('before', 'after')][string]$Round = 'before',
     [ValidateSet('light', 'dark')][string[]]$Themes = @('light', 'dark'),
-    [ValidateSet('1', '2')][string[]]$FontScales = @('1', '2'),
-    [ValidateSet('0', '1')][string[]]$Rotations = @('0'),
+    # accord-rub9: matriz vigente em retrato e fonte padrão.
+    [ValidateSet('1')][string[]]$FontScales = @('1'),
+    [ValidateSet('0')][string[]]$Rotations = @('0'),
     [ValidatePattern('^app\.accord\.[A-Za-z0-9]+(#[\p{L}0-9_]+)?$')][string[]]$Classes = @('app.accord.UiAuditAccessCaptureTest', 'app.accord.UiAuditCaptureTest'),
     [string]$OutputDirectory = 'app/build/ui-audit',
     [string]$ApkDirectory,

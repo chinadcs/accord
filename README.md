@@ -12,7 +12,7 @@ O Accord pode ser usado, modificado e redistribuído, inclusive comercialmente, 
 [licença completa](LICENSE.md). Componentes de terceiros mantêm suas próprias licenças e avisos.
 
 > **Estado:** em desenvolvimento, com serviço hospedado em uso no piloto. Compatível com
-> Android 10 ou superior; a cobertura de testes varia por recurso. Veja [Estado do projeto](#estado-do-projeto).
+> Android 10 ou superior; interface fixa em retrato. A cobertura de testes varia por recurso. Veja [Estado do projeto](#estado-do-projeto).
 
 ## Sumário
 

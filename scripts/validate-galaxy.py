@@ -18,8 +18,9 @@ def main():
     parser.add_argument('--serial', required=True)
     parser.add_argument('--output', required=True)
     parser.add_argument('--classes', nargs='+', required=True)
-    parser.add_argument('--font', choices=['1', '2'], default='1')
-    parser.add_argument('--rotation', choices=['0', '1'], default='0')
+    # accord-rub9: matriz vigente em retrato e fonte padrão.
+    parser.add_argument('--font', choices=['1'], default='1')
+    parser.add_argument('--rotation', choices=['0'], default='0')
     parser.add_argument('--theme', choices=['light', 'dark'], default='light')
     parser.add_argument('--reduced-motion', action='store_true')
     parser.add_argument('--perf', action='store_true')

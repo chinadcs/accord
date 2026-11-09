@@ -23,11 +23,13 @@ import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /** Regressão do seletor de banco em paisagem com teclado aberto. */
 @RunWith(AndroidJUnit4::class)
+@Ignore("Histórico: paisagem retirada do aceite pelo usuário em accord-rub9; app fixo em retrato.")
 class UiAuditBankPickerLandscapeTest {
     @get:Rule val compose = createEmptyComposeRule()
 

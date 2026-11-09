@@ -16,11 +16,13 @@ import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
+import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 
 /** Em paisagem, Lançamentos registra pela ação no fluxo (sem FAB) e abre as três entradas. */
 @RunWith(AndroidJUnit4::class)
+@Ignore("Histórico: paisagem retirada do aceite pelo usuário em accord-rub9; app fixo em retrato.")
 class UiAuditEntriesLandscapeTest {
     @get:Rule val compose = createEmptyComposeRule()
 

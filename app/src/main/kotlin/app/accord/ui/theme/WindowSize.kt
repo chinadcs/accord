@@ -3,7 +3,7 @@ package app.accord.ui.theme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalConfiguration
 
-/** Abaixo disto a janela é a paisagem de um celular: barra inferior, compositor e cabeçalho disputam a altura. */
+/** Pouca altura disponível, inclusive em janela dividida ou com teclado no app em retrato. */
 const val COMPACT_HEIGHT_DP = 480
 
 @Composable
