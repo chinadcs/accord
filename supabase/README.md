@@ -34,6 +34,12 @@ em 08/11/2026 nos Galaxy S20 FE e S23 FE com o release: duas contas, espaço, co
 nos dois sentidos e edição em modo avião reconciliada depois (banco: 2 usuários, 1 espaço, 2 membros,
 4 registros). O roteiro completo do `accord-chf` (Doze, TalkBack, conflito offline etc.) segue por fazer.
 
+Na continuidade autorizada de 08/11/2026 foram aplicadas as quatro migrações restantes
+(`20261108120000` a `20261108150000`), com as 12 versões locais/remotas alinhadas e
+fumaça transacional de avaliações aprovada no hospedado. O S20 FE foi atualizado;
+o S23 FE ainda aguarda atualização e o serviço recusa seus envios pelo protocolo 1.
+P2 continua oculta no release. Ver [relatório da implantação](../docs/s7-implantacao-hospedada-2026-11-08.md).
+
 O APK release lê `accord.release.supabase.url`, `accord.release.supabase.publishableKey` e a
 assinatura (`accord.release.storeFile`, `storePassword`, `keyAlias`, `keyPassword`) de
 `local.properties` ou das variáveis `ACCORD_RELEASE_*`; sem elas `:app:assembleRelease` falha. A
