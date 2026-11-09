@@ -288,12 +288,28 @@ Para preparar o APK com versão, conferir a assinatura e comparar com o APK ante
 [script de release](scripts/release.ps1):
 
 ```powershell
-.\scripts\release.ps1 -Tag v0.1.0 -PreviousApk CAMINHO_DO_APK_ANTERIOR.apk
+.\scripts\release.ps1 -Tag v0.1.0 -PreviousApk CAMINHO_DO_APK_ANTERIOR.apk -RequireClean
 ```
 
 O guia detalhado fica em `docs/distribuicao.md`, mantido apenas localmente. A decisão do canal
 está no [ADR 0061](docs/adr/0061-distribuicao-por-github-releases-e-obtainium.md). O fluxo GitHub Releases/Obtainium
 está em preparação local; ainda não há uma Release validada para instalação.
+
+Prepare a distribuição num checkout limpo do commit escolhido. O script confere versão,
+assinatura, ausência de CAMERA/modo depurável e presença dos avisos de licença no APK.
+Os avisos e o inventário das bibliotecas ficam em `app/src/main/assets/licenses/` e acompanham
+o aplicativo. Atualizações de dependências exigem revisar esse inventário e as fontes correspondentes.
+
+Para anexar a fonte do mesmo commit, incluindo os arquivos de fonte das dependências e os
+complementos nativos fixados no inventário:
+
+```powershell
+python scripts/release-sources.py --commit SHA_COMPLETO_DO_COMMIT --output app/build/releases/v0.1.0/accord-v0.1.0-sources.tar.gz
+```
+
+Esse comando baixa fontes públicas e verifica seus SHA-256. Ele usa somente arquivos do
+commit, sem incluir `.git`, configurações locais, dados do usuário ou a chave de assinatura.
+O pacote inclui instruções de build; ferramentas e SDKs continuam sendo obtidos separadamente.
 
 O release aponta para o **Supabase hospedado** e é assinado com keystore própria. Ele lê as chaves
 abaixo de `local.properties` ou das variáveis `ACCORD_RELEASE_*` equivalentes (nunca das chaves do

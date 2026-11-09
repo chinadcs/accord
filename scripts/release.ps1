@@ -5,7 +5,9 @@ param(
     [ValidatePattern('^v(0|[1-9][0-9]{0,3})\.(0|[1-9][0-9]?)\.(0|[1-9][0-9]?)$')]
     [string]$Tag,
     # APK anteriormente distribuído: exige mesma assinatura e código maior.
-    [string]$PreviousApk
+    [string]$PreviousApk,
+    # Distribuição: exige fonte commitada e evita mudanças durante o build.
+    [switch]$RequireClean
 )
 
 $ErrorActionPreference = 'Stop'
@@ -38,11 +40,18 @@ function Read-Apk([string]$Path) {
         versionCode = [int]$package.Groups[2].Value
         versionName = $package.Groups[3].Value
         certificateSha256 = $cert.ToLowerInvariant()
+        debuggable = (($badging -join "`n") -match '(?m)^application-debuggable')
+        cameraPermission = (($badging -join "`n") -match "uses-permission: name='android.permission.CAMERA'")
     }
 }
 
 Push-Location $root
 try {
+    $startingCommit = & git rev-parse HEAD
+    if ($LASTEXITCODE -ne 0) { throw 'Não foi possível identificar a fonte.' }
+    $startingStatus = & git status --porcelain
+    if ($LASTEXITCODE -ne 0) { throw 'Não foi possível conferir a árvore de trabalho.' }
+    if ($RequireClean -and $startingStatus) { throw 'Distribuição exige checkout limpo do commit revisado.' }
     $previous = if ($PreviousApk) { Read-Apk $PreviousApk }
     if ($previous -and $expectedCode -le $previous.versionCode) {
         throw 'A atualização exige versionCode maior que o anterior.'
@@ -54,6 +63,15 @@ try {
     if ($metadata.packageName -ne 'app.accord' -or $metadata.versionCode -ne $expectedCode -or $metadata.versionName -ne $version) {
         throw 'O APK não corresponde ao pacote/versão solicitados.'
     }
+    if ($metadata.debuggable -or $metadata.cameraPermission) { throw 'Release não pode ser depurável nem pedir CAMERA (ADR 0065).' }
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $archive = [System.IO.Compression.ZipFile]::OpenRead($apk)
+    try {
+        foreach ($entry in @('assets/licenses/accord-GPL-3.0.txt', 'assets/licenses/THIRD-PARTY-NOTICES.txt', 'assets/licenses/runtime-dependencies.json')) {
+            if (-not $archive.GetEntry($entry)) { throw "Aviso obrigatório ausente no APK: $entry" }
+        }
+    }
+    finally { $archive.Dispose() }
     if ($previous) {
         if ($previous.packageName -ne $metadata.packageName -or $previous.certificateSha256 -ne $metadata.certificateSha256) {
             throw 'Atualização incompatível: pacote ou certificado diferente do APK anterior.'
@@ -68,6 +86,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Não foi possível identificar o commit.' }
     $status = & git status --porcelain
     if ($LASTEXITCODE -ne 0) { throw 'Não foi possível conferir a árvore de trabalho.' }
+    if ($RequireClean -and ($status -or "$commit" -ne "$startingCommit")) { throw 'A fonte mudou durante o build; APK não liberado para distribuição.' }
     [ordered]@{
         tag = $Tag
         commit = "$commit"
@@ -79,6 +98,9 @@ try {
         sha256 = (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant()
         bytes = (Get-Item -LiteralPath $destination).Length
         previousApkChecked = [bool]$previous
+        debuggable = $metadata.debuggable
+        cameraPermission = $metadata.cameraPermission
+        licenseNoticesChecked = $true
     } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $output 'release.json') -Encoding UTF8
     Write-Host "APK verificado: $destination (versionCode $expectedCode)"
     Write-Host 'Preparação local; publicação e validação por Obtainium continuam pendentes.'

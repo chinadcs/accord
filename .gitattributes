@@ -2,3 +2,6 @@
 app/src/main/assets/vendors/*.tsv text eol=lf
 app/src/main/assets/vendors/*.json text eol=lf
 app/src/main/assets/vendors/*.txt text eol=lf
+
+# Preserve upstream legal texts verbatim, including their original whitespace and line endings.
+app/src/main/assets/licenses/*.txt -text -whitespace
