@@ -476,6 +476,14 @@ class RoomFinanceSpace private constructor(
 
     override suspend fun pendings(): QueryResult<List<PendingItem>> = query { entryQueries.pendings() }
 
+    private val clueQueries by lazy { ClueQueries(dao, entryQueries, ::entryDetail) }
+
+    override suspend fun clueSource(from: LocalDate, untilExclusive: LocalDate): QueryResult<app.accord.core.clues.ClueSource> =
+        query { clueQueries.source(from, untilExclusive) }
+
+    override suspend fun clueImportOrigins(entryId: String): QueryResult<List<app.accord.core.clues.ClueImportOrigin>> =
+        query { clueQueries.origins(entryId) }
+
     override suspend fun subscriptions(from: LocalDate, untilExclusive: LocalDate): QueryResult<SubscriptionList> =
         query { subscriptionQueries.list(from, untilExclusive) }
 

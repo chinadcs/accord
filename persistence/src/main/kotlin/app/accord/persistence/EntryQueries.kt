@@ -330,6 +330,14 @@ internal class EntryQueries(
         )
     }
 
+    /** Same original-date builder and exclusions as activity; linked credits remain identifiable evidence. */
+    suspend fun clueRows(from: LocalDate, untilExclusive: LocalDate): List<EntryRow> {
+        require(from < untilExclusive)
+        return build(EntryFilter(YearMonth.from(from), YearMonth.from(untilExclusive.minusDays(1)), DateCriterion.PurchaseDate))
+            .filter { it.bucket == Bucket.Credit || (it.bucket == Bucket.Expense && it.row.kind != EntryKind.Boleto) }
+            .map { it.row }.filter { it.date >= from && it.date < untilExclusive }
+    }
+
     /**
      * Acumulado até o fim de [month], o mês exibido na lista (no critério escolhido), e o próprio [month]; reaproveita a lista para valer a
      * mesma regra de cada tipo. Mês passado ou futuro vale igual: o saldo é o que foi lançado até o fim dele.

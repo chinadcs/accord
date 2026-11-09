@@ -34,6 +34,12 @@ import java.time.YearMonth
  * e alterar dados financeiros e cadastros; Chat, importação e formulários usam os mesmos comandos.
  */
 interface FinanceSpace {
+    /** S7: original-date purchases and linked credits, versions, import limitations; no writes. */
+    suspend fun clueSource(from: LocalDate, untilExclusive: LocalDate): QueryResult<app.accord.core.clues.ClueSource>
+
+    /** Extracted fields only, from confirmed batches linked to this entry; never reads the external file. */
+    suspend fun clueImportOrigins(entryId: String): QueryResult<List<app.accord.core.clues.ClueImportOrigin>>
+
     suspend fun execute(envelope: Envelope, command: Command): CommandResult
 
     /** Mesmas regras do [execute], sem persistir nada. A gravação reaplica regras e versões. */
