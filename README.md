@@ -154,6 +154,8 @@ Estado detalhado e decisões em [ARCHITECTURE.md](ARCHITECTURE.md) e nos [ADRs](
 
 O wrapper incluído usa Gradle **9.8.2**; não é necessário instalar Gradle separadamente.
 A primeira compilação precisa de internet para baixar o Gradle e as dependências.
+As bancadas locais `:poc` e `:pocpc` são opcionais e só entram no build quando seus arquivos
+estão presentes; um clone do produto não precisa desses acervos para compilar o aplicativo.
 
 ## Preparar o ambiente
 
@@ -395,6 +397,7 @@ supabase stop
 - [Arquitetura e estado de implementação](ARCHITECTURE.md)
 - [Decisões de arquitetura (ADRs)](docs/adr/README.md)
 - [Modelo CSV de importação](docs/modelos/accord-importacao-exemplo.csv)
+- [Exemplos fictícios de frases para testes](docs/modelos/frases-chat-exemplo.tsv)
 - [Instruções para trabalhar no repositório](AGENTS.md)
 
 O plano (`docs/plano-desenvolvimento.md`), as specs (`docs/specs/`) e o restante da documentação

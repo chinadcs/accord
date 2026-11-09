@@ -1,0 +1,7 @@
+# Fictitious test examples only. Never add private chat messages here.
+ex-1	Valores	pizza 89 no débito	registra valor=89,00 pagamento=debito conta=1 categoria=alimentacao.restaurantes
+ex-2	Valores	tênis 300 em 3x no cartão	registra valor=300,00 parcelas=3 papel=total pagamento=cartao categoria=compras.roupas
+ex-3	Datas	farmácia 45 ontem no pix	registra valor=45,00 data=2026-10-21 pagamento=pix conta=1 categoria=saude.medicamentos
+ex-4	Pagamento	padaria 12	pergunta campo=pagamento
+ex-5	Consultas	quanto gastei com pet?	resposta padrao=consulta
+ex-6	Conversa	foi no cartão	corrige pagamento=cartao

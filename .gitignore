@@ -29,6 +29,8 @@ scripts/poc/__pycache__/
 poc
 pocpc
 .kotlin/
+__pycache__/
+*.pyc
 
 # Chaves de assinatura nunca versionadas
 *.jks

@@ -377,11 +377,11 @@ class PocBenchTest {
     }
 
     @Test
-    fun `o modelo de frases reais da documentacao e valido`() {
+    fun `o modelo ficticio de frases versionado e valido`() {
         val template = generateSequence(java.io.File("").absoluteFile) { it.parentFile }
-            .map { java.io.File(it, "docs/poc/frases-reais.modelo.tsv") }
+            .map { java.io.File(it, "docs/modelos/frases-chat-exemplo.tsv") }
             .firstOrNull { it.isFile }
-        assertTrue(template != null, "docs/poc/frases-reais.modelo.tsv não encontrado")
+        assertTrue(template != null, "docs/modelos/frases-chat-exemplo.tsv não encontrado")
         val parsed = BatteryFile.parse(template.readText(Charsets.UTF_8))
         assertTrue(parsed.errors.isEmpty(), parsed.errors.joinToString())
         assertEquals(6, parsed.cases.size)

@@ -20,6 +20,9 @@ include(":core")
 include(":persistence")
 include(":remote")
 include(":app")
-include(":poc")
-include(":pocpc")
 include(":categorybench")
+
+// Bancadas opcionais mantidas localmente; um clone do produto compila sem esses acervos.
+listOf("poc", "pocpc").forEach { bench ->
+    if (file("$bench/build.gradle.kts").isFile) include(":$bench")
+}
