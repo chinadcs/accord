@@ -62,8 +62,11 @@ fun ArchivedChatsScreen(padding: PaddingValues, container: AppContainer, onBack:
         history?.let { data ->
             val messages = (data["chat_message"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }
             val receipts = (data["chat_receipt"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }
+            val conversations = (data["chat_conversation"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }
             if (messages.isEmpty()) Text(stringResource(R.string.privacy_archive_empty))
-            messages.sortedBy { it["createdAtMillis"]?.jsonPrimitive?.longOrNull }.forEach { message ->
+            messages.groupBy { it["conversationId"]?.jsonPrimitive?.contentOrNull ?: "legacy" }.forEach { (conversationId, thread) ->
+            Text(conversations.firstOrNull { it["id"]?.jsonPrimitive?.contentOrNull == conversationId }?.get("title")?.jsonPrimitive?.contentOrNull ?: "Histórico anterior", style = MaterialTheme.typography.titleMedium)
+            thread.sortedBy { it["createdAtMillis"]?.jsonPrimitive?.longOrNull }.forEach { message ->
                 Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
                     Column(Modifier.fillMaxWidth().padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
                         Text(message["text"]?.jsonPrimitive?.contentOrNull.orEmpty())
@@ -79,6 +82,7 @@ fun ArchivedChatsScreen(padding: PaddingValues, container: AppContainer, onBack:
                         }
                     }
                 }
+            }
             }
         }
     }

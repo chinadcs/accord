@@ -1,6 +1,7 @@
 package app.accord.persistence
 
 import androidx.room.Dao
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.OnConflictStrategy
@@ -10,6 +11,13 @@ import androidx.room.Upsert
 import androidx.room.Insert
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.Serializable
+
+@Entity(tableName = "chat_conversation")
+@Serializable
+data class ChatConversationRow(
+    @PrimaryKey val id: String, val title: String, val createdAtMillis: Long, val lastUsedAtMillis: Long,
+    val selected: Boolean, val draftText: String, val scrollIndex: Int, val scrollOffset: Int,
+)
 
 /**
  * Histórico do Chat (S3 §12): só neste aparelho. Mora no banco do par (conta, espaço), mas as
@@ -34,6 +42,7 @@ data class ChatMessageRow(
     val note: String?,
     /** IDs de categoria separados por vírgula. */
     val categoryHints: String,
+    @ColumnInfo(defaultValue = "'legacy'") val conversationId: String = app.accord.core.chat.LEGACY_CONVERSATION_ID,
 )
 
 @Entity(tableName = "chat_attempt", indices = [Index("messageId")])
@@ -62,6 +71,7 @@ data class ChatQuestionRow(
     val amountCents: Long?,
     val state: String,
     val createdAtMillis: Long,
+    @ColumnInfo(defaultValue = "'[]'") val detachedEntryIds: String = "[]",
 )
 
 @Entity(tableName = "chat_receipt", indices = [Index(value = ["operationId"], unique = true), Index("entryId")])
@@ -89,10 +99,30 @@ data class ChatFeedbackRow(
     /** VALUE, CATEGORY, DATE, PAYMENT ou UNDERSTOOD; nulo quando a pessoa não disse. */
     val field: String?,
     val votedAtMillis: Long,
+    @ColumnInfo(defaultValue = "'[]'") val fieldsJson: String = "[]",
+    val assessedOperationId: String? = null,
 )
 
 @Dao
 interface ChatDao {
+    @Query("SELECT * FROM chat_conversation ORDER BY lastUsedAtMillis DESC, id") suspend fun conversations(): List<ChatConversationRow>
+    @Query("SELECT * FROM chat_conversation ORDER BY lastUsedAtMillis DESC, id") fun observeConversations(): Flow<List<ChatConversationRow>>
+    @Query("SELECT * FROM chat_conversation WHERE id = :id") suspend fun conversation(id: String): ChatConversationRow?
+    @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insertConversation(row: ChatConversationRow): Long
+    @Query("UPDATE chat_conversation SET selected = 0") suspend fun deselectConversations()
+    @Query("UPDATE chat_conversation SET selected = 1, lastUsedAtMillis = :now WHERE id = :id") suspend fun selectConversation(id: String, now: Long)
+    @Query("UPDATE chat_conversation SET lastUsedAtMillis = :now WHERE id = :id") suspend fun touchConversation(id: String, now: Long)
+    @Query("UPDATE chat_conversation SET title = :title WHERE id = :id") suspend fun renameConversation(id: String, title: String)
+    @Query("UPDATE chat_conversation SET draftText = :text WHERE id = :id") suspend fun updateDraft(id: String, text: String)
+    @Query("UPDATE chat_conversation SET scrollIndex = :index, scrollOffset = :offset WHERE id = :id") suspend fun updatePosition(id: String, index: Int, offset: Int)
+    @Query("DELETE FROM chat_conversation WHERE id = :id") suspend fun deleteConversation(id: String)
+    @Query("DELETE FROM chat_conversation") suspend fun clearConversations()
+    @Query("DELETE FROM chat_feedback WHERE receiptId IN (SELECT r.id FROM chat_receipt r JOIN chat_message m ON m.id = r.messageId WHERE m.conversationId = :id)") suspend fun deleteConversationFeedback(id: String)
+    @Query("DELETE FROM chat_receipt WHERE messageId IN (SELECT id FROM chat_message WHERE conversationId = :id)") suspend fun deleteConversationReceipts(id: String)
+    @Query("DELETE FROM chat_attempt WHERE messageId IN (SELECT id FROM chat_message WHERE conversationId = :id)") suspend fun deleteConversationAttempts(id: String)
+    @Query("DELETE FROM chat_question WHERE state <> 'Open' AND messageId IN (SELECT id FROM chat_message WHERE conversationId = :id)") suspend fun deleteConversationClosedQuestions(id: String)
+    @Query("DELETE FROM chat_message WHERE conversationId = :id") suspend fun deleteConversationMessages(id: String)
+    @Query("DELETE FROM chat_question WHERE state <> 'Open'") suspend fun clearClosedQuestions()
     @Upsert suspend fun upsertMessage(row: ChatMessageRow)
     @Query("SELECT * FROM chat_message WHERE id = :id") suspend fun message(id: String): ChatMessageRow?
     @Query("SELECT * FROM chat_message ORDER BY createdAtMillis, id") suspend fun messages(): List<ChatMessageRow>

@@ -8,6 +8,7 @@ import app.accord.AppContainer
 import app.accord.FeedbackEvent
 import app.accord.R
 import app.accord.core.chat.ChatCoordinator
+import app.accord.core.chat.ChatConversation
 import app.accord.core.chat.ChatMessage
 import app.accord.core.chat.ChatSnapshot
 import app.accord.core.chat.FeedbackField
@@ -32,6 +33,8 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /** Situação do modelo no cabeçalho do Chat (tela 04 §4): discreta, abre a tela 25. */
 sealed interface ModelBadge {
@@ -56,6 +59,8 @@ data class ChatUiState(
     val canInterpretNow: Boolean = false,
     /** Categorias do espaço, para as sugestões e o seletor de categoria do recibo "a classificar". */
     val categories: Map<String, CategoryNode> = emptyMap(),
+    val conversations: List<ChatConversation> = emptyList(),
+    val activeConversation: ChatConversation? = null,
 )
 
 /**
@@ -68,7 +73,8 @@ class ChatViewModel(
     private val container: AppContainer,
     private val saved: SavedStateHandle,
 ) : ViewModel() {
-    private val composer = MutableStateFlow(saved.get<String>(KEY_COMPOSER).orEmpty())
+    private val composer = MutableStateFlow<Pair<String, String>?>(null)
+    private val edits = Mutex()
 
     private val snapshot: StateFlow<ChatSnapshot?> = container.chat
         .flatMapLatest { coordinator -> coordinator?.snapshot ?: emptyFlow() }
@@ -86,11 +92,14 @@ class ChatViewModel(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     val state: StateFlow<ChatUiState> = combine(snapshot, container.models.manager.status, composer, categories) { snap, model, text, categoryMap ->
+        val active = snap?.activeConversation
         // ADR 0036: com regras locais não há modelo a instalar nem aviso de modelo.
         ChatUiState(
             loaded = snap != null,
-            items = snap?.let(::buildChatItems).orEmpty(),
-            composer = text,
+            items = active?.let { snap.forConversation(it.id).let(::buildChatItems) }.orEmpty(),
+            composer = if (active == null) "" else text?.takeIf { it.first == active.id }?.second
+                ?: saved.get<String>(draftKey(active.id)) ?: active.draftText,
+            conversations = snap?.conversations.orEmpty(), activeConversation = active,
             badge = when {
                 container.categoryPilot.replacesInterpreter -> ModelBadge.FakePilot
                 container.usesRuleInterpreter -> ModelBadge.LocalRules
@@ -106,21 +115,51 @@ class ChatViewModel(
     init {
         // Retenção de 30 dias dos votos do joinha (accord-8q5).
         viewModelScope.launch { container.chat.collect { it?.purgeExpiredFeedback() } }
+        viewModelScope.launch {
+            snapshot.collect { snap ->
+                val active = snap?.activeConversation ?: return@collect
+                saved.remove<String>("composer")?.takeIf { it.isNotEmpty() }?.let { legacy ->
+                    if (active.draftText.isEmpty() && saved.get<String>(draftKey(active.id)) == null) updateDraft(active.id, legacy)
+                }
+            }
+        }
     }
 
     fun onComposerChange(text: String) {
-        composer.value = text
-        saved[KEY_COMPOSER] = text
+        val id = state.value.activeConversation?.id ?: return
+        updateDraft(id, text)
+    }
+
+    private fun updateDraft(id: String, text: String) {
+        composer.value = id to text
+        saved[draftKey(id)] = text
+        viewModelScope.launch { edits.withLock { coordinator?.saveConversationDraft(id, text) } }
+    }
+
+    fun createConversation() { viewModelScope.launch { edits.withLock { coordinator?.createConversation() } } }
+    fun selectConversation(id: String) { viewModelScope.launch { edits.withLock { coordinator?.selectConversation(id) } } }
+    fun renameConversation(id: String, title: String) { viewModelScope.launch { edits.withLock { coordinator?.renameConversation(id, title) } } }
+    fun deleteConversation(id: String) {
+        viewModelScope.launch { edits.withLock {
+            if (coordinator?.deleteConversation(id) == true) {
+                saved.remove<String>(draftKey(id))
+                if (composer.value?.first == id) composer.value = null
+            }
+        } }
+    }
+    fun savePosition(id: String, index: Int, offset: Int) {
+        viewModelScope.launch { coordinator?.saveConversationPosition(id, index, offset) }
     }
 
     fun send() {
-        val text = composer.value
+        val id = state.value.activeConversation?.id ?: return
+        val text = composer.value?.takeIf { it.first == id }?.second ?: state.value.composer
         if (text.isBlank()) return
         // Esvazia antes de gravar: um segundo toque em Enviar encontra o campo vazio e não envia nada.
-        onComposerChange("")
+        updateDraft(id, "")
         viewModelScope.launch {
-            val sent = coordinator?.send(text)
-            if (sent == null) onComposerChange(text)
+            val sent = coordinator?.send(text, id)
+            if (sent == null && state.value.conversations.any { it.id == id }) updateDraft(id, text)
         }
     }
 
@@ -131,7 +170,8 @@ class ChatViewModel(
 
     /** Opção de uma consulta (categoria ou compra): envia a pergunta completa como mensagem, sem tocar no campo de texto. */
     fun sendQuestion(text: String) {
-        viewModelScope.launch { coordinator?.send(text) }
+        val id = state.value.activeConversation?.id ?: return
+        viewModelScope.launch { coordinator?.send(text, id) }
     }
 
     fun cancel(message: ChatMessage) {
@@ -203,6 +243,6 @@ class ChatViewModel(
     private fun percentOf(received: Long, total: Long): Int? = if (total <= 0) null else (received * 100 / total).toInt()
 
     private companion object {
-        const val KEY_COMPOSER = "composer"
+        fun draftKey(id: String) = "draft:$id"
     }
 }

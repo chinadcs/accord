@@ -92,7 +92,7 @@ fun buildChatItems(snapshot: ChatSnapshot): List<ChatItem> {
                         val receipt = head(original)
                         val question = openQuestions.firstOrNull { it.link == QuestionLink.Entry(receipt.entryId) }
                         val hints = message.categoryHints.take(3).mapNotNull { id -> question?.options?.firstOrNull { (it.value as? app.accord.core.chat.OptionValue.Category)?.id == id }?.ref }
-                        add(ChatItem.Receipt(receipt, receipt.id == undoable, question, question?.let { suggestedCategoryOption(it, message)?.ref }, hints, snapshot.feedback.firstOrNull { it.receiptId == receipt.id }, corrected = receipt.id != original.id))
+                        add(ChatItem.Receipt(receipt, receipt.id == undoable, question, question?.let { suggestedCategoryOption(it, message)?.ref }, hints, snapshot.feedback.firstOrNull { it.receiptId == receipt.id && (it.assessedOperationId == null || it.assessedOperationId == receipt.operationId) }, corrected = receipt.id != original.id))
                     }
                 }
                 MessageState.Asked ->

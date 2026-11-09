@@ -71,8 +71,8 @@ class ChatCoordinator(
 
     private val queue = Channel<String>(Channel.UNLIMITED)
     private val stateLock = Mutex()
-    private val running = mutableMapOf<String, Deferred<Output>>()
-    private val canceled = mutableSetOf<String>()
+    private val running = java.util.concurrent.ConcurrentHashMap<String, Deferred<Output>>()
+    private val canceled = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
     private sealed interface Output {
         data class Text(val raw: String) : Output
@@ -101,19 +101,57 @@ class ChatCoordinator(
 
     // ---- API ----
 
+    suspend fun createConversation() = store.createConversation()
+    suspend fun selectConversation(id: String) = store.selectConversation(id)
+    suspend fun renameConversation(id: String, title: String) = store.renameConversation(id, title)
+    suspend fun saveConversationDraft(id: String, text: String) = store.saveConversationDraft(id, text)
+    suspend fun saveConversationPosition(id: String, index: Int, offset: Int) = store.saveConversationPosition(id, index, offset)
+
     /** Grava a mensagem e a enfileira. Textos iguais em mensagens distintas são intenções distintas. */
-    suspend fun send(text: String): String? {
+    suspend fun send(text: String, conversationId: String? = null): String? = stateLock.withLock {
         val trimmed = text.trim()
-        if (trimmed.isEmpty()) return null
+        if (trimmed.isEmpty()) return@withLock null
+        val conversation = if (conversationId == null) store.ensureActiveConversation() else store.conversation(conversationId) ?: return@withLock null
         val id = newId()
-        store.saveMessage(ChatMessage(id = id, text = trimmed, createdAtMillis = nowMillis()))
+        store.saveMessage(ChatMessage(id = id, text = trimmed, createdAtMillis = nowMillis(), conversationId = conversation.id))
+        store.touchConversation(conversation.id)
         queue.send(id)
-        return id
+        id
+    }
+
+    suspend fun deleteConversation(id: String): Boolean = stateLock.withLock {
+        detachQuestions(id)
+        val ids = store.snapshot().messages.filter { it.conversationId == id && it.state in setOf(MessageState.Sent,MessageState.Interpreting,MessageState.Applying) }.map { it.id }
+        canceled.addAll(ids)
+        ids.forEach { running[it]?.cancel() }
+        store.deleteConversation(id)
+    }
+
+    suspend fun clearHistory() = stateLock.withLock {
+        detachQuestions(null)
+        val ids = store.snapshot().messages.filter { it.state in setOf(MessageState.Sent,MessageState.Interpreting,MessageState.Applying) }.map { it.id }
+        canceled.addAll(ids)
+        ids.forEach { running[it]?.cancel() }
+        store.clear()
+    }
+
+    /** Antes de apagar os recibos, preserva apenas os alvos financeiros estruturados das dúvidas. */
+    private suspend fun detachQuestions(conversationId: String?) {
+        val snapshot = store.snapshot()
+        val messages = snapshot.messages.filter { conversationId == null || it.conversationId == conversationId }.map { it.id }.toSet()
+        val receipts = snapshot.receipts.associateBy { it.id }
+        snapshot.questions.filter { it.messageId in messages && it.state == QuestionState.Open }.forEach { q ->
+            val request = (q.link as? QuestionLink.Correction)?.request ?: return@forEach
+            val targets = listOfNotNull(request.entryId, request.receiptId?.let { receipts[it]?.entryId }) +
+                q.options.mapNotNull { (it.value as? OptionValue.Receipt)?.receiptId?.let { id -> receipts[id]?.entryId } }
+            store.saveQuestion(q.copy(detachedEntryIds = (q.detachedEntryIds + targets).distinct()))
+        }
     }
 
     /** Cancela só a tentativa: o texto fica e nada é aplicado; resultado tardio é descartado. */
     fun cancel(messageId: String) {
         scope.launch {
+            stateLock.withLock {
             val message = store.message(messageId) ?: return@launch
             when (message.state) {
                 MessageState.Sent -> store.saveMessage(message.copy(state = MessageState.Canceled))
@@ -123,13 +161,14 @@ class ChatCoordinator(
                 }
                 else -> Unit
             }
+            }
         }
     }
 
     /** "Tentar de novo" e "Interpretar agora": nova tentativa explícita, nunca automática. */
-    suspend fun retry(messageId: String) {
-        val message = store.message(messageId) ?: return
-        if (message.state !in RETRYABLE) return
+    suspend fun retry(messageId: String) = stateLock.withLock {
+        val message = store.message(messageId) ?: return@withLock
+        if (message.state !in RETRYABLE) return@withLock
         canceled -= messageId
         store.saveMessage(message.copy(state = MessageState.Sent, failure = null, refuse = null, note = null, reply = null))
         queue.send(messageId)
@@ -163,11 +202,14 @@ class ChatCoordinator(
     /** O registro manual foi salvo: a mensagem deixa de oferecer "Tentar de novo". */
     suspend fun resolveManually(messageId: String) {
         stateLock.withLock {
-            val message = store.message(messageId) ?: return
-            store.saveMessage(message.copy(state = MessageState.ResolvedManually))
+            val message = store.message(messageId)
+            if (message != null) store.saveMessage(message.copy(state = MessageState.ResolvedManually))
             store.snapshot().questions.filter { it.messageId == messageId && it.state == QuestionState.Open }
-                .forEach { store.saveQuestion(it.copy(state = QuestionState.Discarded)) }
-            message.draftId?.let { space.discardDraft(it) }
+                .forEach {
+                    store.saveQuestion(it.copy(state = QuestionState.Discarded))
+                    (it.link as? QuestionLink.Draft)?.let { link -> space.discardDraft(link.draftId) }
+                }
+            message?.draftId?.let { space.discardDraft(it) }
         }
     }
 
@@ -176,11 +218,17 @@ class ChatCoordinator(
      * completa o mesmo voto. Só o ID do recibo, o voto, o campo e o instante são guardados; nada sai do aparelho.
      */
     suspend fun rate(receiptId: String, vote: FeedbackVote, field: FeedbackField? = null) = stateLock.withLock {
-        if (store.receipt(receiptId) == null) return@withLock
-        val kept = field.takeIf { vote == FeedbackVote.Down }
+        val receipt = store.receipt(receiptId) ?: return@withLock
         val current = store.feedback().firstOrNull { it.receiptId == receiptId }
+            ?.takeIf { it.assessedOperationId == null || it.assessedOperationId == receipt.operationId }
         if (current?.vote == vote && field == null) store.clearFeedback(receiptId)
-        else store.saveFeedback(ChatFeedback(receiptId, vote, kept, nowMillis()))
+        else {
+            val fields = if (vote != FeedbackVote.Down) emptySet() else if (field == null) emptySet() else {
+                val previous = current?.takeIf { it.vote == FeedbackVote.Down }?.fields.orEmpty()
+                if (field in previous) previous - field else previous + field
+            }
+            store.saveFeedback(ChatFeedback(receiptId, vote, fields.minByOrNull { it.ordinal }, nowMillis(),fields,receipt.operationId))
+        }
     }
 
     /** Retém os votos por 30 dias; os mais antigos são apagados. */
@@ -234,7 +282,9 @@ class ChatCoordinator(
     /** Desfaz a operação do recibo mais recente. Se algo mudou depois, a fachada recusa e nada é apagado. */
     suspend fun undo(receiptId: String): UndoResult = stateLock.withLock {
         val snapshot = store.snapshot()
-        val receipt = snapshot.undoableReceipt()?.takeIf { it.id == receiptId } ?: return UndoResult.NotAvailable
+        val target = snapshot.receipts.firstOrNull { it.id == receiptId } ?: return UndoResult.NotAvailable
+        val conversationId = snapshot.messages.firstOrNull { it.id == target.messageId }?.conversationId ?: return UndoResult.NotAvailable
+        val receipt = snapshot.forConversation(conversationId).undoableReceipt()?.takeIf { it.id == receiptId } ?: return UndoResult.NotAvailable
         when (val result = space.execute(Envelope(CommandId(newId()), Origin.Chat), Undo(receipt.operationId))) {
             is CommandResult.Applied, is CommandResult.AlreadyApplied -> {
                 onFinanceChanged()
@@ -256,6 +306,7 @@ class ChatCoordinator(
      */
     suspend fun recover() {
         val pending = stateLock.withLock {
+            store.ensureActiveConversation()
             store.messagesIn(setOf(MessageState.Interpreting)).forEach { store.saveMessage(it.copy(state = MessageState.Interrupted)) }
             store.messagesIn(setOf(MessageState.Applying)).sortedBy { it.createdAtMillis }.forEach { applyRegister(it.id) }
             store.messagesIn(setOf(MessageState.Sent)).sortedBy { it.createdAtMillis }.map { it.id }
@@ -266,25 +317,26 @@ class ChatCoordinator(
     // ---- fila ----
 
     private suspend fun process(id: String) {
-        val message = store.message(id) ?: return
+        val message = store.message(id) ?: run { canceled -= id; return }
         if (message.state != MessageState.Sent) return
 
         ChatValidator.prefilter(message.text)?.let { decision ->
-            stateLock.withLock { handle(id, decision, started = nowMillis(), attemptId = null, modelVersion = null) }
+            stateLock.withLock { if (store.message(id)!=null) handle(id, decision, started = nowMillis(), attemptId = null, modelVersion = null) }
             return
         }
         val active = interpreters.current()
         if (active == null) {
-            store.saveMessage(message.copy(state = MessageState.NoModel))
+            stateLock.withLock { store.message(id)?.let { store.saveMessage(it.copy(state = MessageState.NoModel)) } }
             return
         }
 
         val attemptId = newId()
         val started = nowMillis()
         val context = stateLock.withLock {
-            store.saveMessage(message.copy(state = MessageState.Interpreting, attempts = message.attempts + 1))
-            buildContext()
-        }
+            val current=store.message(id) ?: return@withLock null
+            store.saveMessage(current.copy(state = MessageState.Interpreting, attempts = current.attempts + 1))
+            buildContext(current.conversationId)
+        } ?: return
         val attempt = scope.async {
             try {
                 Output.Text(active.interpreter.interpret(InterpretRequest(message.text, context)))
@@ -295,6 +347,7 @@ class ChatCoordinator(
             }
         }
         running[id] = attempt
+        if (id in canceled) attempt.cancel()
         val output = try {
             attempt.await()
         } catch (e: CancellationException) {
@@ -305,6 +358,7 @@ class ChatCoordinator(
         }
 
         stateLock.withLock {
+            if (store.message(id)==null) { canceled -= id; return@withLock }
             val wasCanceled = id in canceled
             canceled -= id
             when {
@@ -320,7 +374,7 @@ class ChatCoordinator(
                 }
                 else -> {
                     val raw = (output as Output.Text).raw
-                    val fresh = buildContext()
+                    val fresh = buildContext(message.conversationId)
                     handle(id, ChatValidator.evaluate(message.text, raw, fresh), started, attemptId, active.modelVersion)
                 }
             }
@@ -351,9 +405,9 @@ class ChatCoordinator(
      * "Atualizar" numa resposta de consulta: recalcula pela fachada com os parâmetros já validados, sem chamar o interpretador, e troca o
      * instante do cálculo. Não cria operação nem pendência.
      */
-    suspend fun refreshQuery(id: String) {
-        val message = store.message(id) ?: return
-        val snapshot = ConsultSnapshot.fromFields(message.fields) ?: return
+    suspend fun refreshQuery(id: String): Unit = stateLock.withLock {
+        val message = store.message(id) ?: return@withLock
+        val snapshot = ConsultSnapshot.fromFields(message.fields) ?: return@withLock
         if (snapshot.status == ConsultSnapshot.Status.Ask) return
         val request = snapshot.request()
         saveConsult(message, ConsultSnapshot.of(request, queryRunner.run(request), nowMillis()))
@@ -367,7 +421,7 @@ class ChatCoordinator(
         val message = requireMessage(id)
         val outcome: String = when (decision) {
             is ChatDecision.Register -> {
-                closeUndo()
+                closeUndo(message.conversationId)
                 val partial = PartialEntryOf.from(decision.entry)
                 store.saveMessage(
                     message.copy(
@@ -381,7 +435,7 @@ class ChatCoordinator(
                 "applied"
             }
             is ChatDecision.Ask -> {
-                closeUndo()
+                closeUndo(message.conversationId)
                 ask(message, decision.draft, decision.question)
                 "question"
             }
@@ -399,7 +453,7 @@ class ChatCoordinator(
                 "applied"
             }
             is ChatDecision.Reply -> {
-                if (decision.reply !in KEEPS_UNDO) closeUndo()
+                if (decision.reply !in KEEPS_UNDO) closeUndo(message.conversationId)
                 store.saveMessage(
                     message.copy(
                         state = MessageState.Replied,
@@ -415,18 +469,18 @@ class ChatCoordinator(
             }
             is ChatDecision.Consult -> {
                 // S6: leitura pela fachada. Sem operação na fila, sem pendência, sem lançamento; só o histórico local muda.
-                closeUndo()
+                closeUndo(message.conversationId)
                 val outcome = queryRunner.run(decision.request)
                 saveConsult(message, ConsultSnapshot.of(decision.request, outcome, nowMillis()))
                 "replied"
             }
             is ChatDecision.ConsultAsk -> {
-                closeUndo()
+                closeUndo(message.conversationId)
                 saveConsult(message, ConsultSnapshot.ofAsk(null, decision.ask, nowMillis()))
                 "replied"
             }
             is ChatDecision.Refuse -> {
-                closeUndo()
+                closeUndo(message.conversationId)
                 store.saveMessage(
                     message.copy(
                         state = MessageState.Refused,
@@ -441,8 +495,8 @@ class ChatCoordinator(
     }
 
     /** A próxima mensagem fecha o Desfazer dos recibos anteriores (decisão de 24/10/2026). */
-    private suspend fun closeUndo() {
-        store.snapshot().receipts.filter { !it.undoClosed }.forEach { store.saveReceipt(it.copy(undoClosed = true)) }
+    private suspend fun closeUndo(conversationId: String) {
+        store.snapshot().forConversation(conversationId).receipts.filter { !it.undoClosed }.forEach { store.saveReceipt(it.copy(undoClosed = true)) }
     }
 
     // ---- registro ----
@@ -451,7 +505,7 @@ class ChatCoordinator(
     private suspend fun applyRegister(messageId: String) {
         val message = requireMessage(messageId)
         val operationId = checkNotNull(message.operationId)
-        val context = buildContext()
+        val context = buildContext(message.conversationId)
         val partial = DraftCodec.fromFields(message.fields)
         val decision = EntryCompleter.complete(partial, context)
         if (decision !is ChatDecision.Register) {
@@ -600,7 +654,7 @@ class ChatCoordinator(
             ),
         )
         val options = if (question.field == QuestionField.Category) {
-            EntryCompleter.categoryOptions(buildContext(), emptyList())
+            EntryCompleter.categoryOptions(buildContext(message.conversationId), emptyList())
         } else {
             question.options
         }
@@ -655,9 +709,10 @@ class ChatCoordinator(
             store.saveQuestion(question.copy(state = QuestionState.Discarded))
             return
         }
-        val message = requireMessage(question.messageId)
+        val message = store.message(question.messageId)
         val applied = EntryCompleter.apply(DraftCodec.fromFields(draft.fields), question.field, value)
-        val context = buildContext()
+        if (message == null) return // Sem conversa, o rascunho é retomado pelo formulário em Revisar.
+        val context = buildContext(message.conversationId)
         when (val decision = EntryCompleter.complete(applied, context)) {
             is ChatDecision.Register -> {
                 store.saveQuestion(question.copy(state = QuestionState.Answered))
@@ -668,7 +723,7 @@ class ChatCoordinator(
                         operationId = message.operationId ?: newId(),
                     ),
                 )
-                closeUndo()
+                closeUndo(message.conversationId)
                 applyRegister(message.id)
             }
             is ChatDecision.Ask -> ask(message, decision.draft, decision.question)
@@ -690,12 +745,13 @@ class ChatCoordinator(
             return
         }
         val command = ChatCommands.correct(EntryChange.Category(category.id), detail)
-        val message = requireMessage(question.messageId)
+        val message = store.message(question.messageId)
         when (val result = space.execute(Envelope(CommandId(newId()), Origin.Chat), command)) {
             is CommandResult.Applied, is CommandResult.AlreadyApplied -> {
                 val receipt = receiptOf(result)
                 onFinanceChanged()
                 store.saveQuestion(question.copy(state = QuestionState.Answered))
+                if (message == null) return
                 supersedeAndSave(
                     entryId = link.entryId, newEntryId = link.entryId, receipt = receipt, messageId = message.id,
                     kind = ReceiptKind.Classified, scope = null,
@@ -710,14 +766,14 @@ class ChatCoordinator(
                 val fresh = space.entry(link.entryId).get()
                 store.saveQuestion(question.copy(state = if (fresh != null && fresh.classification != app.accord.core.space.Classification.ToClassify) QuestionState.ResolvedElsewhere else QuestionState.Open))
             }
-            else -> store.saveMessage(message.copy(refuse = RefuseReason.Rejected, note = (result as? CommandResult.Rejected)?.errors?.firstOrNull()?.message))
+            else -> if (message != null) store.saveMessage(message.copy(refuse = RefuseReason.Rejected, note = (result as? CommandResult.Rejected)?.errors?.firstOrNull()?.message))
         }
     }
 
     private suspend fun answerCorrection(question: ChatQuestionRecord, link: QuestionLink.Correction, value: AnswerValue) {
         val option = (value as? AnswerValue.Option)?.value ?: return
         val message = requireMessage(question.messageId)
-        val context = buildContext()
+        val context = buildContext(message.conversationId)
         val request = CorrectionCompleter.apply(link.request, context, option)
         store.saveQuestion(question.copy(state = QuestionState.Answered))
         when (val decision = CorrectionCompleter.complete(request, context)) {
@@ -806,13 +862,14 @@ class ChatCoordinator(
         )
     }
 
-    private suspend fun buildContext(): ChatContext {
+    private suspend fun buildContext(conversationId: String): ChatContext {
         val categories = space.categories().get()
         val accounts = space.accounts().get()
         val card = space.card().get()
         val cards = space.cards().get()
-        val openQuestion = store.openQuestions().maxByOrNull { it.createdAtMillis }
-        val receipts = store.activeReceipts(RECENT_RECEIPTS)
+        val scoped = store.snapshot().forConversation(conversationId)
+        val openQuestion = scoped.questions.filter { it.state == QuestionState.Open }.maxByOrNull { it.createdAtMillis }
+        val receipts = scoped.receipts.filter { it.state == ReceiptState.Active }.sortedByDescending { it.createdAtMillis }.take(RECENT_RECEIPTS)
         return ChatContext(
             today = clock.today(),
             categories = categories.mapIndexed { index, node -> CategoryItem("c${index + 1}", node.id, node.name, node.parentId) },

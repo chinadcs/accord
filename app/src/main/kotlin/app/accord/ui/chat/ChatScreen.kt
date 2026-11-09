@@ -44,6 +44,8 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -99,6 +101,7 @@ import app.accord.ui.theme.Accord
 import app.accord.ui.theme.AccordSpacing
 import app.accord.ui.theme.isCompactHeight
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.distinctUntilChanged
 import java.time.LocalDate
 import java.time.YearMonth
 import com.composables.icons.lucide.R as Lucide
@@ -142,6 +145,11 @@ fun ChatRoute(viewModel: ChatViewModel, padding: PaddingValues, today: LocalDate
         onExample = viewModel::insertExample,
         onManual = openManual,
         onRate = viewModel::rate,
+        onCreateConversation = viewModel::createConversation,
+        onSelectConversation = viewModel::selectConversation,
+        onRenameConversation = viewModel::renameConversation,
+        onDeleteConversation = viewModel::deleteConversation,
+        onPosition = viewModel::savePosition,
     )
 }
 
@@ -162,16 +170,51 @@ fun ChatScreen(
     onExample: (String) -> Unit,
     onManual: (ChatMessage?) -> Unit,
     onRate: (String, FeedbackVote, FeedbackField?) -> Unit = { _, _, _ -> },
+    onCreateConversation: () -> Unit = {},
+    onSelectConversation: (String) -> Unit = {},
+    onRenameConversation: (String, String) -> Unit = { _, _ -> },
+    onDeleteConversation: (String) -> Unit = {},
+    onPosition: (String, Int, Int) -> Unit = { _, _, _ -> },
 ) {
-    val listState = rememberLazyListState()
-    val hasViewport by remember { derivedStateOf { listState.layoutInfo.viewportSize.height > 0 } }
+    var conversationsOpen by rememberSaveable { mutableStateOf(false) }
+    if (conversationsOpen) {
+        ConversationsScreen(state.conversations, padding,
+            onBack = { conversationsOpen = false },
+            onCreate = { onCreateConversation(); conversationsOpen = false },
+            onSelect = { onSelectConversation(it); conversationsOpen = false },
+            onRename = onRenameConversation, onDelete = onDeleteConversation)
+        return
+    }
+    val conversation = state.activeConversation
+    val listState = remember(conversation?.id) { androidx.compose.foundation.lazy.LazyListState(conversation?.scrollIndex ?: 0, conversation?.scrollOffset ?: 0) }
+    DisposableEffect(listState) {
+        onDispose { conversation?.let { onPosition(it.id, listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset) } }
+    }
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }.distinctUntilChanged().collect { (index, offset) ->
+            conversation?.let { onPosition(it.id, index, offset) }
+        }
+    }
+    val hasViewport by remember(listState) { derivedStateOf { listState.layoutInfo.viewportSize.height > 0 } }
+    var previousLast by remember(conversation?.id) { mutableStateOf(state.items.lastOrNull()?.key) }
     // A conversa acompanha o fim quando chega algo novo, sem mover o foco do campo de mensagem.
     LaunchedEffect(state.items.lastOrNull()?.key, hasViewport) {
-        if (state.items.isNotEmpty() && hasViewport) listState.animateScrollToItem(state.items.size)
+        val last = state.items.lastOrNull()?.key
+        if (last != previousLast && state.items.isNotEmpty() && hasViewport) listState.animateScrollToItem(state.items.size)
+        previousLast = last
     }
     Column(
         Modifier.fillMaxSize().padding(padding).consumeWindowInsets(padding).imePadding(),
     ) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s2), verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = { conversationsOpen = true }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                Text(stringResource(R.string.chat_conversations))
+            }
+            Text(conversation?.title.orEmpty(), modifier = Modifier.weight(1f), style = MaterialTheme.typography.titleSmall, maxLines = 2)
+            TextButton(onClick = onCreateConversation, enabled = state.loaded, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                Text(stringResource(R.string.chat_conversation_new))
+            }
+        }
         LazyColumn(
             state = listState,
             modifier = Modifier.weight(1f).fillMaxWidth(),
@@ -502,7 +545,7 @@ private fun FeedbackRow(feedback: ChatFeedback?, onRate: (FeedbackVote, Feedback
             FlowRow(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
                 FeedbackField.entries.forEach { field ->
                     FilterChip(
-                        selected = feedback.field == field,
+                        selected = field in feedback.fields,
                         onClick = { onRate(FeedbackVote.Down, field) },
                         label = { Text(stringResource(feedbackFieldLabel(field))) },
                         modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
@@ -537,6 +580,7 @@ private fun feedbackFieldLabel(field: FeedbackField): Int = when (field) {
     FeedbackField.Date -> R.string.feedback_field_date
     FeedbackField.Payment -> R.string.feedback_field_payment
     FeedbackField.Understood -> R.string.feedback_field_understood
+    FeedbackField.NotEntry -> R.string.feedback_field_not_entry
 }
 
 @OptIn(ExperimentalLayoutApi::class)

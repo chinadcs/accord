@@ -891,7 +891,8 @@ class ChatCoordinatorTest : ChatTestBase() {
         e.fake.on("Amazon 150 no cartão", Proposal.Clarify(QuestionField.Category, emptyList(), reg("Amazon", "150", payment = ChatPayment.Card)))
         e.say("Amazon 150 no cartão")
         e.store.clear()
-        assertTrue(e.store.snapshot().messages.isEmpty() && e.store.openQuestions().isEmpty())
+        assertTrue(e.store.snapshot().messages.isEmpty())
+        assertEquals(1, e.store.openQuestions().size)
         assertEquals(Money(15_000), e.toClassifyTotal(nov))
         assertTrue(e.space.pendings().value().any { it is app.accord.core.space.PendingItem.CategoryToClarify })
     }

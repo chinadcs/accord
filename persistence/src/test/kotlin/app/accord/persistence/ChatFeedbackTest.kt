@@ -45,9 +45,12 @@ class ChatFeedbackTest : ChatTestBase() {
         assertEquals(FeedbackVote.Down, vote.vote)
         assertEquals(FeedbackField.Category, vote.field)
 
-        // Escolher outro campo substitui; o voto continua um só por recibo.
+        // Cada motivo alterna sua seleção; o voto continua um só por recibo.
         e.coordinator.rate(id, FeedbackVote.Down, FeedbackField.Date)
-        assertEquals(FeedbackField.Date, e.store.snapshot().feedback.single().field)
+        assertEquals(setOf(FeedbackField.Category, FeedbackField.Date), e.store.snapshot().feedback.single().fields)
+        e.coordinator.rate(id, FeedbackVote.Down, FeedbackField.Category)
+        assertEquals(setOf(FeedbackField.Date), e.store.snapshot().feedback.single().fields)
+        assertEquals(e.store.receipt(id)!!.operationId, e.store.snapshot().feedback.single().assessedOperationId)
     }
 
     @Test

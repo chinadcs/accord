@@ -3,6 +3,13 @@ package app.accord.core.chat
 import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.Serializable
 
+const val LEGACY_CONVERSATION_ID = "legacy"
+
+data class ChatConversation(
+    val id: String, val title: String, val createdAtMillis: Long, val lastUsedAtMillis: Long,
+    val selected: Boolean = false, val draftText: String = "", val scrollIndex: Int = 0, val scrollOffset: Int = 0,
+)
+
 /** Ciclo de vida de uma mensagem (S3 §6). Só no aparelho: nunca entra na fila de sincronização. */
 enum class MessageState {
     /** Gravada, esperando a vez na fila serial. */
@@ -52,6 +59,7 @@ data class ChatMessage(
     val note: String? = null,
     /** Categorias sugeridas pelo modelo (IDs): só ordenam as opções do recibo "a classificar". */
     val categoryHints: List<String> = emptyList(),
+    val conversationId: String = LEGACY_CONVERSATION_ID,
 )
 
 /** Tentativa de interpretação, para o diagnóstico local (S3 §14): sem texto, valores nem nomes. */
@@ -86,6 +94,7 @@ data class ChatQuestionRecord(
     val amountCents: Long?,
     val state: QuestionState,
     val createdAtMillis: Long,
+    val detachedEntryIds: List<String> = emptyList(),
 )
 
 enum class ReceiptState { Active, ChangedLater, Undone }
@@ -138,7 +147,7 @@ data class ChatReceiptRecord(
 enum class FeedbackVote { Up, Down }
 
 /** O que o joinha para baixo aponta como errado; sem escolha, o voto fica sem campo. */
-enum class FeedbackField { Value, Category, Date, Payment, Understood }
+enum class FeedbackField { Value, Category, Date, Payment, Understood, NotEntry }
 
 /**
  * Voto vigente de um recibo, só neste aparelho. Guarda apenas o ID do recibo, o voto, o campo apontado e o instante:
@@ -149,6 +158,8 @@ data class ChatFeedback(
     val vote: FeedbackVote,
     val field: FeedbackField?,
     val votedAtMillis: Long,
+    val fields: Set<FeedbackField> = field?.let(::setOf).orEmpty(),
+    val assessedOperationId: String? = null,
 )
 
 /** Tudo o que a tela do Chat precisa, numa leitura só. */
@@ -157,13 +168,26 @@ data class ChatSnapshot(
     val questions: List<ChatQuestionRecord>,
     val receipts: List<ChatReceiptRecord>,
     val feedback: List<ChatFeedback> = emptyList(),
-)
+    val conversations: List<ChatConversation> = emptyList(),
+) {
+    val activeConversation: ChatConversation? get() = conversations.firstOrNull { it.selected }
+    fun forConversation(id: String): ChatSnapshot {
+        val kept = messages.filter { it.conversationId == id }
+        val ids = kept.map { it.id }.toSet()
+        val receipts = receipts.filter { it.messageId in ids }
+        val receiptIds = receipts.map { it.id }.toSet()
+        return copy(messages = kept, questions = questions.filter { it.messageId in ids }, receipts = receipts,
+            feedback = feedback.filter { it.receiptId in receiptIds })
+    }
+}
 
 /** Arquivo de transferência do histórico (S3 §12): sem senhas, tokens ou credenciais. */
 data class ChatArchive(
     val messages: List<ChatMessage>,
     val questions: List<ChatQuestionRecord>,
     val receipts: List<ChatReceiptRecord>,
+    val conversations: List<ChatConversation> = emptyList(),
+    val attempts: List<ChatAttempt> = emptyList(),
 )
 
 /**
@@ -171,6 +195,16 @@ data class ChatArchive(
  * sincronização: mensagens, perguntas e recibos não saem do celular.
  */
 interface ChatStore {
+    suspend fun ensureActiveConversation(): ChatConversation
+    suspend fun conversation(id: String): ChatConversation?
+    suspend fun createConversation(title: String = "Nova conversa"): ChatConversation
+    suspend fun selectConversation(id: String): Boolean
+    suspend fun renameConversation(id: String, title: String): Boolean
+    suspend fun saveConversationDraft(id: String, text: String)
+    suspend fun saveConversationPosition(id: String, index: Int, offset: Int)
+    suspend fun touchConversation(id: String)
+    /** Remove só a conversa; perguntas abertas estruturadas ficam para Revisar. Chamar pelo coordenador. */
+    suspend fun deleteConversation(id: String): Boolean
     fun observe(): Flow<ChatSnapshot>
     suspend fun snapshot(): ChatSnapshot
 
@@ -199,7 +233,7 @@ interface ChatStore {
     /** Expurgo dos votos anteriores a [beforeMillis] (retenção de 30 dias). */
     suspend fun purgeFeedbackBefore(beforeMillis: Long)
 
-    /** Apaga mensagens, perguntas, recibos, tentativas e votos deste aparelho; lançamentos não mudam. */
+    /** Apaga conversas/mensagens/recibos/tentativas/votos; preserva perguntas abertas e finanças. Chamar pelo coordenador. */
     suspend fun clear()
 
     suspend fun export(): ChatArchive

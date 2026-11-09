@@ -82,7 +82,7 @@ class RegisterViewModel(
 ) : ViewModel() {
     private val today = provider.clock.today()
     private val commandId: CommandId = CommandId(saved.get<String>(KEY_COMMAND) ?: UUID.randomUUID().toString().also { saved[KEY_COMMAND] = it })
-    private var draftId: String? = saved[KEY_DRAFT]
+    private var draftId: String? = saved.get<String>("sourceDraft") ?: saved[KEY_DRAFT]
 
     private val _state = MutableStateFlow(
         RegisterUiState(

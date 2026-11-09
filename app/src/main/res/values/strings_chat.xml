@@ -1,5 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="action_save">Salvar</string>
+    <string name="action_cancel">Cancelar</string>
+    <string name="pending_chat_draft">Completar lançamento do Chat</string>
+    <string name="pending_choose_category">Escolher categoria</string>
+    <string name="pending_correction">Correção pendente</string>
+    <string name="pending_correction_body">A conversa foi apagada. Abra o lançamento para conferir e editar. Depois volte e conclua esta revisão.</string>
+    <string name="pending_correction_missing">O alvo não está disponível. Confira os lançamentos antes de concluir a revisão.</string>
+    <string name="pending_correction_done">Concluir revisão</string>
+    <string name="chat_conversations">Conversas</string>
+    <string name="chat_conversation_new">Nova conversa</string>
+    <string name="chat_conversation_current">Conversa atual</string>
+    <string name="chat_conversation_rename">Renomear</string>
+    <string name="chat_conversation_delete">Excluir conversa</string>
+    <string name="chat_conversation_name">Nome da conversa</string>
+    <string name="chat_conversation_delete_title">Excluir “%1$s”?</string>
+    <string name="chat_conversation_delete_body">Apaga mensagens, rascunho de texto e avaliações desta conversa neste aparelho. Lançamentos e pendências financeiras permanecem em Revisar. Conteúdo já enviado com seu consentimento permanece na coleta; sua exclusão é feita em Privacidade.</string>
     <!-- Chat (tela 04) -->
     <string name="chat_composer_hint">Digite seu registro…</string>
     <string name="chat_composer_label">Mensagem do Chat</string>
@@ -65,6 +81,7 @@
     <string name="feedback_field_date">Data</string>
     <string name="feedback_field_payment">Pagamento</string>
     <string name="feedback_field_understood">Entendeu outra coisa</string>
+    <string name="feedback_field_not_entry">Não era lançamento</string>
     <string name="receipt_announce">Registrado %1$s. %2$s</string>
 
     <!-- Perguntas -->

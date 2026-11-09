@@ -267,7 +267,9 @@ class AppContainer(
 
     /** Apaga só o histórico deste aparelho; lançamentos e a fila de sincronização não mudam. */
     suspend fun clearChat() {
-        chatStore?.clear()
+        val runtime = access.runtime.value ?: return
+        val coordinator = chat.filterNotNull().first()
+        if (access.runtime.value === runtime) coordinator.clearHistory()
     }
 
     override suspend fun onManualSaved(chatMessageId: String) {

@@ -20,6 +20,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.material3.AlertDialog
+import app.accord.core.chat.QuestionLink
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
@@ -58,16 +63,20 @@ fun PendingQueueRoute(
     onOpenEntry: (String) -> Unit,
     onOpenInvoice: (YearMonth, String?) -> Unit,
     onOpenChat: () -> Unit,
+    onOpenManual: (String) -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     RefreshOnResume(viewModel::refresh)
+    var correction by remember { mutableStateOf<QueueItem.ChatCorrection?>(null) }
     PendingQueueScreen(
         state, padding, onBack, viewModel::setFilter, viewModel::clearBatchFilter, viewModel::refresh, viewModel::accept,
         onOpen = { item ->
             when (item) {
                 is QueueItem.ImportDoubt -> onOpenImport(item.movement.batchId, item.movement.ordinal)
                 is QueueItem.Conflict -> onOpenConflict(item.conflict.operationId)
-                is QueueItem.ChatCategory -> onOpenChat()
+                is QueueItem.ChatCategory -> onOpenEntry((item.item.question.link as QuestionLink.Entry).entryId)
+                is QueueItem.ChatDraft -> onOpenManual(viewModel.draftRoute(item))
+                is QueueItem.ChatCorrection -> correction = item
                 is QueueItem.Record -> when (val p = item.item) {
                     is PendingItem.CategoryToClarify -> onOpenEntry(p.entryId)
                     is PendingItem.InvoiceLink -> onOpenInvoice(p.month, p.cardId)
@@ -78,6 +87,16 @@ fun PendingQueueRoute(
         },
         onOpenChat = onOpenChat,
     )
+    correction?.let { item ->
+        AlertDialog(onDismissRequest = { correction = null }, title = { Text(stringResource(R.string.pending_correction)) },
+            text = { Column {
+                Text(stringResource(R.string.pending_correction_body))
+                item.targets.forEach { (id, label) -> TextButton(onClick = { correction = null; onOpenEntry(id) }) { Text(label) } }
+                if (item.targets.isEmpty()) Text(stringResource(R.string.pending_correction_missing))
+            } },
+            confirmButton = { TextButton(onClick = { viewModel.dismissCorrection(item); correction = null }) { Text(stringResource(R.string.pending_correction_done)) } },
+            dismissButton = { TextButton(onClick = { correction = null }) { Text(stringResource(R.string.action_cancel)) } })
+    }
 }
 
 @Composable
@@ -206,7 +225,7 @@ private fun QueueRow(item: QueueItem, onAccept: (app.accord.ui.review.CategoryRe
                     if (suggestion != null) {
                         Button(onClick = { onAccept(item.item) }) { Text(stringResource(R.string.review_category_accept)) }
                     }
-                    TextButton(onClick = onOpenChat, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.review_category_choose)) }
+                    TextButton(onClick = { onOpen(item) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.pending_choose_category)) }
                 }
             }
         }
@@ -216,6 +235,8 @@ private fun QueueRow(item: QueueItem, onAccept: (app.accord.ui.review.CategoryRe
 /** Motivo, assunto (com data e valor quando se sabe) e ícone da linha; valor que não se sabe não aparece como zero. */
 @Composable
 private fun describe(item: QueueItem): Triple<String, String, Int> = when (item) {
+    is QueueItem.ChatDraft -> Triple(stringResource(R.string.pending_chat_draft), item.draft.fields["description"].orEmpty(), Lucide.drawable.lucide_ic_message_circle)
+    is QueueItem.ChatCorrection -> Triple(stringResource(R.string.pending_correction), listOfNotNull(item.question.description, item.question.amountCents?.let { Money(it).format() }).joinToString(" · "), Lucide.drawable.lucide_ic_message_circle)
     is QueueItem.ImportDoubt -> {
         val m = item.movement
         val amount = movementAmount(m.cents, m.currency)

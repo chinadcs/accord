@@ -624,7 +624,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                                     onDiscard = hub::discard,
                                 )
                                 ReviewConflicts(conflicts) { id -> navController.navigate("$ROUTE_CONFLICT/${Uri.encode(id)}") }
-                                ReviewCategories(categories, onAccept = viewModel::accept, onChoose = { navController.openRoot(Root.Chat) })
+                                ReviewCategories(categories, onAccept = viewModel::accept, onChoose = { navController.navigate(ROUTE_PENDING) })
                             },
                         )
                     }
@@ -1260,6 +1260,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     onOpenEntry = openEntry,
                     onOpenInvoice = { month, card -> navController.navigate("$ROUTE_INVOICE/$month" + (card?.let { "?cardId=$it" } ?: "")) },
                     onOpenChat = { navController.openRoot(Root.Chat) },
+                    onOpenManual = { navController.navigate(it) },
                 )
             }
             composable(
@@ -1303,9 +1304,10 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 )
             }
             composable(
-                "$ROUTE_REGISTER?$ARG_REGISTER_KIND={$ARG_REGISTER_KIND}&$ARG_REGISTER_FORM={$ARG_REGISTER_FORM}&$ARG_REGISTER_CHAT={$ARG_REGISTER_CHAT}&${RegisterViewModel.ARG_SIM_INVOICE}={${RegisterViewModel.ARG_SIM_INVOICE}}",
+                "$ROUTE_REGISTER?$ARG_REGISTER_KIND={$ARG_REGISTER_KIND}&$ARG_REGISTER_FORM={$ARG_REGISTER_FORM}&$ARG_REGISTER_CHAT={$ARG_REGISTER_CHAT}&sourceDraft={sourceDraft}&${RegisterViewModel.ARG_SIM_INVOICE}={${RegisterViewModel.ARG_SIM_INVOICE}}",
                 arguments = listOf(
                     navArgument(RegisterViewModel.ARG_SIM_INVOICE) { type = NavType.StringType; nullable = true; defaultValue = null },
+                    navArgument("sourceDraft") { type = NavType.StringType; nullable = true; defaultValue = null },
                     navArgument(ARG_REGISTER_KIND) { type = NavType.StringType; nullable = true; defaultValue = null },
                     navArgument(ARG_REGISTER_FORM) { type = NavType.StringType; nullable = true; defaultValue = null },
                     navArgument(ARG_REGISTER_CHAT) { type = NavType.StringType; nullable = true; defaultValue = null },

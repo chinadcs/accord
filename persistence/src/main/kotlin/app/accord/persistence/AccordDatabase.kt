@@ -805,12 +805,12 @@ interface SpaceDao {
         EntitySyncRow::class, DraftRow::class, RefundRow::class, LimitPlanRow::class, LimitEntryRow::class, CategoryMoveRow::class, InvoiceRow::class, InvoicePaymentRow::class, RecurrenceRow::class, RecurrenceSegmentRow::class, RecurrenceOverrideRow::class, RecurrenceSettlementRow::class,
         OperationRow::class, OperationChangeRow::class,
         SyncStateRow::class, ConflictRow::class, ConflictEntityRow::class,
-        ChatMessageRow::class, ChatAttemptRow::class, ChatQuestionRow::class, ChatReceiptRow::class, ChatFeedbackRow::class,
+        ChatMessageRow::class, ChatAttemptRow::class, ChatQuestionRow::class, ChatReceiptRow::class, ChatFeedbackRow::class, ChatConversationRow::class,
         ImportBatchRow::class, ImportMovementRow::class, ImportDecisionRow::class, ImportPairRow::class,
         AlertEventRow::class, AlertDisplayRow::class, AlertPreferenceRow::class, IconAssociationRow::class, IntentionRow::class,
         AccountMoveRow::class, ClueEvaluationRow::class,
     ],
-    version = 20,
+    version = 21,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2, spec = Migration1To2::class),
@@ -846,6 +846,7 @@ interface SpaceDao {
         AutoMigration(from = 17, to = 18),
         AutoMigration(from = 18, to = 19, spec = Migration18To19::class),
         AutoMigration(from = 19, to = 20),
+        AutoMigration(from = 20, to = 21, spec = Migration20To21::class),
     ],
 )
 abstract class AccordDatabase : RoomDatabase() {
@@ -858,6 +859,14 @@ abstract class AccordDatabase : RoomDatabase() {
 class Migration1To2 : AutoMigrationSpec {
     override fun onPostMigrate(connection: SQLiteConnection) {
         connection.execSQL("UPDATE operation SET syncState = 'ACKNOWLEDGED' WHERE acknowledged = 1")
+    }
+}
+
+/** Conversa anterior preservada e votos antigos vinculados à versão de resultado que avaliavam. */
+class Migration20To21 : AutoMigrationSpec {
+    override fun onPostMigrate(connection: SQLiteConnection) {
+        connection.execSQL("INSERT INTO chat_conversation(id,title,createdAtMillis,lastUsedAtMillis,selected,draftText,scrollIndex,scrollOffset) SELECT 'legacy','Histórico anterior',MIN(createdAtMillis),MAX(createdAtMillis),1,'',0,0 FROM chat_message HAVING COUNT(*) > 0")
+        connection.execSQL("UPDATE chat_feedback SET fieldsJson = CASE WHEN field IS NULL THEN '[]' ELSE json_array(field) END, assessedOperationId = (SELECT operationId FROM chat_receipt WHERE chat_receipt.id = chat_feedback.receiptId)")
     }
 }
 

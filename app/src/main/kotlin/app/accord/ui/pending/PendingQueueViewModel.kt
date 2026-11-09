@@ -5,6 +5,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.accord.SpaceProvider
 import app.accord.core.chat.ChatCoordinator
+import app.accord.core.chat.ChatQuestionRecord
+import app.accord.core.chat.QuestionLink
+import app.accord.core.chat.QuestionState
+import app.accord.core.chat.DraftCodec
+import app.accord.core.space.LocalDraft
+import app.accord.core.space.DraftSource
+import app.accord.ui.chat.ChatPrefill
+import app.accord.ui.register.FormCodec
+import android.net.Uri
 import app.accord.core.importing.PendingMovement
 import app.accord.core.space.PendingItem
 import app.accord.core.space.QueryResult
@@ -46,11 +55,17 @@ sealed interface QueueItem {
     data class ChatCategory(val item: CategoryReviewItem) : QueueItem {
         override val key get() = item.key
     }
+    data class ChatDraft(val draft: LocalDraft, val messageId: String?) : QueueItem {
+        override val key get() = "chat-draft-${draft.id}"
+    }
+    data class ChatCorrection(val question: ChatQuestionRecord, val targets: List<Pair<String, String>>) : QueueItem {
+        override val key get() = "chat-correction-${question.id}"
+    }
 }
 
 fun QueueItem.matches(filter: QueueFilter): Boolean = when (filter) {
     QueueFilter.All -> true
-    QueueFilter.Chat -> this is QueueItem.ChatCategory
+    QueueFilter.Chat -> this is QueueItem.ChatCategory || this is QueueItem.ChatDraft || this is QueueItem.ChatCorrection
     QueueFilter.Import -> this is QueueItem.ImportDoubt
     QueueFilter.Conflicts -> this is QueueItem.Conflict
     QueueFilter.Records -> this is QueueItem.Record
@@ -109,13 +124,30 @@ class PendingQueueViewModel(
                 return@launch
             }
             val conflicts = sync.conflicts()
-            val categories = chat.value?.snapshot?.first()?.let(::buildCategoryReview).orEmpty()
+            val snapshot = chat.value?.snapshot?.first()
+            val categories = snapshot?.let(::buildCategoryReview).orEmpty()
+            val questions = snapshot?.questions.orEmpty().filter { it.state == QuestionState.Open }
+            val draftQuestions = questions.mapNotNull { q -> (q.link as? QuestionLink.Draft)?.let { it.draftId to q.messageId } }.toMap()
+            val drafts = (provider.space().drafts() as? QueryResult.Data)?.value.orEmpty()
+                .filter { it.source == DraftSource.Chat || it.id in draftQuestions }
+            val corrections = questions.filter { it.link is QuestionLink.Correction && snapshot?.messages?.none { m -> m.id == it.messageId } == true }.map { q ->
+                val ids = (q.detachedEntryIds + listOfNotNull((q.link as QuestionLink.Correction).request.entryId)).distinct()
+                val targets = ids.mapNotNull { id ->
+                    (provider.space().entry(id) as? QueryResult.Data)?.value?.takeUnless { it.voided }?.let {
+                        id to "${it.description} · ${it.amount.format()} · ${it.purchaseDate ?: it.dueDate ?: it.settledDate ?: ""}"
+                    }
+                }
+                QueueItem.ChatCorrection(q, targets)
+            }
             val items = buildList {
                 conflicts.forEach { add(QueueItem.Conflict(it)) }
                 // Primeiro o que já dá para aplicar; depois por lote e ordem do arquivo.
                 imports.sortedWith(compareBy({ !it.ready }, { it.batchStartedAtMillis }, { it.ordinal })).forEach { add(QueueItem.ImportDoubt(it)) }
-                records.forEachIndexed { index, item -> add(QueueItem.Record(item, index)) }
+                val categoryEntries = categories.map { (it.question.link as QuestionLink.Entry).entryId }.toSet()
+                records.filterNot { it is PendingItem.CategoryToClarify && it.entryId in categoryEntries }.forEachIndexed { index, item -> add(QueueItem.Record(item, index)) }
                 categories.forEach { add(QueueItem.ChatCategory(it)) }
+                drafts.forEach { add(QueueItem.ChatDraft(it, draftQuestions[it.id])) }
+                addAll(corrections)
             }
             _state.update { it.copy(loading = false, failed = false, items = items) }
         }
@@ -128,6 +160,18 @@ class PendingQueueViewModel(
             chat.value?.answer(item.question.id, option)
             refresh()
         }
+    }
+
+    fun draftRoute(item: QueueItem.ChatDraft): String {
+        val today = provider.clock.today()
+        val form = if (item.draft.source == DraftSource.Form) FormCodec.fromFields(item.draft.fields, today)
+            else ChatPrefill.toForm(DraftCodec.fromFields(item.draft.fields), today)
+        return "register?form=${Uri.encode(FormCodec.encode(form))}&sourceDraft=${Uri.encode(item.draft.id)}" +
+            (item.messageId?.let { "&chatMessage=${Uri.encode(it)}" } ?: "")
+    }
+
+    fun dismissCorrection(item: QueueItem.ChatCorrection) {
+        viewModelScope.launch { chat.value?.discardQuestion(item.question.id); refresh() }
     }
 
     companion object {

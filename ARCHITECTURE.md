@@ -1,5 +1,11 @@
 # Arquitetura do Accord
 
+Conversas locais (S8, ADR 0059): Room 21 preserva identidade, nome, última seleção, rascunho e
+posição por conversa. O coordenador monta contexto por conversa e serializa exclusão com aplicação
+financeira; perguntas estruturadas sobrevivem em Revisar sem o texto apagado. Feedback admite
+múltiplos motivos opcionais por versão do resultado, sem aprendizado automático. Transferência
+manual v2 lê v1 e nunca reaplica comandos financeiros. Validado em JVM/AVD; aparelhos pendentes.
+
 Revisão: 24/10/2026. O repositório contém aplicativo Android/Compose, motor Kotlin, persistência
 Room, protocolo/fake/adaptador remoto, migrações Supabase e testes. S1 está fechado em
 `accord-9tl`, com pendências em `accord-abv`; S2 está entregue em `accord-rsw` (testes JVM,
