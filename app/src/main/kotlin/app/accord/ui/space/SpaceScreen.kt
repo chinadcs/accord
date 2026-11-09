@@ -20,6 +20,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import app.accord.ui.components.AccordButton as Button
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -29,9 +30,13 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -97,20 +102,12 @@ fun SpaceRoute(
         onTab = viewModel::selectTab, onName = viewModel::onName, onCode = viewModel::onCode,
         onCreate = viewModel::create, onJoin = viewModel::join, onGenerate = viewModel::generateInvite,
         onRevoke = viewModel::revokeInvite,
-        onScan = {
-            InviteScanner.scan(context) { result ->
-                when (result) {
-                    is InviteScanner.Result.Scanned -> viewModel.onScanned(result.raw)
-                    InviteScanner.Result.Unavailable -> viewModel.scanUnavailable()
-                    InviteScanner.Result.Canceled -> Unit
-                }
-            }
-        },
+        onOpenCamera = { InviteScanner.openCamera(context) },
         onRefresh = { viewModel.refresh(announce = true) },
         onCopy = { code ->
             scope.launch {
                 val clip = ClipData.newPlainText(clipLabel, code)
-                // O código é um segredo de uso único: o Android esconde a prévia quando suporta.
+                // O código de convite é sensível: o Android esconde a prévia quando suporta.
                 if (Build.VERSION.SDK_INT >= 33) {
                     clip.description.extras = PersistableBundle().apply { putBoolean(ClipDescription.EXTRA_IS_SENSITIVE, true) }
                 }
@@ -139,8 +136,10 @@ fun SpaceScreen(
     onContinue: () -> Unit,
     onBack: (() -> Unit)?,
     onRevoke: () -> Unit = {},
-    onScan: () -> Unit = {},
+    onOpenCamera: () -> Boolean = { false },
 ) {
+    var showCameraGuide by rememberSaveable(access.space?.spaceId, ui.tab) { mutableStateOf(false) }
+    var cameraUnavailable by rememberSaveable { mutableStateOf(false) }
     Column(
         Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
         verticalArrangement = Arrangement.spacedBy(AccordSpacing.s4),
@@ -154,11 +153,36 @@ fun SpaceScreen(
             Text(stringResource(R.string.space_title), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f).semantics { heading() })
         }
         if (access.space == null) {
-            NoSpaceContent(ui, access, onTab, onName, onCode, onCreate, onJoin, onScan)
+            NoSpaceContent(ui, access, onTab, onName, onCode, onCreate, onJoin, onScan = {
+                cameraUnavailable = false
+                showCameraGuide = true
+            })
         } else {
             ManageContent(ui, access, firstRun, onGenerate, onRefresh, onCopy, onContinue, onRevoke)
         }
         ui.message?.let { MessageBanner(it) }
+    }
+    if (showCameraGuide) {
+        AlertDialog(
+            onDismissRequest = { showCameraGuide = false },
+            title = { Text(stringResource(R.string.space_camera_guide_title)) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
+                    Text(stringResource(R.string.space_camera_guide))
+                    if (cameraUnavailable) {
+                        Text(stringResource(R.string.space_scan_unavailable), color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    if (onOpenCamera()) showCameraGuide = false else cameraUnavailable = true
+                }) { Text(stringResource(R.string.space_camera_open)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showCameraGuide = false }) { Text(stringResource(R.string.space_camera_back)) }
+            },
+        )
     }
 }
 

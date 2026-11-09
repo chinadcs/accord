@@ -78,7 +78,7 @@
     <string name="space_never_checked">Ainda não verificado neste aparelho.</string>
     <string name="space_check_participants">Verificar participantes</string>
     <string name="space_invite_title">Convidar pessoas</string>
-    <string name="space_invite_note">Quem for entrar cria o próprio acesso e lê o QR ou digita o código em Entrar com código. O mesmo código serve a mais de uma pessoa, até o espaço lotar, e vale por 3 dias.</string>
+    <string name="space_invite_note">Quem for entrar cria o próprio acesso e digita o código em Entrar com código. Também pode ler o QR pela câmera do celular, copiar e colar o código. O mesmo código serve a mais de uma pessoa, até o espaço lotar, e vale por 3 dias.</string>
     <plurals name="space_invite_slots">
         <item quantity="one">Resta %1$d vaga.</item>
         <item quantity="other">Restam %1$d vagas.</item>
@@ -87,9 +87,12 @@
     <string name="space_invite_revoking">Invalidando…</string>
     <string name="space_msg_invite_revoked">Código invalidado. Gere outro quando quiser convidar.</string>
     <string name="space_qr_content_description">QR Code do convite. Leva o mesmo código que aparece escrito ao lado.</string>
-    <string name="space_scan_qr">Ler QR Code</string>
-    <string name="space_scan_unavailable">A leitura de QR não está disponível neste aparelho. Digite o código.</string>
-    <string name="space_scan_invalid">Esse QR não é de um convite do Accord. Digite o código ou peça outro QR.</string>
+    <string name="space_scan_qr">Usar câmera do celular</string>
+    <string name="space_camera_guide_title">Ler o convite com a câmera</string>
+    <string name="space_camera_guide">Aponte a câmera do celular para o QR do convite e copie o código que aparecer. Depois, volte ao Accord e cole no campo Código de convite.\n\nSe a câmera não ler o QR, peça o código escrito e digite no campo.</string>
+    <string name="space_camera_open">Abrir câmera</string>
+    <string name="space_camera_back">Voltar ao código</string>
+    <string name="space_scan_unavailable">Não foi possível abrir a câmera. Volte ao código para digitar ou colar.</string>
     <string name="space_invite_generate">Gerar código de convite</string>
     <string name="space_invite_generate_again">Gerar outro código</string>
     <string name="space_invite_generating">Gerando código…</string>

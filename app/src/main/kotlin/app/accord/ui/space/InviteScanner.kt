@@ -1,30 +1,24 @@
 package app.accord.ui.space
 
+import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Context
-import com.google.mlkit.vision.barcode.common.Barcode
-import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
-import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
+import android.content.Intent
+import android.provider.MediaStore
 
 /**
- * Leitura do QR do convite pelo leitor de código do Google Play Services (ADR 0053): a câmera é do
- * leitor do sistema, então o Accord não pede permissão de câmera. Sem Play Services ou com a leitura
- * recusada, quem chama volta à digitação do código.
+ * Abre a câmera externa para a pessoa ler o QR, copiar o código e colá-lo no Accord (ADR 0065).
+ * Não captura imagem, recebe resultado nem pede permissão de câmera para o Accord.
  */
 object InviteScanner {
-    sealed interface Result {
-        data class Scanned(val raw: String?) : Result
-        data object Canceled : Result
-        data object Unavailable : Result
-    }
-
-    fun scan(context: Context, onResult: (Result) -> Unit) {
-        val options = GmsBarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).build()
-        runCatching { GmsBarcodeScanning.getClient(context, options).startScan() }
-            .onFailure { onResult(Result.Unavailable) }
-            .onSuccess { task ->
-                task.addOnSuccessListener { onResult(Result.Scanned(it.rawValue)) }
-                    .addOnCanceledListener { onResult(Result.Canceled) }
-                    .addOnFailureListener { onResult(Result.Unavailable) }
-            }
+    fun openCamera(context: Context): Boolean = try {
+        val intent = Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA)
+        if (context !is Activity) intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        context.startActivity(intent)
+        true
+    } catch (_: ActivityNotFoundException) {
+        false
+    } catch (_: SecurityException) {
+        false
     }
 }

@@ -106,19 +106,6 @@ class SpaceViewModel(private val access: AccessCenter) : ViewModel() {
         }
     }
 
-    /** QR lido: só um código de convite bem formado segue para o serviço; qualquer outro conteúdo é descartado aqui. */
-    fun onScanned(raw: String?) {
-        val code = app.accord.ui.space.InviteQr.codeFrom(raw)
-        if (code == null) {
-            _ui.update { it.copy(message = ScreenMessage(MessageKind.Attention, R.string.space_scan_invalid)) }
-            return
-        }
-        _ui.update { it.copy(code = code, codeError = null, message = null) }
-        join()
-    }
-
-    fun scanUnavailable() = _ui.update { it.copy(message = ScreenMessage(MessageKind.Attention, R.string.space_scan_unavailable)) }
-
     fun revokeInvite() {
         if (_ui.value.working) return
         _ui.update { it.copy(working = true, message = null) }

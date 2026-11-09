@@ -153,7 +153,6 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.lucide.icons)
     implementation(libs.zxing.core)
-    implementation(libs.gms.code.scanner)
     implementation(libs.work.runtime)
     implementation(libs.serialization.json)
     // Texto de PDF no aparelho (S4.6): PdfBox-Android, Apache-2.0, versão fixada.

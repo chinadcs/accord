@@ -6,6 +6,10 @@ decision_date: 2026-11-08
 
 # ADR 0053 — Espaço de até quatro pessoas e código de convite multiuso
 
+Complemento de 09/11/2026: o [ADR 0065](0065-convite-pela-camera-externa-sem-leitor-proprietario.md)
+substitui somente a leitura integrada pelo Google por leitura externa/copiar/colar. As demais
+decisões deste ADR continuam aceitas. O trecho original sobre o leitor abaixo é histórico.
+
 ## Contexto
 
 O [ADR 0014](0014-espaco-igualitario-e-convite.md) limita o espaço a duas pessoas e o código a uso único. Em

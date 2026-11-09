@@ -271,7 +271,7 @@ class AccessUiTest {
     fun entrarComCodigoOfereceLerQrECodigoDigitadoContinuaDisponivel() {
         showSpace(SpaceUi(tab = SpaceTab.Join), access = AccessState(stage = EntryStage.NoSpace))
         compose.onNodeWithTag("space-scan-qr").assertIsDisplayed()
-        compose.onNodeWithText("Ler QR Code").assertIsDisplayed()
+        compose.onNodeWithText("Usar câmera do celular").assertIsDisplayed()
         compose.onNodeWithText("Código de convite", substring = true).assertExists()
     }
 
