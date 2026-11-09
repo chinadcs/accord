@@ -158,6 +158,55 @@ class ApkUpdateTest {
         assertTrue(ReleaseNotes.extract("x".repeat(10_000)).length <= 4_001)
     }
 
+    @Test fun releaseNotesByCategoryKeepEveryCategoryAndDropTheProse() {
+        val body = """
+            Atualize por cima. **Não desinstale.**
+
+            ### ✨ Novidades
+            - **Início** novo
+
+            ### ⚙️ Mudanças
+            - Barra reorganizada
+
+            ### 🧩 Correções
+            - Ajuste no Android 10
+
+            Pré-release do piloto. Ainda não demonstrado: algo.
+
+            Accord é software livre sob a GNU GPLv3.
+
+            Use `accord.apk`.
+        """.trimIndent()
+        val expected = """
+            ✨ Novidades
+            • Início novo
+
+            ⚙️ Mudanças
+            • Barra reorganizada
+
+            🧩 Correções
+            • Ajuste no Android 10
+        """.trimIndent()
+        assertEquals(expected, ReleaseNotes.extract(body))
+    }
+
+    @Test fun releaseNotesExplicitSectionKeepsItsSubsections() {
+        val body = """
+            ## Instalação
+            - Baixe
+
+            ## Nesta versão
+            ### Novo
+            - A
+            ### Corrigido
+            - B
+
+            ## Licença
+            - GPL
+        """.trimIndent()
+        assertEquals("Novo\n• A\nCorrigido\n• B", ReleaseNotes.extract(body))
+    }
+
     @Test fun feedCarriesSizeDigestAndNotesOfTheAsset() {
         val digest = "a".repeat(64)
         val json = """[{"tag_name":"v0.2.0","draft":false,"prerelease":true,"body":"## Nesta versão\n- Algo","assets":[{"name":"accord.apk","state":"uploaded","size":2048,"digest":"sha256:$digest","browser_download_url":"https://github.com/chinadcs/accord/releases/download/v0.2.0/accord.apk"}]}]"""
