@@ -52,3 +52,7 @@ não usada como contexto de outra conversa. O SLM opcional segue adiado (ADR 003
   preservação/classificação sem mensagem, rascunho e transferência v1/v2 sem reaplicar finanças.
   AVD API 33: `ChatConversationsUiTest` (criar, renomear, alternar, recriar e excluir), aprovado.
   Validação física/TalkBack/fonte nos dois Galaxy continua em `accord-0grs.2`.
+- Automação física de 09/11/2026 (`accord-0grs.2.1`): conversas aprovadas em retrato no S23;
+  feedback com múltiplos motivos, recriação e retenção de 30 dias aprovado no Room Android.
+  Paisagem/200% e teclado têm falhas em diagnóstico (`accord-9zr3`); TalkBack falado foi
+  adiado pelo usuário. [Relatório local](../s23-validacao-automatica-2026-11-09.md).

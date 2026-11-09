@@ -3,6 +3,8 @@ package app.accord
 import android.content.Intent
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasScrollAction
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -77,6 +79,18 @@ class ForecastFlowTest {
     }
 
     private fun waitForText(text: String) {
+        if (text == "Categorias") {
+            // O gráfico ocupa o início do orçamento; o cabeçalho é um item lazy abaixo dele.
+            // Voltar das previsões também pode restaurar uma posição mais baixa da lista.
+            compose.waitUntil(15_000) { compose.onAllNodes(hasScrollAction()).fetchSemanticsNodes().isNotEmpty() }
+            compose.onNode(hasScrollAction()).performScrollToNode(hasText(text))
+        }
+        if (text == "$categoryName · excesso já ocorrido") {
+            compose.waitUntil(15_000) {
+                runCatching { compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange))
+                    .performScrollToNode(hasText(text, substring = true)) }.isSuccess
+            }
+        }
         compose.waitUntil(15_000) { compose.onAllNodes(hasText(text, substring = true)).fetchSemanticsNodes().isNotEmpty() }
     }
 

@@ -12,6 +12,8 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.Assert.assertTrue
+import android.view.WindowManager
 import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
@@ -47,5 +49,18 @@ class AppLockUiTest {
     @Test fun recriarActivityNaoApagaBloqueio() {
         scenario!!.recreate()
         compose.onNodeWithText("Accord bloqueado").assertIsDisplayed()
+    }
+
+    @Test fun janelaProtegeCapturaMesmoDesbloqueadaEAposRecriacao() {
+        fun secureWindow() {
+            scenario!!.onActivity { activity ->
+                assertTrue(activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0)
+            }
+        }
+        secureWindow()
+        compose.runOnIdle { container.appLock.authenticated() }
+        secureWindow()
+        scenario!!.recreate()
+        secureWindow()
     }
 }

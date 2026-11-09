@@ -166,6 +166,7 @@ class ComparisonUiTest {
         see("Outubro/2026 inclui dias que ainda não aconteceram; parte dos valores é prevista.")
         see("Outubro/2026 tem 2 vínculos de fatura a conferir; os valores entram provisoriamente.")
         see("Outubro/2026 tem ${brl(80).format()} a classificar, fora de qualquer categoria.")
+        see("Ver pendências")
         compose.onNodeWithText("Ver pendências").performClick()
         assertEquals(true, pendings)
     }
@@ -187,6 +188,7 @@ class ComparisonUiTest {
         compose.onNode(hasScrollAction()).performScrollToNode(hasText("Ver Setembro/2026"))
         compose.onNodeWithText("Ver Setembro/2026").performClick()
         assertEquals(listOf<Any?>(sep, "food", DateCriterion.PurchaseDate, false), opened)
+        see("Ver Outubro/2026")
         compose.onNodeWithText("Ver Outubro/2026").performClick()
         assertEquals(listOf<Any?>(oct, "food", DateCriterion.PurchaseDate, false), opened)
     }
@@ -199,7 +201,9 @@ class ComparisonUiTest {
             comparison(listOf(foodRow)),
             controls = ComparisonControls({ criterion = it }, { grouping = it }, {}, {}, {}, {}, {}),
         )
+        see("Data da compra")
         compose.onNodeWithText("Data da compra").performClick()
+        see("Subcategoria")
         compose.onNodeWithText("Subcategoria").performClick()
         assertEquals(DateCriterion.PurchaseDate, criterion)
         assertEquals(ComparisonGrouping.Subcategory, grouping)

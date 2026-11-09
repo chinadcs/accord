@@ -82,7 +82,9 @@ class AggregationPerformanceTest {
         assumeTrue("Passe -Pandroid.testInstrumentationRunnerArguments.accord.perf=true (apaga o banco do app de debug)", args.getString("accord.perf") == "true")
 
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-        context.deleteDatabase(AppContainer.DATABASE_NAME)
+        val existingFixture = args.getString("accord.perf.existing") == "true"
+        if (existingFixture) check(context.packageName == "app.accord.uivalidation")
+        if (!existingFixture) context.deleteDatabase(AppContainer.DATABASE_NAME)
         val container = DevIdentity.container(context)
         val space = container.space()
         val clock = BudgetClock.system()
@@ -93,6 +95,14 @@ class AggregationPerformanceTest {
         note("Data da medição: $today; $months meses até ${current}; $pixPerMonth Pix + $cardPerMonth cartão + $installmentPurchasesPerMonth parceladas por mês; $runs execuções quentes")
 
         // ---- dados ----
+        if (existingFixture) {
+            // Recupera só a medição após o executor expirar: nunca confunde uma base parcial com a completa.
+            assertTrue("Fixture completa de 4.896 comandos + conta/padrão ausente",
+                container.access.runtime.value!!.syncStore.summary().awaitingOperations == months * (pixPerMonth + cardPerMonth + installmentPurchasesPerMonth) + 2)
+            assertTrue(space.movements(current).data("movimentos atuais").size == pixPerMonth)
+            assertTrue(space.movements(current.minusMonths(35)).data("movimentos antigos").size == pixPerMonth)
+            note("Base completa existente reutilizada; geração não repetida (mesmo volume de 36 meses).")
+        } else {
         val account = (space.execute(Envelope(CommandId("perf-acc")), AddAccount(BankRef.Other("Banco"), "Conta")) as CommandResult.Applied).receipt.changes.single().id
         space.execute(Envelope(CommandId("perf-def")), SetMyDefaultAccount(account))
         val leaves = space.categories().data("categorias").filter { it.seedKey != null && it.parentId != null }
@@ -127,6 +137,7 @@ class AggregationPerformanceTest {
             }
         }
         note("Dados gerados: $counter comandos em %.1f s (não é medida do produto)".format((System.nanoTime() - seedStart) / 1e9))
+        }
 
         // ---- consultas ----
         val food = space.categories().data("categorias").first { it.seedKey == "alimentacao" }

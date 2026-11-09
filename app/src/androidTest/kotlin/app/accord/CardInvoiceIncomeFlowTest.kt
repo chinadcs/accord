@@ -137,7 +137,9 @@ class CardInvoiceIncomeFlowTest {
 
     private fun fromBudget(link: String) {
         compose.onNodeWithText("Orçamento").performClick()
-        waitForText("Categorias")
+        // O gráfico antecede o cabeçalho, que pode estar fora da composição lazy.
+        compose.waitUntil(8_000) { compose.onAllNodes(hasScrollAction()).fetchSemanticsNodes().isNotEmpty() }
+        scrollTo("Categorias")
         tap(link)
     }
 

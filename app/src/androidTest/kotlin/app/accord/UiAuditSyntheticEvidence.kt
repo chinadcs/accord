@@ -126,7 +126,7 @@ internal object UiAuditSyntheticEvidence {
                     node(target).performSemanticsAction(SemanticsActions.ScrollBy) { it(step, 0f) }
                     frame("_rolagemh${horizontalNumber}_$page")
                     val advanced = axis(target)
-                    check(advanced.value() > beforeValue + epsilon || advanced.value() >= advanced.maxValue() - epsilon) {
+                    check(kotlin.math.abs(advanced.value() - beforeValue) > epsilon || advanced.value() >= advanced.maxValue() - epsilon) {
                         "Horizontal scroll did not advance: $name / $horizontalNumber / $page / before=$beforeValue / after=${advanced.value()} / max=${advanced.maxValue()}"
                     }
                 }
@@ -151,11 +151,14 @@ internal object UiAuditSyntheticEvidence {
                 check(step > 0f) { "Scroll has zero size: $name / ${target.order}" }
                 node(target).performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, step) }
                 frame("_rolagem${target.order + 1}_v_$page")
-                sweepVisibleHorizontal()
                 val advanced = axis(target)
-                check(advanced.value() > beforeValue + epsilon || advanced.value() >= advanced.maxValue() - epsilon) {
+                // O eixo lazy usa uma estimativa que pode diminuir ao medir itens com outra altura.
+                check(kotlin.math.abs(advanced.value() - beforeValue) > epsilon || advanced.value() >= advanced.maxValue() - epsilon) {
                     "Scroll did not advance: $name / ${target.order} / $page / before=$beforeValue / after=${advanced.value()} / max=${advanced.maxValue()}"
                 }
+                // Trazer um gráfico horizontal à vista pode reposicionar a LazyColumn externa.
+                // Medir o avanço vertical antes dessa operação independente; o fim segue obrigatório.
+                sweepVisibleHorizontal()
             }
             val final = axis(target)
             if (final.value() >= final.maxValue() - epsilon) ended = true

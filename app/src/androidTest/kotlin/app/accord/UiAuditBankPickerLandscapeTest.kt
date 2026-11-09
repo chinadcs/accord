@@ -14,6 +14,7 @@ import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
@@ -75,7 +76,8 @@ class UiAuditBankPickerLandscapeTest {
         compose.onAllNodes(hasText("Mais") and hasClickAction()).onFirst().performClick()
         compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("Contas"))
         compose.onAllNodes(hasText("Contas") and hasClickAction()).onFirst().performClick()
-        compose.onNodeWithText("Adicionar conta").performClick()
+        compose.onNodeWithText("Adicionar conta").performScrollTo().assertIsDisplayed().performClick()
+        compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("Selecionar banco"))
         compose.onNodeWithText("Selecionar banco").performClick()
         compose.onNodeWithText("Escolher banco").assertIsDisplayed()
     }

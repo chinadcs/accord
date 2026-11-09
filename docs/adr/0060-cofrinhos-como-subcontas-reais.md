@@ -71,3 +71,9 @@ próprio da conta além do disponível pelas regras comuns; isso nunca consome c
   [Relatório](../s8-implantacao-hospedada-2026-11-09.md), entrega `accord-0grs.6.1`.
 - S23 FE conectado e atualizado na continuidade de 09/11/2026, preservando dados da instalação;
   coordenação do protocolo 3 concluída em `accord-0grs.6`, sem substituir o aceite físico.
+- Automação física de 09/11/2026 (`accord-0grs.2.1`): formulários de cofrinho aprovados no
+  S23 em retrato e paisagem/200%, com regressão no S20. No hospedado, ambos persistiram fila
+  em modo avião e após morte do processo; conflito de depósito exigiu escolha explícita.
+  Saldo final convergiu em conta 200 + cofrinho 800 = total 1.000 reais, sem depósito duplicado.
+  Fixtures removidas e rede restaurada. [Relatório local](../s23-validacao-automatica-2026-11-09.md).
+  TalkBack real permanece pendente por escolha do usuário.

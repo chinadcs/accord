@@ -75,3 +75,8 @@ jurídico segue responsabilidade do usuário, como no ADR 0054. Sem deploy hospe
   `accord-0grs.6.1`; atualização do S23 permanece no pai `accord-0grs.6`.
 - Na continuidade de 09/11/2026 o usuário conectou o S23 FE: APK protocolo 3 instalado sobre
   a instalação existente, concluindo `accord-0grs.6`. Validação física tem aceite separado.
+- Automação física de 09/11/2026: privacidade e ciclo de vida aprovados no S23 em retrato;
+  paisagem/200% tem falha de visibilidade a investigar em `accord-9zr3`. Biometria/PIN,
+  TalkBack falado e seleção real de destino ZIP foram adiados pelo usuário. Evidências em
+  [relatório local](../s23-validacao-automatica-2026-11-09.md), `accord-0grs.2.1`;
+  o aceite integral de `accord-0grs.2` permanece aberto.

@@ -1,8 +1,6 @@
 package app.accord
 
 import android.graphics.Bitmap
-import android.content.ClipboardManager
-import android.content.Context
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.ime
@@ -10,6 +8,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
@@ -42,8 +43,6 @@ class KeyboardLayoutUiTest {
         (context.applicationContext as TestAccordApplication).container.theme.set(ThemePreference.Dark)
         scenario = ActivityScenario.launch(MainActivity::class.java)
         scenario!!.onActivity { activity ->
-            (activity.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager)
-                .clearPrimaryClip()
             val container = (activity.application as TestAccordApplication).container
             activity.setContent {
                 val density = LocalDensity.current
@@ -60,7 +59,8 @@ class KeyboardLayoutUiTest {
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val directory = File(instrumentation.targetContext.getExternalFilesDir(null), "screens").apply { mkdirs() }
         File(directory, "charcoal-chat-escuro-fonte200-teclado.png").outputStream().use {
-            requireNotNull(instrumentation.uiAutomation.takeScreenshot()).compress(Bitmap.CompressFormat.PNG, 100, it)
+            // Captura só o app; não lê nem apaga a área de transferência pessoal do teclado.
+            compose.onRoot().captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it)
         }
         compose.onNodeWithText("Mensagem do Chat").assertIsDisplayed()
         compose.onNodeWithText("Enviar").assertIsDisplayed()

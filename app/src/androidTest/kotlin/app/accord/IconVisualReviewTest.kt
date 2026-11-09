@@ -72,8 +72,6 @@ class IconVisualReviewTest {
         val dir = File(instrumentation.targetContext.getExternalFilesDir(null), "icones").apply { mkdirs() }
         val file = File(dir, "$name.png")
         file.outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
-        instrumentation.uiAutomation.executeShellCommand("mkdir -p /sdcard/Download/icones").close()
-        instrumentation.uiAutomation.executeShellCommand("cp ${file.absolutePath} /sdcard/Download/icones/$name.png").use { it.fileDescriptor }
         Thread.sleep(300)
     }
 
@@ -171,8 +169,6 @@ class IconVisualReviewTest {
         val text = "marcas=${fresh.brands.brands.size} cargaMs=$loadMs buscaMs=$searches reconhecerUs=$matchUs abrirSeletorMs=$openMs"
         android.util.Log.i("ICONMEASURE", text)
         File(context.getExternalFilesDir(null), "icones-medidas.txt").writeText(text)
-        InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("mkdir -p /sdcard/Download/icones").close()
-        InstrumentationRegistry.getInstrumentation().uiAutomation.executeShellCommand("cp ${File(context.getExternalFilesDir(null), "icones-medidas.txt").absolutePath} /sdcard/Download/icones/medidas.txt").use { it.fileDescriptor }
         assertTrue(fresh.brands.brands.size > 3000)
     }
 }

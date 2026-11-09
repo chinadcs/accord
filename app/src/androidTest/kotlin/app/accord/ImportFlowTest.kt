@@ -6,6 +6,10 @@ import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToNode
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.semantics.getOrNull
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -49,6 +53,10 @@ class ImportFlowTest {
     private val tag = UUID.randomUUID().toString().take(6).uppercase()
     private val description get() = "MERCADO $tag"
     private var batchId = ""
+    // ICU de versões diferentes do Android pode escolher singular ou plural para zero em pt-BR.
+    private fun counts(pattern: String) = SemanticsMatcher("contagens de importação: $pattern") { node ->
+        Regex(pattern).matches(node.config.getOrNull(SemanticsProperties.Text)?.joinToString("") { it.text }.orEmpty())
+    }
 
     @Before
     fun seed() = runBlocking {
@@ -116,14 +124,16 @@ class ImportFlowTest {
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("Revisar importação")).fetchSemanticsNodes().isNotEmpty() }
         // A transição entre telas ainda pode estar terminando: espera o movimento ficar visível.
         compose.waitUntil(5_000) { runCatching { compose.onNodeWithText(description).assertIsDisplayed() }.isSuccess }
-        compose.onNodeWithText("1 movimento: 1 novo · 0 vínculos · 0 dúvidas").assertIsDisplayed()
+        val summaryCounts = counts("1 movimento: 1 novo · 0 vínculos? · 0 dúvidas?")
+        compose.onNode(SemanticsMatcher.keyIsDefined(SemanticsProperties.VerticalScrollAxisRange)).performScrollToNode(summaryCounts)
+        compose.onNode(summaryCounts).assertIsDisplayed()
 
-        compose.onNodeWithText("Confirmar itens conferidos").performClick()
+        compose.onNodeWithText("Confirmar itens conferidos").assertIsDisplayed().performClick()
         compose.onNodeWithText("1 lançamento novo").assertIsDisplayed()
         compose.onNodeWithText("Confirmar").performClick()
 
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("Importação concluída")).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithText("1 novo · 0 vínculos · 0 pendentes").assertIsDisplayed()
+        compose.onNode(counts("1 novo · 0 vínculos? · 0 pendentes?")).assertIsDisplayed()
         compose.onNodeWithText("Salvo neste aparelho. Será enviado ao outro aparelho quando houver conexão.").assertIsDisplayed()
 
         // O lançamento existe, vindo de uma importação, e o resultado gravado não reaplica nada ao reabrir.

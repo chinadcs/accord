@@ -13,9 +13,11 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.isDialog
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.printToLog
+import androidx.compose.ui.test.printToString
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -87,6 +89,8 @@ class ChatFlowTest {
         } catch (e: Throwable) {
             android.util.Log.e("TREE", "esperava: $text")
             compose.onRoot().printToLog("TREE")
+            val ctx = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().targetContext
+            java.io.File(ctx.getExternalFilesDir(null), "chat-failure.txt").writeText(compose.onRoot().printToString())
             throw e
         }
     }
@@ -152,6 +156,8 @@ class ChatFlowTest {
         // A pergunta some e o recibo mostra a categoria escolhida, no mesmo lançamento.
         compose.waitUntil(10_000) { compose.onAllNodesWithText("qual categoria?", substring = true).fetchSemanticsNodes().isEmpty() }
         waitForText("Alterado depois")
+        // O recibo original e o novo preservam o histórico; com IME aberto o novo pode estar abaixo.
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Pet", substring = true))
         waitForText("Pet")
     }
 
@@ -175,7 +181,7 @@ class ChatFlowTest {
         waitForText("O celular ficou sem memória")
         compose.onNodeWithText(text).assertIsDisplayed()
         TestModel.interpreter.on(text, proposal("mercado $tag", "20", payment = ChatPayment.Pix))
-        compose.onNodeWithText("Tentar de novo").performClick()
+        compose.onNodeWithText("Tentar de novo").performScrollTo().assertIsDisplayed().performClick()
         waitForText("Registrado: R$")
     }
 
@@ -186,7 +192,7 @@ class ChatFlowTest {
         send(text)
         waitForText("O modelo ainda não está no aparelho")
         compose.onNodeWithText(text).assertIsDisplayed()
-        compose.onNodeWithText("Baixar modelo").assertIsDisplayed()
+        compose.onNodeWithText("Baixar modelo").performScrollTo().assertIsDisplayed()
         waitForText("Registrar manualmente")
         runBlocking { TestModel.install(container) }
     }

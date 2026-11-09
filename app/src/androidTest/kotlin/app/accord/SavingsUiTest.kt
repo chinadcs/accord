@@ -55,7 +55,7 @@ class SavingsUiTest {
         scenario!!.recreate()
         compose.waitUntil(15_000) { compose.onAllNodesWithText("Nome do cofrinho").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Nome do cofrinho").assertTextContains("Viagem")
-        fun save() { compose.onNode(hasText("Salvar") and hasAnyAncestor(isDialog())).performScrollTo().performClick() }
+        fun save() { compose.onNode(hasText("Salvar") and hasAnyAncestor(isDialog())).performScrollTo().assertIsDisplayed().performClick() }
         save()
         compose.waitUntil(15_000) { runBlocking { (space.savingsPockets() as QueryResult.Data).value.size==1 } }
         val p=(space.savingsPockets() as QueryResult.Data).value.single()
@@ -65,7 +65,13 @@ class SavingsUiTest {
         compose.onNodeWithText("Guardar").performScrollTo().performClick()
         compose.onNodeWithText("Valor em reais").performScrollTo().performTextInput("200")
         save()
-        compose.waitUntil(15_000) { balance().pocketsBalance==Money(70000) }
+        try { compose.waitUntil(15_000) { balance().pocketsBalance==Money(70000) } }
+        catch (failure: Throwable) {
+            val roots = compose.onAllNodes(isRoot(), useUnmergedTree = true)
+            java.io.File(app.getExternalFilesDir(null), "savings-failure.txt").writeText(
+                roots.fetchSemanticsNodes().indices.joinToString("\n") { roots[it].printToString() })
+            throw failure
+        }
         assertEquals(Money(30000),balance().balance); assertEquals(Money(100000),balance().totalBalance)
         compose.onNodeWithText("Resgatar").performScrollTo().performClick()
         compose.onNodeWithText("Valor em reais").performScrollTo().performTextInput("700")
