@@ -69,3 +69,7 @@ jurídico segue responsabilidade do usuário, como no ADR 0054. Sem deploy hospe
   arquivado sem envio. Sem implantação hospedada. Coleta/Termos continuam em `accord-g5r8`,
   sem novo consentimento, coleta ou texto jurídico inventado nesta entrega.
 - Galaxy/TalkBack/seleção real de destino no aparelho permanecem em `accord-0grs.2`.
+- Continuidade autorizada em 09/11/2026: migrações e função `privacy` publicadas no hospedado;
+  fumaça Auth/Edge/RPC de exportação e exclusão aprovada, com fixtures removidas. S20 FE
+  atualizado, S23 FE indisponível. [Relatório](../s8-implantacao-hospedada-2026-11-09.md),
+  `accord-0grs.6.1`; atualização do S23 permanece no pai `accord-0grs.6`.

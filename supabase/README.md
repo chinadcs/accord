@@ -36,7 +36,8 @@ o banco guarda só o hash. Essa ação funciona depois de remover o Auth. `verif
 ao handler a autenticação; não autoriza exportação, aprovação ou consulta sem sessão válida.
 Não registrar corpos de requisição, senhas ou comprovantes. `SupabasePrivacyLifecycleTest`
 exercita Auth/Edge/SQL locais e remove suas fixtures; pgTAP verifica membros/versões/retomada.
-As duas migrações S8 são somente locais; nenhum deploy foi executado nesta entrega.
+As migrações e a função foram publicadas em 09/11/2026 após autorização explícita;
+ver o [relatório S8](../docs/s8-implantacao-hospedada-2026-11-09.md).
 
 ```powershell
 supabase start            # exige Docker em execução
@@ -52,13 +53,18 @@ destes testes locais. O aplicativo leva somente a URL do projeto e a chave públ
 ## Projeto hospedado (Free) e release
 
 **S8, 09/11/2026:** as migrações `20261108200000`, `20261108210000` e `20261109010000`
-e a Edge Function `privacy` foram exercitadas somente no Supabase local nesta entrega.
-O aplicativo agora envia protocolo **3** (cofrinhos); o serviço hospedado descrito abaixo
-ainda exige atualização coordenada com os clientes antes do uso desta versão. Não foi feito
-deploy, `db push`, `functions deploy` ou instalação em Galaxy nesta entrega. A configuração
+e a Edge Function `privacy` foram publicadas com autorização explícita. As 15 migrações
+locais/remotas estão alinhadas; o serviço recebe protocolo **3** (cofrinhos). S20 FE atualizado
+sem limpeza; S23 FE indisponível, atualização ainda pendente em `accord-0grs.6`. Protocolos
+1/2 são recusados até atualizar o cliente. A configuração
 `verify_jwt=false` de `privacy` depende da validação explícita no handler: sessão + reautenticação
 nas ações normais; continuação de exclusão apenas com comprovante secreto persistido.
-Não publicar apenas o APK sem atualizar serviço e função. Roteiro/aceite em S8/ADRs 0058 e 0060.
+Fumaça HTTP com Auth/Edge/RPC passou local e hospedada, com fixtures removidas.
+Evidências e limites no [relatório S8](../docs/s8-implantacao-hospedada-2026-11-09.md).
+`node supabase/checks/s8-http.mjs --local` exercita o ambiente local; `--project-ref <ref>`
+exige autorização explícita para criar/remover fixtures no ambiente escolhido. O script captura
+as chaves pelo CLI em memória, sem imprimi-las. No Windows, se necessário, definir
+`ACCORD_SUPABASE_CLI` com o caminho do executável do Supabase.
 
 Projeto hospedado criado pelo usuário (ref `SEU_PROJECT_REF`). Em 08/11/2026 as 8 migrações
 foram aplicadas com `supabase db push --db-url <connect string>` (senha do banco só no ambiente da
@@ -73,7 +79,7 @@ nos dois sentidos e edição em modo avião reconciliada depois (banco: 2 usuár
 Na continuidade autorizada de 08/11/2026 foram aplicadas as quatro migrações restantes
 (`20261108120000` a `20261108150000`), com as 12 versões locais/remotas alinhadas e
 fumaça transacional de avaliações aprovada no hospedado. O S20 FE foi atualizado;
-o S23 FE ainda aguarda atualização e o serviço recusa seus envios pelo protocolo 1.
+o S23 FE não recebeu essa atualização. Desde a publicação S8 acima, o serviço exige protocolo 3.
 P2 continua oculta no release. Ver [relatório da implantação](../docs/s7-implantacao-hospedada-2026-11-08.md).
 
 O APK release lê `accord.release.supabase.url`, `accord.release.supabase.publishableKey` e a

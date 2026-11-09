@@ -65,3 +65,7 @@ próprio da conta além do disponível pelas regras comuns; isso nunca consome c
   com recriação, guardar/resgatar e arquivar; `AccountBalanceUiTest` (três cenários) aprovado.
   Pendências: Galaxy/TalkBack/fonte em `accord-0grs.2`; implantação/atualização coordenada em
   `accord-0grs.6`. Protocolos antigos são recusados; o APK isolado não publica estas mudanças.
+- Continuidade autorizada em 09/11/2026: protocolo 3 e função `privacy` publicados, com 15
+  migrações alinhadas e fumaça HTTP de cofrinhos/reenvio/conflito/exportação/exclusão aprovada.
+  S20 FE atualizado; S23 FE indisponível, atualização pendente no pai `accord-0grs.6`.
+  [Relatório](../s8-implantacao-hospedada-2026-11-09.md), entrega `accord-0grs.6.1`.
