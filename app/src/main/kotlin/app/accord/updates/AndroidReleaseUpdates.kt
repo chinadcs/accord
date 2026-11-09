@@ -1,9 +1,6 @@
 package app.accord.updates
 
-import android.content.ActivityNotFoundException
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import app.accord.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -29,9 +26,11 @@ class AndroidUpdateCheckStore(context: Context) : UpdateCheckStore {
             val version = prefs.getString("version", null) ?: return null
             val code = GitHubReleases.versionCode("v$version") ?: return null
             return AppRelease(version, code,
-                "https://github.com/chinadcs/accord/releases/download/v$version/accord.apk", prefs.getBoolean("prerelease", false))
+                "https://github.com/chinadcs/accord/releases/download/v$version/accord.apk", prefs.getBoolean("prerelease", false),
+                size = prefs.getLong("size", 0), sha256 = prefs.getString("sha256", null), notes = prefs.getString("notes", "").orEmpty())
         }
-        set(value) { prefs.edit().putString("version", value?.version).putBoolean("prerelease", value?.prerelease ?: false).apply() }
+        set(value) { prefs.edit().putString("version", value?.version).putBoolean("prerelease", value?.prerelease ?: false)
+            .putLong("size", value?.size ?: 0).putString("sha256", value?.sha256).putString("notes", value?.notes.orEmpty()).apply() }
 }
 
 class PublicGitHubReleaseFeed : ReleaseFeed {
@@ -63,19 +62,5 @@ class PublicGitHubReleaseFeed : ReleaseFeed {
         } finally {
             connection.disconnect()
         }
-    }
-}
-
-/** Browser owns the download and Android owns installation confirmation/signature verification. */
-fun openReleaseDownload(context: Context, release: AppRelease): Boolean {
-    val expected = "https://github.com/chinadcs/accord/releases/download/v${release.version}/accord.apk"
-    if (release.downloadUrl != expected || GitHubReleases.versionCode("v${release.version}") != release.code) return false
-    return try {
-        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(expected)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-        true
-    } catch (_: ActivityNotFoundException) {
-        false
-    } catch (_: SecurityException) {
-        false
     }
 }

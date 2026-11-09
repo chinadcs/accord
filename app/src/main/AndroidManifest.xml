@@ -6,6 +6,8 @@
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <!-- Android 13+: pedida só pelo toque em "Permitir notificações" (passo dos Primeiros passos e tela 27). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- Atualização pelo próprio app (ADR 0070): entrega o APK baixado ao instalador do Android, que pede a confirmação da pessoa. -->
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <!-- Lista dos apps instalados com ícone de abertura, para a pessoa escolher quais notificações o Accord lê (ADR 0069); sem QUERY_ALL_PACKAGES. -->
     <queries>
@@ -45,6 +47,10 @@
                 <data android:mimeType="text/comma-separated-values" />
             </intent-filter>
         </activity>
+
+        <receiver
+            android:name=".updates.UpdateInstallReceiver"
+            android:exported="false" />
 
         <!-- Leitura opcional de notificações de banco (ADR 0069): só funciona depois de a pessoa conceder o acesso nos ajustes do Android. -->
         <service

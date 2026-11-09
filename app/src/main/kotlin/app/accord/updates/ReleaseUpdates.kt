@@ -8,7 +8,16 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.serialization.json.*
 
-data class AppRelease(val version: String, val code: Int, val downloadUrl: String, val prerelease: Boolean)
+/** [size] e [sha256] vêm do asset da API e valem para conferir o download; [notes] é o texto do changelog já limpo. */
+data class AppRelease(
+    val version: String,
+    val code: Int,
+    val downloadUrl: String,
+    val prerelease: Boolean,
+    val size: Long = 0,
+    val sha256: String? = null,
+    val notes: String = "",
+)
 data class UpdateState(
     val checking: Boolean = false,
     val checked: Boolean = false,
@@ -37,6 +46,10 @@ object GitHubReleases {
         return parts[0] * 10_000 + parts[1] * 100 + parts[2]
     }
 
+    /** Só o asset `accord.apk` da tag deste repositório, com o código que a tag declara, pode ser baixado. */
+    fun isOfficialDownload(release: AppRelease) =
+        release.downloadUrl == "${DOWNLOAD}v${release.version}/accord.apk" && versionCode("v${release.version}") == release.code
+
     fun newerRelease(body: String, installedCode: Int, includePrereleases: Boolean): AppRelease? {
         val releases = Json.parseToJsonElement(body).jsonArray
         return releases.mapNotNull { element ->
@@ -55,7 +68,13 @@ object GitHubReleases {
                 (asset["size"]?.jsonPrimitive?.longOrNull ?: 0) <= 0 ||
                 asset["browser_download_url"]?.jsonPrimitive?.content != expected
             ) return@mapNotNull null
-            AppRelease(tag.removePrefix("v"), code, expected, prerelease)
+            AppRelease(
+                tag.removePrefix("v"), code, expected, prerelease,
+                size = asset["size"]?.jsonPrimitive?.longOrNull ?: 0,
+                sha256 = asset["digest"]?.jsonPrimitive?.contentOrNull?.removePrefix("sha256:")?.lowercase()
+                    ?.takeIf { Regex("[0-9a-f]{64}").matches(it) },
+                notes = ReleaseNotes.extract(release["body"]?.jsonPrimitive?.contentOrNull.orEmpty()),
+            )
         }.maxByOrNull { it.code }
     }
 }

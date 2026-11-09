@@ -101,7 +101,8 @@ fun MoreScreen(
     alerts: AlertPreferencesUiState? = null,
     updates: app.accord.updates.UpdateState? = null,
     onCheckUpdates: () -> Unit = {},
-    onDownloadUpdate: (app.accord.updates.AppRelease) -> Boolean = { false },
+    installState: app.accord.updates.InstallState = app.accord.updates.InstallState.Idle,
+    updateActions: app.accord.updates.UpdateActions = app.accord.updates.UpdateActions({}, {}, {}, { false }),
 ) {
     var showChatSettings by rememberSaveable { mutableStateOf(false) }
     if (showChatSettings) {
@@ -203,7 +204,7 @@ fun MoreScreen(
             MoreRow(R.string.bank_notifications_title, Lucide.drawable.lucide_ic_bell, actions.onBankNotifications)
             MoreRow(R.string.appearance_title, Lucide.drawable.lucide_ic_palette, actions.onAppearance)
         }
-        updates?.let { app.accord.updates.UpdatePanel(it, onCheckUpdates, onDownloadUpdate) }
+        updates?.let { app.accord.updates.UpdatePanel(it, installState, onCheckUpdates, updateActions) }
     }
 }
 

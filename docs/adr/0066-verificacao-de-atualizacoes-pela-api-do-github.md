@@ -14,6 +14,9 @@ Verificação Automática via API do GitHub”. Este registro substitui o acompa
 Obtainium e a ausência de verificador dentro do Accord. O canal GitHub Releases, a assinatura
 e a regra de versão permanecem vigentes.
 
+> Parcialmente substituído em 09/11/2026 por [ADR 0070](0070-atualizacao-baixada-e-instalada-pelo-proprio-app.md):
+> o download passa a ser feito pelo app e a instalação é oferecida nele, com confirmação do Android.
+
 ## Decisão
 
 O Accord consulta a API pública de Releases de `chinadcs/accord`, sem autenticação, ao entrar

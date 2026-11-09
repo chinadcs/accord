@@ -91,6 +91,8 @@ class AppContainer(
     /** Fase do produto deste build: P1 por padrão; P2 (S7) só com `-Paccord.p2=true` em debug. Controles de fase futura não aparecem antes. */
     override val phase: app.accord.core.analysis.ProductPhase = defaultPhase(),
     releaseFeed: app.accord.updates.ReleaseFeed = app.accord.updates.PublicGitHubReleaseFeed(),
+    apkDownloader: app.accord.updates.ApkDownloader = app.accord.updates.GitHubApkDownloader(),
+    apkInstaller: app.accord.updates.ApkInstaller = app.accord.updates.PackageInstallerApkInstaller(context),
 ) : SpaceProvider {
     override val clock: BudgetClock = BudgetClock.system()
     override val feedback = FeedbackBus()
@@ -113,9 +115,17 @@ class AppContainer(
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    val updates = app.accord.updates.ReleaseUpdates(
-        appScope, releaseFeed,
-        app.accord.updates.AndroidUpdateCheckStore(context), BuildConfig.VERSION_CODE,
+    private val updateCheckStore = app.accord.updates.AndroidUpdateCheckStore(context)
+    val updates = app.accord.updates.ReleaseUpdates(appScope, releaseFeed, updateCheckStore, BuildConfig.VERSION_CODE)
+
+    /** Baixa e instala a versão oferecida, mostra o changelog depois e apaga o APK (ADR 0070). */
+    val apkUpdate = app.accord.updates.ApkUpdate(
+        appScope, apkDownloader, apkInstaller, app.accord.updates.AndroidPendingUpdateStore(context),
+        java.io.File(context.cacheDir, "updates"), BuildConfig.VERSION_CODE, updateCheckStore.available,
+    )
+    val updateActions = app.accord.updates.UpdateActions(
+        download = apkUpdate::download, cancel = apkUpdate::cancelDownload,
+        install = apkUpdate::install, openSettings = apkUpdate::openPermissionSettings,
     )
 
     /**
@@ -262,6 +272,7 @@ class AppContainer(
     /** Ao voltar ao primeiro plano: um ciclo e a leitura dos indicadores. */
     fun onForeground() {
         updates.check()
+        apkUpdate.onResume()
         appScope.launch {
             access.reconcilePrivacy()
             sync.refresh()

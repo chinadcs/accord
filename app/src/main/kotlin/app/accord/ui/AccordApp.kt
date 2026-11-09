@@ -749,6 +749,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     RefreshOnResume(alertsViewModel::refresh)
                     val allowNotifications = rememberAllowNotifications(container.notifications, onDone = alertsViewModel::refresh)
                     val updatesState by container.updates.state.collectAsStateWithLifecycle()
+                    val apkState by container.apkUpdate.state.collectAsStateWithLifecycle()
                     MoreScreen(
                         padding,
                         reviewState = reviewState,
@@ -805,7 +806,8 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                         alerts = alertsState,
                         updates = updatesState,
                         onCheckUpdates = { container.updates.check(manual = true) },
-                        onDownloadUpdate = { app.accord.updates.openReleaseDownload(context, it) },
+                        installState = apkState.install,
+                        updateActions = container.updateActions,
                     )
                     chatDialog?.let { dialog ->
                         ChatHistoryDialogView(
