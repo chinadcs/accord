@@ -206,6 +206,10 @@ fun RemoteFailure.isTransient(): Boolean = when (this) {
  * [RemoteFailure.SessionExpired].
  */
 interface RemoteSpaceService {
+    /** Serviço deriva a pessoa do token; financeiro exige associação atual ao espaço. */
+    suspend fun exportData(accessToken: String, scope: DataExportScope, spaceId: String?): RemoteResult<String> =
+        RemoteResult.Failed(RemoteFailure.ServiceUnavailable)
+
     suspend fun signUp(email: String, password: String): RemoteResult<AuthSession>
     suspend fun signIn(email: String, password: String): RemoteResult<AuthSession>
     suspend fun refresh(refreshToken: String): RemoteResult<AuthSession>

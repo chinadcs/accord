@@ -9,7 +9,23 @@ fica desativado (`config.toml`, `[auth.email]`) e não há SMTP.
   nada.
 - `tests/database/`: testes pgTAP de permissão, convite e envio (`supabase test db`).
 - Portas na faixa 5532x para não colidir com outra instância local do Supabase na mesma máquina.
-  Os serviços não usados (Studio, Realtime, Storage, Edge Functions, analytics) ficam desligados.
+  Studio, Realtime, Storage e analytics ficam desligados. Edge Functions é habilitado para
+  o endpoint `privacy` (ADR 0058), servido localmente por `supabase functions serve`.
+
+## Exportação de dados (S8)
+
+`supabase migration up --local` aplica a migração de exportação; `supabase functions serve`
+serve o endpoint local. O CLI desta máquina serve todas as funções sem argumento de nome.
+O endpoint valida a sessão no Auth e deriva o titular; `privacy_export` é restrita ao serviço.
+`node --experimental-strip-types --test supabase/functions/privacy/handler.test.mjs` exercita
+o handler com rede simulada (Node 22), e `SupabaseExportTest` verifica a integração real local.
+Os testes desse endpoint exigem o processo de funções ativo; nenhum comando aqui faz deploy.
+
+Os downloads são separados (pessoal/financeiro), com snapshot local e remoto identificados,
+sem tokens, senhas, código de convite ou documento bancário completo. A integração futura do
+ADR 0054 usa `privacy_consent` e `chat_collection_event`, ambas com `account_id`; enquanto
+não existem, a exportação informa a ausência de armazenamento, sem inventar consentimento ou
+coleta. O endpoint não concede SELECT dessas tabelas aos clientes.
 
 ```powershell
 supabase start            # exige Docker em execução

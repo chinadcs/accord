@@ -51,6 +51,7 @@ class SpaceRuntime(
     val identity: app.accord.core.space.Session,
     /** Sessão de importação OFX/PDF do espaço (S4); nula onde o espaço não a oferece (testes de acesso). */
     val imports: app.accord.core.importing.ImportSession? = null,
+    val dataExport: RoomDataExport? = null,
 )
 
 /**
@@ -305,6 +306,12 @@ class AccessCenter(
     }
 
     // ---- primeiros passos ----
+
+    /** Só o endpoint do serviço pode fornecer os dados pessoais enviados; nunca expõe a sessão à UI. */
+    suspend fun exportData(scope: app.accord.core.sync.DataExportScope): RemoteResult<String> {
+        val spaceId = store.read().let { snapshot -> snapshot.session?.let { snapshot.bindings[it.accountId]?.spaceId } }
+        return authorized { token -> remote.exportData(token, scope, spaceId) }
+    }
 
     suspend fun firstSteps(): List<FirstStep> {
         val runtime = runtimeState.value ?: return emptyList()

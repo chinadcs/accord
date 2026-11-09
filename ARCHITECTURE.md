@@ -52,6 +52,13 @@ do app. A árvore financeira permanece montada, invisível e sem semântica aces
 bloqueio, preservando navegação e rascunhos. Preferência só no aparelho em Mais > Segurança;
 FLAG_SECURE protege recentes/capturas. Não substitui autorização do serviço ou criptografia.
 
+Exportação ([ADR 0058](docs/adr/0058-exportacao-e-exclusao-autorizadas-e-recuperaveis.md)):
+Mais > Privacidade e dados oferece ZIPs separados pessoal/financeiro, com snapshot Room por
+lista explícita de tabelas, JSON versionado e CSVs. Snapshot remoto e estados locais permanecem
+separados, sem reaplicar lançamentos; indisponibilidade do serviço exige escolha explícita da
+cópia local incompleta. `privacy` (Edge Function) valida a sessão no Auth e chama a RPC de
+exportação restrita ao serviço. A estrutura é local, sem deploy hospedado nesta entrega.
+
 Gráficos das telas 05, 33 e 20/21: Charty 3.2.0 atrás de `ui/components/MoneyChart`, com
 valores exatos/lista acessível, desenho local e sem animação de crescimento
 ([ADR 0055](docs/adr/0055-biblioteca-de-graficos-charty.md)). O wrapper consome as projeções

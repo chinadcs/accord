@@ -236,6 +236,42 @@ class FakeSpaceService(
         RemoteResult.Ok(spaceOfAccount[account.id]?.let { SpaceRef(it, spaces.getValue(it).name) })
     }
 
+    override suspend fun exportData(accessToken: String, scope: app.accord.core.sync.DataExportScope, spaceId: String?): RemoteResult<String> = call {
+        val account = authenticate(accessToken) ?: return@call fail(RemoteFailure.SessionExpired)
+        val root = kotlinx.serialization.json.buildJsonObject {
+            put("format", kotlinx.serialization.json.JsonPrimitive("accord-service-export"))
+            put("version", kotlinx.serialization.json.JsonPrimitive(1))
+            put("scope", kotlinx.serialization.json.JsonPrimitive(scope.name))
+            if (scope == app.accord.core.sync.DataExportScope.Personal) {
+                put("profile", kotlinx.serialization.json.buildJsonObject {
+                    put("accountId", kotlinx.serialization.json.JsonPrimitive(account.id))
+                    put("email", kotlinx.serialization.json.JsonPrimitive(account.email))
+                })
+                put("collectedChat", kotlinx.serialization.json.JsonArray(emptyList()))
+                put("consents", kotlinx.serialization.json.JsonArray(emptyList()))
+                put("collectionStorageAvailable", kotlinx.serialization.json.JsonPrimitive(false))
+                put("consentStorageAvailable", kotlinx.serialization.json.JsonPrimitive(false))
+            } else {
+                val space = spaceId?.let { memberSpace(account, it) } ?: return@call fail(RemoteFailure.NotMember)
+                put("space", kotlinx.serialization.json.buildJsonObject {
+                    put("id", kotlinx.serialization.json.JsonPrimitive(space.id)); put("name", kotlinx.serialization.json.JsonPrimitive(space.name))
+                })
+                put("entities", kotlinx.serialization.json.buildJsonArray {
+                    space.entities.values.forEach { entity ->
+                        add(kotlinx.serialization.json.buildJsonObject {
+                            put("type", kotlinx.serialization.json.JsonPrimitive(entity.type))
+                            put("id", kotlinx.serialization.json.JsonPrimitive(entity.id))
+                            put("state", kotlinx.serialization.json.JsonPrimitive(entity.state))
+                            put("version", kotlinx.serialization.json.JsonPrimitive(entity.version))
+                            put("tombstone", kotlinx.serialization.json.JsonPrimitive(entity.tombstone))
+                        })
+                    }
+                })
+            }
+        }
+        RemoteResult.Ok(root.toString())
+    }
+
     private fun nicknameOf(account: Account) = account.email.substringBefore('@')
 
     private fun memberSpace(account: Account, spaceId: String): Space? =

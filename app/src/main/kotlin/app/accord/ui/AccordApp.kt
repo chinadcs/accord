@@ -669,6 +669,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             onSpace = { navController.navigate(ROUTE_SPACE) },
                             onAppearance = { navController.navigate("appearance") },
                             onSecurity = { navController.navigate("security") },
+                            onPrivacy = { navController.navigate("privacy") },
                             onAlertPreferences = { navController.navigate(ROUTE_ALERT_PREFS) },
                             onForecasts = { navController.navigate(ROUTE_FORECASTS) },
                             onAlertsToggle = { enabled ->
@@ -1126,6 +1127,12 @@ private fun MainApp(container: AppContainer, startRoute: String) {
             composable("security") {
                 val activity = LocalContext.current as app.accord.MainActivity
                 app.accord.security.SecurityScreen(padding, container.appLock, activity.appAuthenticator) { navController.popBackStack() }
+            }
+            composable("privacy") {
+                val viewModel: app.accord.privacy.PrivacyViewModel = viewModel(factory = viewModelFactory {
+                    initializer { app.accord.privacy.PrivacyViewModel(container) }
+                })
+                app.accord.privacy.PrivacyScreen(padding, viewModel) { navController.popBackStack() }
             }
             composable(ROUTE_ACCOUNTS) {
                 val viewModel: AccountsViewModel = viewModel(

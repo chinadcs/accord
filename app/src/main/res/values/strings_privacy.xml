@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="privacy_title">Privacidade e dados</string>
+    <string name="privacy_cancel">Cancelar</string>
+    <string name="privacy_export_intro">Baixe seus dados pessoais ou os dados financeiros compartilhados. O arquivo identifica o que está neste aparelho, no serviço e ainda pendente de envio.</string>
+    <string name="privacy_export_personal">Baixar meus dados pessoais</string>
+    <string name="privacy_export_financial">Baixar dados financeiros do espaço</string>
+    <string name="privacy_export_failed">Não foi possível preparar ou salvar o arquivo. Seus dados continuam preservados. Tente novamente.</string>
+    <string name="privacy_export_saved">Arquivo salvo no local escolhido.</string>
+    <string name="privacy_export_confirm_title">Salvar cópia dos dados?</string>
+    <string name="privacy_export_warning">O arquivo não tem senha. Quem tiver acesso poderá ler seu conteúdo. Inclui os dados deste aparelho; conversas locais de outros celulares não estão disponíveis. Não é um arquivo de restauração financeira.</string>
+    <string name="privacy_export_local_title">Serviço indisponível</string>
+    <string name="privacy_export_local_body">Não foi possível consultar seus dados no serviço. Você pode salvar uma cópia local, identificada como incompleta, ou cancelar e tentar novamente depois.</string>
+    <string name="privacy_export_local_action">Usar cópia local incompleta</string>
+    <string name="privacy_export_save">Escolher onde salvar</string>
+</resources>

@@ -42,7 +42,7 @@ class AndroidSpaceRuntimeFactory(
         val space = RoomFinanceSpace.open(database, clock, { identity })
         space.onAlertRecorded = alertSink
         val store = SyncStore(database)
-        return SpaceRuntime(space, store, SyncEngine(store, remote, access, onReceived = { space.evaluateAlerts(); alertSink() }), RoomChatStore(database), identity, imports = space.importSession())
+        return SpaceRuntime(space, store, SyncEngine(store, remote, access, onReceived = { space.evaluateAlerts(); alertSink() }), RoomChatStore(database), identity, imports = space.importSession(), dataExport = app.accord.persistence.RoomDataExport(database))
     }
 
     override fun close(accountId: String, spaceId: String) {

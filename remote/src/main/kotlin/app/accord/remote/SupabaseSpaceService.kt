@@ -92,6 +92,26 @@ class SupabaseSpaceService(
 
     // ---- conta ----
 
+    override suspend fun exportData(accessToken: String, scope: app.accord.core.sync.DataExportScope, spaceId: String?): RemoteResult<String> {
+        val payload = buildJsonObject {
+            put("action", if (scope == app.accord.core.sync.DataExportScope.Personal) "export_personal" else "export_financial")
+            spaceId?.let { put("space_id", it) }
+        }
+        return when (val http = send("POST", "/functions/v1/privacy", accessToken, payload)) {
+            is Http.Down -> RemoteResult.Failed(http.failure)
+            is Http.Response -> {
+                val data = http.body.obj()?.get("data").obj()
+                when {
+                http.code == 403 -> RemoteResult.Failed(RemoteFailure.NotMember)
+                commonFailure(http) != null -> RemoteResult.Failed(commonFailure(http)!!)
+                http.code in 200..299 && data?.str("format") == "accord-service-export" && data.long("version") == 1L && data.str("scope") == scope.name ->
+                    RemoteResult.Ok(data.toString())
+                else -> RemoteResult.Failed(RemoteFailure.ServiceUnavailable)
+                }
+            }
+        }
+    }
+
     private fun session(body: JsonObject): AuthSession? {
         val user = body["user"].obj() ?: return null
         return AuthSession(
