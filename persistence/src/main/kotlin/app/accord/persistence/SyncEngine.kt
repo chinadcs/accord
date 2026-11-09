@@ -40,7 +40,7 @@ class SyncEngine(
     private val access: SyncAccess,
     private val batchSize: Int = 20,
     private val pageSize: Int = 100,
-    /** Depois de aplicar alterações recebidas: a fachada avalia os avisos (S5, ADR 0044). */
+    /** Avalia avisos após alterações recebidas; somente avaliações de pistas não disparam essa avaliação. */
     private val onReceived: suspend () -> Unit = {},
 ) {
     private val mutex = Mutex()
@@ -106,6 +106,7 @@ class SyncEngine(
 
         setStage(SyncStage.Receiving)
         var received = 0
+        var receivedBeyondClueEvaluations = false
         var conflicts = 0
         while (true) {
             val page = when (val call = authorized(run) { remote.pull(it, run.spaceId, store.cursor(), pageSize) }) {
@@ -114,12 +115,13 @@ class SyncEngine(
             }
             val summary = store.applyPage(page)
             received += summary.applied.size
+            if (summary.applied.any { it.type != app.accord.core.space.EntityType.ClueEvaluation }) receivedBeyondClueEvaluations = true
             conflicts += summary.conflicts
             refresh()
             if (!page.hasMore) break
         }
 
-        if (received > 0) onReceived()
+        if (receivedBeyondClueEvaluations) onReceived()
         store.markCycleComplete()
         state.update {
             it.copy(connection = ConnectionState.Online, service = ServiceState.Responding, session = SessionState.Valid, lastFailure = null)

@@ -1,3 +1,45 @@
 <resources>
     <string name="clue_evaluation">Avaliação de pista</string>
+    <string name="clues_title">Pistas de revisão</string>
+    <string name="clues_existing_pending">Conferir pendências de importação existentes</string>
+    <string name="clues_explanation">São pistas para vocês avaliarem. Nenhum lançamento foi alterado.</string>
+    <string name="clues_local">Dados disponíveis neste aparelho. Registros offline de outros aparelhos podem ainda não ter chegado.</string>
+    <string name="clues_unreviewed">A avaliar</string>
+    <string name="clues_reviewed">Já avaliadas</string>
+    <string name="clues_no_unreviewed">Nenhuma pista a avaliar nos dados disponíveis.</string>
+    <string name="clues_no_reviewed">Nenhuma pista avaliada ainda.</string>
+    <string name="clues_coverage_limited">Cobertura limitada: não há dados suficientes para concluir aumento de frequência.</string>
+    <string name="clues_coverage_unconfirmed">Cobertura não confirmada: confira os registros e as origens disponíveis.</string>
+    <string name="clues_coverage_known">Os documentos conhecidos têm cobertura conferida nos dois períodos.</string>
+    <string name="clues_coverage_caveat">A cobertura dos documentos conhecidos não garante que todos os gastos e canais foram registrados.</string>
+    <string name="clues_counts">Compras: %1$d no período anterior · %2$d no atual.</string>
+    <string name="clues_reopened">Nova evidência relevante: avaliar novamente.</string>
+    <string name="clues_changed">A evidência mudou desde a análise. Atualize antes de avaliar.</string>
+    <string name="clues_update">Atualizar análise</string>
+    <string name="clues_insufficient">O sinal já não está disponível ou há evidência insuficiente. Isso não confirma erro.</string>
+    <string name="clues_frequency_rule">Dois períodos de 28 dias completos, pela data original da compra. Uma compra parcelada conta uma vez. Regra inicial: pelo menos 3 compras antes, 6 agora e frequência pelo menos dobrada.</string>
+    <string name="clues_frequency_periods">Anterior: %1$s a %2$s (28 dias).
+Atual: %3$s a %4$s (28 dias).</string>
+    <string name="clues_not_proof">Valor e data iguais não provam duplicação.</string>
+    <string name="clues_compare_origins">Comparar origens</string>
+    <string name="clues_hide_origins">Recolher origens</string>
+    <string name="clues_evidence_unavailable">Evidência indisponível. Não é possível concluir erro.</string>
+    <string name="clues_evidence_changed">O movimento mudou desde a análise. Conferir abre a versão atual.</string>
+    <string name="clues_check_entry">Conferir movimento</string>
+    <string name="clues_origin_unknown">Origem não disponível</string>
+    <string name="clues_no_import_origin">Sem campos de importação vinculados disponíveis.</string>
+    <string name="clues_import_ordinal">Movimento importado %1$d · campos originais</string>
+    <string name="clues_dismiss">Dispensar pista: compras legítimas</string>
+    <string name="clues_saving">Salvando avaliação…</string>
+    <string name="clues_dismiss_effect">A avaliação vale para todo o espaço após sincronizar. Os gastos continuam como estavam; corrigir exige conferir o movimento.</string>
+    <string name="clues_save_failed">Não foi possível salvar a avaliação. Confira as evidências e tente de novo.</string>
+    <string name="clues_query_failed">Não foi possível atualizar as pistas. O último conteúdo disponível foi preservado.</string>
+    <string name="clues_evaluated_by">Avaliada por %1$s · compras legítimas</string>
+    <string name="clues_similar_title">Cobranças parecidas: %1$s</string>
+    <string name="clues_frequency_title">Mais compras em %1$s</string>
+    <string name="clues_subcategory_unknown">Subcategoria indisponível</string>
+    <string name="clues_coverage_interval">Documento: %1$s a %2$s · %3$s</string>
+    <string name="clues_unknown_date">data não declarada</string>
+    <string name="clues_document_reviewed">conferido</string>
+    <string name="clues_document_partial">com limitações</string>
 </resources>

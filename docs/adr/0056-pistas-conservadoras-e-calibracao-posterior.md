@@ -89,7 +89,11 @@ não há tabela pública de conversas nem efeito em valores, meses ou avisos. A 
 - [ADR 0048](0048-intencoes-de-compra-conversao-e-simulacao.md): intenções e simulador;
   pistas ficaram fora daquele ADR. [ADR 0024](0024-protocolo-por-agregados-e-cursor.md):
   protocolo existente de sincronização, sem novo contrato concreto aprovado aqui.
-- C1/C2/C3 (`accord-9y6.13` a `.15`) implementados e exercitados: 706 testes core, 658 de
-  persistência, 138 remote (incluindo Supabase local obrigatório) e 134 pgTAP passam.
-  Compilação Kotlin do app passou. Telas C4 (`accord-9y6.16`), calibração (`accord-9y6.17`)
-  e validação nos Galaxy S20 FE/S23 FE ainda pendentes. Nenhuma migração hospedada nesta entrega.
+- C1–C4 (`accord-9y6.13` a `.16`) implementados e exercitados: 706 testes core, 659 de
+  persistência, 138 remote (incluindo Supabase local obrigatório), 165 app e 134 pgTAP passam.
+  Há 11 testes instrumentados distintos (9 de UI, repetidos também com fonte real 200%, e 2
+  com Room/ViewModel/Compose). A UI P2 compara origens temporariamente, sem criar pendência;
+  correção usa o lançamento atual. Receber só `ClueEvaluation` também não dispara o callback
+  de avaliação de avisos. [Evidências](../pistas-revisao-2026-11-08.md).
+- Calibração (`accord-9y6.17`), Galaxy/TalkBack (`accord-9y6.18`) e migração hospedada
+  (`accord-9y6.19`, exige autorização explícita) pendentes. Nenhuma implantação remota aqui.

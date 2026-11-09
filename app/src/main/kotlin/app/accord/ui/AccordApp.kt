@@ -194,6 +194,11 @@ import app.accord.ui.nav.ROUTE_COMMITMENT
 import app.accord.ui.nav.ROUTE_COMMITMENTS
 import app.accord.ui.nav.ROUTE_SIMULATOR
 import app.accord.ui.nav.ROUTE_INTENTIONS
+import app.accord.ui.nav.ROUTE_CLUES
+import app.accord.ui.nav.ROUTE_CLUE
+import app.accord.ui.clues.CluesViewModel
+import app.accord.ui.clues.CluesRoute
+import app.accord.ui.clues.ClueDetailRoute
 import app.accord.ui.nav.ROUTE_INTENTION
 import app.accord.ui.intentions.IntentionRoute
 import app.accord.ui.intentions.IntentionViewModel
@@ -586,6 +591,12 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                         ReviewRoot(
                             stringResource(R.string.review_title), padding, register,
                             extra = {
+                                if (container.phase.includes(ProductPhase.P2)) {
+                                    app.accord.ui.components.AccordOutlinedButton(
+                                        onClick = { navController.navigate(ROUTE_CLUES) },
+                                        modifier = Modifier.fillMaxWidth(),
+                                    ) { Text(stringResource(R.string.clues_title)) }
+                                }
                                 PendingHubCard(queueState.items.size, queueState.loading) { navController.navigate(ROUTE_PENDING) }
                                 ImportHub(
                                     hubState,
@@ -653,6 +664,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             onWeeklyReview = { navController.navigate(ROUTE_WEEKLY_REVIEW) },
                             onSimulator = if (container.phase.includes(ProductPhase.P2)) ({ navController.navigate(ROUTE_SIMULATOR) }) else null,
                             onIntentions = if (container.phase.includes(ProductPhase.P2)) ({ navController.navigate(ROUTE_INTENTIONS) }) else null,
+                            onClues = if (container.phase.includes(ProductPhase.P2)) ({ navController.navigate(ROUTE_CLUES) }) else null,
                             onRegister = register,
                             onSpace = { navController.navigate(ROUTE_SPACE) },
                             onAppearance = { navController.navigate("appearance") },
@@ -855,6 +867,20 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 }
             }
             if (container.phase.includes(ProductPhase.P2)) {
+                composable(ROUTE_CLUES) {
+                    val vm: CluesViewModel = viewModel(factory = viewModelFactory { initializer { CluesViewModel(container, createSavedStateHandle()) } })
+                    CluesRoute(vm, padding, { navController.popBackStack() }) { key, reference ->
+                        navController.navigate("$ROUTE_CLUE/${Uri.encode(key)}?reference=${reference.toEpochDay()}")
+                    }
+                }
+                composable("$ROUTE_CLUE/{clueKey}?reference={reference}", arguments = listOf(
+                    navArgument("clueKey") { type = NavType.StringType }, navArgument("reference") { type = NavType.StringType },
+                )) {
+                    val vm: CluesViewModel = viewModel(factory = viewModelFactory { initializer { CluesViewModel(container, createSavedStateHandle()) } })
+                    ClueDetailRoute(vm, padding, { navController.popBackStack() },
+                        onEntry = { id -> navController.navigate("$ROUTE_ENTRY/${Uri.encode(id)}") },
+                        onPending = { navController.navigate(ROUTE_PENDING) })
+                }
                 composable(ROUTE_INTENTIONS) {
                     val viewModel: IntentionsViewModel = viewModel(factory = viewModelFactory { initializer { IntentionsViewModel(container) } })
                     IntentionsRoute(

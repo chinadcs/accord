@@ -337,7 +337,16 @@ build `-Paccord.p2=true` só em debug; sem ela nenhum controle aparece). **Imple
   aceita um só compromisso por intenção (o segundo volta como `conflict` com o já reconhecido) e preserva a origem em atualizações. No cliente (Room 15) a
   divergência oculta o compromisso local, o orçamento conta a compra reconhecida, e a escolha é explícita (manter a reconhecida, ou aplicar os dados deste
   aparelho a ela, com a identidade dela; tipos diferentes só permitem manter a reconhecida).
-- **Pistas (telas 37 e 38) não existem:** os limiares dependem de dados do piloto (`accord-9y6.12` a `.16`).
+- **Pistas (telas 37 e 38).** Critérios conservadores iniciais aprovados no
+  [ADR 0056](docs/adr/0056-pistas-conservadoras-e-calibracao-posterior.md). `FinanceSpace.clueSource`
+  reutiliza a construção da atividade e expõe versões, vínculo de estorno, cobertura declarada
+  e pendências importadas; `core.clues.ClueDetector` é puro e não altera valores nem alertas.
+  `DismissClue` revalida a evidência dentro da transação e acrescenta `ClueEvaluation`
+  (Room 20, protocolo 2; registros concorrentes ficam como histórico). Fake e SQL local
+  recusam alteração/exclusão. A UI P2 em Revisar/Mais compara extraídos persistidos e abre
+  lançamentos atuais pelos fluxos existentes; dispensa não corrige dinheiro.
+  Calibração do piloto (`accord-9y6.17`), Galaxy/TalkBack (`accord-9y6.18`) e implantação
+  hospedada da migração (`accord-9y6.19`, exige autorização) permanecem pendentes.
 
 ## Interface e validação futura
 

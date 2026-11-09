@@ -57,6 +57,8 @@ const val ROUTE_SIMULATOR = "simulator"
 
 /** Intenções de compra (tela 34) e uma intenção (tela 35): `intention/{id}` ou `intention/new?value=centavos&month=AAAA-MM`. */
 const val ROUTE_INTENTIONS = "intentions"
+const val ROUTE_CLUES = "clues"
+const val ROUTE_CLUE = "clue"
 const val ROUTE_INTENTION = "intention"
 
 /** Detalhe de um compromisso: `commitment/{id}`; o ID pode ter `#` ou `:`, por isso vai codificado. */

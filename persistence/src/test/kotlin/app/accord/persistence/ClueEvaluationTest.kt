@@ -43,20 +43,24 @@ class ClueEvaluationTest : SpaceTestBase() {
         service.joinWithCode(b.accessToken, code)
         val ana = open("ana")
         val bia = open("bia")
+        var alertCallbacks = 0
         suspend fun sync(h: Handle, auth: AuthSession) {
             val access = object : SyncAccess {
                 override suspend fun check(): SessionCheck = SessionCheck.Usable(auth, spaceId)
                 override suspend fun renew(): RenewResult = RenewResult.Expired
             }
-            assertIs<SyncOutcome.Completed>(SyncEngine(SyncStore(h.database.db), service, access).syncNow())
+            assertIs<SyncOutcome.Completed>(SyncEngine(SyncStore(h.database.db), service, access, onReceived = { alertCallbacks++ }).syncNow())
         }
         ana.purchases()
         sync(ana,a); sync(bia,b)
+        assertTrue(alertCallbacks > 0) // Positive control: financial changes still evaluate alerts.
+        val beforeEvaluations = alertCallbacks
         for (device in listOf(ana,bia)) {
             val c = device.clue()
             device.space.execute(device.env(), DismissClue(c.key,c.fingerprint,reference)).applied()
         }
         sync(ana,a); sync(bia,b); sync(ana,a)
+        assertEquals(beforeEvaluations, alertCallbacks, "Receber apenas avaliações não avalia nem agenda avisos")
         for (device in listOf(ana,bia)) {
             val evaluations = device.space.clueEvaluations().value()
             assertEquals(2, evaluations.size)

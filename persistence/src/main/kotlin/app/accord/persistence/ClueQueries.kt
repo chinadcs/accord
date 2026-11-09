@@ -8,6 +8,7 @@ internal class ClueQueries(
     private val dao: SpaceDao,
     private val entries: EntryQueries,
     private val detail: suspend (String) -> EntryDetail?,
+    private val pendingCorrespondences: suspend () -> Set<String> = { emptySet() },
 ) {
     suspend fun origins(entryId: String): List<ClueImportOrigin> {
         val root = entryId.substringBefore('#')
@@ -23,7 +24,7 @@ internal class ClueQueries(
         val batches = dao.confirmedImportBatches()
         val pendingBatches = dao.batchesWithPending().toSet()
         val pendingTargets = batches.flatMap { dao.importMovements(it.id) }
-            .filter { it.pending.isNotEmpty() }.mapNotNull { it.targetId }.toSet()
+            .filter { it.pending.isNotEmpty() }.mapNotNull { it.targetId }.toSet() + pendingCorrespondences()
         val tree = CategoryTree(dao.categories().associateBy { it.id }, dao.categoryMoves())
         val evidence = entries.clueRows(from, until).mapNotNull { row ->
             val current = detail(row.id)?.takeUnless { it.voided } ?: return@mapNotNull null

@@ -46,6 +46,8 @@ import java.util.UUID
 
 /** O que as telas precisam para ler e alterar dados: a fachada e o relógio do orçamento. */
 interface SpaceProvider {
+    /** Last locally known member names; no network request and no claim about fresh membership. */
+    fun memberNames(): Map<String, String> = emptyMap()
     val clock: BudgetClock
 
     /** Fase do produto deste build (P1 por padrão; P2 com a flag do S7). Controles de fase futura não aparecem antes. */
@@ -154,6 +156,7 @@ class AppContainer(
 
     /** Quem registra é a conta da sessão; as telas só existem com conta e espaço. */
     override val personId: String get() = access.status.value.account?.accountId.orEmpty()
+    override fun memberNames(): Map<String, String> = access.status.value.participants?.items.orEmpty().associate { it.accountId to it.nickname }
 
     private val ready = CompletableDeferred<Unit>()
 

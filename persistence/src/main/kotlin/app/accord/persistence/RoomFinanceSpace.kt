@@ -477,7 +477,13 @@ class RoomFinanceSpace private constructor(
 
     override suspend fun pendings(): QueryResult<List<PendingItem>> = query { entryQueries.pendings() }
 
-    private val clueQueries by lazy { ClueQueries(dao, entryQueries, ::entryDetail) }
+    private val clueQueries by lazy { ClueQueries(dao, entryQueries, ::entryDetail) {
+        val importing = importSession()
+        unwrap(importing.pendings()).flatMap { pending ->
+            val reconciled = unwrap(importing.pending(pending.batchId, pending.ordinal))?.reconciled
+            (reconciled?.candidateEntryIds.orEmpty() + listOfNotNull(reconciled?.linkedEntryId)).map { it.substringBefore('#') }
+        }.toSet()
+    } }
 
     override suspend fun clueEvaluations(): QueryResult<List<app.accord.core.clues.ClueEvaluation>> = query {
         dao.clueEvaluations().map {
