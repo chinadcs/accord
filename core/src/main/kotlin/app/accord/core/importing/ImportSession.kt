@@ -129,6 +129,12 @@ sealed interface ImportDecision {
 
     /** A credit that returns money of an earlier purchase or payment ([originId]): a refund, never income. Needs the person's choice of the origin. */
     data class AsRefund(val ordinal: Int, val originId: String) : ImportDecision
+
+    /**
+     * An installment line (n of N) without a registered purchase: the person confirms its [totalCents] and the purchase is created with every installment,
+     * the ones before n on past invoices. The total must split into this line's value; the category comes from the usual choice or suggestion.
+     */
+    data class AsInstallmentPurchase(val ordinal: Int, val totalCents: Long) : ImportDecision
 }
 
 sealed interface DecideOutcome {

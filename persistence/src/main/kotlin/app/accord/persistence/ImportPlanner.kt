@@ -130,7 +130,7 @@ internal class ImportPlanner(
             if (index == 0) created = receipt
         }
         val target: StepTarget? = step.target
-            ?: step.createsType?.let { type -> created?.changes?.firstOrNull { it.type == type }?.let { StepTarget(type, it.id) } }
+            ?: step.createsType?.let { type -> created?.changes?.firstOrNull { it.type == type }?.let { StepTarget(type, it.id, step.createsNumber) } }
         return row.copy(
             key = step.item.key,
             resolution = step.resolution.name,

@@ -31,7 +31,7 @@ sealed interface ResolveContent {
     data class Ready(val detail: PendingDetail) : ResolveContent
 }
 
-enum class Picking { ExpenseCategory, IncomeCategory, Refund }
+enum class Picking { ExpenseCategory, IncomeCategory, Refund, InstallmentPurchase }
 
 data class PendingResolveUiState(
     val content: ResolveContent = ResolveContent.Loading,
@@ -114,6 +114,12 @@ class PendingResolveViewModel(
     fun chooseRefundOrigin(originId: String) {
         _state.update { it.copy(picking = null) }
         decide(ImportDecision.AsRefund(ordinal, originId))
+    }
+
+    /** "Cadastrar a compra parcelada": a pessoa confirmou o total; a compra inteira é criada ao aplicar, as parcelas anteriores nos meses passados. */
+    fun chooseInstallmentPurchase(totalCents: Long) {
+        _state.update { it.copy(picking = null) }
+        decide(ImportDecision.AsInstallmentPurchase(ordinal, totalCents))
     }
 
     fun acceptSuggestion() = decide(ImportDecision.AcceptSuggestions(listOf(ordinal)))

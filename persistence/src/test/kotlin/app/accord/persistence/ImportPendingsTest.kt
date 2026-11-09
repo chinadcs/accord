@@ -393,4 +393,38 @@ class ImportPendingsTest : SpaceTestBase() {
         assertEquals(2, checkNotNull(b.imports().result(id).value()).count(Resolution.Created))
         assertNotNull(b.space.movements(oct).value().firstOrNull { it.description == "PADARIA" })
     }
+
+    // ---- accord-z724: parcela n/N sem compra registrada vira a compra inteira ----
+
+    @Test fun `an installment line without a purchase creates the whole purchase once the person confirms the total, and the next line links by itself`() = runBlocking<Unit> {
+        val h = open()
+        h.account()
+        val hint = app.accord.core.importing.InstallmentHint(3, 10)
+        val id = h.confirmedCard("c1", cardDoc("card-z", cmv(1, d(2026, 12, 5), -15000, "MAGAZINE LUIZA", hint), cmv(2, d(2026, 12, 6), -1000, "PADARIA")), dec)
+        val pending = h.imports().pendings().value().single()
+        assertEquals(setOf(DoubtReason.InstallmentPurchaseNotRegistered), pending.doubts)
+        assertIs<ResolveOutcome.NotReady>(h.resolve(id, pending.ordinal))
+
+        // Um total que não divide em 10 parcelas com a 3ª igual à linha é recusado, e nada é gravado.
+        assertIs<DecideOutcome.Rejected>(h.imports().decide(id, ImportDecision.AsInstallmentPurchase(pending.ordinal, 140000), h.revision(id)).value())
+        assertEquals(setOf(DoubtReason.InstallmentPurchaseNotRegistered), h.imports().pendings().value().single().doubts)
+
+        h.decide(id, ImportDecision.AsInstallmentPurchase(pending.ordinal, 150000))
+        assertEquals(true, h.imports().pendings().value().single().ready)
+        assertEquals(Resolution.Created, assertIs<ResolveOutcome.Applied>(h.resolve(id, pending.ordinal)).resolution)
+
+        val purchaseId = checkNotNull(checkNotNull(h.imports().result(id).value()).items.first { it.ordinal == 1 }.targetId)
+        val purchase = checkNotNull(h.space.purchase(purchaseId).value())
+        assertEquals(150000, purchase.total.cents)
+        assertEquals((0..9).map { oct.plusMonths(it.toLong()) }, purchase.installments.map { it.invoiceMonth }, "1st installment two months before the document's invoice")
+        assertEquals(emptyList(), h.imports().pendings().value())
+
+        // A fatura seguinte traz a parcela 4/10: casa com a compra criada, sem dúvida.
+        val jan = ym(2027, 1)
+        val next = cardDoc("card-z2", cmv(1, d(2027, 1, 5), -15000, "MAGAZINE LUIZA", app.accord.core.importing.InstallmentHint(4, 10)))
+        val info = (h.imports().start(StartImport("c2", "c2.pdf", 10, next, BatchSource(DocumentKind.Card, cardId, jan))).value() as StartOutcome.Started).info
+        val line = checkNotNull(h.imports().review(info.id).value()).preview.items.single()
+        assertEquals(app.accord.core.importing.Classification.SafeLink, line.classification)
+        assertIs<app.accord.core.importing.ProposedEffect.LinkInstallment>(line.effect)
+    }
 }

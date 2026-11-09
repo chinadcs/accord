@@ -204,6 +204,7 @@
     <string name="import_doubt_shift_blocked">Mover a compra para a fatura do documento tocaria uma fatura quitada ou uma parcela cancelada.</string>
     <string name="import_doubt_installment_value">O valor da parcela é diferente do cronograma registrado.</string>
     <string name="import_doubt_installment_missing">Parcela de uma compra que não está registrada.</string>
+    <string name="import_doubt_schedule_paid">Parte das parcelas cairia numa fatura já quitada.</string>
     <string name="import_doubt_total">O total da fatura ainda não foi conferido.</string>
     <string name="import_doubt_payment">O valor do pagamento é diferente do total da fatura.</string>
     <string name="import_doubt_invoice_payment">Pode ser o pagamento de uma fatura.</string>
@@ -219,6 +220,7 @@
     <string name="import_effect_link">Vincula a um lançamento existente, sem somar de novo.</string>
     <string name="import_effect_link_correct">Vincula e corrige a fatura da compra para a do documento.</string>
     <string name="import_effect_installment">Vincula à parcela %1$d de uma compra registrada.</string>
+    <string name="import_effect_installment_purchase">Cadastra a compra em %1$d parcelas e vincula esta linha à parcela %2$d.</string>
     <string name="import_effect_installment_shift">Vincula à parcela %1$d e move as parcelas para a fatura do documento.</string>
     <string name="import_effect_invoice">Quitação integral da fatura de %1$02d/%2$d, sem despesa nova.</string>
     <string name="import_effect_boleto">Pagamento de um boleto registrado.</string>

@@ -10,6 +10,8 @@ import app.accord.core.importing.BatchStatus
 import app.accord.core.importing.ConfirmOutcome
 import app.accord.core.importing.DecideOutcome
 import app.accord.core.importing.DiscardOutcome
+import app.accord.core.Installments
+import app.accord.core.Money
 import app.accord.core.importing.DocumentKind
 import app.accord.core.importing.DoubtReason
 import app.accord.core.importing.ImportDecision
@@ -209,6 +211,27 @@ internal class RoomImportSession(
                     dao.upsertImportDecisions(listOf(ImportDecisionRow(batchId, decision.ordinal, ImportDecisionType.REFUND, decision.originId)))
                     // "É estorno", "é renda" e "é repetição" se contradizem: a última escolha vale.
                     dao.deleteImportDecision(batchId, decision.ordinal, ImportDecisionType.INCOME)
+                    dao.deleteImportDecision(batchId, decision.ordinal, ImportDecisionType.DISMISS)
+                    listOf(decision.ordinal)
+                }
+                is ImportDecision.AsInstallmentPurchase -> {
+                    if (decision.ordinal !in movements) return@write unknownMovement(decision.ordinal)
+                    val current = evaluation()
+                    val line = current.extraction.movements.firstOrNull { it.ordinal == decision.ordinal }
+                    val hint = line?.installment
+                    val lineCents = line?.amountCents
+                    val splits = hint != null && lineCents != null && lineCents < 0 && hint.number in 1..hint.total && decision.totalCents >= hint.total &&
+                        Installments.splitTotal(Money(decision.totalCents), hint.total)[hint.number - 1].cents == -lineCents
+                    when {
+                        current.kind != DocumentKind.Card || hint == null -> return@write DecideOutcome.Rejected(
+                            listOf(FieldError("ordinal", ErrorCode.NotAllowed, "Só uma parcela n/N de um documento de cartão vira compra parcelada.")),
+                        )
+                        !splits -> return@write DecideOutcome.Rejected(
+                            listOf(FieldError("totalCents", ErrorCode.OutOfRange, "O total precisa dividir em ${hint.total} parcelas com a parcela ${hint.number} igual ao valor desta linha.")),
+                        )
+                    }
+                    dao.deleteImportDecision(batchId, decision.ordinal, ImportDecisionType.INSTALLMENT_PURCHASE)
+                    dao.upsertImportDecisions(listOf(ImportDecisionRow(batchId, decision.ordinal, ImportDecisionType.INSTALLMENT_PURCHASE, decision.totalCents.toString())))
                     dao.deleteImportDecision(batchId, decision.ordinal, ImportDecisionType.DISMISS)
                     listOf(decision.ordinal)
                 }

@@ -117,6 +117,7 @@ internal class ImportEvaluator(
             postponed = byOrdinal(ImportDecisionType.POSTPONE).mapNotNull { keyOf[it.ordinal] }.toSet(),
             invoiceCorrections = byOrdinal(ImportDecisionType.CORRECT_INVOICE).mapNotNull { r -> keyOf[r.ordinal]?.let { it to r.value } }.toMap(),
             firstInstallmentShifts = byOrdinal(ImportDecisionType.SHIFT_FIRST).mapNotNull { keyOf[it.ordinal] }.toSet(),
+            installmentPurchaseTotals = byOrdinal(ImportDecisionType.INSTALLMENT_PURCHASE).mapNotNull { r -> keyOf[r.ordinal]?.let { k -> r.value.toLongOrNull()?.let { k to it } } }.toMap(),
             refundByKey = byOrdinal(ImportDecisionType.REFUND).mapNotNull { r -> keyOf[r.ordinal]?.let { it to r.value } }.toMap(),
             refused = refused,
         )

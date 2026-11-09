@@ -12,7 +12,7 @@ enum class DoubtReason {
     AmountNotInterpreted, DateNotInterpreted, ZeroAmount, ForeignCurrencyMovement, FitidDivergent, PossibleRepetition,
     RemovedPreviously, CreditToClassify, PossibleMatch, CategoryUnknown,
     // Billing rules (accord-c9m.7)
-    InvoiceDiverges, InstallmentInvoiceDiverges, InstallmentShiftBlocked, InstallmentValueDiverges, InstallmentPurchaseNotRegistered,
+    InvoiceDiverges, InstallmentInvoiceDiverges, InstallmentShiftBlocked, InstallmentValueDiverges, InstallmentPurchaseNotRegistered, InstallmentScheduleHitsPaidInvoice,
     InvoiceTotalNotConfirmed, PaymentDivergent, PossibleInvoicePayment, PossibleBoleto,
 
     /** The person chose "review later": the movement is held out of the confirmation and kept as a pending item. */
@@ -84,6 +84,8 @@ data class Decisions(
     val firstInstallmentShifts: Set<String> = emptySet(),
     /** A credit the person says refunds the purchase or payment with this id. Never decided from the sign of the value. */
     val refundByKey: Map<String, String> = emptyMap(),
+    /** The installment line has no registered purchase and the person confirmed its total (cents): the purchase is created with every installment (accord-z724). */
+    val installmentPurchaseTotals: Map<String, Long> = emptyMap(),
     /** "Review later": the movement becomes a doubt, whatever else is known about it. */
     val postponed: Set<String> = emptySet(),
     /** Steps the validator refuses now; computed by the facade, never chosen by the person. */
@@ -183,5 +185,19 @@ sealed interface ProposedEffect {
 
     /** A confirmed refund of [originId] (S1 `RegisterRefund`), credited on [invoiceDueMonth] for a card document and on the month of the movement otherwise. */
     data class CreateRefund(val originId: String, val invoiceDueMonth: YearMonth?) : ProposedEffect
+
+    /**
+     * The installment line [number] of [count] has no registered purchase: creates it with all [count] installments (S1 `RegisterCardPurchase`, total confirmed
+     * by the person), the 1st on [firstInvoice]. The installments before [number] land on past invoices of [months], which change; the movement links to
+     * installment [number].
+     */
+    data class CreateInstallmentPurchase(
+        val categoryId: String,
+        val totalCents: Long,
+        val number: Int,
+        val count: Int,
+        val firstInvoice: YearMonth,
+        val months: List<YearMonth>,
+    ) : ProposedEffect
 }
 enum class IncomeBasis { InvestmentCredit, ChosenByPerson }

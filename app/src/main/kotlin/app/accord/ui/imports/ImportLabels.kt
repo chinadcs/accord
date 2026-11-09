@@ -77,6 +77,7 @@ fun DoubtReason.label(): String = stringResource(
         DoubtReason.InstallmentShiftBlocked -> R.string.import_doubt_shift_blocked
         DoubtReason.InstallmentValueDiverges -> R.string.import_doubt_installment_value
         DoubtReason.InstallmentPurchaseNotRegistered -> R.string.import_doubt_installment_missing
+        DoubtReason.InstallmentScheduleHitsPaidInvoice -> R.string.import_doubt_schedule_paid
         DoubtReason.InvoiceTotalNotConfirmed -> R.string.import_doubt_total
         DoubtReason.PaymentDivergent -> R.string.import_doubt_payment
         DoubtReason.PossibleInvoicePayment -> R.string.import_doubt_invoice_payment
@@ -114,6 +115,7 @@ fun ProposedEffect.label(): String = when (this) {
     is ProposedEffect.PayBoleto -> stringResource(R.string.import_effect_boleto)
     is ProposedEffect.CreateIncome -> stringResource(R.string.import_effect_income)
     is ProposedEffect.CreateRefund -> stringResource(R.string.import_effect_refund)
+    is ProposedEffect.CreateInstallmentPurchase -> stringResource(R.string.import_effect_installment_purchase, count, number)
 }
 
 /** `11/2026`, o mês de vencimento de uma fatura. */

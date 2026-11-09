@@ -2,6 +2,7 @@ package app.accord.core.importing
 
 import app.accord.core.Money
 import app.accord.core.space.Classification as ChosenCategory
+import app.accord.core.space.AmountMeaning
 import app.accord.core.space.Command
 import app.accord.core.space.CorrectInvoiceAssignment
 import app.accord.core.space.DeterministicIds
@@ -32,6 +33,8 @@ data class ConfirmStep(
     val commands: List<Command> = emptyList(),
     val target: StepTarget? = null,
     val createsType: EntityType? = null,
+    /** Installment number the movement ends up tied to when [createsType] is a purchase created with all its installments. */
+    val createsNumber: Int? = null,
 )
 
 data class StepsPlan(val steps: List<ConfirmStep>, val summary: ConfirmationSummary)
@@ -82,6 +85,7 @@ object ImportSteps {
                 .forEach { s -> s.item.movement.date?.let { add(billing.cycle.assign(it).dueMonth) } }
         }
         steps.forEach { s -> (s.item.effect as? ProposedEffect.LinkInstallment)?.shift?.let { addAll(it.before); addAll(it.after) } }
+        steps.forEach { s -> (s.item.effect as? ProposedEffect.CreateInstallmentPurchase)?.takeIf { s.commands.isNotEmpty() }?.let { addAll(it.months) } }
     }
 
     private val LINKS = setOf(Resolution.Linked, Resolution.InstallmentLinked, Resolution.InvoicePaid, Resolution.BoletoPaid)
@@ -135,6 +139,17 @@ object ImportSteps {
                         item, Resolution.BoletoPaid,
                         listOf(PayBoleto(boletoId = effect.boletoId, payment = Settlement(date, amount), accountId = originId)),
                         StepTarget(EntityType.Boleto, effect.boletoId),
+                    )
+                    is ProposedEffect.CreateInstallmentPurchase -> ConfirmStep(
+                        item, Resolution.Created,
+                        listOf(
+                            RegisterCardPurchase(
+                                description = m.description, classification = ChosenCategory.Category(effect.categoryId), date = date,
+                                amount = Money(effect.totalCents), amountMeaning = AmountMeaning.Total, installments = effect.count,
+                                cardId = originId, invoice = effect.firstInvoice,
+                            ),
+                        ),
+                        createsType = EntityType.CardPurchase, createsNumber = effect.number,
                     )
                     is ProposedEffect.CreateRefund -> ConfirmStep(
                         item, Resolution.RefundCreated,

@@ -19,7 +19,15 @@ import androidx.compose.material3.TextButton
 import androidx.compose.ui.Alignment
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.KeyboardType
+import app.accord.core.Installments
+import app.accord.core.MoneyParse
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -51,7 +59,7 @@ private val REPETITION_DOUBTS = setOf(DoubtReason.FitidDivergent, DoubtReason.Po
 
 private val INVOICE_DOUBTS = setOf(
     DoubtReason.InvoiceDiverges, DoubtReason.InstallmentInvoiceDiverges, DoubtReason.InstallmentShiftBlocked, DoubtReason.InstallmentValueDiverges,
-    DoubtReason.InstallmentPurchaseNotRegistered, DoubtReason.InvoiceTotalNotConfirmed, DoubtReason.PaymentDivergent,
+    DoubtReason.InstallmentScheduleHitsPaidInvoice, DoubtReason.InvoiceTotalNotConfirmed, DoubtReason.PaymentDivergent,
     DoubtReason.PossibleInvoicePayment, DoubtReason.PossibleBoleto,
 )
 
@@ -66,6 +74,7 @@ fun PendingResolveRoute(viewModel: PendingResolveViewModel, padding: PaddingValu
         onConfirmNew = viewModel::confirmNew, onDismiss = viewModel::dismiss, onLink = viewModel::link, onSeparate = viewModel::keepSeparate,
         onReset = viewModel::reset, onApply = viewModel::apply, onOpenCard = onOpenCard,
         onCorrectInvoice = viewModel::correctInvoice, onShiftFirst = viewModel::shiftFirstInstallment, onRefund = viewModel::chooseRefundOrigin,
+        onInstallmentPurchase = viewModel::chooseInstallmentPurchase,
     )
 }
 
@@ -91,6 +100,7 @@ fun PendingResolveScreen(
     onCorrectInvoice: (String) -> Unit = {},
     onShiftFirst: () -> Unit = {},
     onRefund: (String) -> Unit = {},
+    onInstallmentPurchase: (Long) -> Unit = {},
 ) {
     Column(Modifier.fillMaxSize().padding(padding)) {
         when (val content = state.content) {
@@ -142,6 +152,11 @@ fun PendingResolveScreen(
                     Picking.ExpenseCategory -> CategoryDialog(state.categories, selected = null, onPick = onCategory, onDismiss = onDismissPicker)
                     Picking.IncomeCategory -> IncomeChoiceDialog(state.incomeCategories, onIncome, onDismissPicker)
                     Picking.Refund -> RefundChoiceDialog(detail.refundCandidates, onRefund, onDismissPicker)
+                    Picking.InstallmentPurchase -> detail.reconciled.movement.let { m ->
+                        val hint = m.installment
+                        val cents = m.amountCents
+                        if (hint != null && cents != null) InstallmentPurchaseDialog(hint.number, hint.total, -cents, onInstallmentPurchase, onDismissPicker)
+                    }
                     null -> Unit
                 }
             }
@@ -250,6 +265,17 @@ private fun Options(
                 Text(stringResource(R.string.pending_shift_apply, monthText(suggestedFirst)))
             }
         }
+        val purchaseLine = item.movement.installment
+        if (DoubtReason.InstallmentPurchaseNotRegistered in doubts && purchaseLine != null && item.movement.amountCents != null) {
+            Text(stringResource(R.string.pending_purchase_title, purchaseLine.number, purchaseLine.total), style = MaterialTheme.typography.titleSmall)
+            Text(
+                stringResource(if (purchaseLine.number > 1) R.string.pending_purchase_body_past else R.string.pending_purchase_body),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            OutlinedButton(onClick = { onPick(Picking.InstallmentPurchase) }, enabled = enabled, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.pending_purchase_action))
+            }
+        }
         if (doubts.any { it in INVOICE_DOUBTS }) {
             Text(stringResource(R.string.pending_invoice_hint), style = MaterialTheme.typography.bodyMedium)
             OutlinedButton(onClick = onOpenCard, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.pending_open_card)) }
@@ -274,6 +300,12 @@ private fun Consequence(detail: PendingDetail, categories: Map<String, CategoryN
                             style = MaterialTheme.typography.bodyMedium,
                         )
                     }
+                    (item.effect as? ProposedEffect.CreateInstallmentPurchase)?.let { purchase ->
+                        Text(
+                            stringResource(R.string.pending_purchase_months, monthText(purchase.months.first()), monthText(purchase.months.last())),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                    }
                     (item.effect as? ProposedEffect.CreateRefund)?.let { refund ->
                         detail.refundCandidates.firstOrNull { it.id == refund.originId }?.let { Text(refundLine(it), style = MaterialTheme.typography.bodyMedium) }
                     }
@@ -284,6 +316,39 @@ private fun Consequence(detail: PendingDetail, categories: Map<String, CategoryN
             TextButton(onClick = onReset, enabled = !working, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.import_reset)) }
         }
     }
+}
+
+/** Total da compra que o documento mostra só em parte: a pessoa confirma; a parcela n do total tem de valer o da linha. Nada é gravado antes de aplicar. */
+@Composable
+private fun InstallmentPurchaseDialog(number: Int, count: Int, lineCents: Long, onConfirm: (Long) -> Unit, onDismiss: () -> Unit) {
+    fun plain(cents: Long) = "%d,%02d".format(cents / 100, cents % 100)
+    var text by rememberSaveable { mutableStateOf(plain(lineCents * count)) }
+    val parsed = (Money.parse(text) as? MoneyParse.Ok)?.money?.cents
+    val installment = parsed?.takeIf { it >= count }?.let { Installments.splitTotal(Money(it), count)[number - 1].cents }
+    val valid = installment == lineCents
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.pending_purchase_dialog_title, number, count)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                Text(stringResource(R.string.pending_purchase_dialog_body, Money(lineCents).format()), style = MaterialTheme.typography.bodyMedium)
+                OutlinedTextField(
+                    value = text, onValueChange = { text = it }, singleLine = true, isError = !valid,
+                    label = { Text(stringResource(R.string.pending_purchase_total)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    if (valid) stringResource(R.string.pending_purchase_split_ok, number, Money(lineCents).format())
+                    else stringResource(R.string.pending_purchase_split_bad, count, number, Money(lineCents).format()),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (valid) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
+                )
+            }
+        },
+        confirmButton = { TextButton(onClick = { parsed?.let(onConfirm) }, enabled = valid) { Text(stringResource(R.string.pending_purchase_confirm)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.action_cancel)) } },
+    )
 }
 
 @Composable

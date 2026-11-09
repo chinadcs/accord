@@ -19,13 +19,16 @@ internal object BillingRules {
         val charge: Boolean = false,
     )
 
+    /** What the person decided for an installment line without a registered purchase: the confirmed total and the category (null while not chosen). */
+    data class NewPurchase(val totalCents: Long, val categoryId: String?)
+
     /** Null when no billing rule applies and the generic matching must decide. Only called for clean debits that are not already known. */
-    fun decide(m: ExtractedMovement, isCard: Boolean, b: BillingContext, shiftFirst: Boolean = false): Outcome? {
+    fun decide(m: ExtractedMovement, isCard: Boolean, b: BillingContext, shiftFirst: Boolean = false, newPurchase: NewPurchase? = null): Outcome? {
         val cents = m.amountCents ?: return null
         if (cents >= 0) return null
         val amount = -cents
         if (isCharge(m)) return Outcome(charge = true)
-        if (isCard) return m.installment?.let { installment(m, it, b, amount, shiftFirst) }
+        if (isCard) return m.installment?.let { installment(m, it, b, amount, shiftFirst, newPurchase) }
         return invoicePayment(m, b, amount) ?: boleto(m, b, amount)
     }
 
@@ -36,14 +39,15 @@ internal object BillingRules {
 
     // ---- rule 9: installments ----
 
-    private fun installment(m: ExtractedMovement, hint: InstallmentHint, b: BillingContext, amount: Long, shiftFirst: Boolean): Outcome {
+    private fun installment(m: ExtractedMovement, hint: InstallmentHint, b: BillingContext, amount: Long, shiftFirst: Boolean, newPurchase: NewPurchase?): Outcome {
         val rows = b.purchases.flatMap { p -> p.installments.map { p to it } }
             .filter { (_, r) -> r.number == hint.number && r.total == hint.total && !r.cancelled }
         val exact = rows.filter { (_, r) -> r.cents == amount && !r.hasOrigin }
         if (exact.size > 1) return Outcome(reasons = setOf(DoubtReason.PossibleMatch))
         if (exact.isEmpty()) {
             val related = rows.any { (p, _) -> sharesAWord(p.description, m.description, 2) }
-            return Outcome(reasons = setOf(if (related) DoubtReason.InstallmentValueDiverges else DoubtReason.InstallmentPurchaseNotRegistered))
+            if (related) return Outcome(reasons = setOf(DoubtReason.InstallmentValueDiverges))
+            return newPurchase?.let { createPurchase(m, hint, b, amount, it) } ?: Outcome(reasons = setOf(DoubtReason.InstallmentPurchaseNotRegistered))
         }
         val (purchase, row) = exact.single()
         val doc = b.documentInvoice ?: return Outcome(reasons = setOf(DoubtReason.InstallmentInvoiceDiverges))
@@ -58,6 +62,23 @@ internal object BillingRules {
             is app.accord.core.ShiftResult.Shifted -> Outcome(ProposedEffect.LinkInstallment(purchase.purchaseId, row.number, row.entryId, InstallmentShift(shift.before, shift.after)))
             is app.accord.core.ShiftResult.Blocked -> Outcome(reasons = setOf(DoubtReason.InstallmentShiftBlocked))
         }
+    }
+
+    /**
+     * The person confirmed the total of a purchase the document shows only in part (line n of N): every installment is created, the 1st on the document's
+     * invoice minus n - 1 months. Nothing is guessed: a total that does not split into this line's value, or a schedule that reaches a paid invoice, stays a doubt.
+     */
+    private fun createPurchase(m: ExtractedMovement, hint: InstallmentHint, b: BillingContext, amount: Long, plan: NewPurchase): Outcome {
+        val notRegistered = Outcome(reasons = setOf(DoubtReason.InstallmentPurchaseNotRegistered))
+        val lineInvoice = b.documentInvoice ?: m.date?.let { b.cycle.assign(it).dueMonth } ?: return notRegistered
+        if (hint.number !in 1..hint.total || plan.totalCents < hint.total) return notRegistered
+        if (Installments.splitTotal(app.accord.core.Money(plan.totalCents), hint.total)[hint.number - 1].cents != amount) return notRegistered
+        val categoryId = plan.categoryId ?: return Outcome(reasons = setOf(DoubtReason.CategoryUnknown))
+        val first = lineInvoice.minusMonths((hint.number - 1).toLong())
+        val months = Installments.schedule(first, hint.total)
+        val paid = b.invoices.filter { it.paid }.map { it.dueMonth }.toSet()
+        if (months.any { it in paid }) return Outcome(reasons = setOf(DoubtReason.InstallmentScheduleHitsPaidInvoice))
+        return Outcome(ProposedEffect.CreateInstallmentPurchase(categoryId, plan.totalCents, hint.number, hint.total, first, months))
     }
 
     // ---- rule 10: invoice payment (full only) ----

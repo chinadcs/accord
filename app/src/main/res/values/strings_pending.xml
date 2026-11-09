@@ -48,6 +48,17 @@
     <string name="pending_credit_refund">É estorno de uma compra: escolher a compra</string>
     <string name="pending_credit_refund_hint">O estorno abate a categoria da compra no mês em que o crédito entrou e não vira renda.</string>
     <string name="pending_refund_pick">Compra ou pagamento estornado</string>
+    <string name="pending_purchase_title">Parcela %1$d/%2$d de uma compra que você ainda não registrou</string>
+    <string name="pending_purchase_body">O aplicativo cadastra a compra com todas as parcelas, a primeira nesta fatura. Você confirma o total antes.</string>
+    <string name="pending_purchase_body_past">O aplicativo cadastra a compra com todas as parcelas. As anteriores a esta entram nas faturas dos meses passados, que passam a incluí-las. Você confirma o total antes e vê os meses ao lado de \"O que vai acontecer\".</string>
+    <string name="pending_purchase_action">Cadastrar a compra parcelada</string>
+    <string name="pending_purchase_dialog_title">Compra parcelada: parcela %1$d de %2$d</string>
+    <string name="pending_purchase_dialog_body">O documento mostra só esta parcela, de %1$s. Confirme o total da compra; a divisão em parcelas é do aplicativo, com a diferença de centavos na última.</string>
+    <string name="pending_purchase_total">Total da compra (R$)</string>
+    <string name="pending_purchase_split_ok">A parcela %1$d fica em %2$s, igual ao documento.</string>
+    <string name="pending_purchase_split_bad">Com este total, a parcela %2$d não fica em %3$s ao dividir em %1$d parcelas.</string>
+    <string name="pending_purchase_confirm">Usar este total</string>
+    <string name="pending_purchase_months">Faturas de %1$s a %2$s passam a incluir esta compra.</string>
     <string name="pending_refund_none">Nenhuma compra ou pagamento recente desta origem pode ser estornado. Registre o estorno no detalhe da compra.</string>
     <string name="pending_refund_line">%1$s · %2$s · %3$s</string>
     <string name="pending_refund_remaining">Ainda dá para estornar %1$s</string>

@@ -76,7 +76,7 @@ object Reconciler {
         // Billing rules (8 to 11, 13): clean debits that are not known and not decided by the person.
         val outcomes = arrayOfNulls<BillingRules.Outcome>(movements.size)
         if (billing != null && !blockedByCurrency) {
-            movements.forEachIndexed { i, m -> if (reasons[i].isEmpty() && !knownMatch[i] && forced[i] == null) outcomes[i] = BillingRules.decide(m, isCard, billing, keys[i] in decisions.firstInstallmentShifts) }
+            movements.forEachIndexed { i, m -> if (reasons[i].isEmpty() && !knownMatch[i] && forced[i] == null) outcomes[i] = BillingRules.decide(m, isCard, billing, keys[i] in decisions.firstInstallmentShifts, newPurchaseOf(keys[i], decisions)) }
         }
 
         // Matching with manual or Chat entries (rule 5): only for clean debits that billing did not decide.
@@ -175,6 +175,9 @@ object Reconciler {
         }
         return Preview(batchId, if (blockedByCurrency) BatchState.DiagnosticOnly else BatchState.InReview, items)
     }
+
+    private fun newPurchaseOf(key: String, decisions: Decisions): BillingRules.NewPurchase? =
+        decisions.installmentPurchaseTotals[key]?.let { BillingRules.NewPurchase(it, decisions.categoryByKey[key] ?: decisions.defaultCategoryId) }
 
     /** Origin records a confirmation would persist: new movements and safe links. Doubts, blocked and already known ones are not effected now. */
     fun originRecords(preview: Preview, originId: String): List<KnownOrigin> = preview.items
