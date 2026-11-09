@@ -70,6 +70,7 @@ class ChatFeedbackFlowTest {
             store.snapshot().receipts.single()
         }
         ActivityScenario.launch(MainActivity::class.java).use { scenario ->
+            compose.onNodeWithContentDescription("Chat").performClick()
             fun click(text: String) { compose.onNodeWithText(text).performScrollTo().performClick() }
             fun fields() = runBlocking { store.snapshot().feedback.single().fields }
             compose.waitUntil(10_000) { compose.onAllNodes(hasScrollAction()).fetchSemanticsNodes().isNotEmpty() }

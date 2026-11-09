@@ -62,6 +62,7 @@ class CategoryPilotFlowTest {
         container.clearChat()
         app.container = container
         activity = ActivityScenario.launch(MainActivity::class.java)
+        compose.onNodeWithContentDescription("Chat").performClick()
     }
 
     @After fun close() = runBlocking<Unit> {
@@ -195,7 +196,7 @@ class CategoryPilotFlowTest {
             assertTrue("Compact navigation must leave room for the conversation", nav.height <= 100f * pixelsPerDp)
             compose.onNodeWithContentDescription("Lançamentos").assertIsDisplayed()
             compose.onNodeWithContentDescription("Orçamento").assertIsDisplayed()
-            compose.onNodeWithContentDescription("Revisar").assertIsDisplayed()
+            compose.onNodeWithContentDescription("Início").assertIsDisplayed()
             compose.onNodeWithContentDescription("Mais").assertIsDisplayed()
             capture("category_pilot_real_keyboard_${choice.name}_200")
         }

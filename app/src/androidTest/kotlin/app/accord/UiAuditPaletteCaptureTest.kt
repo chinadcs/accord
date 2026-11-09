@@ -110,7 +110,7 @@ class UiAuditPaletteCaptureTest {
             container.theme.set(theme)
             container.theme.setPalette(palette)
             scenario = ActivityScenario.launch(MainActivity::class.java)
-            waitFor("Mensagem do Chat")
+            waitFor("Conversar no Chat")
             compose.onAllNodes(hasText("Orçamento") and hasClickAction()).onFirst().performClick()
             waitFor("Alimentação")
             UiAuditSyntheticEvidence.capture(compose, "palette_${palette.key}_05_orcamento", theme, "window")

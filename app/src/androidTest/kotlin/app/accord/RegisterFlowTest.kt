@@ -61,6 +61,7 @@ class RegisterFlowTest {
             themeStore.set(UiAuditSyntheticEvidence.theme ?: ThemePreference.Light)
         }
         scenario = ActivityScenario.launch(MainActivity::class.java)
+        compose.onNodeWithContentDescription("Chat").performClick()
         Unit
     }
 

@@ -99,7 +99,7 @@ class CharcoalVisualReviewTest {
      * a aba continua "exibida". [TextLayoutResult.didOverflowHeight] acusa linhas que não couberam.
      */
     private fun assertNavLabelsNotClipped() {
-        for (label in listOf("Lançamentos", "Orçamento", "Revisar", "Mais")) {
+        for (label in listOf("Lançamentos", "Orçamento", "Início", "Mais")) {
             val node = compose.onNode(hasText(label) and hasAnyAncestor(hasTestTag("root-navigation")), useUnmergedTree = true)
             node.assertIsDisplayed()
             val action = node.fetchSemanticsNode().config[SemanticsActions.GetTextLayoutResult].action
@@ -126,15 +126,16 @@ class CharcoalVisualReviewTest {
     }
 
     @Test
-    fun chatIniciaECincoRaizesCompartilhamTemaEscuroETextoAmpliado() {
+    fun inicioAbreECincoRaizesCompartilhamTemaEscuroETextoAmpliado() {
         showApp(seed = true)
-        compose.onNodeWithText("Mensagem do Chat").assertIsDisplayed()
+        compose.onNodeWithText("Conversar no Chat").assertIsDisplayed()
+        tab("Chat")
         compose.onNodeWithTag("root-navigation", useUnmergedTree = true).assertIsDisplayed()
         capture("chat-escuro")
 
         for ((label, slug) in listOf(
             "Orçamento" to "orcamento", "Lançamentos" to "lancamentos",
-            "Revisar" to "revisar", "Mais" to "mais",
+            "Início" to "inicio", "Mais" to "mais",
         )) {
             tab(label)
             if (label == "Orçamento" || label == "Lançamentos") waitFor(Money(5_900).format())

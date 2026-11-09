@@ -48,6 +48,7 @@ class UiAuditRegisterCaptureTest {
         require(round.matches(Regex("[a-z0-9_-]+")))
         app.container.theme.set(if (themeName == "dark") ThemePreference.Dark else ThemePreference.Light)
         scenario = ActivityScenario.launch(MainActivity::class.java)
+        compose.onNodeWithContentDescription("Chat").performClick()
         compose.waitUntil(12_000) { compose.onAllNodesWithText("Mensagem do Chat").fetchSemanticsNodes().isNotEmpty() }
     }
 

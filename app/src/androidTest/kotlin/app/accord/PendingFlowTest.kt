@@ -90,7 +90,8 @@ class PendingFlowTest {
     @Test
     fun duvidaGuardadaApareceEmRevisarEResolveSemDuplicar() {
         scenario = ActivityScenario.launch(MainActivity::class.java)
-        compose.onNodeWithText("Revisar").performClick()
+        compose.onNodeWithText("Mais").performClick()
+        compose.onNodeWithText("Revisar").performScrollTo().performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("Revisar pendências")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Revisar pendências").performScrollTo().performClick()
 

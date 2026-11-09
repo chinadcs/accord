@@ -1,5 +1,7 @@
 package app.accord
 
+import androidx.compose.ui.test.performScrollTo
+
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollAction
@@ -257,7 +259,8 @@ class SyncFlowTest {
         assertEquals(1, ana.sync.summary()!!.openConflicts)
 
         launch(ana)
-        compose.onNodeWithText("Revisar").performClick()
+        compose.onNodeWithText("Mais").performClick()
+        compose.onNodeWithText("Revisar").performScrollTo().performClick()
         waitForText("Conflitos de edição")
         tap("Revisar conflito")
         waitForText("Escolher versão")

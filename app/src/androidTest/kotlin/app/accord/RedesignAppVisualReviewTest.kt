@@ -43,7 +43,7 @@ class RedesignAppVisualReviewTest {
             "Chat" to "chat",
             "Orçamento" to "orcamento",
             "Lançamentos" to "lancamentos",
-            "Revisar" to "revisar",
+            "Início" to "inicio",
             "Mais" to "mais",
         )
         for ((scale, suffix) in listOf(1f to "normal", 1.3f to "130")) {

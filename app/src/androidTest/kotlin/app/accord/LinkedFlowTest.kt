@@ -1,5 +1,7 @@
 package app.accord
 
+import androidx.compose.ui.test.onNodeWithContentDescription
+
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollAction
@@ -81,6 +83,7 @@ class LinkedFlowTest {
             RegisterBoleto(power, Classification.Category(category("casa.contas-domesticas")), month.atDay(20), Money(18_000), account),
         )
         scenario = ActivityScenario.launch(MainActivity::class.java)
+        compose.onNodeWithContentDescription("Chat").performClick()
         Unit
     }
 

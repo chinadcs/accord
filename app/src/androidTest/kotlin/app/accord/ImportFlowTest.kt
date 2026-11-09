@@ -98,7 +98,8 @@ class ImportFlowTest {
                 .receipt.changes.single().id
         }
         scenario = ActivityScenario.launch(MainActivity::class.java)
-        compose.onNodeWithText("Revisar").performClick()
+        compose.onNodeWithText("Mais").performClick()
+        compose.onNodeWithText("Revisar").performScrollTo().performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("Continuar revisão")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Continuar revisão").performScrollTo().performClick()
         compose.waitUntil(5_000) { runCatching { compose.onNodeWithText(description).assertIsDisplayed() }.isSuccess }
@@ -117,7 +118,8 @@ class ImportFlowTest {
     @Test
     fun revisarOferecaContinuarConfirmarEMostreOResultado() {
         scenario = ActivityScenario.launch(MainActivity::class.java)
-        compose.onNodeWithText("Revisar").performClick()
+        compose.onNodeWithText("Mais").performClick()
+        compose.onNodeWithText("Revisar").performScrollTo().performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("Continuar revisão")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Continuar revisão").performScrollTo().performClick()
 
@@ -154,7 +156,8 @@ class ImportFlowTest {
     @Test
     fun descartarNaRevisaoVoltaARevisarSemContinuarRevisao() {
         scenario = ActivityScenario.launch(MainActivity::class.java)
-        compose.onNodeWithText("Revisar").performClick()
+        compose.onNodeWithText("Mais").performClick()
+        compose.onNodeWithText("Revisar").performScrollTo().performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("Continuar revisão")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Continuar revisão").performScrollTo().performClick()
         compose.waitUntil(5_000) { runCatching { compose.onNodeWithText(description).assertIsDisplayed() }.isSuccess }
@@ -172,7 +175,8 @@ class ImportFlowTest {
     @Test
     fun descartarPeloCardDeRevisarTiraOContinuarRevisao() {
         scenario = ActivityScenario.launch(MainActivity::class.java)
-        compose.onNodeWithText("Revisar").performClick()
+        compose.onNodeWithText("Mais").performClick()
+        compose.onNodeWithText("Revisar").performScrollTo().performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("Continuar revisão")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Descartar esta revisão").performScrollTo().performClick()
         compose.onNodeWithText("Descartar").performClick()

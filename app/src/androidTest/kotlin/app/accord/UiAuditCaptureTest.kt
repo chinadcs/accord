@@ -53,6 +53,7 @@ class UiAuditCaptureTest {
         require(round.matches(Regex("[a-z0-9_-]+")))
         context.container.theme.set(if (themeName == "dark") ThemePreference.Dark else ThemePreference.Light)
         scenario = ActivityScenario.launch(MainActivity::class.java)
+        compose.onNodeWithContentDescription("Chat").performClick()
         waitFor("Mensagem do Chat")
     }
 
@@ -151,7 +152,7 @@ class UiAuditCaptureTest {
         for ((label, id) in listOf(
             "Lançamentos" to "07_lancamentos",
             "Orçamento" to "05_orcamento",
-            "Revisar" to "14_revisar",
+            "Início" to "inicio",
             "Mais" to "22_mais",
         )) {
             compose.onAllNodes(hasText(label) and hasClickAction()).onFirst().performClick()

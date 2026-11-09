@@ -21,6 +21,7 @@ class ChatConversationsUiTest {
     @Before fun prepare() = runBlocking<Unit> {
         container.chat.filterNotNull().first().clearHistory()
         scenario = ActivityScenario.launch(MainActivity::class.java)
+        compose.onNodeWithContentDescription("Chat").performClick()
     }
     @After fun close() { scenario?.close(); runBlocking { container.chat.value?.clearHistory() } }
 

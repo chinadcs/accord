@@ -22,6 +22,7 @@ import app.accord.persistence.SyncController
 import app.accord.ui.review.CategoryReviewItem
 import app.accord.ui.review.buildCategoryReview
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -101,6 +102,7 @@ class PendingQueueViewModel(
         ),
     )
     val state: StateFlow<PendingQueueUiState> = _state.asStateFlow()
+    private var refreshJob: Job? = null
 
     init {
         // Vindo de um lote, a fila já abre no filtro Importação.
@@ -116,7 +118,8 @@ class PendingQueueViewModel(
     fun clearBatchFilter() = _state.update { it.copy(batchFilter = null) }
 
     fun refresh() {
-        viewModelScope.launch {
+        refreshJob?.cancel()
+        refreshJob = viewModelScope.launch {
             val imports = (provider.imports().pendings() as? QueryResult.Data)?.value
             val records = (provider.space().pendings() as? QueryResult.Data)?.value
             if (imports == null || records == null) {

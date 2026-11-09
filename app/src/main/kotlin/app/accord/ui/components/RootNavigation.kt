@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -33,6 +35,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.text.style.Hyphens
 import androidx.compose.ui.text.style.LineBreak
@@ -43,9 +46,9 @@ import androidx.compose.ui.unit.dp
 import app.accord.ui.nav.Root
 import app.accord.ui.theme.AccordSpacing
 
-/** Cinco destinos persistentes, inclusive quando o Chat é a raiz inicial. */
+/** Cinco destinos persistentes, com Início como abertura e Chat central. */
 @Composable
-fun RootNavigationBar(selected: Root?, onSelect: (Root) -> Unit) {
+fun RootNavigationBar(selected: Root?, onSelect: (Root) -> Unit, hasPending: Boolean = false) {
     val colors = MaterialTheme.colorScheme
     val enlarged = LocalDensity.current.fontScale >= 1.5f
     // With large text and the IME open, retain all five destinations as labelled accessibility tabs.
@@ -78,12 +81,17 @@ fun RootNavigationBar(selected: Root?, onSelect: (Root) -> Unit) {
                         } else {
                             val active = selected == root
                             val rootLabel = stringResource(root.label)
+                            val attention = hasPending && (root == Root.Home || root == Root.More)
+                            val pendingLabel = stringResource(app.accord.R.string.home_pending_badge)
                             Surface(
-                                modifier = Modifier.weight(1f).heightIn(min = 64.dp).selectable(
+                                modifier = Modifier.weight(1f).heightIn(min = 64.dp).testTag("tab-${root.name}").selectable(
                                     selected = active,
                                     role = Role.Tab,
                                     onClick = { onSelect(root) },
-                                ).then(if (compact) Modifier.semantics { contentDescription = rootLabel } else Modifier),
+                                ).semantics {
+                                    if (compact) contentDescription = rootLabel
+                                    if (attention) stateDescription = pendingLabel
+                                },
                                 shape = MaterialTheme.shapes.medium,
                                 color = colors.surfaceContainerLow,
                             ) {
@@ -96,11 +104,13 @@ fun RootNavigationBar(selected: Root?, onSelect: (Root) -> Unit) {
                                         Modifier.size(32.dp).background(if (active) colors.primary else Color.Transparent, CircleShape),
                                         contentAlignment = Alignment.Center,
                                     ) {
-                                        Icon(
-                                            painterResource(root.icon), contentDescription = null,
-                                            tint = if (active) colors.onPrimary else colors.onSurfaceVariant,
-                                            modifier = Modifier.size(20.dp),
-                                        )
+                                        BadgedBox(badge = { if (attention) Badge() }) {
+                                            Icon(
+                                                painterResource(root.icon), contentDescription = null,
+                                                tint = if (active) colors.onPrimary else colors.onSurfaceVariant,
+                                                modifier = Modifier.size(20.dp),
+                                            )
+                                        }
                                     }
                                     if (!compact) Text(
                                         rootLabel,
@@ -123,7 +133,7 @@ fun RootNavigationBar(selected: Root?, onSelect: (Root) -> Unit) {
             val chatLabel = stringResource(Root.Chat.label)
             FloatingActionButton(
                 onClick = { onSelect(Root.Chat) },
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = AccordSpacing.s1)
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = AccordSpacing.s1).testTag("tab-Chat")
                     .selectable(selected = selected == Root.Chat, enabled = true, role = Role.Tab, onClick = { onSelect(Root.Chat) })
                     .semantics {
                         contentDescription = chatLabel

@@ -388,7 +388,7 @@ build `-Paccord.p2=true` só em debug; sem ela nenhum controle aparece). **Imple
 
 ## Interface e validação futura
 
-Chat é a tela inicial. Barra inferior: Lançamentos, Orçamento, Chat (ícone Astroid, sem rótulo visual), Revisar e Mais. Detalhes preservam
+Início é a tela inicial após configuração (ADR 0067). Barra inferior: Lançamentos, Orçamento, Chat (ícone Astroid, sem rótulo visual), Início e Mais. Revisar fica em Mais, com atalho no Início e indicadores de pendências locais nas duas abas. Detalhes preservam
 contexto ao voltar. Seguir cada spec, linguagem pt-BR clara e sem julgamento, temas claro/escuro,
 fonte nativa e tokens semânticos. Corpo 16 sp, títulos 20–24 sp, margens 16 dp e ritmo 4/8 dp
 são referências adaptáveis, não alturas rígidas. Validar TalkBack, texto ampliado, teclado,

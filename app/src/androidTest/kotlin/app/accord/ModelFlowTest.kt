@@ -1,5 +1,7 @@
 package app.accord
 
+import androidx.compose.ui.test.onNodeWithContentDescription
+
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -34,6 +36,7 @@ class ModelFlowTest {
             container.access.runtime.value?.chatStore?.clear()
         }
         scenario = ActivityScenario.launch(MainActivity::class.java)
+        compose.onNodeWithContentDescription("Chat").performClick()
     }
 
     @After

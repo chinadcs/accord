@@ -201,7 +201,7 @@ class AccessFlowTest {
         // O aviso "Limite atualizado" volta com a tela e cobre os botões do rodapé até ser dispensado.
         dismissReceipt("Limite atualizado")
         tap("Começar a registrar")
-        waitForText("Mensagem do Chat")
+        waitForText("Conversar no Chat")
         waitForText("Orçamento")
         compose.onNodeWithText("Mais").performClick()
         waitForText("Categorias e subcategorias")
@@ -209,7 +209,7 @@ class AccessFlowTest {
     }
 
     @Test
-    fun cadastroEspacoConviteEPrimeirosPassosAteOChat() {
+    fun cadastroEspacoConviteEPrimeirosPassosAteOInicio() {
         waitForText("Controle financeiro colaborativo")
         tap("Criar acesso")
         waitForText("Nenhum e-mail de confirmação é enviado")
@@ -237,8 +237,8 @@ class AccessFlowTest {
         waitForText("10 categorias, editáveis.")
         waitForText("Sem ele, cada registro pede o pagamento.")
         tap("Começar a registrar")
-        // O Chat inicia o uso (sem rótulo na barra): o campo de mensagem e a raiz Orçamento confirmam a chegada.
-        waitForText("Mensagem do Chat")
+        // Início abre após concluir os Primeiros passos (ADR 0067).
+        waitForText("Conversar no Chat")
         waitForText("Orçamento")
     }
 
@@ -257,7 +257,7 @@ class AccessFlowTest {
         scenario!!.onActivity { it.onBackPressedDispatcher.onBackPressed() }
         compose.waitForIdle()
 
-        waitForText("Mensagem do Chat")
+        waitForText("Conversar no Chat")
         compose.onNodeWithText("Lançamentos").performClick()
         waitForText("Saldo total")
         compose.onNodeWithText("Orçamento").performClick()
@@ -322,7 +322,7 @@ class AccessFlowTest {
             container.access.createSpace("Casa")
             container.access.dismissFirstSteps()
         }
-        waitForText("Mensagem do Chat")
+        waitForText("Conversar no Chat")
         compose.onNodeWithText("Mais").performClick()
         waitForText("Conectado como $email")
         tap("Sair")

@@ -1,5 +1,7 @@
 package app.accord
 
+import androidx.compose.ui.test.onNodeWithContentDescription
+
 import android.view.WindowInsets
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasClickAction
@@ -39,6 +41,7 @@ class UiAuditLayoutRegressionTest {
         assertTrue("Configure font_scale real >= 1.5 antes deste teste", context.resources.configuration.fontScale >= 1.5f)
         context.container.theme.set(ThemePreference.Dark)
         scenario = ActivityScenario.launch(MainActivity::class.java)
+        compose.onNodeWithContentDescription("Chat").performClick()
         compose.waitUntil(12_000) {
             compose.onAllNodesWithText("Mensagem do Chat").fetchSemanticsNodes().isNotEmpty()
         }

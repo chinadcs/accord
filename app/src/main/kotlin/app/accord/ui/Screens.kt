@@ -2,6 +2,7 @@ package app.accord.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,6 +13,10 @@ import androidx.compose.foundation.verticalScroll
 import app.accord.ui.components.AccordButton as Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.painterResource
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -22,7 +27,7 @@ import app.accord.ui.theme.AccordSpacing
 
 /** Esqueleto de uma tela raiz: margem de 16 dp, título como cabeçalho para o TalkBack e rolagem. */
 @Composable
-fun RootScaffold(title: String, padding: PaddingValues, content: @Composable () -> Unit) {
+fun RootScaffold(title: String, padding: PaddingValues, onBack: (() -> Unit)? = null, content: @Composable () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -31,7 +36,14 @@ fun RootScaffold(title: String, padding: PaddingValues, content: @Composable () 
             .padding(AccordSpacing.s4),
         verticalArrangement = Arrangement.spacedBy(AccordSpacing.s4),
     ) {
-        Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            onBack?.let { action ->
+                IconButton(onClick = action) {
+                    Icon(painterResource(com.composables.icons.lucide.R.drawable.lucide_ic_arrow_left), stringResource(R.string.action_back))
+                }
+            }
+            Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+        }
         content()
     }
 }
@@ -42,9 +54,10 @@ fun ReviewRoot(
     title: String,
     padding: PaddingValues,
     onRegister: () -> Unit,
+    onBack: () -> Unit,
     extra: @Composable () -> Unit = {},
 ) {
-    RootScaffold(title, padding) {
+    RootScaffold(title, padding, onBack) {
         extra()
         Button(onClick = onRegister, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
             Text(stringResource(R.string.action_register_manually))

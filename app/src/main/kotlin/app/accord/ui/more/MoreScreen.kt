@@ -54,6 +54,7 @@ data class MoreActions(
     val onCard: () -> Unit,
     val onIncomes: () -> Unit,
     val onCommitments: () -> Unit,
+    val onReview: () -> Unit = {},
     val onRegister: () -> Unit = {},
     val onSpace: () -> Unit = {},
     val onAppearance: () -> Unit = {},
@@ -89,6 +90,7 @@ data class MoreActions(
 fun MoreScreen(
     padding: PaddingValues,
     actions: MoreActions,
+    reviewState: app.accord.ui.pending.PendingQueueUiState = app.accord.ui.pending.PendingQueueUiState(),
     account: AccountView? = null,
     sessionState: SessionState = SessionState.Valid,
     syncStatus: SyncStatus? = null,
@@ -117,6 +119,11 @@ fun MoreScreen(
         // O registro manual continua a um toque de qualquer raiz, sem depender de modelo nem de rede.
         Button(onClick = actions.onRegister, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
             Text(stringResource(R.string.action_register_manually))
+        }
+
+        Section(R.string.more_group_review) {
+            MoreRow(R.string.tab_review, Lucide.drawable.lucide_ic_circle_check, actions.onReview,
+                supporting = app.accord.ui.home.pendingSummary(reviewState))
         }
 
         Section(R.string.more_group_budget) {

@@ -1,5 +1,7 @@
 package app.accord
 
+import androidx.compose.ui.test.onNodeWithContentDescription
+
 import android.graphics.Bitmap
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.WindowInsets
@@ -53,6 +55,7 @@ class KeyboardLayoutUiTest {
                 }
             }
         }
+        compose.onNodeWithContentDescription("Chat").performClick()
         compose.onNodeWithText("Mensagem do Chat").performClick().performTextInput("mercado 35")
         compose.waitUntil(10_000) { keyboardVisible }
         compose.waitForIdle()

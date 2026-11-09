@@ -68,6 +68,7 @@ class ChatFlowTest {
         // O histórico do Chat de um teste não pode aparecer no seguinte.
         container.access.runtime.value?.chatStore?.clear()
         scenario = ActivityScenario.launch(MainActivity::class.java)
+        compose.onNodeWithContentDescription("Chat").performClick()
         Unit
     }
 

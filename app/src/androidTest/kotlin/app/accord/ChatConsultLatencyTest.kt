@@ -1,5 +1,7 @@
 package app.accord
 
+import androidx.compose.ui.test.onNodeWithContentDescription
+
 import android.util.Log
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -112,6 +114,7 @@ class ChatConsultLatencyTest {
         seed()
         container.access.runtime.value?.chatStore?.clear()
         scenario = ActivityScenario.launch(MainActivity::class.java)
+        compose.onNodeWithContentDescription("Chat").performClick()
         Unit
     }
 

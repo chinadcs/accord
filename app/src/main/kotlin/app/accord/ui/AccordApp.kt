@@ -27,6 +27,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.createSavedStateHandle
@@ -238,6 +240,7 @@ import app.accord.ui.nav.ROUTE_INCOMES
 import app.accord.ui.nav.ROUTE_INVOICE
 import app.accord.ui.nav.ROUTE_REGISTER
 import app.accord.ui.nav.Root
+import app.accord.ui.nav.ROUTE_REVIEW
 import app.accord.ui.categories.CategoriesRoute
 import app.accord.ui.categories.CategoriesViewModel
 import app.accord.ui.incomes.IncomesRoute
@@ -297,7 +300,7 @@ fun AccordApp(container: AppContainer) {
             onPrivacy = { utility = "privacy" }, onArchive = if (access.archivedSpaces.isNotEmpty()) ({ utility = "archive" }) else null)
         else -> {
             // Fixada na primeira composição: trocar a rota inicial depois recriaria o grafo de navegação.
-            val startRoute = remember { if (access.stage == EntryStage.FirstSteps) ROUTE_FIRST_STEPS else Root.Chat.graph }
+            val startRoute = remember { if (access.stage == EntryStage.FirstSteps) ROUTE_FIRST_STEPS else Root.Home.graph }
             MainApp(container, startRoute)
         }
     }
@@ -345,6 +348,15 @@ private fun MainApp(container: AppContainer, startRoute: String) {
     }
     val access by container.access.status.collectAsStateWithLifecycle()
     val syncStatus by container.sync.status.collectAsStateWithLifecycle()
+    val reviewSummary: PendingQueueViewModel = viewModel(key = "home-pendings", factory = viewModelFactory {
+        initializer { PendingQueueViewModel(container, container.sync, container.chat, androidx.lifecycle.SavedStateHandle()) }
+    })
+    val reviewState by reviewSummary.state.collectAsStateWithLifecycle()
+    RefreshOnResume(reviewSummary::refresh)
+    val coordinator by container.chat.collectAsStateWithLifecycle()
+    LaunchedEffect(coordinator) {
+        coordinator?.snapshot?.map { it.questions }?.distinctUntilChanged()?.collect { reviewSummary.refresh() }
+    }
     val pendingAlert by container.pendingAlertEvent.collectAsStateWithLifecycle()
     // Aviso tocado: pilha Orçamento, Previsões, Detalhe. Evento de outro espaço ou conta é ignorado e abre só as Previsões; com a sessão encerrada, espera entrar.
     LaunchedEffect(pendingAlert, access.stage) {
@@ -360,6 +372,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
     }
     val entry by navController.currentBackStackEntryAsState()
     val destination = entry?.destination
+    LaunchedEffect(entry, syncStatus) { reviewSummary.refresh() }
     // A barra inferior só aparece nas raízes; detalhes e formulários escondem-na.
     val onRoot = Root.entries.any { destination?.route == it.start }
     val selectedRoot = Root.entries.firstOrNull { root -> destination?.hierarchy?.any { it.route == root.graph } == true }
@@ -488,7 +501,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
         },
         bottomBar = {
             if (onRoot) {
-                Box(Modifier.imePadding()) { RootNavigationBar(selectedRoot, openRoot) }
+                Box(Modifier.imePadding()) { RootNavigationBar(selectedRoot, openRoot, reviewState.items.isNotEmpty()) }
             }
         },
     ) { padding ->
@@ -511,6 +524,15 @@ private fun MainApp(container: AppContainer, startRoute: String) {
             val register = { navController.navigate(ROUTE_REGISTER) }
             val openEntry = { id: String -> navController.navigate("$ROUTE_ENTRY/${Uri.encode(id)}") }
 
+            navigation(startDestination = Root.Home.start, route = Root.Home.graph) {
+                composable(Root.Home.start) {
+                    PullToRefresh(reviewSummary::refresh) {
+                        app.accord.ui.home.HomeScreen(padding, reviewState, reviewSummary::refresh,
+                            onChat = { openRoot(Root.Chat) }, onRegister = register,
+                            onReview = { navController.navigate(ROUTE_REVIEW) })
+                    }
+                }
+            }
             navigation(startDestination = Root.Chat.start, route = Root.Chat.graph) {
                 composable(Root.Chat.start) {
                     val viewModel: ChatViewModel = viewModel(
@@ -591,43 +613,42 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     }
                 }
             }
-            navigation(startDestination = Root.Review.start, route = Root.Review.graph) {
-                composable(Root.Review.start) {
-                    val viewModel: ReviewViewModel = viewModel(factory = viewModelFactory { initializer { ReviewViewModel(container.sync, container.chat) } })
-                    val conflicts by viewModel.conflicts.collectAsStateWithLifecycle()
-                    val categories by viewModel.categories.collectAsStateWithLifecycle()
-                    RefreshOnResume(viewModel::refresh)
-                    val hub: ImportHubViewModel = viewModel(factory = viewModelFactory { initializer { ImportHubViewModel(container) } })
-                    val hubState by hub.state.collectAsStateWithLifecycle()
-                    RefreshOnResume(hub::refresh)
-                    val queue: PendingQueueViewModel = viewModel(
-                        factory = viewModelFactory { initializer { PendingQueueViewModel(container, container.sync, container.chat, createSavedStateHandle()) } },
+            composable(ROUTE_REVIEW) {
+                val viewModel: ReviewViewModel = viewModel(factory = viewModelFactory { initializer { ReviewViewModel(container.sync, container.chat) } })
+                val conflicts by viewModel.conflicts.collectAsStateWithLifecycle()
+                val categories by viewModel.categories.collectAsStateWithLifecycle()
+                RefreshOnResume(viewModel::refresh)
+                val hub: ImportHubViewModel = viewModel(factory = viewModelFactory { initializer { ImportHubViewModel(container) } })
+                val hubState by hub.state.collectAsStateWithLifecycle()
+                RefreshOnResume(hub::refresh)
+                val queue: PendingQueueViewModel = viewModel(
+                    factory = viewModelFactory { initializer { PendingQueueViewModel(container, container.sync, container.chat, createSavedStateHandle()) } },
+                )
+                val queueState by queue.state.collectAsStateWithLifecycle()
+                RefreshOnResume(queue::refresh)
+                PullToRefresh({ viewModel.refresh(); hub.refresh(); queue.refresh() }) {
+                    ReviewRoot(
+                        stringResource(R.string.review_title), padding, register,
+                        onBack = { navController.popBackStack() },
+                        extra = {
+                            if (container.phase.includes(ProductPhase.P2)) {
+                                app.accord.ui.components.AccordOutlinedButton(
+                                    onClick = { navController.navigate(ROUTE_CLUES) },
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) { Text(stringResource(R.string.clues_title)) }
+                            }
+                            PendingHubCard(queueState.items.size, queueState.loading) { navController.navigate(ROUTE_PENDING) }
+                            ImportHub(
+                                hubState,
+                                onImport = { navController.navigate(ROUTE_IMPORT) },
+                                onContinue = { id -> navController.navigate("$ROUTE_IMPORT_REVIEW/${Uri.encode(id)}") },
+                                onOpenResult = { id -> navController.navigate("$ROUTE_IMPORT_RESULT/${Uri.encode(id)}") },
+                                onDiscard = hub::discard,
+                            )
+                            ReviewConflicts(conflicts) { id -> navController.navigate("$ROUTE_CONFLICT/${Uri.encode(id)}") }
+                            ReviewCategories(categories, onAccept = viewModel::accept, onChoose = { navController.navigate(ROUTE_PENDING) })
+                        },
                     )
-                    val queueState by queue.state.collectAsStateWithLifecycle()
-                    RefreshOnResume(queue::refresh)
-                    PullToRefresh({ viewModel.refresh(); hub.refresh(); queue.refresh() }) {
-                        ReviewRoot(
-                            stringResource(R.string.review_title), padding, register,
-                            extra = {
-                                if (container.phase.includes(ProductPhase.P2)) {
-                                    app.accord.ui.components.AccordOutlinedButton(
-                                        onClick = { navController.navigate(ROUTE_CLUES) },
-                                        modifier = Modifier.fillMaxWidth(),
-                                    ) { Text(stringResource(R.string.clues_title)) }
-                                }
-                                PendingHubCard(queueState.items.size, queueState.loading) { navController.navigate(ROUTE_PENDING) }
-                                ImportHub(
-                                    hubState,
-                                    onImport = { navController.navigate(ROUTE_IMPORT) },
-                                    onContinue = { id -> navController.navigate("$ROUTE_IMPORT_REVIEW/${Uri.encode(id)}") },
-                                    onOpenResult = { id -> navController.navigate("$ROUTE_IMPORT_RESULT/${Uri.encode(id)}") },
-                                    onDiscard = hub::discard,
-                                )
-                                ReviewConflicts(conflicts) { id -> navController.navigate("$ROUTE_CONFLICT/${Uri.encode(id)}") }
-                                ReviewCategories(categories, onAccept = viewModel::accept, onChoose = { navController.navigate(ROUTE_PENDING) })
-                            },
-                        )
-                    }
                 }
             }
             navigation(startDestination = Root.More.start, route = Root.More.graph) {
@@ -670,7 +691,9 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     val updatesState by container.updates.state.collectAsStateWithLifecycle()
                     MoreScreen(
                         padding,
+                        reviewState = reviewState,
                         actions = MoreActions(
+                            onReview = { navController.navigate(ROUTE_REVIEW) },
                             onCategories = { navController.navigate(ROUTE_CATEGORIES) },
                             onAccounts = { navController.navigate(ROUTE_ACCOUNTS) },
                             onLimits = { navController.navigate(ROUTE_LIMITS) },
@@ -806,7 +829,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                         onBack = { navController.popBackStack() },
                         onOpenDetail = { id -> navController.navigate("$ROUTE_FORECAST/${Uri.encode(id)}/${viewModel.month}") },
                         onOpenPreferences = { navController.navigate(ROUTE_ALERT_PREFS) },
-                        onImproveCoverage = { openRoot(Root.Review) },
+                        onImproveCoverage = { navController.navigate(ROUTE_REVIEW) },
                         onClassify = { navController.openFilteredEntries(viewModel.month, null, EntrySituation.ToClassify) },
                     ),
                 )
@@ -835,7 +858,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                         onOpenCommitments = { navController.navigate("$ROUTE_COMMITMENTS?$ARG_MONTH=${viewModel.month}") },
                         onDestination = { destination ->
                             when (destination) {
-                                ReasonDestination.Review -> openRoot(Root.Review)
+                                ReasonDestination.Review -> navController.navigate(ROUTE_REVIEW)
                                 ReasonDestination.Pendings -> navController.navigate(ROUTE_PENDING)
                                 ReasonDestination.Card -> navController.navigate(ROUTE_CARD)
                                 ReasonDestination.Sync -> navController.navigate(ROUTE_SYNC)
@@ -986,7 +1009,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     WeeklyReviewActions(
                         onBack = { navController.popBackStack() },
                         onOpenCategory = { categoryId, month -> navController.navigate("$ROUTE_FORECAST/${Uri.encode(categoryId)}/$month") },
-                        onOpenPendings = { navController.openRoot(Root.Review) },
+                        onOpenPendings = { navController.navigate(ROUTE_REVIEW) },
                         onOpenCommitment = { id -> navController.navigate("$ROUTE_COMMITMENT/${Uri.encode(id)}") },
                         onOpenActivity = { navController.navigate(ROUTE_ACTIVITY) },
                         onOpenCommitments = { navController.navigate(ROUTE_COMMITMENTS) },
@@ -1006,7 +1029,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             onOpenEntries = { month, categoryId, criterion, toClassify ->
                                 navController.openFilteredEntries(month, categoryId, EntrySituation.ToClassify.takeIf { toClassify }, criterion)
                             },
-                            onOpenPendings = { navController.openRoot(Root.Review) },
+                            onOpenPendings = { navController.navigate(ROUTE_REVIEW) },
                         ),
                     )
                 }
@@ -1086,8 +1109,8 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 val viewModel: FirstStepsViewModel = viewModel(
                     factory = viewModelFactory { initializer { FirstStepsViewModel(container, container.access, container.notifications) } },
                 )
-                val goToChat: () -> Unit = {
-                    navController.navigate(Root.Chat.graph) { popUpTo(ROUTE_FIRST_STEPS) { inclusive = true } }
+                val goToHome: () -> Unit = {
+                    navController.navigate(Root.Home.graph) { popUpTo(ROUTE_FIRST_STEPS) { inclusive = true } }
                 }
                 FirstStepsRoute(
                     viewModel, container.notifications, padding,
@@ -1097,11 +1120,11 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                         onAccounts = { navController.navigate(ROUTE_ACCOUNTS) },
                         onLimits = { navController.navigate("$ROUTE_LIMITS?initialSetup=true") },
                         onSpace = { navController.navigate(ROUTE_SPACE) },
-                        onStart = { viewModel.start(goToChat) },
+                        onStart = { viewModel.start(goToHome) },
                         onRegisterManually = {
                             viewModel.start {
-                                // O Chat fica embaixo do formulário: ao sair do registro há uma raiz para onde voltar (accord-6hu).
-                                navController.navigate(Root.Chat.graph) { popUpTo(ROUTE_FIRST_STEPS) { inclusive = true } }
+                                // Início fica embaixo do formulário: ao sair do registro há uma raiz para onde voltar (accord-6hu).
+                                navController.navigate(Root.Home.graph) { popUpTo(ROUTE_FIRST_STEPS) { inclusive = true } }
                                 navController.navigate(ROUTE_REGISTER)
                             }
                         },
@@ -1413,10 +1436,10 @@ private fun SpeedDialAction(label: String, icon: Int, onClick: () -> Unit) {
     }
 }
 
-// A tela inicial do Chat é a base da pilha das raízes. Não usar findStartDestination(): numa sessão iniciada nos Primeiros
+// A tela Início é a base da pilha das raízes. Não usar findStartDestination(): numa sessão iniciada nos Primeiros
 // passos o início do grafo é essa tela, já removida da pilha, e o popUpTo deixaria de ter alvo (accord-6hu).
 private fun NavHostController.openRoot(root: Root) = navigate(root.graph) {
-    popUpTo(Root.Chat.start) { saveState = true }
+    popUpTo(Root.Home.start) { saveState = true }
     launchSingleTop = true
     restoreState = true
 }

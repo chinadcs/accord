@@ -1,5 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="tab_home">Início</string>
+    <string name="more_group_review">Revisão e importação</string>
+    <string name="home_intro">Registre e acompanhe o que precisa de atenção.</string>
+    <string name="home_open_chat">Conversar no Chat</string>
+    <string name="home_open_review">Abrir Revisar</string>
+    <string name="home_pending_loading">Consultando pendências…</string>
+    <string name="home_pending_failed">Não foi possível consultar as pendências</string>
+    <string name="home_pending_empty">Nenhuma pendência neste aparelho</string>
+    <string name="home_pending_badge">Há pendências neste aparelho</string>
+    <plurals name="home_pending_count">
+        <item quantity="one">%d pendência neste aparelho</item>
+        <item quantity="other">%d pendências neste aparelho</item>
+    </plurals>
     <string name="chat_fake_pilot">Piloto · interpretador fake</string>
     <string name="chat_fake_pilot_help">Este piloto usa uma tabela de demonstração e registra despesas reais no espaço aberto. Frases disponíveis:\n\nração 80 no cartão\ntanque cheio 200 no cartão\ncamiseta 60 no cartão\nAmazon 150 no cartão\n\nA categoria só é aplicada após sua escolha. Outras frases permitem registro manual. Os diagnósticos ficam neste aparelho, sem texto ou valores.</string>
     <string name="chat_categories_all">Ver todas</string>

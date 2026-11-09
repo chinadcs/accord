@@ -31,6 +31,7 @@ class CategoryPilotOffFlowTest {
         try {
             app.container = container
             activity = ActivityScenario.launch(MainActivity::class.java)
+            compose.onNodeWithContentDescription("Chat").performClick()
             compose.onNodeWithText("Mensagem do Chat").performTextInput("ração 80 no cartão")
             compose.onNodeWithText("Enviar").performClick()
             compose.waitUntil(15_000) { runBlocking {
@@ -58,6 +59,7 @@ class CategoryPilotOffFlowTest {
         try {
             app.container = container
             activity = ActivityScenario.launch(MainActivity::class.java)
+            compose.onNodeWithContentDescription("Chat").performClick()
             compose.onNodeWithText("Mensagem do Chat").performTextInput("bom dia, tudo bem")
             compose.onNodeWithText("Enviar").performClick()
             compose.waitUntil(15_000) { compose.onAllNodesWithText("Não entendi esta frase", substring = true).fetchSemanticsNodes().isNotEmpty() }

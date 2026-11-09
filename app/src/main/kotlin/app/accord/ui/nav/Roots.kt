@@ -18,7 +18,7 @@ enum class Root(
     Entries("entries_graph", "entries", R.string.tab_entries, Lucide.drawable.lucide_ic_list),
     Budget("budget_graph", "budget", R.string.tab_budget, Lucide.drawable.lucide_ic_wallet),
     Chat("chat_graph", "chat", R.string.tab_chat, R.drawable.lucide_ic_astroid),
-    Review("review_graph", "review", R.string.tab_review, Lucide.drawable.lucide_ic_circle_check),
+    Home("home_graph", "home", R.string.tab_home, Lucide.drawable.lucide_ic_house),
     More("more_graph", "more", R.string.tab_more, Lucide.drawable.lucide_ic_ellipsis),
 }
 
@@ -115,3 +115,6 @@ const val ROUTE_COMPARISON = "comparison"
 
 /** Revisão semanal (tela 29). */
 const val ROUTE_WEEKLY_REVIEW = "weekly_review"
+
+/** Revisar, aberto pelo Início ou Mais; voltar preserva a origem. */
+const val ROUTE_REVIEW = "review"
