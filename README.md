@@ -300,7 +300,10 @@ no Android, preservando a instalação existente. **Não desinstale**: isso apag
 Sem rede, continue usando o aplicativo e tente mais tarde. A consulta não envia dados financeiros
 nem exige token. Obtainium foi retirado por decisão do usuário
 ([ADR 0066](docs/adr/0066-verificacao-de-atualizacoes-pela-api-do-github.md)).
-O fluxo ainda não tem uma Release publicada e validada entre duas versões em aparelho físico.
+A [pré-release v0.1.0](https://github.com/chinadcs/accord/releases/tag/v0.1.0) está publicada,
+com [APK assinado](https://github.com/chinadcs/accord/releases/download/v0.1.0/accord.apk), fontes
+correspondentes e avisos de licença. Consulte as notas para as limitações conhecidas do piloto.
+A validação de atualização entre duas versões em aparelho físico permanece pendente.
 
 Prepare a distribuição num checkout limpo do commit escolhido. O script confere versão,
 assinatura, ausência de CAMERA/modo depurável e presença dos avisos de licença no APK.
