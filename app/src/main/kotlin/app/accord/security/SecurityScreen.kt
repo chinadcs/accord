@@ -13,6 +13,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,6 +23,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import kotlinx.coroutines.flow.first
 import app.accord.R
 import app.accord.ui.components.AccordButton
 import app.accord.ui.components.AccordOutlinedButton
@@ -31,7 +35,33 @@ import app.accord.ui.theme.AccordSpacing
 @Composable
 fun AppLockScreen(authenticator: AndroidAppAuthenticator, lock: AppLockStore) {
     val configured by authenticator.configuration.collectAsStateWithLifecycle()
+    AppLockScreen(configured, authenticator::authenticate, lock::authenticated,
+        authenticator::openSettings, { lock.setEnabled(false) })
+}
+
+@Composable
+internal fun AppLockScreen(
+    configured: Boolean,
+    authenticate: ((Boolean) -> Unit) -> Unit,
+    onAuthenticated: () -> Unit,
+    onOpenSettings: () -> Unit,
+    onContinueWithout: () -> Unit,
+) {
     var failed by remember { mutableStateOf(false) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val requestUnlock = {
+        authenticate { success ->
+            failed = !success
+            if (success) onAuthenticated()
+        }
+    }
+    // Uma tentativa por entrada/configuração, sem repetir ao voltar do prompt cancelado.
+    LaunchedEffect(configured, lifecycle) {
+        if (configured) {
+            lifecycle.currentStateFlow.first { it.isAtLeast(Lifecycle.State.RESUMED) }
+            requestUnlock()
+        }
+    }
     Surface(Modifier.fillMaxSize()) {
         Column(
             Modifier.fillMaxSize().safeDrawingPadding().verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
@@ -41,18 +71,13 @@ fun AppLockScreen(authenticator: AndroidAppAuthenticator, lock: AppLockStore) {
                 modifier = Modifier.semantics { heading() })
             Text(stringResource(R.string.security_intro))
             if (configured) {
-                AccordButton(onClick = {
-                    authenticator.authenticate { success ->
-                        failed = !success
-                        if (success) lock.authenticated()
-                    }
-                }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.security_unlock)) }
+                AccordButton(onClick = requestUnlock, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.security_unlock)) }
             } else {
                 Text(stringResource(R.string.security_not_configured))
-                AccordButton(onClick = authenticator::openSettings, modifier = Modifier.fillMaxWidth()) {
+                AccordButton(onClick = onOpenSettings, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.security_configure_android))
                 }
-                AccordOutlinedButton(onClick = { lock.setEnabled(false) }, modifier = Modifier.fillMaxWidth()) {
+                AccordOutlinedButton(onClick = onContinueWithout, modifier = Modifier.fillMaxWidth()) {
                     Text(stringResource(R.string.security_continue_without))
                 }
             }
