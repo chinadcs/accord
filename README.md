@@ -301,17 +301,20 @@ Sem rede, continue usando o aplicativo e tente mais tarde. A consulta não envia
 nem exige token. Obtainium foi retirado por decisão do usuário
 ([ADR 0066](docs/adr/0066-verificacao-de-atualizacoes-pela-api-do-github.md)).
 A [pré-release v0.1.0](https://github.com/chinadcs/accord/releases/tag/v0.1.0) está publicada,
-com [APK assinado](https://github.com/chinadcs/accord/releases/download/v0.1.0/accord.apk), fontes
-correspondentes e avisos de licença. Consulte as notas para as limitações conhecidas do piloto.
-A validação de atualização entre duas versões em aparelho físico permanece pendente.
+com [APK assinado](https://github.com/chinadcs/accord/releases/download/v0.1.0/accord.apk). Cada
+Release tem só `accord.apk` como asset; o código-fonte da versão são os arquivos **Source code**
+(`.zip` e `.tar.gz`) que o GitHub gera para a tag, e os avisos de licença acompanham o APK. As notas
+contam o que mudou para quem usa o aplicativo e as limitações conhecidas do piloto; commit e SHA-256
+não vão no texto. A validação de atualização entre duas versões em aparelho físico permanece pendente.
 
 Prepare a distribuição num checkout limpo do commit escolhido. O script confere versão,
 assinatura, ausência de CAMERA/modo depurável e presença dos avisos de licença no APK.
 Os avisos e o inventário das bibliotecas ficam em `app/src/main/assets/licenses/` e acompanham
 o aplicativo. Atualizações de dependências exigem revisar esse inventário e as fontes correspondentes.
 
-Para anexar a fonte do mesmo commit, incluindo os arquivos de fonte das dependências e os
-complementos nativos fixados no inventário:
+O pacote de fontes completo, com os arquivos de fonte das dependências e os complementos nativos
+fixados no inventário, **não é mais anexado às Releases** (decisão do usuário em 09/11/2026). Quem
+quiser gerá-lo localmente para o mesmo commit pode usar:
 
 ```powershell
 python scripts/release-sources.py --commit SHA_COMPLETO_DO_COMMIT --output app/build/releases/v0.1.0/accord-v0.1.0-sources.tar.gz
