@@ -530,11 +530,16 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     val home: app.accord.ui.home.HomeAllowanceViewModel = viewModel(factory = viewModelFactory {
                         initializer { app.accord.ui.home.HomeAllowanceViewModel(container) }
                     })
+                    val upcomingModel: app.accord.ui.home.HomeUpcomingViewModel = viewModel(factory = viewModelFactory {
+                        initializer { app.accord.ui.home.HomeUpcomingViewModel(container) }
+                    })
                     val allowance by home.state.collectAsStateWithLifecycle()
-                    RefreshOnResume(home::refresh)
-                    LaunchedEffect(syncStatus) { home.refresh() }
+                    val upcoming by upcomingModel.state.collectAsStateWithLifecycle()
+                    val refreshHome = { home.refresh(); upcomingModel.refresh() }
+                    RefreshOnResume(refreshHome)
+                    LaunchedEffect(syncStatus) { refreshHome() }
                     LaunchedEffect(home) {
-                        kotlinx.coroutines.flow.merge(container.feedback.changed, container.feedback.undone).collect { home.refresh() }
+                        kotlinx.coroutines.flow.merge(container.feedback.changed, container.feedback.undone).collect { refreshHome() }
                     }
                     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
                     LaunchedEffect(home, lifecycleOwner) {
@@ -543,15 +548,17 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             while (true) {
                                 kotlinx.coroutines.delay(30_000)
                                 val now = container.clock.today()
-                                if (now != date) { date = now; home.refresh() }
+                                if (now != date) { date = now; refreshHome() }
                             }
                         }
                     }
-                    PullToRefresh({ reviewSummary.refresh(); home.refresh() }) {
+                    PullToRefresh({ reviewSummary.refresh(); refreshHome() }) {
                         app.accord.ui.home.HomeScreen(padding, reviewState, reviewSummary::refresh,
                             onChat = { openRoot(Root.Chat) }, onRegister = register,
                             onReview = { navController.navigate(ROUTE_REVIEW) }, allowance = allowance,
-                            onAllowanceRetry = home::refresh, onBudget = { openRoot(Root.Budget) })
+                            onAllowanceRetry = home::refresh, onBudget = { openRoot(Root.Budget) },
+                            upcoming = upcoming, onUpcomingRetry = upcomingModel::refresh,
+                            onCommitments = { navController.navigate(ROUTE_COMMITMENTS) })
                     }
                 }
             }

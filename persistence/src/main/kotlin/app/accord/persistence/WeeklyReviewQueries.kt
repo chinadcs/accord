@@ -1,10 +1,12 @@
 package app.accord.persistence
 
+import app.accord.core.UPCOMING_DAYS
 import app.accord.core.analysis.ReviewPeriod
+import app.accord.core.upcomingCommitments
+import app.accord.core.upcomingMonths
 import app.accord.core.forecast.Excess
 import app.accord.core.forecast.MonthForecast
 import app.accord.core.space.Commitment
-import app.accord.core.space.EntrySituation
 import app.accord.core.space.MonthCommitments
 import app.accord.core.space.PendingItem
 import app.accord.core.space.PurchaseActivity
@@ -27,11 +29,6 @@ internal class WeeklyReviewQueries(
     private val pendings: suspend () -> List<PendingItem>,
     private val commitments: suspend (YearMonth) -> MonthCommitments,
 ) {
-    companion object {
-        /** Horizonte de "próximos compromissos": 7 dias a partir da consulta (decisão do usuário, 07/11/2026). */
-        const val UPCOMING_DAYS = 7L
-    }
-
     suspend fun review(period: ReviewPeriod, reference: LocalDate): WeeklyReviewSummary = WeeklyReviewSummary(
         period = period,
         reference = reference,
@@ -75,10 +72,7 @@ internal class WeeklyReviewQueries(
 
     private suspend fun upcoming(reference: LocalDate): ReviewUpcoming {
         val until = reference.plusDays(UPCOMING_DAYS)
-        val months = generateSequence(YearMonth.from(reference)) { it.plusMonths(1) }.takeWhile { it.atDay(1).isBefore(until) }.toList()
-        val items: List<Commitment> = months.flatMap { commitments(it).items }
-            .filter { !it.dueDate.isBefore(reference) && it.dueDate.isBefore(until) && EntrySituation.Paid !in it.situations }
-            .sortedWith(compareBy({ it.dueDate }, { it.id }))
+        val items: List<Commitment> = upcomingCommitments(upcomingMonths(reference).flatMap { commitments(it).items }, reference, until)
         return ReviewUpcoming(reference, until, items)
     }
 }

@@ -44,6 +44,9 @@ fun HomeScreen(
     allowance: HomeAllowanceState = HomeAllowanceState.Loading,
     onAllowanceRetry: () -> Unit = {},
     onBudget: () -> Unit = {},
+    upcoming: HomeUpcomingState = HomeUpcomingState.Loading,
+    onUpcomingRetry: () -> Unit = {},
+    onCommitments: () -> Unit = {},
 ) {
     RootScaffold(stringResource(R.string.tab_home), padding) {
         SyncIndicator()
@@ -66,6 +69,19 @@ fun HomeScreen(
                     is HomeAllowanceState.Ready -> AllowanceBody(allowance.value)
                 }
                 AccordOutlinedButton(onClick = onBudget) { Text(stringResource(R.string.allowance_budget)) }
+            }
+        }
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+            Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
+                when (upcoming) {
+                    HomeUpcomingState.Loading -> Text(stringResource(R.string.upcoming_loading))
+                    HomeUpcomingState.Failed -> {
+                        Text(stringResource(R.string.upcoming_failed))
+                        AccordOutlinedButton(onClick = onUpcomingRetry) { Text(stringResource(R.string.action_retry)) }
+                    }
+                    is HomeUpcomingState.Ready -> UpcomingBody(upcoming.events)
+                }
+                AccordOutlinedButton(onClick = onCommitments) { Text(stringResource(R.string.upcoming_open)) }
             }
         }
         Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
