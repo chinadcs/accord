@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="security_title">Segurança</string>
+    <string name="security_locked_title">Accord bloqueado</string>
+    <string name="security_intro">Proteja o acesso ao Accord com a biometria ou a credencial de bloqueio do seu celular.</string>
+    <string name="security_policy">O Accord bloqueia ao iniciar, ao bloquear a tela e após um minuto fora do aplicativo. Seus rascunhos e operações são preservados.</string>
+    <string name="security_unlock">Desbloquear</string>
+    <string name="security_auth_title">Desbloquear Accord</string>
+    <string name="security_auth_subtitle">Use a biometria ou a credencial do celular.</string>
+    <string name="security_auth_failed">Não foi possível confirmar. Toque para tentar novamente.</string>
+    <string name="security_not_configured">Este celular ainda não tem uma credencial de bloqueio configurada.</string>
+    <string name="security_configure_android">Configurar bloqueio no Android</string>
+    <string name="security_continue_without">Continuar com a proteção desativada</string>
+    <string name="security_enabled">Bloqueio ativado</string>
+    <string name="security_disabled">Bloqueio desativado</string>
+    <string name="security_enable">Ativar bloqueio</string>
+    <string name="security_disable">Desativar bloqueio</string>
+</resources>

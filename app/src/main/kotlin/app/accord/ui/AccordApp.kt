@@ -668,6 +668,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             onRegister = register,
                             onSpace = { navController.navigate(ROUTE_SPACE) },
                             onAppearance = { navController.navigate("appearance") },
+                            onSecurity = { navController.navigate("security") },
                             onAlertPreferences = { navController.navigate(ROUTE_ALERT_PREFS) },
                             onForecasts = { navController.navigate(ROUTE_FORECASTS) },
                             onAlertsToggle = { enabled ->
@@ -1121,6 +1122,10 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 CategoryMoveRoute(viewModel, padding, onBack = {
                     if (!navController.popBackStack(ROUTE_CATEGORIES, inclusive = false)) navController.popBackStack()
                 })
+            }
+            composable("security") {
+                val activity = LocalContext.current as app.accord.MainActivity
+                app.accord.security.SecurityScreen(padding, container.appLock, activity.appAuthenticator) { navController.popBackStack() }
             }
             composable(ROUTE_ACCOUNTS) {
                 val viewModel: AccountsViewModel = viewModel(

@@ -2,6 +2,22 @@ package app.accord
 
 import android.graphics.Color
 import android.os.Bundle
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
+import android.view.WindowManager
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import app.accord.security.AndroidAppAuthenticator
+import app.accord.security.AppLockScreen
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -19,6 +35,35 @@ import app.accord.ui.theme.AccordTheme
 import app.accord.ui.theme.ThemePreference
 
 class MainActivity : ComponentActivity() {
+    lateinit var appAuthenticator: AndroidAppAuthenticator
+        private set
+    private val appLock get() = (application as AccordApplication).container.appLock
+    private val screenOffReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == Intent.ACTION_SCREEN_OFF) {
+                appAuthenticator.cancel()
+                appLock.onScreenOff()
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        appAuthenticator.refresh()
+        appLock.onForeground(appAuthenticator.deviceLocked)
+    }
+
+    override fun onStop() {
+        appLock.onBackground()
+        super.onStop()
+    }
+
+    override fun onDestroy() {
+        unregisterReceiver(screenOffReceiver)
+        appAuthenticator.cancel()
+        super.onDestroy()
+    }
+
     override fun onNewIntent(intent: android.content.Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
@@ -27,6 +72,14 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        appAuthenticator = AndroidAppAuthenticator(this)
+        if (Build.VERSION.SDK_INT >= 33) {
+            registerReceiver(screenOffReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF), Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("UnspecifiedRegisterReceiverFlag")
+            registerReceiver(screenOffReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF))
+        }
         enableEdgeToEdge()
         val container = (application as AccordApplication).container
         // Toque numa notificação de aviso: só a chave do evento vem na intenção; o app abre Orçamento, Previsões e o detalhe (S5.6).
@@ -52,8 +105,21 @@ class MainActivity : ComponentActivity() {
             LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { container.onForeground() }
             AccordTheme(preference, corners, palette) {
                 val iconChoices by container.icons.choices.collectAsStateWithLifecycle()
+                val security by container.appLock.state.collectAsStateWithLifecycle()
+                val focus = LocalFocusManager.current
+                val keyboard = LocalSoftwareKeyboardController.current
+                LaunchedEffect(security.locked) {
+                    if (security.locked) { focus.clearFocus(force = true); keyboard?.hide() }
+                }
+                BackHandler(enabled = security.locked) { moveTaskToBack(true) }
                 CompositionLocalProvider(LocalIconChoices provides iconChoices, LocalIconActions provides container.iconActions) {
-                    AccordApp(container)
+                    Box(Modifier.fillMaxSize()) {
+                        // Manter a navegação montada preserva formulários; bloqueio remove também semântica e foco.
+                        Box(if (security.locked) Modifier.fillMaxSize().alpha(0f).clearAndSetSemantics {} else Modifier.fillMaxSize()) {
+                            AccordApp(container)
+                        }
+                        if (security.locked) AppLockScreen(appAuthenticator, container.appLock)
+                    }
                 }
             }
         }

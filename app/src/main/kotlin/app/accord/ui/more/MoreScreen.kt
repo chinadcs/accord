@@ -57,6 +57,7 @@ data class MoreActions(
     val onRegister: () -> Unit = {},
     val onSpace: () -> Unit = {},
     val onAppearance: () -> Unit = {},
+    val onSecurity: () -> Unit = {},
     val onAlertPreferences: () -> Unit = {},
     val onForecasts: () -> Unit = {},
     val onSubscriptions: () -> Unit = {},
@@ -177,6 +178,7 @@ fun MoreScreen(
         }
 
         Section(R.string.more_group_device) {
+            MoreRow(R.string.security_title, Lucide.drawable.lucide_ic_lock, actions.onSecurity)
             MoreRow(R.string.appearance_title, Lucide.drawable.lucide_ic_palette, actions.onAppearance)
         }
     }

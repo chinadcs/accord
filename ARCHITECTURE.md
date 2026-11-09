@@ -45,6 +45,13 @@ isoladamente não reprova candidato nem bloqueia integração; os critérios de 
 
 ## Mapa atual do repositório
 
+Proteção local ([ADR 0057](docs/adr/0057-bloqueio-local-com-credencial-do-android.md),
+[S8](docs/specs/S8-protecao-dados-conversas-cofrinhos.md)): `MainActivity` protege a entrada com
+biometria/credencial do Android, memória efêmera de desbloqueio e tolerância de um minuto fora
+do app. A árvore financeira permanece montada, invisível e sem semântica acessível atrás do
+bloqueio, preservando navegação e rascunhos. Preferência só no aparelho em Mais > Segurança;
+FLAG_SECURE protege recentes/capturas. Não substitui autorização do serviço ou criptografia.
+
 Gráficos das telas 05, 33 e 20/21: Charty 3.2.0 atrás de `ui/components/MoneyChart`, com
 valores exatos/lista acessível, desenho local e sem animação de crescimento
 ([ADR 0055](docs/adr/0055-biblioteca-de-graficos-charty.md)). O wrapper consome as projeções

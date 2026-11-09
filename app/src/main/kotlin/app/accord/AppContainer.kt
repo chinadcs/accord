@@ -95,6 +95,7 @@ class AppContainer(
 
     /** Preferência de tema deste aparelho; não é dado financeiro. */
     val theme = ThemeStore(context)
+    val appLock = app.accord.security.AppLockStore(context)
 
     private val intentionDraftStore = app.accord.ui.intentions.SharedPreferencesIntentionDrafts(context)
     override fun intentionDrafts(): app.accord.ui.intentions.IntentionDrafts = intentionDraftStore

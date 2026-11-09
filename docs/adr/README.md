@@ -162,6 +162,7 @@ observada em 24/10/2026. Os estados abaixo são de decisão, não de conclusão 
 | [0054](0054-coleta-opcional-do-conteudo-do-chat-e-termos-de-uso.md) | Coleta opcional do conteúdo do Chat e Termos de uso | accepted |
 | [0055](0055-biblioteca-de-graficos-charty.md) | Biblioteca de gráficos: Charty | accepted |
 | [0056](0056-pistas-conservadoras-e-calibracao-posterior.md) | Pistas conservadoras, avaliação compartilhada e calibração posterior | accepted |
+| [0057](0057-bloqueio-local-com-credencial-do-android.md) | Bloqueio local com biometria e credencial do Android | accepted |
 
 Questões ainda sem decisão, como modelo/motor, leitores bancários, acesso local, retenção de
 idempotência e validação financeira no serviço, permanecem nos Beads/specs S2–S4. Suas tarefas
