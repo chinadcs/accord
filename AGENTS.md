@@ -6,7 +6,7 @@ e instruções da sessão prevalecem sobre orientações locais.
 
 ## Produto e estado real
 
-**Accord** é um aplicativo Android de controle financeiro do casal, em português brasileiro.
+**Accord** é um aplicativo Android de controle financeiro colaborativo para até quatro pessoas, em português brasileiro.
 A base contém documentação, Beads, aplicativo Compose, motor financeiro, persistência Room,
 protocolo/adaptador remoto, migrações Supabase e testes. S1 está entregue no Beads, com pendências
 de validação; S2 está entregue no Beads, com validação nos aparelhos (`accord-chf`) e decisões
@@ -56,7 +56,8 @@ curtas com links; ADRs preservam justificativas. O papel `adr-writer` não autor
 
 ## Invariantes do produto
 
-- **Acesso:** contas individuais por e-mail/senha; ambos criam/editam todos os dados e ajustes
+- **Acesso:** contas individuais por e-mail/senha; até 4 pessoas por espaço, código de convite multiuso
+  (ADR 0053, aceito em 08/11/2026; implementado em `accord-0vdp`, com migração hospedada aplicada); todos criam/editam todos os dados e ajustes
   do espaço, sem papéis administrativos, gastos privados ou cotas individuais. Convite por
   código e autorização do espaço são validados no serviço/banco, não apenas no cliente.
 - **Piloto sem e-mails:** planejar Confirm Email desativado; sem confirmação, recuperação, OTP,
@@ -74,7 +75,8 @@ curtas com links; ADRs preservam justificativas. O papel `adr-writer` não autor
   não pago é previsto pelo vencimento; pago ocupa só o mês do pagamento efetivo, removendo a
   previsão e preservando ambas as datas. Importação de cartão sem fatura declarada atribui cada compra pela data (ADR 0043, proposto). Fechamento 8/vencimento 15 são configuração inicial,
   sem garantir atribuição. Dúvida só de fatura permite salvar na estimada como “a conferir”.
-  Um cartão é o escopo inicial; não adicionar gestão de múltiplos cartões por suposição.
+  Vários cartões, com fechamento, vencimento e limite por cartão, cartão padrão individual e conta vinculada
+  (ADR 0052, aceito em 08/11/2026; implementado em `accord-k9zy`, com migração hospedada aplicada).
 - **Créditos e pagamentos:** estorno confirmado abate categoria original no período do crédito,
   preserva compra e não vira renda. Futuras canceladas ficam até confirmar não cobrança, sem
   crédito fictício. P0 aceita apenas quitação integral conferida da fatura; parcial/divergente
@@ -96,7 +98,9 @@ curtas com links; ADRs preservam justificativas. O papel `adr-writer` não autor
   ou mesclagem automática. Nova edição exige nova comparação. Versões não viram duas despesas.
   Salvo localmente difere de reconhecido; não afirmar conhecer registros offline do outro
   celular. Realtime não substitui fila/protocolo. Política detalhada de acesso local é aberta.
-- **Privacidade:** Chat só no aparelho de origem; dados financeiros compartilhados. Não
+- **Privacidade:** Chat só no aparelho de origem; dados financeiros compartilhados. Exceção (ADR 0054,
+  aceito em 08/11/2026; ainda não implementado): coleta opcional do conteúdo do Chat, só com consentimento
+  por pessoa, após os Termos, em tabela própria legível só pelo dono. Fora disso, não
   sincronizar mensagens/transcrições ou PDFs/OFX completos. Não incluir senhas, tokens, chaves
   administrativas, conversas ou conteúdo bancário em logs ou fixtures compartilhadas.
 - **Importação:** OFX estruturado, PDF bancário com texto selecionável e o CSV no modelo próprio do Accord (`docs/importacao-csv.md`, ADR 0042 proposto; não lê CSV de banco; único formato cuja coluna de categoria vira escolha do lote), processados localmente;
@@ -108,7 +112,7 @@ curtas com links; ADRs preservam justificativas. O papel `adr-writer` não autor
   localmente (a do PDF só por um layout validado com esse exemplo); sem suporte geral comprovado. Inspeção
   de `example.ofx`: dez movimentos EUR e FITID repetido, sem origem Itaú comprovada. Moeda não
   suportada bloqueia efetivação sem conversão automática; preservar moeda da prévia.
-- **Alertas:** até um evento por categoria principal por semana, destinado aos dois e respeitando
+- **Alertas:** até um evento por categoria principal por semana, destinado a todos os membros e respeitando
   preferências/permissões. Janela America/Sao_Paulo: segunda 00h até segunda seguinte 00h,
   fim exclusivo. Recálculo/limites não renovam cota; nova janela não agenda envio. Coordenação
   entre aparelhos ainda precisa de implementação; conhecidos e novos variáveis são separados.
@@ -121,9 +125,10 @@ reembolsos com terceiros, divisão obrigatória por item, IA remota automática 
 
 ## Android, modelo e experiência
 
-Validar Galaxy S20 FE e S23 FE. S20 FE é referência mínima, com 6 GB de RAM total informados;
-isso não é memória disponível. Verificar variante, Android e espaço nos dois, RAM do S23 FE e
-consumo real. Modelo/motor/quantização/hospedagem e critérios de qualidade/RAM são abertos.
+O produto exige Android 10/API 29 ou superior; não restringir compatibilidade a modelos de celular.
+Galaxy S20 FE e S23 FE são aparelhos do piloto, preservados nos roteiros e relatórios de validação.
+Para testes e eventual SLM, verificar variante, Android, espaço, RAM disponível e consumo real;
+RAM total não equivale à disponível. Modelo/motor/quantização/hospedagem e critérios de qualidade/RAM são abertos.
 Candidatos do plano §13.3 são hipóteses de prova de conceito, não decisões finais.
 
 Download separado no primeiro uso, até **2 GB decimais** por celular para o conjunto necessário,
@@ -214,7 +219,7 @@ quando `supabase start` está ativo (`ACCORD_REQUIRE_SUPABASE=1` transforma a au
 
 Na implementação, testar dinheiro/datas com exemplos independentes, autorização no serviço,
 reenvio após resposta perdida, conflitos, importação/retomada e alertas coordenados. Validar UI
-nos dois celulares. Build verde não comprova qualidade do modelo ou compatibilidade bancária.
+em aparelhos físicos do piloto. Build verde não comprova qualidade do modelo ou compatibilidade bancária.
 Relatar precisamente o que foi executado e o que está pendente.
 
 ## Agentes e autoridade
@@ -224,8 +229,15 @@ Corpos compartilhados: `.claude/agents/`. Adaptadores Codex: `.codex/agents/`. S
 O [catálogo](.claude/agents-roster.md) organiza responsabilidades; `frontend-android` é o papel
 para interface Android. Delegar só quando autorizado pelo usuário ou instruções ativas; catálogo
 não dispara agentes automaticamente. Autorizações já dadas continuam válidas. Não enviar
-mensagens externas, publicar, criar serviço remoto, fazer commit, push, pull ou sync remoto
-sem autorização explícita.
+mensagens externas, publicar, criar serviço remoto, push, pull ou sync remoto sem autorização
+explícita.
+
+**Commits (autorização do usuário, 03/11/2026):** ao fechar um bead, fazer o commit local dele em
+seguida. Adicionar só os arquivos do bead, por caminho (nunca `git add -A`), validar
+proporcionalmente antes, escrever a mensagem em pt-BR (`feat(escopo): ...`) com os IDs dos beads
+no corpo e o trailer de coautoria da sessão. Se o bead tocar arquivos que também têm mudanças de
+outro bead em aberto, avisar o usuário em vez de misturar. Isso não autoriza push, pull, sync nem
+remote, e prevalece sobre "sem commit" do bloco Beads abaixo, que é gerado por `bd setup codex`.
 
 <!-- BEGIN BEADS CODEX SETUP: generated by bd setup codex -->
 ## Beads Issue Tracker
