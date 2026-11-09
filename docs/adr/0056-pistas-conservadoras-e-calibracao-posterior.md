@@ -51,6 +51,23 @@ usa agregados e limitações, sem conteúdo bancário ou conversas no repositór
 
 ## Fontes e evidências
 
+### Contrato de leitura e detector (C1/C2)
+
+`clueSource(from, untilExclusive)` expõe evidências pela mesma construção da atividade,
+com revisão, raiz da compra, vínculo do crédito, subcategoria histórica e pendência importada.
+`clueImportOrigins` lê só extraídos persistidos dos lotes confirmados. São consultas sem escrita.
+O detector puro em `core.clues` normaliza descrição apenas por espaços e caixa, sem aproximação
+semântica. Cobranças parecidas usam conjunto ordenado de IDs; frequência usa subcategoria e
+intervalos. As chaves são SHA-256 de campos com comprimento prefixado. Uma impressão separada
+inclui IDs, data, valor e descrição (e subcategoria na frequência), sem revisão ou autor:
+edições sem relação não reabrem. Não são criadas despesas, pendências ou notificações.
+
+Para frequência, a cobertura inicial exige intervalos declarados conferidos, contínuos nos
+56 dias, para cada canal importado conhecido. Registros manuais/origem desconhecida e dúvidas
+de importação impedem atestar cobertura adequada. Isso é conservador e não comprova que canais
+ausentes foram importados. Similaridade não exige histórico completo; limitações ficam visíveis.
+Contrato de avaliações persistidas/sincronizadas continua em C3.
+
 - Aceites explícitos do usuário na conversa de `accord-9y6.12`, em 08/11/2026; aceite final:
   “Vamos seguir nessa regra conservadora inicialmente”.
 - [S7](../specs/S7-p2-intencoes-simulacao-pistas.md), telas
