@@ -77,7 +77,6 @@ const val ROUTE_INVOICE = "invoice"
 
 /** Categorias, contas e limites, abertos pela aba Mais; voltar retorna a ela. */
 const val ROUTE_CATEGORIES = "categories"
-const val ROUTE_CATEGORY_EDIT = "category-edit"
 const val ROUTE_CATEGORY_MOVE = "category-move"
 const val ROUTE_ACCOUNTS = "accounts"
 const val ROUTE_LIMITS = "limits"

@@ -121,6 +121,7 @@ object ReceiptSummaries {
             totalCents = detail.amount.cents,
             categoryName = category?.name,
             parentName = parent?.name,
+            categoryId = category?.id,
             toClassify = !isIncome && detail.classification == Classification.ToClassify,
             payment = payment,
             accountLabel = accountLabel,

@@ -273,6 +273,7 @@ class RoomFinanceSpace private constructor(
         is CreateCategory -> categoryPlanner.planCreate(command)
         is CreateIncomeCategory -> incomePlanner.planCreateCategory(command)
         is RenameIncomeCategory -> incomePlanner.planRenameCategory(command)
+        is app.accord.core.space.EditIncomeCategory -> incomePlanner.planEditCategory(command)
         is SetIconAssociation -> iconPlanner.planSet(session, command)
         is ClearIconAssociation -> iconPlanner.planClear(session, command)
         is CreateIntention -> intentionPlanner.planCreate(session, command)
@@ -337,7 +338,7 @@ class RoomFinanceSpace private constructor(
 
     /** Cadastros de conta e de categoria de renda não mudam número nenhum do orçamento; o próprio registro do evento nunca dispara avaliação. */
     private fun changesBudgetNumbers(command: Command) = command !is RecordAlertEvent && command !is AddAccount && command !is SetMyDefaultAccount &&
-        command !is CreateIncomeCategory && command !is RenameIncomeCategory && command !is SetIconAssociation && command !is ClearIconAssociation &&
+        command !is CreateIncomeCategory && command !is RenameIncomeCategory && command !is app.accord.core.space.EditIncomeCategory && command !is SetIconAssociation && command !is ClearIconAssociation &&
         command !is CreateIntention && command !is EditIntention && command !is app.accord.core.space.DismissClue &&
         command !is app.accord.core.space.CreateSavingsPocket && command !is app.accord.core.space.EditSavingsPocket &&
         command !is app.accord.core.space.ArchiveSavingsPocket && command !is app.accord.core.space.MoveSavingsPocket
@@ -772,7 +773,7 @@ class RoomFinanceSpace private constructor(
     }
 
     override suspend fun incomeCategories(): QueryResult<List<IncomeCategoryNode>> = query {
-        dao.incomeCategories().map { IncomeCategoryNode(it.id, it.name, it.sortOrder, it.iconKey, it.seedKey, it.revision) }
+        dao.incomeCategories().map { IncomeCategoryNode(it.id, it.name, it.sortOrder, it.iconKey, it.seedKey, it.revision, it.colorIndex) }
     }
 
     override suspend fun accounts(): QueryResult<AccountsView> = query {

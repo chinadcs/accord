@@ -6,6 +6,7 @@ import app.accord.core.space.Classification
 import app.accord.core.space.CommandResult
 import app.accord.core.space.CorrectEntry
 import app.accord.core.space.CreateIncomeCategory
+import app.accord.core.space.EditIncomeCategory
 import app.accord.core.space.DeterministicIds
 import app.accord.core.space.DirectPaymentKind
 import app.accord.core.space.EntityType
@@ -85,6 +86,34 @@ class IncomeCategoryTest : SpaceTestBase() {
         assertEquals(listOf(ErrorCode.DuplicateName), h.space.execute(h.env(), RenameIncomeCategory(id, "salário")).errorCodes())
         val stale = h.space.execute(h.env(), RenameIncomeCategory(id, "Outro", expectedRevision = 1))
         assertIs<CommandResult.StaleVersion>(stale)
+    }
+
+    @Test fun `editing changes only what came filled, keeps the identity and validates name, icon, color and revision`() = runBlocking<Unit> {
+        val h = open()
+        val id = h.space.execute(h.env(), CreateIncomeCategory("Aluguel")).applied().changes.single().id
+        assertNull(h.space.incomeCategories().value().single { it.id == id }.colorIndex)
+        h.space.execute(h.env(), EditIncomeCategory(id, iconKey = "house", colorIndex = 4)).applied()
+        val edited = h.space.incomeCategories().value().single { it.id == id }
+        assertEquals("Aluguel", edited.name)
+        assertEquals("house", edited.iconKey)
+        assertEquals(4, edited.colorIndex)
+        assertEquals(2, edited.revision)
+        h.space.execute(h.env(), EditIncomeCategory(id, name = "Aluguéis")).applied()
+        val renamed = h.space.incomeCategories().value().single { it.id == id }
+        assertEquals("Aluguéis", renamed.name)
+        assertEquals(4, renamed.colorIndex)
+        assertEquals("house", renamed.iconKey)
+        assertEquals(listOf(ErrorCode.Required), h.space.execute(h.env(), EditIncomeCategory(id)).errorCodes())
+        assertEquals(listOf(ErrorCode.Required), h.space.execute(h.env(), EditIncomeCategory(id, name = "  ")).errorCodes())
+        assertEquals(listOf(ErrorCode.DuplicateName), h.space.execute(h.env(), EditIncomeCategory(id, name = "salário")).errorCodes())
+        assertEquals(listOf(ErrorCode.OutOfRange), h.space.execute(h.env(), EditIncomeCategory(id, colorIndex = 12)).errorCodes())
+        assertEquals(listOf(ErrorCode.UnknownReference), h.space.execute(h.env(), EditIncomeCategory("nao-existe", colorIndex = 1)).errorCodes())
+        assertIs<CommandResult.StaleVersion>(h.space.execute(h.env(), EditIncomeCategory(id, colorIndex = 1, expectedRevision = 1)))
+        // A semente também pode ser editada, sem perder a chave que a identifica.
+        h.space.execute(h.env(), EditIncomeCategory(inc("salario"), colorIndex = 0)).applied()
+        val seed = h.space.incomeCategories().value().single { it.id == inc("salario") }
+        assertEquals(0, seed.colorIndex)
+        assertEquals("salario", seed.seedKey)
     }
 
     @Test fun `an income carries its category, which survives receiving it`() = runBlocking<Unit> {

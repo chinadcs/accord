@@ -6,20 +6,23 @@
     <string name="categories_new_sub">Nova subcategoria</string>
     <string name="categories_expand">Mostrar subcategorias (%1$d)</string>
     <string name="categories_collapse">Ocultar subcategorias (%1$d)</string>
-    <string name="categories_rename">Renomear</string>
-    <string name="categories_move">Mover</string>
+    <string name="categories_tab_expense">Despesa</string>
+    <string name="categories_tab_income">Renda</string>
+    <string name="categories_edit_named">Editar %1$s</string>
+    <string name="categories_move_named">Mover %1$s</string>
     <string name="categories_reorder">Reorganizar ordem</string>
     <string name="categories_reorder_done">Concluir reorganização</string>
     <string name="categories_move_up">Subir %1$s</string>
     <string name="categories_move_down">Descer %1$s</string>
+    <string name="categories_income_note">Categorias de renda classificam o que entra. Mudanças valem para o espaço compartilhado; uma renda pode ficar sem categoria.</string>
     <string name="categories_note">Mudanças valem para o orçamento compartilhado. Para tirar uma categoria, mova os lançamentos dela para outra e remova: o histórico continua nos lançamentos movidos.</string>
     <string name="categories_name">Nome</string>
     <string name="categories_name_required">Informe um nome.</string>
     <string name="categories_save">Salvar</string>
     <string name="categories_create_title">Nova categoria</string>
     <string name="categories_create_sub_note">Nomes iguais no mesmo nível não são aceitos; em níveis diferentes podem repetir.</string>
-    <string name="categories_rename_title">Renomear</string>
-    <string name="categories_rename_note">O nome muda em todos os lançamentos, sem perder o histórico.</string>
+    <string name="categories_create_income_title">Nova categoria de renda</string>
+    <string name="categories_create_income_note">Nomes iguais não são aceitos, mesmo com letras maiúsculas ou acentos diferentes.</string>
     <string name="categories_move_title">Mover “%1$s”</string>
     <string name="categories_move_from">Origem: %1$s</string>
     <string name="categories_move_to">Destino (categoria principal)</string>
@@ -36,12 +39,10 @@
     <string name="categories_parts_confirm">Mover e aplicar</string>
     <string name="feedback_category_created">Categoria criada.</string>
     <string name="feedback_subcategory_created">Subcategoria criada.</string>
-    <string name="feedback_category_renamed">Nome atualizado.</string>
     <string name="feedback_subcategory_moved">Subcategoria movida daqui para frente.</string>
     <string name="feedback_order_changed">Ordem atualizada.</string>
 
     <!-- Editar, mover lançamentos e remover categoria (ADR 0039) -->
-    <string name="categories_edit">Editar</string>
     <string name="state_selected">Selecionado</string>
     <string name="category_edit_title">Editar categoria</string>
     <string name="category_edit_missing">Esta categoria não está mais disponível.</string>

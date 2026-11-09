@@ -13,14 +13,19 @@ import app.accord.core.space.Command
 import app.accord.core.space.CommandId
 import app.accord.core.space.CommandResult
 import app.accord.core.space.CreateCategory
+import app.accord.core.space.CreateIncomeCategory
 import app.accord.core.space.Decision
+import app.accord.core.space.EditCategory
+import app.accord.core.space.EditIncomeCategory
 import app.accord.core.space.Envelope
+import app.accord.core.space.IncomeCategoryNode
 import app.accord.core.space.InvolvedPart
 import app.accord.core.space.MoveSubcategory
 import app.accord.core.space.PartDecision
 import app.accord.core.space.QueryResult
-import app.accord.core.space.RenameCategory
 import app.accord.core.space.ReorderCategories
+import app.accord.ui.categoryColorIndex
+import app.accord.ui.ownColorKey
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,10 +37,13 @@ import java.util.UUID
 sealed interface CategoriesContent {
     data object Loading : CategoriesContent
     data object Failed : CategoriesContent
-    data class Ready(val mains: List<MainCategory>) : CategoriesContent
+    data class Ready(val mains: List<MainCategory>, val incomes: List<IncomeCategoryNode>) : CategoriesContent
 }
 
 data class MainCategory(val node: CategoryNode, val children: List<CategoryNode>)
+
+/** As duas abas da tela: categorias de despesa (com subcategorias) e categorias de renda (lista plana). */
+enum class CategoryTab { Expense, Income }
 
 /** O que fazer, mês a mês, com a parte do limite de uma subcategoria que muda de categoria. */
 enum class PartChoice { Carry, Drop, Custom }
@@ -46,10 +54,41 @@ sealed interface CategoryDialog {
     val working: Boolean
     val message: String?
 
-    /** [parentId] nulo cria categoria principal; senão, subcategoria dela. */
-    data class Create(val parentId: String?, val name: String = "", val nameError: Boolean = false, override val message: String? = null, override val working: Boolean = false) : CategoryDialog
+    /** [parentId] nulo cria categoria principal; senão, subcategoria dela. Na aba Renda ([income]) cria categoria de renda. */
+    data class Create(
+        val parentId: String?,
+        val name: String = "",
+        val nameError: Boolean = false,
+        override val message: String? = null,
+        override val working: Boolean = false,
+        val income: Boolean = false,
+    ) : CategoryDialog
 
-    data class Rename(val id: String, val name: String, val nameError: Boolean = false, override val message: String? = null, override val working: Boolean = false) : CategoryDialog
+    /**
+     * Painel único de edição (nome, ícone e cor), no lugar de renomear e editar separados. Só o que mudou vai no comando; a versão
+     * vista ao abrir ([revision]) protege contra edição concorrente do outro celular. A subcategoria ([parentName] preenchido) usa a cor
+     * da principal; a categoria de renda não tem mover nem remover.
+     */
+    data class Edit(
+        val tab: CategoryTab,
+        val id: String,
+        val parentName: String?,
+        val revision: Long,
+        val originalName: String,
+        val originalIcon: String,
+        val name: String,
+        val iconKey: String,
+        /** Índice da paleta mostrado como escolhido: o salvo, ou o derivado enquanto não houve escolha. */
+        val colorIndex: Int,
+        val colorTouched: Boolean = false,
+        val nameError: Boolean = false,
+        override val message: String? = null,
+        override val working: Boolean = false,
+    ) : CategoryDialog {
+        val isMain get() = parentName == null
+        val changed get() = name.trim() != originalName || iconKey != originalIcon || colorTouched
+        val canMoveOrRemove get() = tab == CategoryTab.Expense
+    }
 
     data class Move(
         val sub: CategoryNode,
@@ -71,14 +110,24 @@ sealed interface CategoryDialog {
 }
 
 /**
- * Categorias e subcategorias (tela 23): criar, renomear (mesma identidade), mover subcategoria daqui
- * para frente e reorganizar a ordem. Sem exclusão nem promoção/rebaixamento no P0; nomes repetidos no
- * mesmo nível são recusados pelo serviço.
+ * Categorias (tela 23), em duas abas: Despesa (com subcategorias) e Renda. Criar, editar nome/ícone/cor num só painel (mesma
+ * identidade), mover subcategoria daqui para frente e reorganizar a ordem das despesas. Mover lançamentos e remover ficam
+ * em tela própria (ADR 0039). Nomes repetidos no mesmo nível são recusados pelo serviço.
  */
 class CategoriesViewModel(
     private val provider: SpaceProvider,
-    @Suppress("unused") saved: SavedStateHandle,
+    private val saved: SavedStateHandle,
 ) : ViewModel() {
+    private val _tab = MutableStateFlow(CategoryTab.entries.firstOrNull { it.name == saved.get<String>(TAB_KEY) } ?: CategoryTab.Expense)
+    val tab: StateFlow<CategoryTab> = _tab.asStateFlow()
+
+    fun selectTab(tab: CategoryTab) {
+        saved[TAB_KEY] = tab.name
+        _tab.value = tab
+        _dialog.value = null
+        _reordering.value = false
+    }
+
     private val _content = MutableStateFlow<CategoriesContent>(CategoriesContent.Loading)
     val content: StateFlow<CategoriesContent> = _content.asStateFlow()
 
@@ -105,12 +154,14 @@ class CategoriesViewModel(
         if (showLoading) _content.value = CategoriesContent.Loading
         viewModelScope.launch {
             val all = (provider.space().categories() as? QueryResult.Data)?.value
-            _content.value = if (all == null) {
+            val incomes = (provider.space().incomeCategories() as? QueryResult.Data)?.value
+            _content.value = if (all == null || incomes == null) {
                 CategoriesContent.Failed
             } else {
                 CategoriesContent.Ready(
                     all.filter { it.parentId == null }.sortedBy { it.order }
                         .map { main -> MainCategory(main, all.filter { it.parentId == main.id }.sortedBy { it.order }) },
+                    incomes.sortedBy { it.order },
                 )
             }
         }
@@ -127,9 +178,27 @@ class CategoriesViewModel(
         _dialog.value = dialog
     }
 
-    fun startCreate(parentId: String?) = open(CategoryDialog.Create(parentId))
+    fun startCreate(parentId: String?) = open(CategoryDialog.Create(parentId, income = _tab.value == CategoryTab.Income && parentId == null))
 
-    fun startRename(node: CategoryNode) = open(CategoryDialog.Rename(node.id, node.name))
+    fun startEdit(node: CategoryNode) {
+        val ready = _content.value as? CategoriesContent.Ready ?: return
+        val parent = node.parentId?.let { id -> ready.mains.firstOrNull { it.node.id == id }?.node }
+        open(
+            CategoryDialog.Edit(
+                tab = CategoryTab.Expense, id = node.id, parentName = parent?.name, revision = node.revision,
+                originalName = node.name, originalIcon = node.iconKey, name = node.name, iconKey = node.iconKey,
+                colorIndex = categoryColorIndex((parent ?: node).ownColorKey()),
+            ),
+        )
+    }
+
+    fun startEditIncome(node: IncomeCategoryNode) = open(
+        CategoryDialog.Edit(
+            tab = CategoryTab.Income, id = node.id, parentName = null, revision = node.revision,
+            originalName = node.name, originalIcon = node.iconKey, name = node.name, iconKey = node.iconKey,
+            colorIndex = categoryColorIndex(node.ownColorKey()),
+        ),
+    )
 
     fun startMove(sub: CategoryNode) = open(CategoryDialog.Move(sub))
 
@@ -140,10 +209,14 @@ class CategoriesViewModel(
     fun setName(name: String) = _dialog.update {
         when (it) {
             is CategoryDialog.Create -> it.copy(name = name, nameError = false, message = null)
-            is CategoryDialog.Rename -> it.copy(name = name, nameError = false, message = null)
+            is CategoryDialog.Edit -> it.copy(name = name, nameError = false, message = null)
             else -> it
         }
     }
+
+    fun setIcon(key: String) = _dialog.update { if (it is CategoryDialog.Edit) it.copy(iconKey = key, message = null) else it }
+
+    fun setColor(index: Int) = _dialog.update { if (it is CategoryDialog.Edit && it.isMain) it.copy(colorIndex = index, colorTouched = true, message = null) else it }
 
     fun setDestination(id: String) = _dialog.update { if (it is CategoryDialog.Move) it.copy(destinationId = id, destinationError = false, message = null) else it }
 
@@ -165,11 +238,20 @@ class CategoriesViewModel(
         when (d) {
             is CategoryDialog.Create -> {
                 if (d.name.isBlank()) return _dialog.update { d.copy(nameError = true) }
-                run(d, CreateCategory(d.name.trim(), d.parentId), if (d.parentId == null) R.string.feedback_category_created else R.string.feedback_subcategory_created)
+                val command = if (d.income) CreateIncomeCategory(d.name.trim()) else CreateCategory(d.name.trim(), d.parentId)
+                run(d, command, if (d.parentId == null) R.string.feedback_category_created else R.string.feedback_subcategory_created)
             }
-            is CategoryDialog.Rename -> {
+            is CategoryDialog.Edit -> {
                 if (d.name.isBlank()) return _dialog.update { d.copy(nameError = true) }
-                run(d, RenameCategory(d.id, d.name.trim()), R.string.feedback_category_renamed)
+                if (!d.changed) return close()
+                val name = d.name.trim().takeIf { it != d.originalName }
+                val icon = d.iconKey.takeIf { it != d.originalIcon }
+                val color = d.colorIndex.takeIf { d.isMain && d.colorTouched }
+                val command = when (d.tab) {
+                    CategoryTab.Expense -> EditCategory(d.id, name, icon, color, expectedRevision = d.revision)
+                    CategoryTab.Income -> EditIncomeCategory(d.id, name, icon, color, expectedRevision = d.revision)
+                }
+                run(d, command, R.string.feedback_category_edited)
             }
             is CategoryDialog.Move -> {
                 val destination = d.destinationId ?: return _dialog.update { d.copy(destinationError = true) }
@@ -210,7 +292,12 @@ class CategoriesViewModel(
                     }
                 }
                 is CommandResult.StaleVersion -> {
-                    _dialog.update { current -> current?.let { withMessage(withWorking(it, false), "Esta categoria mudou. Atualizamos a lista; tente de novo.") } }
+                    val message = if (d is CategoryDialog.Edit) {
+                        "Esta categoria mudou em outro lugar. Feche e abra a edição de novo para ver a versão atual."
+                    } else {
+                        "Esta categoria mudou. Atualizamos a lista; tente de novo."
+                    }
+                    _dialog.update { current -> current?.let { withMessage(withWorking(it, false), message) } }
                     refresh()
                 }
             }
@@ -221,14 +308,14 @@ class CategoriesViewModel(
 
     private fun withWorking(d: CategoryDialog, working: Boolean): CategoryDialog = when (d) {
         is CategoryDialog.Create -> d.copy(working = working)
-        is CategoryDialog.Rename -> d.copy(working = working)
+        is CategoryDialog.Edit -> d.copy(working = working)
         is CategoryDialog.Move -> d.copy(working = working)
         is CategoryDialog.ReviewParts -> d.copy(working = working)
     }
 
     private fun withMessage(d: CategoryDialog, message: String): CategoryDialog = when (d) {
         is CategoryDialog.Create -> d.copy(message = message)
-        is CategoryDialog.Rename -> d.copy(message = message)
+        is CategoryDialog.Edit -> d.copy(message = message)
         is CategoryDialog.Move -> d.copy(message = message)
         is CategoryDialog.ReviewParts -> d.copy(message = message)
     }
@@ -237,6 +324,10 @@ class CategoriesViewModel(
         provider.feedback.post(FeedbackEvent(feedback, undoOperationId = operationId.takeIf { undoable }))
         _dialog.value = null
         load(showLoading = false)
+    }
+
+    companion object {
+        private const val TAB_KEY = "categoriesTab"
     }
 
     // ---- ordem ----

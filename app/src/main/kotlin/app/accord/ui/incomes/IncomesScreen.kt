@@ -26,6 +26,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.accord.ui.components.DetailHeader
 import app.accord.R
+import app.accord.core.space.IncomeCategoryNode
+import app.accord.ui.IncomeCategoryTag
 import app.accord.core.space.IncomeView
 import app.accord.ui.components.AdaptiveRow
 import app.accord.ui.components.DecorativeIcon
@@ -114,7 +116,7 @@ fun IncomesScreen(
                         }
                     }
                 } else {
-                    items(summary.items, key = { it.id }) { IncomeRow(it, state.incomeCategoryNames[it.incomeCategoryId], onOpen, onReceive) }
+                    items(summary.items, key = { it.id }) { IncomeRow(it, state.incomeCategories[it.incomeCategoryId], onOpen, onReceive) }
                 }
             }
         }
@@ -122,7 +124,7 @@ fun IncomesScreen(
 }
 
 @Composable
-private fun IncomeRow(income: IncomeView, categoryName: String?, onOpen: (String) -> Unit, onReceive: (IncomeView) -> Unit) {
+private fun IncomeRow(income: IncomeView, category: IncomeCategoryNode?, onOpen: (String) -> Unit, onReceive: (IncomeView) -> Unit) {
     val received = income.receivedDate != null
     val line = if (received) {
         stringResource(R.string.incomes_line_received, income.receivedDate?.shortLabel().orEmpty())
@@ -142,9 +144,7 @@ private fun IncomeRow(income: IncomeView, categoryName: String?, onOpen: (String
                 DecorativeIcon(if (received) Lucide.drawable.lucide_ic_circle_check else Lucide.drawable.lucide_ic_clock)
                 Text(line, style = MaterialTheme.typography.bodyMedium)
             }
-            if (categoryName != null) {
-                Text(categoryName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+            IncomeCategoryTag(category, style = MaterialTheme.typography.bodySmall)
             // Valor efetivo e previsto aparecem rotulados, sem pendência pela diferença.
             if (received && income.receivedAmount != null && income.receivedAmount != income.expectedAmount) {
                 Text(

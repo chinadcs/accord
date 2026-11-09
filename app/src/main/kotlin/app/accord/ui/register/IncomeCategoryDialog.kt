@@ -24,7 +24,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import app.accord.R
+import androidx.compose.ui.graphics.Color
 import app.accord.core.space.IncomeCategoryNode
+import app.accord.ui.categoryColor
+import app.accord.ui.ownColorKey
 import app.accord.ui.components.DecorativeIcon
 import app.accord.ui.components.lucideRes
 import app.accord.ui.theme.AccordSpacing
@@ -62,9 +65,9 @@ internal fun IncomeCategoryDialog(
                 )
             } else {
                 Column(Modifier.verticalScroll(rememberScrollState())) {
-                    if (allowNone) IncomeCategoryRow(stringResource(R.string.register_income_category_none), selected == null, null) { onPick(null) }
+                    if (allowNone) IncomeCategoryRow(stringResource(R.string.register_income_category_none), selected == null, null, null) { onPick(null) }
                     categories.forEach { node ->
-                        IncomeCategoryRow(node.name, selected == node.id, node.iconKey) { onPick(node.id) }
+                        IncomeCategoryRow(node.name, selected == node.id, node.iconKey, categoryColor(node.ownColorKey())) { onPick(node.id) }
                     }
                     TextButton(onClick = { creating = true }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
                         Text(stringResource(R.string.register_income_category_new))
@@ -104,14 +107,14 @@ internal fun IncomeCategoryDialog(
 }
 
 @Composable
-private fun IncomeCategoryRow(label: String, selected: Boolean, iconKey: String?, onClick: () -> Unit) {
+private fun IncomeCategoryRow(label: String, selected: Boolean, iconKey: String?, color: Color?, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).selectable(selected = selected, onClick = onClick, role = Role.RadioButton),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
     ) {
         RadioButton(selected = selected, onClick = null)
-        if (iconKey != null) DecorativeIcon(lucideRes(iconKey))
+        if (iconKey != null && color != null) DecorativeIcon(lucideRes(iconKey), tint = color)
         Text(label, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge, maxLines = 2)
     }
 }

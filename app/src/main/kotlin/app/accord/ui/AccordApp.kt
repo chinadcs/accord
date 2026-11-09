@@ -174,10 +174,7 @@ import app.accord.ui.nav.ROUTE_ENTRY
 import app.accord.ui.nav.ARG_MONTH
 import app.accord.ui.nav.ROUTE_ACCOUNTS
 import app.accord.ui.nav.ROUTE_CATEGORIES
-import app.accord.ui.nav.ROUTE_CATEGORY_EDIT
 import app.accord.ui.nav.ROUTE_CATEGORY_MOVE
-import app.accord.ui.categories.CategoryEditRoute
-import app.accord.ui.categories.CategoryEditViewModel
 import app.accord.ui.categories.CategoryMoveRoute
 import app.accord.ui.categories.CategoryMoveViewModel
 import app.accord.ui.nav.ROUTE_LIMITS
@@ -435,7 +432,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
     val resources = LocalResources.current
     // O aviso da ação anterior não cobre o botão Salvar do formulário que abre em seguida.
     val formRoute = destination?.route?.substringBefore('?')?.substringBefore('/')
-    val inForm = formRoute in setOf(ROUTE_REGISTER, ROUTE_EDIT, ROUTE_CARD, ROUTE_ACCOUNTS, ROUTE_CATEGORIES, ROUTE_CATEGORY_EDIT, ROUTE_CATEGORY_MOVE, ROUTE_LIMITS, ROUTE_FIRST_STEPS, ROUTE_ALERT_PREFS, ROUTE_SIMULATOR, ROUTE_INTENTION)
+    val inForm = formRoute in setOf(ROUTE_REGISTER, ROUTE_EDIT, ROUTE_CARD, ROUTE_ACCOUNTS, ROUTE_CATEGORIES, ROUTE_CATEGORY_MOVE, ROUTE_LIMITS, ROUTE_FIRST_STEPS, ROUTE_ALERT_PREFS, ROUTE_SIMULATOR, ROUTE_INTENTION)
     // Ao abrir um formulário novo (de fora ou de outro formulário) o aviso some; voltar de uma tela de edição para a lista
     // (também formulário, já aberta antes) não apaga o aviso da ação que acabou de salvar.
     var cameFromForm by remember { mutableStateOf(false) }
@@ -1205,22 +1202,10 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 PullToRefresh(viewModel::refresh) {
                     CategoriesRoute(
                         viewModel, padding, onBack = { navController.popBackStack() },
-                        onEdit = { id -> navController.navigate("$ROUTE_CATEGORY_EDIT/$id") },
+                        onMoveEntries = { id -> navController.navigate("$ROUTE_CATEGORY_MOVE/$id?${CategoryMoveViewModel.ARG_REMOVE}=false") },
+                        onRemove = { id -> navController.navigate("$ROUTE_CATEGORY_MOVE/$id?${CategoryMoveViewModel.ARG_REMOVE}=true") },
                     )
                 }
-            }
-            composable(
-                "$ROUTE_CATEGORY_EDIT/{${CategoryEditViewModel.ARG_CATEGORY}}",
-                arguments = listOf(navArgument(CategoryEditViewModel.ARG_CATEGORY) { type = NavType.StringType }),
-            ) {
-                val viewModel: CategoryEditViewModel = viewModel(
-                    factory = viewModelFactory { initializer { CategoryEditViewModel(container, createSavedStateHandle()) } },
-                )
-                CategoryEditRoute(
-                    viewModel, padding, onBack = { navController.popBackStack() },
-                    onMove = { id -> navController.navigate("$ROUTE_CATEGORY_MOVE/$id?${CategoryMoveViewModel.ARG_REMOVE}=false") },
-                    onRemove = { id -> navController.navigate("$ROUTE_CATEGORY_MOVE/$id?${CategoryMoveViewModel.ARG_REMOVE}=true") },
-                )
             }
             composable(
                 "$ROUTE_CATEGORY_MOVE/{${CategoryMoveViewModel.ARG_CATEGORY}}?${CategoryMoveViewModel.ARG_REMOVE}={${CategoryMoveViewModel.ARG_REMOVE}}",

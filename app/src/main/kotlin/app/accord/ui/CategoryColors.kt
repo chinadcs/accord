@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import app.accord.core.space.CategoryNode
+import app.accord.core.space.IncomeCategoryNode
 
 /**
  * Cor de cada categoria principal; a subcategoria usa a do pai. A cor reforça o ícone e o nome, nunca os substitui
@@ -28,6 +29,8 @@ private val DarkColors = listOf(
 private val SeedIndex = mapOf(
     "alimentacao" to 1, "compras" to 9, "assinaturas" to 7, "lazer" to 8, "pet" to 10,
     "servicos" to 11, "casa" to 2, "saude" to 0, "transporte" to 6, "eletronicos" to 5,
+    // Categorias de renda iniciais (lista própria, sem choque com as de despesa): tons de verde e azul-petróleo.
+    "investimento" to 3, "salario" to 4, "renda-extra" to 5,
 )
 
 private const val CHOSEN_PREFIX = "cor:"
@@ -43,6 +46,9 @@ val CategoryColorNames = listOf(
 
 /** Chave da cor de uma categoria principal: a escolhida, ou a derivada (semente ou identificador). */
 fun CategoryNode.ownColorKey(): String = colorIndex?.let { "$CHOSEN_PREFIX$it" } ?: seedKey ?: id
+
+/** Chave da cor de uma categoria de renda: a escolhida, ou a derivada (semente ou identificador). */
+fun IncomeCategoryNode.ownColorKey(): String = colorIndex?.let { "$CHOSEN_PREFIX$it" } ?: seedKey ?: id
 
 /** Chave estável da cor: a da categoria principal, seja a categoria principal ou filha. */
 fun CategoryNode.colorKey(categories: Map<String, CategoryNode>): String {
@@ -66,6 +72,13 @@ fun categoryColor(colorKey: String): Color {
     val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
     val index = categoryColorIndex(colorKey)
     return if (dark) DarkColors[index] else LightColors[index]
+}
+
+/** Cor da categoria de renda [id]; sem categoria, a cor neutra dos ícones. */
+@Composable
+fun incomeCategoryColor(categories: List<IncomeCategoryNode>, id: String?): Color {
+    val node = id?.let { wanted -> categories.firstOrNull { it.id == wanted } }
+    return if (node == null) MaterialTheme.colorScheme.onSurfaceVariant else categoryColor(node.ownColorKey())
 }
 
 /** Cor da categoria [id] (ou do pai dela); sem categoria, a cor neutra dos ícones. */

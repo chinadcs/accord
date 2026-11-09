@@ -119,6 +119,7 @@ class EntityStatesRoundTripTest : SpaceTestBase() {
         val income = h.space.execute(h.env(), RegisterIncome("Salário", brl(5000), d(2026, 10, 5), incomeCategoryId = salary)).applied().changes.single().id
         h.space.execute(h.env(), ReceiveIncome(income, Settlement(d(2026, 10, 6)))).applied()
         h.space.execute(h.env(), RenameIncomeCategory(salary, "Trabalho avulso")).applied()
+        h.space.execute(h.env(), app.accord.core.space.EditIncomeCategory(salary, iconKey = "briefcase", colorIndex = 5)).applied()
         h.space.execute(h.env(), SetIconAssociation(IconScope.Name, "Delivery noite", IconRef(IconSource.Brand, "ifood"))).applied()
         h.space.execute(h.env(), SetIconAssociation(IconScope.Entry, pix, IconRef(IconSource.Generic, "pizza"))).applied()
         h.space.execute(h.env(), SetIconAssociation(IconScope.Name, "Academia", IconRef(IconSource.Bank, "60701190"))).applied()

@@ -2,6 +2,7 @@ package app.accord.ui.register
 
 import app.accord.ui.colorKey
 import app.accord.ui.categoryColor
+import app.accord.ui.ownColorKey
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.shape.CircleShape
 import androidx.activity.compose.BackHandler
@@ -231,7 +232,7 @@ fun RegisterScreen(
                     label = stringResource(R.string.register_income_category),
                     value = chosen?.name ?: stringResource(R.string.register_income_category_pick),
                     error = null, bring = remember { BringIntoViewRequester() },
-                    leadingContent = chosen?.let { node -> { DecorativeIcon(lucideRes(node.iconKey)) } },
+                    leadingContent = chosen?.let { node -> { DecorativeIcon(lucideRes(node.iconKey), tint = categoryColor(node.ownColorKey())) } },
                 ) { keyboard?.hide(); picking = Picker.IncomeCategory }
             }
 

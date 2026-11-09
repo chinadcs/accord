@@ -95,6 +95,7 @@ import app.accord.core.chat.RefuseReason
 import app.accord.core.chat.StandardReply
 import app.accord.core.label
 import app.accord.ui.components.DecorativeIcon
+import app.accord.ui.components.lucideRes
 import app.accord.ui.fullLabel
 import app.accord.ui.theme.Accord
 import app.accord.ui.theme.AccordSpacing
@@ -485,7 +486,7 @@ private fun ReceiptCard(
                     Text(summary.description, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
                 }
             }
-            ReceiptLines(summary, today)
+            ReceiptLines(summary, today, categories)
             if (item.corrected && receipt.state == ReceiptState.Active) StateTag(stringResource(R.string.receipt_corrected), Lucide.drawable.lucide_ic_pencil)
             if (receipt.state == ReceiptState.ChangedLater) StateTag(stringResource(R.string.receipt_changed_later), Lucide.drawable.lucide_ic_pencil)
             if (receipt.state == ReceiptState.Undone) StateTag(stringResource(R.string.receipt_undone), Lucide.drawable.lucide_ic_undo_2)
@@ -583,7 +584,7 @@ private fun feedbackFieldLabel(field: FeedbackField): Int = when (field) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun ReceiptLines(summary: ReceiptSummary, today: LocalDate) {
+private fun ReceiptLines(summary: ReceiptSummary, today: LocalDate, categories: Map<String, CategoryNode>) {
     val total = Money(summary.totalCents).format()
     val date = LocalDate.parse(summary.dateIso)
     val title = when {
@@ -602,10 +603,16 @@ private fun ReceiptLines(summary: ReceiptSummary, today: LocalDate) {
             }
         } else {
             val category = listOfNotNull(summary.parentName, summary.categoryName).joinToString(" > ")
-            Text(
-                if (payment != null) stringResource(R.string.receipt_category_payment, category, payment) else category,
-                style = MaterialTheme.typography.bodyMedium,
-            )
+            // Recibo antigo não guarda a identidade: acha a categoria pelo nome (e pelo da principal, quando há).
+            val node = summary.categoryId?.let(categories::get)
+                ?: categories.values.firstOrNull { it.name == summary.categoryName && categories[it.parentId]?.name == summary.parentName }
+            Row(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalAlignment = Alignment.CenterVertically) {
+                if (node != null) DecorativeIcon(lucideRes(node.iconKey), modifier = Modifier.size(20.dp), tint = categoryColor(categories, node.id))
+                Text(
+                    if (payment != null) stringResource(R.string.receipt_category_payment, category, payment) else category,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
         }
     } else if (payment != null) {
         Text(payment, style = MaterialTheme.typography.bodyMedium)

@@ -109,6 +109,8 @@ data class ReceiptSummary(
     val totalCents: Long,
     val categoryName: String? = null,
     val parentName: String? = null,
+    /** Identidade da categoria, para o recibo mostrar o ícone e a cor atuais; recibos antigos não têm e se resolvem pelo nome. */
+    val categoryId: String? = null,
     val toClassify: Boolean = false,
     val payment: ChatPayment? = null,
     val accountLabel: String? = null,

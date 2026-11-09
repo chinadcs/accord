@@ -338,6 +338,18 @@ data class CreateIncomeCategory(val name: String) : Command
 data class RenameIncomeCategory(val categoryId: String, val name: String, val expectedRevision: Long? = null) : Command
 
 /**
+ * Edita a categoria de renda (ADR 0038, emenda de 09/11/2026): nome, ícone e cor (índice da paleta, [CategoryPalette]). Só o que vem
+ * preenchido muda. A categoria de renda não tem subcategorias, então a cor é sempre a própria.
+ */
+data class EditIncomeCategory(
+    val categoryId: String,
+    val name: String? = null,
+    val iconKey: String? = null,
+    val colorIndex: Int? = null,
+    val expectedRevision: Long? = null,
+) : Command
+
+/**
  * Escolhe o ícone de um lançamento ([IconScope.Entry], [target] é a identidade do lançamento) ou de todos os lançamentos com o mesmo nome
  * ([IconScope.Name], [target] é o nome, comparado sem caixa, acento e espaços extras). Substitui a escolha anterior do mesmo alvo. O ícone é só visual:
  * não muda categoria, valores, datas nem dados importados (ADR 0047). A fachada confere o formato da chave do catálogo da origem e recusa
@@ -1033,6 +1045,8 @@ data class IncomeCategoryNode(
     val iconKey: String,
     val seedKey: String?,
     val revision: Long = 0,
+    /** Cor escolhida (índice da paleta, ADR 0038); nulo vale a cor derivada da semente ou da identidade. */
+    val colorIndex: Int? = null,
 )
 
 data class MovementRow(

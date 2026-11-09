@@ -2,7 +2,9 @@ package app.accord.persistence
 
 import app.accord.core.Money
 import app.accord.core.space.CommandResult
+import app.accord.core.space.CategoryPalette
 import app.accord.core.space.CreateIncomeCategory
+import app.accord.core.space.EditIncomeCategory
 import app.accord.core.space.EntityChange
 import app.accord.core.space.EntityType
 import app.accord.core.space.ErrorCode
@@ -63,6 +65,43 @@ internal class IncomePlanner(
         }
         return Planned.Go(months = emptySet()) {
             val next = row.copy(name = name, nameKey = key, revision = row.revision + 1)
+            dao.upsertIncomeCategory(next)
+            listOf(EntityChange(EntityType.IncomeCategory, next.id, null, next.revision))
+        }
+    }
+
+    suspend fun planEditCategory(c: EditIncomeCategory): Planned {
+        val row = dao.incomeCategory(c.categoryId)
+            ?: return stop("categoryId", ErrorCode.UnknownReference, "Categoria de renda não encontrada.")
+        if (c.expectedRevision != null && c.expectedRevision != row.revision) {
+            return Planned.Stop(CommandResult.StaleVersion(row.id, row.revision))
+        }
+        if (c.name == null && c.iconKey == null && c.colorIndex == null) {
+            return stop("fields", ErrorCode.Required, "Informe o que mudou.")
+        }
+        val errors = mutableListOf<FieldError>()
+        val name = c.name?.trim()
+        if (name != null && name.isEmpty()) errors += FieldError("name", ErrorCode.Required, "Informe o nome da categoria de renda.")
+        if (c.iconKey?.isBlank() == true) errors += FieldError("iconKey", ErrorCode.Required, "Escolha um ícone.")
+        val color = c.colorIndex
+        if (color != null && color !in 0 until CategoryPalette.SIZE) {
+            errors += FieldError("colorIndex", ErrorCode.OutOfRange, "Escolha uma das cores da paleta.")
+        }
+        if (!name.isNullOrEmpty()) {
+            val key = NameKey.of(name)
+            if (dao.incomeCategories().any { it.id != row.id && it.nameKey == key }) {
+                errors += FieldError("name", ErrorCode.DuplicateName, "Já existe uma categoria de renda com esse nome. Escolha outro nome.")
+            }
+        }
+        if (errors.isNotEmpty()) return stop(errors)
+        return Planned.Go(months = emptySet()) {
+            val next = row.copy(
+                name = name ?: row.name,
+                nameKey = name?.let(NameKey::of) ?: row.nameKey,
+                iconKey = c.iconKey ?: row.iconKey,
+                colorIndex = color ?: row.colorIndex,
+                revision = row.revision + 1,
+            )
             dao.upsertIncomeCategory(next)
             listOf(EntityChange(EntityType.IncomeCategory, next.id, null, next.revision))
         }

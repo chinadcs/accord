@@ -40,6 +40,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.accord.ui.components.DetailHeader
 import app.accord.R
+import app.accord.ui.categoryColor
+import app.accord.ui.ownColorKey
+import app.accord.ui.components.DecorativeIcon
+import app.accord.ui.components.lucideRes
 import app.accord.core.RecurrenceScope
 import app.accord.core.label
 import app.accord.core.space.ExtraReason
@@ -220,6 +224,9 @@ private fun Fields(
             label = stringResource(R.string.register_category),
             value = categoryPath(state.categories, form.categoryId) ?: stringResource(R.string.register_category_pick),
             error = state.errors[EditField.Category], bring = bring.getValue(EditField.Category),
+            leadingContent = form.categoryId?.let { state.categories[it]?.iconKey }?.let { key ->
+                { DecorativeIcon(lucideRes(key), tint = categoryColor(state.categories, form.categoryId)) }
+            },
         ) { onPick(Picker.Category) }
     }
     if (original.incomeCategoryEditable) {
@@ -228,6 +235,7 @@ private fun Fields(
             label = stringResource(R.string.register_income_category),
             value = chosen?.name ?: stringResource(R.string.register_income_category_pick),
             error = state.errors[EditField.IncomeCategory], bring = bring.getValue(EditField.IncomeCategory),
+            leadingContent = chosen?.let { node -> { DecorativeIcon(lucideRes(node.iconKey), tint = categoryColor(node.ownColorKey())) } },
         ) { onPick(Picker.IncomeCategory) }
     }
     if (original.accountEditable) {

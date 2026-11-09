@@ -348,16 +348,39 @@ class VisualReviewS1eTest {
                 app.accord.ui.categories.MainCategory(categories.getValue("eletro"), listOf(categories.getValue("equip"))),
                 app.accord.ui.categories.MainCategory(categories.getValue("saude"), listOf(categories.getValue("cons"))),
             ),
+            listOf(
+                app.accord.core.space.IncomeCategoryNode("inv", "Investimento", 0, "trending-up", "investimento"),
+                app.accord.core.space.IncomeCategoryNode("sal", "Salário", 1, "briefcase", "salario"),
+            ),
         )
+        fun screen(dialog: app.accord.ui.categories.CategoryDialog?, expanded: Set<String>, reordering: Boolean, tab: app.accord.ui.categories.CategoryTab) =
+            @androidx.compose.runtime.Composable {
+                app.accord.ui.categories.CategoriesScreen(
+                    content, dialog, expanded, reordering, tab, PaddingValues(), onBack = {}, onRetry = {}, onTab = {},
+                    onToggle = {}, onToggleReorder = {}, onMove = { _, _ -> }, onCreate = {}, onEdit = {}, onEditIncome = {},
+                    onMoveSub = {}, onName = {}, onIcon = {}, onColor = {}, onDestination = {}, onAnswer = { _, _, _ -> },
+                    onSubmit = {}, onClose = {}, onMoveEntries = {}, onRemove = {},
+                )
+            }
         both("s1f_categorias") {
-            app.accord.ui.categories.CategoriesScreen(content, null, setOf("eletro"), true, PaddingValues(), {}, {}, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, { _, _, _ -> }, {}, {}, {})
+            screen(null, setOf("eletro"), true, app.accord.ui.categories.CategoryTab.Expense)()
+        }
+        both("s1f_categorias_renda") {
+            screen(null, emptySet(), false, app.accord.ui.categories.CategoryTab.Income)()
+        }
+        val edit = app.accord.ui.categories.CategoryDialog.Edit(
+            tab = app.accord.ui.categories.CategoryTab.Expense, id = "eletro", parentName = null, revision = 1,
+            originalName = "Eletrônicos", originalIcon = "laptop", name = "Eletrônicos", iconKey = "laptop", colorIndex = 5,
+        )
+        capture("s1f_categorias_editar", ThemePreference.Light, window = true) {
+            screen(edit, emptySet(), false, app.accord.ui.categories.CategoryTab.Expense)()
         }
         val review = app.accord.ui.categories.CategoryDialog.ReviewParts(
             categories.getValue("cons"), "eletro",
             listOf(app.accord.ui.categories.PartAnswer(nov, brl(200), app.accord.ui.categories.PartChoice.Carry), app.accord.ui.categories.PartAnswer(nov.plusMonths(1), brl(250))),
         )
         capture("s1f_categorias_partes", ThemePreference.Light, window = true) {
-            app.accord.ui.categories.CategoriesScreen(content, review, emptySet(), false, PaddingValues(), {}, {}, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, { _, _, _ -> }, {}, {}, {})
+            screen(review, emptySet(), false, app.accord.ui.categories.CategoryTab.Expense)()
         }
     }
 

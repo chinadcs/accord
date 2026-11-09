@@ -1,12 +1,11 @@
 package app.accord.ui.categories
 
+import app.accord.core.space.IncomeCategoryNode
 import app.accord.ui.categoryColor
 import app.accord.ui.ownColorKey
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -28,6 +27,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.PrimaryTabRow
+import androidx.compose.material3.Tab
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -52,18 +53,30 @@ import app.accord.ui.theme.AccordSpacing
 import com.composables.icons.lucide.R as Lucide
 
 @Composable
-fun CategoriesRoute(viewModel: CategoriesViewModel, padding: PaddingValues, onBack: () -> Unit, onEdit: (String) -> Unit) {
+fun CategoriesRoute(
+    viewModel: CategoriesViewModel,
+    padding: PaddingValues,
+    onBack: () -> Unit,
+    onMoveEntries: (String) -> Unit,
+    onRemove: (String) -> Unit,
+) {
     val content by viewModel.content.collectAsStateWithLifecycle()
     val dialog by viewModel.dialog.collectAsStateWithLifecycle()
     val expanded by viewModel.expanded.collectAsStateWithLifecycle()
     val reordering by viewModel.reordering.collectAsStateWithLifecycle()
+    val tab by viewModel.tab.collectAsStateWithLifecycle()
     RefreshOnResume(viewModel::refresh)
     CategoriesScreen(
-        content, dialog, expanded, reordering, padding, onBack, onRetry = { viewModel.load() },
+        content, dialog, expanded, reordering, tab, padding, onBack, onRetry = { viewModel.load() },
+        onTab = viewModel::selectTab,
         onToggle = viewModel::toggle, onToggleReorder = viewModel::toggleReorder, onMove = viewModel::move,
-        onCreate = viewModel::startCreate, onRename = viewModel::startRename, onMoveSub = viewModel::startMove,
-        onName = viewModel::setName, onDestination = viewModel::setDestination, onAnswer = viewModel::answer,
-        onSubmit = viewModel::submit, onClose = viewModel::close, onEdit = onEdit,
+        onCreate = viewModel::startCreate, onEdit = viewModel::startEdit, onEditIncome = viewModel::startEditIncome,
+        onMoveSub = viewModel::startMove,
+        onName = viewModel::setName, onIcon = viewModel::setIcon, onColor = viewModel::setColor,
+        onDestination = viewModel::setDestination, onAnswer = viewModel::answer,
+        onSubmit = viewModel::submit, onClose = viewModel::close,
+        onMoveEntries = { id -> viewModel.close(); onMoveEntries(id) },
+        onRemove = { id -> viewModel.close(); onRemove(id) },
     )
 }
 
@@ -73,27 +86,43 @@ fun CategoriesScreen(
     dialog: CategoryDialog?,
     expanded: Set<String>,
     reordering: Boolean,
+    tab: CategoryTab,
     padding: PaddingValues,
     onBack: () -> Unit,
     onRetry: () -> Unit,
+    onTab: (CategoryTab) -> Unit,
     onToggle: (String) -> Unit,
     onToggleReorder: () -> Unit,
     onMove: (CategoryNode, Int) -> Unit,
     onCreate: (String?) -> Unit,
-    onRename: (CategoryNode) -> Unit,
+    onEdit: (CategoryNode) -> Unit,
+    onEditIncome: (IncomeCategoryNode) -> Unit,
     onMoveSub: (CategoryNode) -> Unit,
     onName: (String) -> Unit,
+    onIcon: (String) -> Unit,
+    onColor: (Int) -> Unit,
     onDestination: (String) -> Unit,
     onAnswer: (java.time.YearMonth, PartChoice?, String?) -> Unit,
     onSubmit: () -> Unit,
     onClose: () -> Unit,
-    onEdit: (String) -> Unit,
+    onMoveEntries: (String) -> Unit,
+    onRemove: (String) -> Unit,
 ) {
     Column(
         Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
         verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
     ) {
         DetailHeader(stringResource(R.string.categories_screen_title), onBack)
+        PrimaryTabRow(selectedTabIndex = tab.ordinal, modifier = Modifier.selectableGroup()) {
+            CategoryTab.entries.forEach { entry ->
+                Tab(selected = tab == entry, onClick = { onTab(entry) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                    Text(
+                        stringResource(if (entry == CategoryTab.Expense) R.string.categories_tab_expense else R.string.categories_tab_income),
+                        modifier = Modifier.padding(AccordSpacing.s2),
+                    )
+                }
+            }
+        }
         OutlinedButton(onClick = { onCreate(null) }, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
             DecorativeIcon(Lucide.drawable.lucide_ic_plus)
             Text(stringResource(R.string.categories_new))
@@ -104,22 +133,60 @@ fun CategoriesScreen(
                 Text(stringResource(R.string.state_error), style = MaterialTheme.typography.bodyLarge)
                 OutlinedButton(onClick = onRetry, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.action_retry)) }
             }
-            is CategoriesContent.Ready -> {
-                content.mains.forEach { main ->
-                    MainRow(main, main.node.id in expanded, reordering, onToggle, onMove, onCreate, onRename, onMoveSub, onEdit)
+            is CategoriesContent.Ready -> when (tab) {
+                CategoryTab.Expense -> {
+                    content.mains.forEach { main ->
+                        MainRow(main, main.node.id in expanded, reordering, onToggle, onMove, onCreate, onEdit, onMoveSub)
+                    }
+                    OutlinedButton(onClick = onToggleReorder, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+                        Text(stringResource(if (reordering) R.string.categories_reorder_done else R.string.categories_reorder))
+                    }
+                    Text(stringResource(R.string.categories_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                OutlinedButton(onClick = onToggleReorder, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
-                    Text(stringResource(if (reordering) R.string.categories_reorder_done else R.string.categories_reorder))
+                CategoryTab.Income -> {
+                    content.incomes.forEach { income -> IncomeRow(income, onEditIncome) }
+                    Text(stringResource(R.string.categories_income_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Text(stringResource(R.string.categories_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
     val mains = (content as? CategoriesContent.Ready)?.mains.orEmpty()
-    dialog?.let { CategoryDialogs(it, mains, onName, onDestination, onAnswer, onSubmit, onClose) }
+    dialog?.let { CategoryDialogs(it, mains, onName, onIcon, onColor, onDestination, onAnswer, onSubmit, onClose, onMoveEntries, onRemove) }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+/** Botão só com ícone: o nome da ação e da categoria vai no rótulo de acessibilidade. */
+@Composable
+private fun ActionIcon(iconKey: String, description: String, onClick: () -> Unit) {
+    IconButton(onClick = onClick, modifier = Modifier.size(AccordSpacing.touchMin)) {
+        Icon(painterResource(lucideRes(iconKey)), contentDescription = description)
+    }
+}
+
+@Composable
+private fun IncomeRow(node: IncomeCategoryNode, onEdit: (IncomeCategoryNode) -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+        Row(
+            Modifier.fillMaxWidth().padding(AccordSpacing.s3),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+        ) {
+            CategoryBadge(node.iconKey, categoryColor(node.ownColorKey()))
+            Text(node.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+            ActionIcon("pencil", stringResource(R.string.categories_edit_named, node.name)) { onEdit(node) }
+        }
+    }
+}
+
+/** Ícone da categoria na cor escolhida, sobre um disco da própria cor esmaecida (o mesmo desenho do painel de edição). */
+@Composable
+private fun CategoryBadge(iconKey: String, color: androidx.compose.ui.graphics.Color) {
+    Surface(color = color.copy(alpha = 0.16f), shape = CircleShape) {
+        Box(Modifier.size(AccordSpacing.touchMin), contentAlignment = Alignment.Center) {
+            DecorativeIcon(lucideRes(iconKey), tint = color)
+        }
+    }
+}
+
 @Composable
 private fun MainRow(
     main: MainCategory,
@@ -128,68 +195,32 @@ private fun MainRow(
     onToggle: (String) -> Unit,
     onMove: (CategoryNode, Int) -> Unit,
     onCreate: (String?) -> Unit,
-    onRename: (CategoryNode) -> Unit,
+    onEdit: (CategoryNode) -> Unit,
     onMoveSub: (CategoryNode) -> Unit,
-    onEdit: (String) -> Unit,
 ) {
+    val color = categoryColor(main.node.ownColorKey())
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = CircleShape) {
-                    Box(Modifier.size(AccordSpacing.touchMin), contentAlignment = Alignment.Center) {
-                        DecorativeIcon(lucideRes(main.node.iconKey), tint = categoryColor(main.node.ownColorKey()))
-                    }
-                }
+                CategoryBadge(main.node.iconKey, color)
                 Text(main.node.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                if (reordering) ReorderButtons(main.node, onMove)
+                if (reordering) ReorderButtons(main.node, onMove) else ActionIcon("pencil", stringResource(R.string.categories_edit_named, main.node.name)) { onEdit(main.node) }
             }
-            FlowRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
-                verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
-            ) {
-                TextButton(onClick = { onToggle(main.node.id) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                    Icon(painterResource(if (expanded) Lucide.drawable.lucide_ic_chevron_up else Lucide.drawable.lucide_ic_chevron_down), contentDescription = null)
-                    Spacer(Modifier.width(AccordSpacing.s1))
-                    Text(stringResource(if (expanded) R.string.categories_collapse else R.string.categories_expand, main.children.size))
-                }
-                TextButton(onClick = { onRename(main.node) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                    Icon(painterResource(Lucide.drawable.lucide_ic_pencil), contentDescription = null)
-                    Spacer(Modifier.width(AccordSpacing.s1))
-                    Text(stringResource(R.string.categories_rename))
-                }
-                TextButton(onClick = { onEdit(main.node.id) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                    Icon(painterResource(lucideRes("palette")), contentDescription = null)
-                    Spacer(Modifier.width(AccordSpacing.s1))
-                    Text(stringResource(R.string.categories_edit))
-                }
+            TextButton(onClick = { onToggle(main.node.id) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                Icon(painterResource(if (expanded) Lucide.drawable.lucide_ic_chevron_up else Lucide.drawable.lucide_ic_chevron_down), contentDescription = null)
+                Spacer(Modifier.width(AccordSpacing.s1))
+                Text(stringResource(if (expanded) R.string.categories_collapse else R.string.categories_expand, main.children.size))
             }
             if (expanded) {
                 main.children.forEach { sub ->
                     Row(Modifier.padding(start = AccordSpacing.s4), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                        DecorativeIcon(lucideRes(sub.iconKey), tint = categoryColor(main.node.ownColorKey()))
+                        DecorativeIcon(lucideRes(sub.iconKey), tint = color)
                         Text(sub.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                        if (reordering) ReorderButtons(sub, onMove)
-                    }
-                    FlowRow(
-                        modifier = Modifier.fillMaxWidth().padding(start = AccordSpacing.s4),
-                        horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
-                        verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
-                    ) {
-                        TextButton(onClick = { onRename(sub) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                            Icon(painterResource(Lucide.drawable.lucide_ic_pencil), contentDescription = null)
-                            Spacer(Modifier.width(AccordSpacing.s1))
-                            Text(stringResource(R.string.categories_rename))
-                        }
-                        TextButton(onClick = { onEdit(sub.id) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                            Icon(painterResource(lucideRes("palette")), contentDescription = null)
-                            Spacer(Modifier.width(AccordSpacing.s1))
-                            Text(stringResource(R.string.categories_edit))
-                        }
-                        TextButton(onClick = { onMoveSub(sub) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                            Icon(painterResource(lucideRes("arrow-left-right")), contentDescription = null)
-                            Spacer(Modifier.width(AccordSpacing.s1))
-                            Text(stringResource(R.string.categories_move))
+                        if (reordering) {
+                            ReorderButtons(sub, onMove)
+                        } else {
+                            ActionIcon("pencil", stringResource(R.string.categories_edit_named, sub.name)) { onEdit(sub) }
+                            ActionIcon("arrow-left-right", stringResource(R.string.categories_move_named, sub.name)) { onMoveSub(sub) }
                         }
                     }
                 }
@@ -220,20 +251,29 @@ private fun CategoryDialogs(
     dialog: CategoryDialog,
     mains: List<MainCategory>,
     onName: (String) -> Unit,
+    onIcon: (String) -> Unit,
+    onColor: (Int) -> Unit,
     onDestination: (String) -> Unit,
     onAnswer: (java.time.YearMonth, PartChoice?, String?) -> Unit,
     onSubmit: () -> Unit,
     onClose: () -> Unit,
+    onMoveEntries: (String) -> Unit,
+    onRemove: (String) -> Unit,
 ) {
     when (dialog) {
         is CategoryDialog.Create -> NameDialog(
-            title = R.string.categories_create_title, name = dialog.name, error = dialog.nameError, message = dialog.message,
+            title = if (dialog.income) R.string.categories_create_income_title else R.string.categories_create_title,
+            name = dialog.name, error = dialog.nameError, message = dialog.message,
             working = dialog.working, onName = onName, onSubmit = onSubmit, onClose = onClose,
-            note = if (dialog.parentId == null) null else R.string.categories_create_sub_note,
+            note = when {
+                dialog.income -> R.string.categories_create_income_note
+                dialog.parentId == null -> null
+                else -> R.string.categories_create_sub_note
+            },
         )
-        is CategoryDialog.Rename -> NameDialog(
-            title = R.string.categories_rename_title, name = dialog.name, error = dialog.nameError, message = dialog.message,
-            working = dialog.working, onName = onName, onSubmit = onSubmit, onClose = onClose, note = R.string.categories_rename_note,
+        is CategoryDialog.Edit -> CategoryEditSheet(
+            dialog, onName, onIcon, onColor, onSave = onSubmit,
+            onMoveEntries = { onMoveEntries(dialog.id) }, onRemove = { onRemove(dialog.id) }, onClose = onClose,
         )
         is CategoryDialog.Move -> AlertDialog(
             onDismissRequest = onClose,

@@ -6,6 +6,7 @@ import app.accord.SpaceProvider
 import app.accord.core.forecast.ExceedProjection
 import app.accord.core.forecast.exceedProjections
 import app.accord.core.space.QueryResult
+import app.accord.ui.colorKey
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,7 +14,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.time.YearMonth
 
-data class ProjectionRow(val categoryName: String, val projection: ExceedProjection)
+/** [iconKey] e [colorKey] vêm da categoria (cor da principal); nulos quando ela não foi encontrada. */
+data class ProjectionRow(val categoryName: String, val projection: ExceedProjection, val iconKey: String? = null, val colorKey: String? = null)
 
 sealed interface HomeProjectionState {
     data object Loading : HomeProjectionState
@@ -35,9 +37,14 @@ class HomeProjectionViewModel(private val provider: SpaceProvider) : ViewModel()
                 val today = provider.clock.today()
                 val space = provider.space()
                 val forecast = (space.forecasts(YearMonth.from(today)) as? QueryResult.Data)?.value
-                val names = (space.categories() as? QueryResult.Data)?.value?.associate { it.id to it.name }
-                mutable.value = if (forecast == null || names == null) HomeProjectionState.Failed
-                else HomeProjectionState.Ready(exceedProjections(forecast, today).map { ProjectionRow(names[it.categoryId] ?: it.categoryId, it) })
+                val categories = (space.categories() as? QueryResult.Data)?.value?.associateBy { it.id }
+                mutable.value = if (forecast == null || categories == null) HomeProjectionState.Failed
+                else HomeProjectionState.Ready(
+                    exceedProjections(forecast, today).map {
+                        val node = categories[it.categoryId]
+                        ProjectionRow(node?.name ?: it.categoryId, it, node?.iconKey, node?.colorKey(categories))
+                    },
+                )
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {

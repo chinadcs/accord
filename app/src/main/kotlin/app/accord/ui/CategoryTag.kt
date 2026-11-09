@@ -13,6 +13,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import app.accord.core.space.CategoryNode
+import app.accord.core.space.IncomeCategoryNode
 import app.accord.ui.components.lucideRes
 import app.accord.ui.theme.AccordSpacing
 
@@ -33,6 +34,20 @@ fun CategoryTag(
     val node = id?.let(categories::get) ?: return
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalAlignment = Alignment.CenterVertically) {
         Icon(painterResource(lucideRes(node.iconKey)), contentDescription = null, modifier = Modifier.size(18.dp), tint = categoryColor(categories, id))
+        Text(node.name, style = style)
+    }
+}
+
+/** A categoria de renda com o seu ícone na cor escolhida e o nome; o mesmo desenho de [CategoryTag] para a despesa. */
+@Composable
+fun IncomeCategoryTag(
+    category: IncomeCategoryNode?,
+    modifier: Modifier = Modifier,
+    style: TextStyle = MaterialTheme.typography.bodyMedium,
+) {
+    val node = category ?: return
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalAlignment = Alignment.CenterVertically) {
+        Icon(painterResource(lucideRes(node.iconKey)), contentDescription = null, modifier = Modifier.size(18.dp), tint = categoryColor(node.ownColorKey()))
         Text(node.name, style = style)
     }
 }

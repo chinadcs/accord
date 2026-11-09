@@ -38,7 +38,7 @@ import org.junit.runner.RunWith
 import java.time.LocalDate
 import java.util.UUID
 
-/** Editar (ícone e cor), mover lançamentos e remover categoria, de ponta a ponta no banco do aparelho (ADR 0039). Só no emulador. */
+/** Editar (nome, ícone e cor, no painel único), mover lançamentos e remover categoria, de ponta a ponta no banco do aparelho (ADR 0039). Só no emulador. */
 @RunWith(AndroidJUnit4::class)
 class CategoryEditFlowTest {
     @get:Rule
@@ -83,8 +83,8 @@ class CategoryEditFlowTest {
         compose.onNode(hasScrollAction()).performScrollToNode(hasText("Categorias e subcategorias"))
         compose.onAllNodes(hasText("Categorias e subcategorias") and hasClickAction()).onLast().performSemanticsAction(SemanticsActions.OnClick)
         waitForText("Reorganizar ordem")
-        // Beta foi a última categoria principal criada, então é a última da lista.
-        click("Editar")
+        // Só o ícone de caneta: o nome da ação e da categoria vai no rótulo de acessibilidade. O painel sobe de baixo.
+        compose.onNodeWithContentDescription("Editar $nameB").performSemanticsAction(SemanticsActions.OnClick)
         waitForText("Editar categoria")
     }
 
