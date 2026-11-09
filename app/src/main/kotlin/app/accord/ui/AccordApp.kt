@@ -548,10 +548,14 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     val projectionModel: app.accord.ui.home.HomeProjectionViewModel = viewModel(factory = viewModelFactory {
                         initializer { app.accord.ui.home.HomeProjectionViewModel(container) }
                     })
+                    val cashFlowModel: app.accord.ui.home.HomeCashFlowViewModel = viewModel(factory = viewModelFactory {
+                        initializer { app.accord.ui.home.HomeCashFlowViewModel(container) }
+                    })
                     val allowance by home.state.collectAsStateWithLifecycle()
                     val upcoming by upcomingModel.state.collectAsStateWithLifecycle()
                     val projection by projectionModel.state.collectAsStateWithLifecycle()
-                    val refreshHome = { home.refresh(); upcomingModel.refresh(); projectionModel.refresh() }
+                    val cashFlow by cashFlowModel.state.collectAsStateWithLifecycle()
+                    val refreshHome = { home.refresh(); upcomingModel.refresh(); projectionModel.refresh(); cashFlowModel.refresh() }
                     RefreshOnResume(refreshHome)
                     LaunchedEffect(syncStatus) { refreshHome() }
                     LaunchedEffect(home) {
@@ -575,6 +579,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             onAllowanceRetry = home::refresh, onBudget = { openRoot(Root.Budget) },
                             upcoming = upcoming, onUpcomingRetry = upcomingModel::refresh,
                             onCommitments = { navController.navigate(ROUTE_COMMITMENTS) },
+                            cashFlow = cashFlow, onCashFlowRetry = cashFlowModel::refresh,
                             projection = projection, onProjectionRetry = projectionModel::refresh,
                             onForecasts = { navController.navigate("$ROUTE_FORECASTS?$ARG_MONTH=${container.clock.currentMonth()}") })
                     }

@@ -25,7 +25,7 @@ class HomeUiTest {
 
     @Test fun cargaNaoDizQueNaoHaPendencias() {
         show(PendingQueueUiState())
-        compose.onNodeWithText("Consultando pendências…").assertIsDisplayed()
+        compose.onNodeWithText("Consultando pendências…").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Nenhuma pendência neste aparelho").assertDoesNotExist()
     }
 
@@ -35,9 +35,9 @@ class HomeUiTest {
         compose.setContent { AccordTheme {
             HomeScreen(PaddingValues(), PendingQueueUiState(loading = false, failed = true), { retries++ }, {}, {}, { reviews++ })
         } }
-        compose.onNodeWithText("Não foi possível consultar as pendências").assertIsDisplayed()
-        compose.onNodeWithText("Tentar de novo").performClick()
-        compose.onNodeWithText("Abrir Revisar").performClick()
+        compose.onNodeWithText("Não foi possível consultar as pendências").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Tentar de novo").performScrollTo().performClick()
+        compose.onNodeWithText("Abrir Revisar").performScrollTo().performClick()
         assertEquals(1, retries)
         assertEquals(1, reviews)
         compose.onNodeWithText("Nenhuma pendência neste aparelho").assertDoesNotExist()
@@ -45,7 +45,7 @@ class HomeUiTest {
 
     @Test fun filaVaziaTemTextoLocal() {
         show(PendingQueueUiState(loading = false))
-        compose.onNodeWithText("Nenhuma pendência neste aparelho").assertIsDisplayed()
+        compose.onNodeWithText("Nenhuma pendência neste aparelho").performScrollTo().assertIsDisplayed()
     }
 
     @Test fun indicadoresDeInicioEMaisTemDescricaoAcessivel() {
