@@ -240,6 +240,7 @@ import app.accord.ui.nav.ROUTE_EDIT
 import app.accord.ui.nav.ROUTE_PENDING
 import app.accord.ui.nav.ROUTE_PENDING_ITEM
 import app.accord.ui.nav.ROUTE_IMPORT
+import app.accord.ui.nav.ROUTE_IMPORT_HUB
 import app.accord.ui.nav.ROUTE_IMPORT_RESULT
 import app.accord.ui.nav.ROUTE_IMPORT_REVIEW
 import app.accord.ui.nav.ROUTE_INCOMES
@@ -680,15 +681,12 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 val conflicts by viewModel.conflicts.collectAsStateWithLifecycle()
                 val categories by viewModel.categories.collectAsStateWithLifecycle()
                 RefreshOnResume(viewModel::refresh)
-                val hub: ImportHubViewModel = viewModel(factory = viewModelFactory { initializer { ImportHubViewModel(container) } })
-                val hubState by hub.state.collectAsStateWithLifecycle()
-                RefreshOnResume(hub::refresh)
                 val queue: PendingQueueViewModel = viewModel(
                     factory = viewModelFactory { initializer { PendingQueueViewModel(container, container.sync, container.chat, createSavedStateHandle()) } },
                 )
                 val queueState by queue.state.collectAsStateWithLifecycle()
                 RefreshOnResume(queue::refresh)
-                PullToRefresh({ viewModel.refresh(); hub.refresh(); queue.refresh() }) {
+                PullToRefresh({ viewModel.refresh(); queue.refresh() }) {
                     ReviewRoot(
                         stringResource(R.string.review_title), padding, register,
                         onBack = { navController.popBackStack() },
@@ -700,13 +698,6 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                                 ) { Text(stringResource(R.string.clues_title)) }
                             }
                             PendingHubCard(queueState.items.size, queueState.loading) { navController.navigate(ROUTE_PENDING) }
-                            ImportHub(
-                                hubState,
-                                onImport = { navController.navigate(ROUTE_IMPORT) },
-                                onContinue = { id -> navController.navigate("$ROUTE_IMPORT_REVIEW/${Uri.encode(id)}") },
-                                onOpenResult = { id -> navController.navigate("$ROUTE_IMPORT_RESULT/${Uri.encode(id)}") },
-                                onDiscard = hub::discard,
-                            )
                             ReviewConflicts(conflicts) { id -> navController.navigate("$ROUTE_CONFLICT/${Uri.encode(id)}") }
                             ReviewCategories(categories, onAccept = viewModel::accept, onChoose = { navController.navigate(ROUTE_PENDING) })
                         },
@@ -757,6 +748,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                         reviewState = reviewState,
                         actions = MoreActions(
                             onReview = { navController.navigate(ROUTE_REVIEW) },
+                            onImport = { navController.navigate(ROUTE_IMPORT_HUB) },
                             onCategories = { navController.navigate(ROUTE_CATEGORIES) },
                             onAccounts = { navController.navigate(ROUTE_ACCOUNTS) },
                             onLimits = { navController.navigate(ROUTE_LIMITS) },
@@ -1316,6 +1308,23 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                         viewModel, padding, onBack = { navController.popBackStack() },
                         onSeeEntries = { month -> navController.openFilteredEntries(month, null, null, cardId = viewModel.selectedCardId) },
                     )
+                }
+            }
+            composable(ROUTE_IMPORT_HUB) {
+                val hub: ImportHubViewModel = viewModel(factory = viewModelFactory { initializer { ImportHubViewModel(container) } })
+                val hubState by hub.state.collectAsStateWithLifecycle()
+                RefreshOnResume(hub::refresh)
+                PullToRefresh(hub::refresh) {
+                    RootScaffold(stringResource(R.string.import_hub_title), padding, onBack = { navController.popBackStack() }) {
+                        ImportHub(
+                            hubState,
+                            onImport = { navController.navigate(ROUTE_IMPORT) },
+                            onContinue = { id -> navController.navigate("$ROUTE_IMPORT_REVIEW/${Uri.encode(id)}") },
+                            onOpenResult = { id -> navController.navigate("$ROUTE_IMPORT_RESULT/${Uri.encode(id)}") },
+                            onDiscard = hub::discard,
+                            showTitle = false,
+                        )
+                    }
                 }
             }
             composable(ROUTE_IMPORT) {

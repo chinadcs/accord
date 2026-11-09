@@ -31,7 +31,7 @@ import app.accord.ui.theme.AccordSpacing
 import com.composables.icons.lucide.R as Lucide
 
 /**
- * Importação dentro de Revisar (parte da tela 14): "Continuar revisão" quando há uma em andamento, senão "Importar arquivo";
+ * Hub da importação, aberto por Mais (antes ficava dentro de Revisar, tela 14): "Continuar revisão" quando há uma em andamento, senão "Importar arquivo";
  * cobertura por origem e histórico. A ausência de arquivos não é apresentada como cobrança nem como "dias perdidos".
  */
 @Composable
@@ -41,11 +41,13 @@ fun ImportHub(
     onContinue: (String) -> Unit,
     onOpenResult: (String) -> Unit,
     onDiscard: (String) -> Unit = {},
+    /** Falso quando a tela que o hospeda já tem o título "Importar do banco". */
+    showTitle: Boolean = true,
 ) {
     var confirmingDiscard by rememberSaveable { mutableStateOf(false) }
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.large, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
-            Text(stringResource(R.string.import_hub_title), style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
+            if (showTitle) Text(stringResource(R.string.import_hub_title), style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
             if (state.failed) Text(stringResource(R.string.state_error), style = MaterialTheme.typography.bodyMedium)
             val inReview = state.inReview
             if (inReview != null) {

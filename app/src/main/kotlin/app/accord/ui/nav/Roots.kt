@@ -82,7 +82,11 @@ const val ROUTE_CATEGORY_MOVE = "category-move"
 const val ROUTE_ACCOUNTS = "accounts"
 const val ROUTE_LIMITS = "limits"
 
-/** Importação (S4): escolher o arquivo, revisar o lote `import_review/{batchId}` e ver o resultado `import_result/{batchId}`. */
+/**
+ * Importação (S4): o hub `import_hub`, aberto por Mais (continuar, histórico, cobertura), escolher o arquivo `import`, revisar o lote
+ * `import_review/{batchId}` e ver o resultado `import_result/{batchId}`.
+ */
+const val ROUTE_IMPORT_HUB = "import_hub"
 const val ROUTE_IMPORT = "import"
 const val ROUTE_IMPORT_REVIEW = "import_review"
 const val ROUTE_IMPORT_RESULT = "import_result"

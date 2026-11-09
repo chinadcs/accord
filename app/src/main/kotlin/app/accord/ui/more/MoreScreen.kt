@@ -55,6 +55,7 @@ data class MoreActions(
     val onIncomes: () -> Unit,
     val onCommitments: () -> Unit,
     val onReview: () -> Unit = {},
+    val onImport: () -> Unit = {},
     val onRegister: () -> Unit = {},
     val onSpace: () -> Unit = {},
     val onAppearance: () -> Unit = {},
@@ -130,6 +131,7 @@ fun MoreScreen(
         Section(R.string.more_group_review) {
             MoreRow(R.string.tab_review, Lucide.drawable.lucide_ic_circle_check, actions.onReview,
                 supporting = app.accord.ui.home.pendingSummary(reviewState))
+            MoreRow(R.string.more_import, Lucide.drawable.lucide_ic_download, actions.onImport)
         }
 
         Section(R.string.more_group_budget) {

@@ -30,6 +30,7 @@
     <string name="tab_budget">Orçamento</string>
     <string name="tab_entries">Lançamentos</string>
     <string name="tab_review">Revisar</string>
+    <string name="more_import">Importar do banco</string>
     <string name="tab_more">Mais</string>
 
     <!-- Conteúdo provisório das raízes que S1 não implementa -->

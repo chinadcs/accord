@@ -252,13 +252,13 @@
     </plurals>
     <string name="import_result_originals">Os dados originais de cada movimento e as suas decisões ficam guardados neste aparelho. O arquivo em si não é guardado.</string>
     <string name="import_result_see_entries">Ver lançamentos</string>
-    <string name="import_result_back_review">Voltar para Revisar</string>
+    <string name="import_result_back_review">Voltar para a importação</string>
     <string name="import_result_open_entry">Abrir lançamento</string>
     <string name="import_sync_saved">Salvo neste aparelho. Será enviado ao outro aparelho quando houver conexão.</string>
     <string name="import_sync_acknowledged">Salvo neste aparelho e recebido pelo serviço.</string>
     <string name="import_sync_received">Resultado recebido do outro aparelho.</string>
 
-    <!-- Importação em Revisar (tela 14) -->
+    <!-- Hub da importação, aberto por Mais -->
     <string name="import_hub_title">Importar do banco</string>
     <string name="import_hub_in_review">Há uma revisão em andamento: %1$s.</string>
     <string name="import_hub_continue">Continuar revisão</string>

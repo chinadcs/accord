@@ -41,7 +41,7 @@ import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 /**
- * Importação de ponta a ponta no banco do aparelho (S4.4): do lote em revisão, por Revisar, até o resultado, passando pelo resumo de
+ * Importação de ponta a ponta no banco do aparelho (S4.4): do lote em revisão, pelo hub em Mais, até o resultado, passando pelo resumo de
  * confirmação. A seleção de arquivo é do sistema operacional e não é automatizada aqui: o lote nasce pela mesma sessão que a tela usa.
  */
 @RunWith(AndroidJUnit4::class)
@@ -99,7 +99,7 @@ class ImportFlowTest {
         }
         scenario = ActivityScenario.launch(MainActivity::class.java)
         compose.onNodeWithText("Mais").performClick()
-        compose.onNodeWithText("Revisar").performScrollTo().performClick()
+        compose.onNodeWithText("Importar do banco").performScrollTo().performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("Continuar revisão")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Continuar revisão").performScrollTo().performClick()
         compose.waitUntil(5_000) { runCatching { compose.onNodeWithText(description).assertIsDisplayed() }.isSuccess }
@@ -116,10 +116,10 @@ class ImportFlowTest {
     }
 
     @Test
-    fun revisarOferecaContinuarConfirmarEMostreOResultado() {
+    fun hubOferecaContinuarConfirmarEMostreOResultado() {
         scenario = ActivityScenario.launch(MainActivity::class.java)
         compose.onNodeWithText("Mais").performClick()
-        compose.onNodeWithText("Revisar").performScrollTo().performClick()
+        compose.onNodeWithText("Importar do banco").performScrollTo().performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("Continuar revisão")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Continuar revisão").performScrollTo().performClick()
 
@@ -152,12 +152,12 @@ class ImportFlowTest {
         assertEquals(1, runBlocking { (container.space().movements(java.time.YearMonth.now()) as QueryResult.Data).value.count { it.description == description } })
     }
 
-    /** Descartar na revisão volta a Revisar já sem "Continuar revisão": o card se atualiza ao reaparecer. */
+    /** Descartar na revisão volta ao hub da importação já sem "Continuar revisão": o card se atualiza ao reaparecer. */
     @Test
-    fun descartarNaRevisaoVoltaARevisarSemContinuarRevisao() {
+    fun descartarNaRevisaoVoltaAoHubSemContinuarRevisao() {
         scenario = ActivityScenario.launch(MainActivity::class.java)
         compose.onNodeWithText("Mais").performClick()
-        compose.onNodeWithText("Revisar").performScrollTo().performClick()
+        compose.onNodeWithText("Importar do banco").performScrollTo().performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("Continuar revisão")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Continuar revisão").performScrollTo().performClick()
         compose.waitUntil(5_000) { runCatching { compose.onNodeWithText(description).assertIsDisplayed() }.isSuccess }
@@ -171,12 +171,12 @@ class ImportFlowTest {
         assertTrue(runBlocking { (container.imports().batches() as QueryResult.Data).value.none { it.id == batchId } })
     }
 
-    /** Descartar direto do card de Revisar, sem abrir a revisão. */
+    /** Descartar direto do hub da importação (Mais), sem abrir a revisão. */
     @Test
-    fun descartarPeloCardDeRevisarTiraOContinuarRevisao() {
+    fun descartarPeloHubTiraOContinuarRevisao() {
         scenario = ActivityScenario.launch(MainActivity::class.java)
         compose.onNodeWithText("Mais").performClick()
-        compose.onNodeWithText("Revisar").performScrollTo().performClick()
+        compose.onNodeWithText("Importar do banco").performScrollTo().performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("Continuar revisão")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("Descartar esta revisão").performScrollTo().performClick()
         compose.onNodeWithText("Descartar").performClick()
