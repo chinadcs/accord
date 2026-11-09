@@ -161,7 +161,7 @@ class SyncFlowTest {
         waitForText("Sincronização")
         tap("Sincronização")
         waitForText("1 operação local por enviar")
-        waitForText("A visão do casal pode estar desatualizada. O que está salvo aqui ainda não foi enviado.")
+        waitForText("A visão do espaço pode estar desatualizada. O que está salvo aqui ainda não foi enviado.")
         service.online = true
         tap("Sincronizar agora")
         waitForText("Nenhuma operação por enviar neste aparelho")

@@ -78,7 +78,7 @@ class SyncUiTest {
         compose.onNodeWithText("Última sincronização concluída: 22/10, 10h30").assertIsDisplayed()
         compose.onNodeWithText("3 operações locais por enviar").assertIsDisplayed()
         compose.onNodeWithText("A contagem é de operações, não de despesas: uma correção também conta.").assertIsDisplayed()
-        compose.onNodeWithText("A visão do casal pode estar desatualizada. O que está salvo aqui ainda não foi enviado.").assertIsDisplayed()
+        compose.onNodeWithText("A visão do espaço pode estar desatualizada. O que está salvo aqui ainda não foi enviado.").assertIsDisplayed()
         compose.onNodeWithText("Sincronizar agora").assertIsEnabled()
     }
 
@@ -88,14 +88,14 @@ class SyncUiTest {
         compose.onNodeWithText("Nenhuma operação por enviar neste aparelho").assertIsDisplayed()
         compose.onNodeWithText("Nada pendente. O outro aparelho pode ter registros que ainda não chegaram.").assertIsDisplayed()
         assertTrue(compose.onAllNodesWithText("Tudo sincronizado", substring = true).fetchSemanticsNodes().isEmpty())
-        assertTrue(compose.onAllNodesWithText("A visão do casal pode estar desatualizada", substring = true).fetchSemanticsNodes().isEmpty())
+        assertTrue(compose.onAllNodesWithText("A visão do espaço pode estar desatualizada", substring = true).fetchSemanticsNodes().isEmpty())
     }
 
     @Test
     fun semNenhumaSincronizacaoConcluidaAvisaQueAVisaoPodeEstarDesatualizada() {
         showSync(status(lastSync = null))
         compose.onNodeWithText("Nenhuma sincronização foi concluída neste aparelho.").assertIsDisplayed()
-        compose.onNodeWithText("A visão do casal pode estar desatualizada.").assertIsDisplayed()
+        compose.onNodeWithText("A visão do espaço pode estar desatualizada.").assertIsDisplayed()
     }
 
     @Test

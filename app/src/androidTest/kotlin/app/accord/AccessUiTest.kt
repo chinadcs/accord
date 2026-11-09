@@ -77,7 +77,7 @@ class AccessUiTest {
     @Test
     fun loginTemUmaAcaoPrincipalEOsDoisCaminhosSecundarios() {
         showAccess()
-        compose.onNodeWithText("Controle financeiro do casal").assertIsDisplayed()
+        compose.onNodeWithText("Controle financeiro colaborativo").assertIsDisplayed()
         compose.onNodeWithText("E-mail").assertIsDisplayed()
         compose.onNodeWithText("Senha").assertIsDisplayed()
         compose.onNodeWithText("Entrar").assertIsDisplayed().assertIsEnabled()

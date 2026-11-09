@@ -7,7 +7,7 @@
     <string name="incomes_expected">Total esperado</string>
     <string name="incomes_not_balance">Renda prevista não é saldo disponível confirmado.</string>
     <string name="incomes_empty_title">Nenhuma renda neste mês</string>
-    <string name="incomes_empty_body">Isso mostra só o que foi registrado. Não significa que o casal não tenha renda.</string>
+    <string name="incomes_empty_body">Isso mostra só o que foi registrado. Não significa que o espaço não tenha renda.</string>
     <string name="incomes_line_received">Recebido em %1$s</string>
     <string name="incomes_line_expected">Previsto para %1$s</string>
     <string name="incomes_expected_was">Previsto: %1$s</string>

@@ -1,18 +1,18 @@
 # Accord
 
-Aplicativo Android de controle financeiro do casal, em português brasileiro. Duas pessoas, cada
-uma com a própria conta, compartilham um espaço financeiro e registram gastos, rendas, cartão e
+Aplicativo Android de controle financeiro colaborativo, em português brasileiro. Até quatro pessoas,
+cada uma com a própria conta, compartilham um espaço financeiro e registram gastos, rendas, cartões e
 compromissos conversando com o app ou preenchendo um formulário.
 
 Feito em **Kotlin e Jetpack Compose**, com banco e fila locais (**Room**) e **Supabase** (Auth e
-PostgreSQL) para sincronizar os dados financeiros entre os dois celulares.
+PostgreSQL) para sincronizar os dados financeiros entre os aparelhos dos membros.
 
 **Licença:** GNU GPL versão 3 (`GPL-3.0-only`). Copyright (c) 2026 Daniel Campos.
 O Accord pode ser usado, modificado e redistribuído, inclusive comercialmente, conforme a
 [licença completa](LICENSE.md). Componentes de terceiros mantêm suas próprias licenças e avisos.
 
-> **Estado:** em desenvolvimento. Build, testes e fumaça local não substituem
-> a validação nos Galaxy S20 FE e S23 FE, ainda pendente. Veja [Estado do projeto](#estado-do-projeto).
+> **Estado:** em desenvolvimento, com serviço hospedado em uso no piloto. Compatível com
+> Android 10 ou superior; a cobertura de testes varia por recurso. Veja [Estado do projeto](#estado-do-projeto).
 
 ## Sumário
 
@@ -35,24 +35,27 @@ rótulo), **Revisar** e **Mais**. São 38 telas, descritas em
 
 | Área | O que existe |
 | --- | --- |
-| **Acesso e espaço** | Conta individual por e-mail e senha, criação do espaço, convite por código para a segunda pessoa e primeiros passos. |
+| **Acesso e espaço** | Conta individual por e-mail e senha, espaço de até quatro membros com direitos iguais, convite multiuso por código ou QR Code e primeiros passos reduzidos para convidados. |
 | **Chat** | Escreva "gastei 45 no mercado": o app entende a frase, mostra um recibo do que foi entendido com editar e desfazer, pergunta quando há dúvida e oferece registro manual. Também responde consultas por um catálogo fechado de perguntas. Joinha no recibo mede o acerto no uso real. |
 | **Lançamentos** | Lista com filtros, detalhe, registro manual e edição. Ações ligadas ao lançamento: pagar, receber, estorno, cancelar parcelas e trocar a forma de pagamento. |
 | **Orçamento e limites** | Orçamento mensal por categoria e subcategoria, detalhe da categoria no mês, limites com divisão opcional entre subcategorias. |
 | **Categorias** | Criar, renomear, mover e remover categorias e subcategorias; categorias próprias para rendas; ícones de categoria e de marcas de estabelecimentos. |
 | **Compromissos** | Boletos, parcelas e recorrências futuras, com detalhe e conferência da fatura de cada ocorrência no cartão. |
-| **Cartão e faturas** | Um cartão, faturas por vencimento, detalhe da fatura e quitação integral conferida. |
+| **Cartões e faturas** | Vários cartões com fechamento, vencimento, limite e conta vinculada; cartão padrão individual, faturas por vencimento e quitação integral conferida. |
+| **Contas e cofrinhos** | Saldos com data de corte, transferências entre contas e cofrinhos vinculados, com guardar/resgatar, alvo opcional e histórico compartilhado. Reservas não duplicam saldo nem alteram o orçamento. |
 | **Rendas** | Rendas previstas e recebidas, com categoria de renda opcional. |
 | **Importação** | OFX, PDF bancário com texto selecionável e o CSV no modelo próprio do Accord, tudo lido no aparelho. Fluxo: escolher arquivo → revisar a prévia → resultado → pendências. Reimportar não duplica. |
-| **Previsões e alertas** | Previsões por categoria, detalhe da previsão e preferências de alertas (no máximo um por categoria principal por semana, para os dois). |
-| **Mais** | Contas, categorias, limites, modelo no aparelho, sincronização, alertas, tema claro/escuro e histórico do Chat (limpar, exportar, importar). |
+| **Previsões e alertas** | Previsões por categoria, detalhe da previsão e preferências de alertas (no máximo um evento por categoria principal por semana, destinado a todos os membros). A coordenação entre aparelhos permanece pendente. |
+| **Mais** | Contas, cofrinhos, categorias, limites, sincronização, alertas, tema e segurança. Conversas locais podem ser criadas, renomeadas, excluídas, exportadas e importadas. |
+| **Proteção e dados** | Bloqueio por biometria ou credencial do Android; exportação pessoal e financeira; exclusão recuperável da conta ou do espaço, com autorização no serviço. |
 | **Sincronização** | Fila persistida, envio em segundo plano, indicadores de estado e tela para **escolher a versão** em conflito. |
 
 ### Análise e planejamento (P1 e P2)
 
 - **P1:** revisão semanal, atividade de compras, assinaturas (com detalhe) e comparações históricas.
 - **P2:** intenções de compra compartilhadas e simulador de compra, que não altera o orçamento
-  real. As pistas de revisão (telas 37–38) ainda não foram implementadas.
+  real, e pistas conservadoras de lançamentos parecidos e mudanças de frequência. As pistas
+  estão implementadas; a calibração com uso real permanece pendente. P2 fica oculta no release.
 
 ### Fora do escopo inicial
 
@@ -72,9 +75,9 @@ O resumo abaixo vem do [AGENTS.md](AGENTS.md) e do plano local (`docs/plano-dese
 caso de divergência, vale o plano e os [ADRs](docs/adr/README.md).
 
 **Acesso**
-- Os dois usuários criam e editam tudo: sem papéis administrativos, gastos privados ou cotas
+- Até quatro membros criam e editam os dados e ajustes do espaço: sem papéis administrativos, gastos privados ou cotas
   individuais. Convite e autorização do espaço são validados no serviço e no banco.
-- O piloto não usa e-mails: sem confirmação, recuperação de senha, código ou link mágico. O e-mail
+- O piloto não envia e-mails: sem confirmação, recuperação de senha, OTP ou link mágico. O e-mail
   identifica o login, sem comprovar posse; ajuda é atendimento manual fora do app.
 
 **IA no Chat**
@@ -121,7 +124,9 @@ caso de divergência, vale o plano e os [ADRs](docs/adr/README.md).
 
 **Privacidade**
 - O Chat existe só no aparelho de origem; mensagens, transcrições e arquivos de importação completos
-  não são sincronizados. Dados financeiros são compartilhados entre os dois.
+  não são sincronizados. Dados financeiros são compartilhados entre os membros do espaço.
+- A coleta opcional do conteúdo do Chat foi aprovada como decisão, mas Termos e implementação
+  continuam pendentes; o app atual mantém as conversas localmente.
 - Senhas, tokens, chaves, conversas e conteúdo bancário não entram em logs.
 
 **Importação**
@@ -134,12 +139,15 @@ caso de divergência, vale o plano e os [ADRs](docs/adr/README.md).
 
 | Frente | Situação |
 | --- | --- |
-| Motor financeiro, persistência e sincronização (S1, S2) | Implementados e testados em JVM, no Supabase local e no emulador. Validação nos dois celulares pendente. |
-| Serviço hospedado | Projeto Supabase hospedado com as 8 migrações aplicadas e fumaça nos dois celulares em 08/11/2026, registrado em [supabase/README.md](supabase/README.md). |
+| Motor financeiro, persistência e sincronização (S1, S2) | Implementados e testados em JVM, Supabase local e emulador; fumaça de sincronização física no piloto. Roteiro completo de recuperação, conflitos e acessibilidade permanece pendente. |
+| Serviço hospedado | Em 09/11/2026: 15 migrações alinhadas, protocolo 3 e endpoint de privacidade publicados, com verificações HTTP. Clientes do piloto atualizados. Evidências em [supabase/README.md](supabase/README.md). |
 | Chat | Interpretador por regras em uso, com validador, histórico local e recibo. Nenhum modelo de linguagem integrado. |
 | Importação | OFX e CSV verificados com exemplos do usuário. PDF só com layout de fatura de cartão Itaú, validado com um exemplo real. Sem compatibilidade bancária geral comprovada. |
 | Alertas | Preferências e janela semanal implementadas; a coordenação entre aparelhos ainda precisa de implementação. |
-| P1 e P2 | Telas implementadas atrás de fase, sem validação nos aparelhos; pistas (37–38) pendentes. |
+| Espaço e cartões | Até quatro membros, convite multiuso/QR e vários cartões implementados; migrações aplicadas no hospedado. |
+| Proteção, dados, conversas e cofrinhos (S8) | Implementados, com testes JVM/SQL/AVD e serviço hospedado atualizado. Validação física completa e TalkBack permanecem em andamento. |
+| P1 e P2 | Análises P1 e recursos P2 implementados, incluindo pistas (37–38); P2 oculta no release. Calibração e aceite físico permanecem pendentes. |
+| Termos e coleta do Chat | Decisão aprovada; revisão jurídica e implementação pendentes. |
 
 Estado detalhado e decisões em [ARCHITECTURE.md](ARCHITECTURE.md) e nos [ADRs](docs/adr/README.md).
 
@@ -250,7 +258,8 @@ Se houver mais de um dispositivo, informe o serial mostrado pelo `adb devices`:
 
 Também é possível selecionar o módulo `app` e o dispositivo no Android Studio e clicar em
 **Run**. No primeiro acesso, crie uma conta por e-mail e senha, crie o espaço e siga os
-primeiros passos. A segunda pessoa cria sua própria conta e entra usando o código de convite.
+primeiros passos. Os convidados criam suas próprias contas e entram pelo código ou QR Code,
+até o limite de quatro membros. O código vale por três dias e pode ser invalidado.
 Para registrar despesas, use o Chat ou o registro manual.
 
 Outras opções do script:
@@ -404,4 +413,6 @@ O plano (`docs/plano-desenvolvimento.md`), as specs (`docs/specs/`) e o restante
 de trabalho são mantidos no disco, fora do versionamento. Referências a esse acervo nos ADRs e
 nas instruções locais preservam suas fontes, mas não estarão disponíveis em um clone público.
 
-Build e testes locais não substituem a validação nos Galaxy S20 FE e S23 FE, ainda pendente.
+Build e testes locais não substituem a validação em aparelhos físicos, incluindo TalkBack,
+texto ampliado, retomada e sincronização entre membros. Os modelos usados no piloto são
+referências de teste, não uma restrição de compatibilidade do produto.

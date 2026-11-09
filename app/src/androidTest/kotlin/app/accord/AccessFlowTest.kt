@@ -210,7 +210,7 @@ class AccessFlowTest {
 
     @Test
     fun cadastroEspacoConviteEPrimeirosPassosAteOChat() {
-        waitForText("Controle financeiro do casal")
+        waitForText("Controle financeiro colaborativo")
         tap("Criar acesso")
         waitForText("Nenhum e-mail de confirmação é enviado")
         type("E-mail", email)
@@ -276,7 +276,7 @@ class AccessFlowTest {
 
     @Test
     fun credencialRecusadaEFalhaDeRedeTemMensagensDiferentesEPreservamOEmail() {
-        waitForText("Controle financeiro do casal")
+        waitForText("Controle financeiro colaborativo")
         type("E-mail", email)
         type("Senha", "senha-errada")
         tapLast("Entrar")
@@ -299,7 +299,7 @@ class AccessFlowTest {
         val code = (service.generateInvite(first.accessToken, (service.currentSpace(first.accessToken) as app.accord.core.sync.RemoteResult.Ok).value!!.spaceId)
             as app.accord.core.sync.RemoteResult.Ok).value.code
 
-        waitForText("Controle financeiro do casal")
+        waitForText("Controle financeiro colaborativo")
         tap("Criar acesso")
         type("E-mail", email)
         type("Senha", "senha-1234")
@@ -316,7 +316,7 @@ class AccessFlowTest {
 
     @Test
     fun sairPedeDecisaoEOEmailVoltaPreenchidoNoLogin() {
-        waitForText("Controle financeiro do casal")
+        waitForText("Controle financeiro colaborativo")
         runBlocking {
             container.access.signUp(email, "senha-1234", "senha-1234")
             container.access.createSpace("Casa")
@@ -329,13 +329,13 @@ class AccessFlowTest {
         waitForText("Sair da conta?")
         waitForText("Os dados deste aparelho continuam guardados para esta conta.")
         dialogButton("Sair assim mesmo")
-        waitForText("Controle financeiro do casal")
+        waitForText("Controle financeiro colaborativo")
         compose.onNodeWithText(email).assertExists()
     }
 
     @Test
     fun reiniciarOAplicativoRetomaOndeParouSemUsarARede() {
-        waitForText("Controle financeiro do casal")
+        waitForText("Controle financeiro colaborativo")
         runBlocking {
             container.access.signUp(email, "senha-1234", "senha-1234")
             container.access.createSpace("Casa")

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <!-- Acesso (tela 01) -->
-    <string name="access_title">Controle financeiro do casal</string>
+    <string name="access_title">Controle financeiro colaborativo</string>
     <string name="access_renew_title">Entre novamente para continuar</string>
     <string name="access_renew_note">Entre novamente para continuar. O que foi salvo neste aparelho continua guardado.</string>
     <string name="access_email">E-mail</string>

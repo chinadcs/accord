@@ -7,7 +7,7 @@
     <string name="intentions_new">Nova intenção</string>
     <string name="intentions_simulate">Simular uma compra</string>
     <string name="intentions_empty_title">Nenhuma intenção guardada</string>
-    <string name="intentions_empty_body">Guarde aqui o que vocês pensam em comprar, mesmo sem saber o preço. Fica visível para os dois e não conta como despesa.</string>
+    <string name="intentions_empty_body">Guarde aqui o que vocês pensam em comprar, mesmo sem saber o preço. Fica visível para todos os membros e não conta como despesa.</string>
     <string name="intentions_failed">Não foi possível ler as intenções. Nada foi apagado; tente de novo.</string>
     <string name="intentions_no_value">sem valor definido</string>
     <string name="intentions_when">Quando pretende: %1$s</string>
@@ -17,7 +17,7 @@
     <string name="intentions_by_you">por você</string>
     <string name="intentions_by_other">pela outra pessoa</string>
 
-    <string name="intention_title_view">Intenção do casal</string>
+    <string name="intention_title_view">Intenção compartilhada</string>
     <string name="intention_title_new">Nova intenção</string>
     <string name="intention_title_edit">Editar intenção</string>
     <string name="intention_name">Nome</string>

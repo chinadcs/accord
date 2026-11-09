@@ -10,13 +10,13 @@
     </plurals>
     <string name="sync_nothing_pending">Nenhuma operação por enviar neste aparelho</string>
     <string name="sync_nothing_pending_note">Nada pendente. O outro aparelho pode ter registros que ainda não chegaram.</string>
-    <string name="sync_view_outdated">A visão do casal pode estar desatualizada.</string>
-    <string name="sync_view_outdated_queue">A visão do casal pode estar desatualizada. O que está salvo aqui ainda não foi enviado.</string>
-    <string name="sync_view_outdated_week">Passou uma semana desde o último sucesso. A visão do casal pode estar desatualizada; este aparelho não afirma estar em dia.</string>
+    <string name="sync_view_outdated">A visão do espaço pode estar desatualizada.</string>
+    <string name="sync_view_outdated_queue">A visão do espaço pode estar desatualizada. O que está salvo aqui ainda não foi enviado.</string>
+    <string name="sync_view_outdated_week">Passou uma semana desde o último sucesso. A visão do espaço pode estar desatualizada; este aparelho não afirma estar em dia.</string>
     <string name="sync_count_note">A contagem é de operações, não de despesas: uma correção também conta.</string>
     <string name="sync_now">Sincronizar agora</string>
     <string name="sync_running_send">Enviando as operações locais…</string>
-    <string name="sync_running_receive">Recebendo as alterações do casal…</string>
+    <string name="sync_running_receive">Recebendo as alterações do espaço…</string>
     <string name="sync_running_note">Registro e consulta continuam disponíveis enquanto sincroniza.</string>
     <string name="sync_done">Sincronizado. Só as operações reconhecidas foram marcadas como enviadas.</string>
     <string name="sync_done_conflict">Operações reconhecidas. O conflito continua aguardando sua escolha.</string>
@@ -46,7 +46,7 @@
         <item quantity="one">%d conflito de edição</item>
         <item quantity="other">%d conflitos de edição</item>
     </plurals>
-    <string name="sync_conflicts_note">Os registros locais continuam disponíveis. Enquanto o conflito não for resolvido, a visão do casal não está plenamente atualizada.</string>
+    <string name="sync_conflicts_note">Os registros locais continuam disponíveis. Enquanto o conflito não for resolvido, a visão do espaço não está plenamente atualizada.</string>
     <string name="sync_conflict_review">Revisar conflito</string>
     <string name="sync_conflict_deferred">Revisão adiada</string>
     <string name="sync_attention_title">Operações com atenção</string>
@@ -116,7 +116,7 @@
 
     <!-- Resolver conflito (tela 19, modo conflito) -->
     <string name="conflict_title">Escolher versão</string>
-    <string name="conflict_intro">A mesma coisa foi alterada nos dois aparelhos. Nenhuma versão vem escolhida e a data da edição não decide qual está certa.</string>
+    <string name="conflict_intro">O mesmo item foi alterado em aparelhos diferentes. Nenhuma versão vem escolhida e a data da edição não decide qual está certa.</string>
     <string name="conflict_mine">Sua edição</string>
     <string name="conflict_theirs">Edição da outra pessoa</string>
     <string name="conflict_mine_when">Editada neste aparelho</string>
@@ -149,7 +149,7 @@
     <string name="conflict_entity_category">Categoria</string>
     <string name="conflict_entity_income_category">Categoria de renda</string>
     <string name="conflict_entity_icon_association">Ícone de lançamento</string>
-    <string name="conflict_conversion_note">Vocês converteram a mesma intenção em compromisso, cada um no seu celular. Só um compromisso vale: o orçamento já conta uma única compra e a sua escolha vale para os dois aparelhos.</string>
+    <string name="conflict_conversion_note">A mesma intenção foi convertida em compromisso em aparelhos diferentes. Só um compromisso vale: o orçamento já conta uma única compra e a sua escolha vale para todo o espaço.</string>
     <string name="conflict_kinds_differ">Os dois compromissos são de tipos diferentes. Só é possível manter o que o serviço já reconheceu; depois, registre de novo o que quiser.</string>
     <string name="conflict_entity_intention">Intenção de compra</string>
     <string name="conflict_entity_import_batch">Importação de documento</string>
@@ -219,5 +219,5 @@
     <string name="value_no">não</string>
     <string name="value_unknown">desconhecido</string>
     <string name="review_conflicts_title">Conflitos de edição</string>
-    <string name="review_conflicts_note">Itens editados nos dois aparelhos aguardam sua escolha.</string>
+    <string name="review_conflicts_note">Itens com edições conflitantes aguardam sua escolha.</string>
 </resources>

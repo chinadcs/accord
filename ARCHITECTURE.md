@@ -33,7 +33,7 @@ exigem registrar a questão no Beads e esclarecer a decisão afetada.
 | Tema | Confirmado | Ainda depende de implementação ou validação |
 | --- | --- | --- |
 | Aplicativo | Android nativo, Kotlin e Jetpack Compose | Módulos/build existem; desenho concreto da fachada proposto no ADR 0022 e validação nos aparelhos pendente |
-| Aparelhos | Galaxy S20 FE como referência mínima e Galaxy S23 FE; S20 FE com 6 GB de RAM total informados | Variantes, Android, espaço livre, RAM do S23 FE e consumo real |
+| Aparelhos | Android 10/API 29 ou superior; os modelos do piloto são referências de teste | Cobertura física, acessibilidade e consumo real por recurso; eventual SLM exige medição própria |
 | Inferência | P0: interpretador local por regras ([ADR 0036](docs/adr/0036-interpretador-por-regras-no-p0-e-slm-opcional.md)); SLM no aparelho é candidato opcional adiado, sem fallback automático para IA remota | Promoção das regras ao produto; se o SLM voltar: modelo, motor, quantização, qualidade em português e medição nos aparelhos |
 | Distribuição | Download separado no primeiro uso, até 2 GB decimais por celular | Hospedagem, tamanho efetivo, retomada e espaço instalado |
 | Desempenho | Meta desejada de até 5 s do envio ao resultado visível de frase curta, com modelo carregado; sem corte eliminatório (31/10/2026) | Medições nos dois celulares; carga inicial, RAM, bateria e aquecimento |
@@ -260,7 +260,7 @@ Vocabulário do plano §§3–5 e do índice das telas; não é descrição exau
 
 | Conceito | Regra que precisa permanecer verdadeira |
 | --- | --- |
-| Espaço do casal | Duas contas individuais, mesmo acesso de criação/edição e orçamento compartilhado |
+| Espaço colaborativo | Até quatro contas individuais, mesmo acesso de criação/edição e orçamento compartilhado (ADR 0053) |
 | Conta bancária | Banco e apelido compartilhados; conta padrão é preferência individual de preenchimento |
 | Lançamento | Identidade estável, autor e, quando conhecido, quem gastou; correção não cria cópia |
 | Compra parcelada | Compra e parcelas vinculadas; cada parcela ocupa sua fatura sem somar o total novamente |
@@ -302,9 +302,9 @@ confirmação, recuperação, OTP, magic link ou convite por e-mail. Planejar Co
 desativado, sem SMTP. E-mail identifica login sem comprovar posse; ajuda orienta atendimento
 manual fora do app, em ambiente confiável.
 
-A segunda conta entra por código de convite gerado no aplicativo. Autorização do espaço e
+Os convidados entram por código multiuso ou QR Code, até quatro membros (ADR 0053). Autorização do espaço e
 validação/consumo do convite ocorrem no serviço/banco; alterar referência no cliente não concede
-acesso. Ambos têm os mesmos direitos no espaço, sem hierarquia administrativa no produto.
+acesso. Todos os membros têm os mesmos direitos no espaço, sem hierarquia administrativa no produto.
 Credenciais administrativas nunca entram no aplicativo. Há testes de permissão locais para
 associados e não associados; execução histórica está no Beads, sem reexecução nesta revisão.
 Isso não comprova permissões de um projeto hospedado.
