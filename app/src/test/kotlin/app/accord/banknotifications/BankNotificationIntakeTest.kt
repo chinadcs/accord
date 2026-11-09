@@ -86,4 +86,13 @@ class BankNotificationIntakeTest {
         assertEquals(listOf("Description"), saved[1].missing)
         assertEquals("", saved[1].fields["description"])
     }
+    @Test
+    fun `itau voce enviou vira despesa com pagamento Pix e voce recebeu vira receita`() {
+        val intake = intake()
+        intake.onNotification("com.banco.app", "k1|1", null, "Você enviou R\$ 1,00 para Estabelecimento", ongoing = false)
+        intake.onNotification("com.banco.app", "k2|2", null, "Você recebeu R\$ 1,00 de Estabelecimento", ongoing = false)
+
+        assertEquals(mapOf("kind" to "Expense", "form" to "Pix", "description" to "Estabelecimento", "amount" to "1,00"), saved[0].fields.filterKeys { it in setOf("kind", "form", "description", "amount") })
+        assertEquals(mapOf("kind" to "Income", "description" to "Estabelecimento", "amount" to "1,00"), saved[1].fields.filterKeys { it in setOf("kind", "form", "description", "amount") })
+    }
 }
