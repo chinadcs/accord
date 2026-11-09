@@ -92,6 +92,9 @@ object ChatValidator {
         if (!context.phase.includes(ProductPhase.P1)) return ChatDecision.Reply(StandardReply.ConsultNeedsP1)
         if (listOfNotNull(p.month, p.target).any { !ChatText.anchored(text, it) }) return ChatDecision.Refuse(RefuseReason.Unanchored)
         val compatible = when (p.type) {
+            ConsultType.TodayAllowance, ConsultType.WeekAllowance ->
+                p.category == null && p.target == null && p.date == null && p.criterion == null && p.month == null &&
+                    ConsultReader.allowanceType(text) == p.type
             ConsultType.CategorySpend -> p.target == null && p.date == null
             ConsultType.PurchaseSchedule -> p.category == null && p.criterion == null && p.month == null
             ConsultType.MonthCommitments -> p.category == null && p.target == null && p.date == null && p.criterion == null

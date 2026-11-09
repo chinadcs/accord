@@ -43,6 +43,14 @@ object ConsultReader {
     private val targetAfter = Regex("\\b(?:d[oae]s?|da compra d[oae]s?|da compra do|da compra da) +(?:compra +d[oae] +)?(?:o +|a +)?(.+)$")
     private val filler = Regex("\\b(?:pra|para|por favor|pfv|ai|ainda|ja|no total|total)\\b")
 
+    /** Formas fechadas: não confundir conselho de compra, registro misto ou categoria específica. */
+    fun allowanceType(text: String): ConsultType? = when (ChatText.fold(text).trim().trimEnd('?', '.', '!', ' ')) {
+        "quanto posso gastar hoje", "quanto podemos gastar hoje", "quanto ainda posso gastar hoje" -> ConsultType.TodayAllowance
+        "quanto posso gastar esta semana", "quanto posso gastar essa semana", "quanto posso gastar nesta semana",
+        "quanto podemos gastar esta semana", "quanto ainda posso gastar esta semana" -> ConsultType.WeekAllowance
+        else -> null
+    }
+
     /**
      * @param text mensagem original (o validador ancora os trechos nela);
      * @return a proposta de consulta ou `null` quando a frase não é uma pergunta do catálogo.
@@ -56,6 +64,7 @@ object ConsultReader {
 
         // Comparação entre períodos está fora do catálogo deste recorte: responder só um dos meses seria enganoso.
         if (comparisonCue.containsMatchIn(folded) || monthPhrase.findAll(folded).count() > 1) return null
+        allowanceType(text)?.let { return Proposal.Consult(it) }
         if (adviceCue.containsMatchIn(folded)) return null
 
         val period = monthPhrase.find(folded)?.value ?: otherPeriod.find(folded)?.value

@@ -75,6 +75,9 @@ internal fun QueryCard(item: ChatItem.Query, actions: ChatActions, onChoose: (St
 private fun SourceButton(result: ChatQueryResult, actions: ChatActions, modifier: Modifier) {
     val month = YearMonth.parse(result.month)
     when (result.kind) {
+        ChatQueryResult.Kind.TodayAllowance, ChatQueryResult.Kind.WeekAllowance -> OutlinedButton(
+            onClick = actions.onOpenBudget, modifier = modifier,
+        ) { Text(stringResource(R.string.allowance_budget)) }
         ChatQueryResult.Kind.Spend -> OutlinedButton(
             onClick = { actions.onOpenFilteredEntries(month, result.categoryId, DateCriterion.valueOf(result.criterion)) },
             modifier = modifier,
@@ -93,6 +96,9 @@ private fun ResultBody(result: ChatQueryResult) {
     val body = MaterialTheme.typography.bodyLarge
     val month = monthLabel(result.month)
     when (result.kind) {
+        ChatQueryResult.Kind.TodayAllowance, ChatQueryResult.Kind.WeekAllowance -> {
+            result.allowance?.let { app.accord.ui.home.AllowanceBody(it, weekOnly = result.kind == ChatQueryResult.Kind.WeekAllowance) }
+        }
         ChatQueryResult.Kind.Spend -> {
             val purchaseDate = result.criterion == DateCriterion.PurchaseDate.name
             val title = if (purchaseDate) R.string.consult_spend_purchase_title else R.string.consult_spend_budget_title

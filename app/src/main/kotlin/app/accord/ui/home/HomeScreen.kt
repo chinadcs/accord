@@ -41,6 +41,9 @@ fun HomeScreen(
     onChat: () -> Unit,
     onRegister: () -> Unit,
     onReview: () -> Unit,
+    allowance: HomeAllowanceState = HomeAllowanceState.Loading,
+    onAllowanceRetry: () -> Unit = {},
+    onBudget: () -> Unit = {},
 ) {
     RootScaffold(stringResource(R.string.tab_home), padding) {
         SyncIndicator()
@@ -51,6 +54,19 @@ fun HomeScreen(
         }
         AccordOutlinedButton(onClick = onRegister, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
             Text(stringResource(R.string.action_register_manually))
+        }
+        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+            Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
+                when (allowance) {
+                    HomeAllowanceState.Loading -> Text(stringResource(R.string.allowance_loading))
+                    HomeAllowanceState.Failed -> {
+                        Text(stringResource(R.string.allowance_failed))
+                        AccordOutlinedButton(onClick = onAllowanceRetry) { Text(stringResource(R.string.action_retry)) }
+                    }
+                    is HomeAllowanceState.Ready -> AllowanceBody(allowance.value)
+                }
+                AccordOutlinedButton(onClick = onBudget) { Text(stringResource(R.string.allowance_budget)) }
+            }
         }
         Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
             Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {

@@ -15,6 +15,10 @@ interpretador → validador, por isso é registrada aqui.
 
 ## Decisão
 
+Extensão em 09/11/2026: o [ADR 0068](0068-margem-diaria-e-semanal-do-orcamento.md) acrescenta
+margem do orçamento para hoje e esta semana, calculada no core. A restrição mensal abaixo
+continua valendo para os tipos originais; a extensão não abre intervalos livres.
+
 Aceita pelo usuário em 07/11/2026, junto com o ajuste da mensagem mista (item 7). Já tinham decisão do usuário nessa data as perguntas abertas 8–10 da spec (sem período assume o mês corrente do
 orçamento e mostra o critério; uma ação por mensagem; explicação do modelo adiada) e o recorte "núcleo P1". O aceite cobre o desenho do contrato; não prova medição nos aparelhos.
 

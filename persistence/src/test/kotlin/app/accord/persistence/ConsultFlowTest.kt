@@ -64,6 +64,45 @@ class ConsultFlowTest : ChatTestBase() {
     }
 
     @Test
+    fun `margem no Chat usa mesmo orcamento real inclui parcela uma vez e nao grava`() = runBlocking<Unit> {
+        val e = consultEnv()
+        e.seedFood() // 980 reais: 300 pagos + 680 no cartão; outubro 22 tem 10 dias restantes.
+        e.handle.space.execute(e.handle.env(), app.accord.core.space.DefineLimits(
+            oct, app.accord.core.LimitScope.OnlyThisMonth,
+            listOf(app.accord.core.space.CategoryLimitEdit(seed("alimentacao"),
+                app.accord.core.LimitEdit(app.accord.core.TotalChange.Set(brl(1980))))),
+        )).applied()
+        // Categoria sem limite não reduz os 1000 reais restantes da categoria limitada.
+        e.pix("Outra categoria", 900, "transporte", d(2026, 10, 21))
+        val operations = e.space.operations().value().size
+        val changes = e.financeChanges
+        val budget = e.space.budget(oct).value()
+        val expected = app.accord.core.spendingAllowance(budget, d(2026, 10, 22))
+        assertEquals(100_000L, expected.remainingCents)
+        assertEquals(10_000L, expected.todayCents)
+        assertEquals(40_000L, expected.weekCents)
+        for ((text, kind) in listOf("quanto posso gastar hoje?" to ChatQueryResult.Kind.TodayAllowance,
+            "quanto posso gastar esta semana?" to ChatQueryResult.Kind.WeekAllowance)) {
+            val message = e.say(text)
+            val snapshot = e.snapshotOf(message.id)
+            assertEquals(kind, snapshot.result?.kind)
+            assertEquals(expected, snapshot.result?.allowance)
+            assertEquals(snapshot, ConsultSnapshot.fromFields(ConsultSnapshot.toFields(snapshot)))
+            // Atualizar histórico no mês seguinte usa o relógio atual, sem repetir o mês antigo.
+            val nextClock = app.accord.core.BudgetClock.of(java.time.Clock.fixed(
+                Instant.parse("2026-11-01T15:00:00Z"), java.time.ZoneOffset.UTC))
+            val refreshed = assertIs<app.accord.core.chat.ConsultOutcome.Result>(
+                app.accord.core.chat.ChatQueryRunner(e.space, nextClock).run(snapshot.request())).result
+            assertEquals("2026-11", refreshed.month)
+            assertEquals("2026-11-01", refreshed.allowance?.date)
+            assertNull(refreshed.allowance?.todayCents) // O limite era só em outubro.
+        }
+        assertEquals(operations, e.space.operations().value().size)
+        assertEquals(changes, e.financeChanges)
+        assertTrue(e.space.drafts().value().isEmpty())
+    }
+
+    @Test
     fun `gasto de alimentacao em outubro devolve o mesmo numero do orcamento e nao escreve nada`() = runBlocking<Unit> {
         val e = consultEnv()
         e.seedFood()

@@ -20,7 +20,7 @@ enum class CorrectionField { Amount, Date, Description, Category, Payment, Accou
 enum class UnsupportedType { Recurrence, Boleto, Refund, InvoicePayment, Cancellation }
 
 /** Catálogo fechado das consultas do Chat (S6). Pedido fora dele é rejeitado, nunca respondido por aproximação. */
-enum class ConsultType { CategorySpend, PurchaseSchedule, MonthCommitments }
+enum class ConsultType { CategorySpend, PurchaseSchedule, MonthCommitments, TodayAllowance, WeekAllowance }
 
 /** Critério de data pedido: mês do orçamento ou data original da compra. Ausente, o app assume o orçamento e diz isso. */
 enum class ConsultCriterion { Budget, PurchaseDate }
@@ -303,6 +303,8 @@ object ProposalCodec {
         "category_spend" to ConsultType.CategorySpend,
         "purchase_schedule" to ConsultType.PurchaseSchedule,
         "month_commitments" to ConsultType.MonthCommitments,
+        "today_allowance" to ConsultType.TodayAllowance,
+        "week_allowance" to ConsultType.WeekAllowance,
     )
     private val CONSULT_CRITERIA = mapOf("budget" to ConsultCriterion.Budget, "purchase_date" to ConsultCriterion.PurchaseDate)
     private val NATURES = mapOf("expense" to Nature.Expense, "income" to Nature.Income)

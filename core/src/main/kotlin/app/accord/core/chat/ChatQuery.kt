@@ -2,6 +2,8 @@ package app.accord.core.chat
 
 import app.accord.core.BudgetClock
 import app.accord.core.Money
+import app.accord.core.SpendingAllowance
+import app.accord.core.spendingAllowance
 import app.accord.core.space.CommitmentDetail
 import app.accord.core.space.DateCriterion
 import app.accord.core.space.EntryFilter
@@ -47,8 +49,9 @@ data class ChatQueryResult(
     val laterCents: Long? = null,
     val laterCount: Int? = null,
     val lines: List<QueryLine> = emptyList(),
+    val allowance: SpendingAllowance? = null,
 ) {
-    enum class Kind { Spend, Schedule, Commitments }
+    enum class Kind { Spend, Schedule, Commitments, TodayAllowance, WeekAllowance }
 }
 
 /** Resultado da execução: um número calculado, um pedido de complemento ou uma falha (que nunca vira zero). */
@@ -66,6 +69,7 @@ sealed interface ConsultOutcome {
 class ChatQueryRunner(private val space: FinanceSpace, private val clock: BudgetClock) {
     suspend fun run(request: ConsultRequest): ConsultOutcome = try {
         when (request.type) {
+            ConsultType.TodayAllowance, ConsultType.WeekAllowance -> allowance(request)
             ConsultType.CategorySpend -> spend(request)
             ConsultType.PurchaseSchedule -> schedule(request)
             ConsultType.MonthCommitments -> commitments(request)
@@ -74,6 +78,15 @@ class ChatQueryRunner(private val space: FinanceSpace, private val clock: Budget
         throw e
     } catch (_: Exception) {
         ConsultOutcome.Failed
+    }
+
+    private suspend fun allowance(request: ConsultRequest): ConsultOutcome {
+        val today = clock.today()
+        val month = YearMonth.from(today)
+        val budget = (space.budget(month) as? QueryResult.Data)?.value ?: return ConsultOutcome.Failed
+        val value = spendingAllowance(budget, today)
+        val kind = if (request.type == ConsultType.TodayAllowance) ChatQueryResult.Kind.TodayAllowance else ChatQueryResult.Kind.WeekAllowance
+        return ConsultOutcome.Result(base(request, kind).copy(month = month.toString(), allowance = value))
     }
 
     private fun base(request: ConsultRequest, kind: ChatQueryResult.Kind) = ChatQueryResult(
