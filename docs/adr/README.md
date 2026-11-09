@@ -176,12 +176,13 @@ observada em 24/10/2026. Os estados abaixo são de decisão, não de conclusão 
 | [0063](0063-licenca-gplv3-e-documentacao-local.md) | GNU GPLv3 e documentação local, exceto ADRs e modelos | accepted |
 | [0064](0064-historico-publicavel-e-privacidade-da-autoria.md) | Histórico publicável e privacidade da autoria | accepted |
 | [0065](0065-convite-pela-camera-externa-sem-leitor-proprietario.md) | Convite pela câmera externa, sem leitor proprietário | accepted |
-| [0066](0066-verificacao-de-atualizacoes-pela-api-do-github.md) | Verificação de atualizações pela API pública do GitHub | accepted; download e instalação substituídos por [0070](0070-atualizacao-baixada-e-instalada-pelo-proprio-app.md) |
+| [0066](0066-verificacao-de-atualizacoes-pela-api-do-github.md) | Verificação de atualizações pela API pública do GitHub | accepted; download e instalação substituídos por [0070](0070-atualizacao-baixada-e-instalada-pelo-proprio-app.md) e verificação só ao abrir por [0072](0072-aviso-de-versao-nova-na-barra-de-notificacoes.md) |
 | [0067](0067-inicio-como-abertura-e-revisar-em-mais.md) | Início como abertura e Revisar em Mais | accepted |
 | [0068](0068-margem-diaria-e-semanal-do-orcamento.md) | Margem diária e semanal do orçamento | accepted |
 | [0069](0069-notificacao-de-banco-como-proposta-em-revisar.md) | Notificação de banco como proposta em Revisar | accepted |
 | [0070](0070-atualizacao-baixada-e-instalada-pelo-proprio-app.md) | Atualização baixada e instalada pelo próprio app | accepted |
 | [0071](0071-ordem-das-abas-saldo-e-botao-de-registro-no-inicio.md) | Ordem das abas, saldo e botão de registro no Início | accepted; substitui partes do [0067](0067-inicio-como-abertura-e-revisar-em-mais.md) |
+| [0072](0072-aviso-de-versao-nova-na-barra-de-notificacoes.md) | Aviso de versão nova na barra de notificações | accepted; substitui, em 0066, a ausência de tarefa periódica |
 
 Questões ainda sem decisão, como modelo/motor, leitores bancários, acesso local, retenção de
 idempotência e validação financeira no serviço, permanecem nos Beads/specs S2–S4. Suas tarefas

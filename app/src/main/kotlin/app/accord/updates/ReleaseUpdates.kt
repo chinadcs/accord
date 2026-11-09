@@ -33,6 +33,8 @@ interface UpdateCheckStore {
     var lastSuccess: Long
     var available: AppRelease?
     var dismissedCode: Int
+    /** Maior versão já avisada na barra de notificações; cada versão é avisada uma vez. */
+    var notifiedCode: Int
 }
 
 object GitHubReleases {
@@ -79,7 +81,7 @@ object GitHubReleases {
     }
 }
 
-/** Foreground checks: daily after success, hourly after failure; manual retries at most every 30s. */
+/** Checks (foreground or the periodic worker): daily after success, hourly after failure; manual retries at most every 30s. */
 class ReleaseUpdates(
     private val scope: CoroutineScope,
     private val feed: ReleaseFeed,
@@ -95,6 +97,14 @@ class ReleaseUpdates(
     ))
     val state = mutable.asStateFlow()
     private val mutex = Mutex()
+
+    /** Versão a avisar na barra de notificações: mais nova que a instalada, não dispensada e ainda não avisada. */
+    fun dueNotification(): AppRelease? =
+        store.available?.takeIf { it.code > installedCode && it.code > store.dismissedCode && it.code > store.notifiedCode }
+
+    fun markNotified(release: AppRelease) {
+        store.notifiedCode = maxOf(store.notifiedCode, release.code)
+    }
 
     fun dismissNotice() {
         mutable.value.available?.let { store.dismissedCode = it.code }

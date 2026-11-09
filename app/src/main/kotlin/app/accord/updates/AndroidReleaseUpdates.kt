@@ -21,6 +21,9 @@ class AndroidUpdateCheckStore(context: Context) : UpdateCheckStore {
     override var dismissedCode: Int
         get() = prefs.getInt("dismissed", 0)
         set(value) { prefs.edit().putInt("dismissed", value).apply() }
+    override var notifiedCode: Int
+        get() = prefs.getInt("notified", 0)
+        set(value) { prefs.edit().putInt("notified", value).apply() }
     override var available: AppRelease?
         get() {
             val version = prefs.getString("version", null) ?: return null

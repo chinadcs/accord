@@ -16,6 +16,8 @@ e a regra de versão permanecem vigentes.
 
 > Parcialmente substituído em 09/11/2026 por [ADR 0070](0070-atualizacao-baixada-e-instalada-pelo-proprio-app.md):
 > o download passa a ser feito pelo app e a instalação é oferecida nele, com confirmação do Android.
+> Também parcialmente substituído em 09/11/2026 por [ADR 0072](0072-aviso-de-versao-nova-na-barra-de-notificacoes.md):
+> há verificação periódica com o app fechado e aviso na barra de notificações.
 
 ## Decisão
 

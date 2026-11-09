@@ -118,6 +118,9 @@ class AppContainer(
     private val updateCheckStore = app.accord.updates.AndroidUpdateCheckStore(context)
     val updates = app.accord.updates.ReleaseUpdates(appScope, releaseFeed, updateCheckStore, BuildConfig.VERSION_CODE)
 
+    /** Aviso na barra de notificações de versão nova; a verificação com o app fechado é agendada no `init` (ADR 0072). */
+    val updateNotifier = app.accord.updates.UpdateNotifier(context).also { it.ensureChannel() }
+
     /** Baixa e instala a versão oferecida, mostra o changelog depois e apaga o APK (ADR 0070). */
     val apkUpdate = app.accord.updates.ApkUpdate(
         appScope, apkDownloader, apkInstaller, app.accord.updates.AndroidPendingUpdateStore(context),
@@ -217,6 +220,9 @@ class AppContainer(
     suspend fun awaitReady() = ready.await()
 
     init {
+        // Versão já instalada ou não mais oferecida: tira o aviso da barra. A verificação periódica independe de conta e espaço.
+        if (updates.state.value.available == null) updateNotifier.cancel()
+        app.accord.updates.UpdateCheckScheduler(context).schedule()
         appScope.launch {
             access.restore()
             ready.complete(Unit)

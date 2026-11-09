@@ -9,6 +9,7 @@ class ReleaseUpdatesTest {
         override var lastSuccess = 0L
         override var available: AppRelease? = null
         override var dismissedCode = 0
+        override var notifiedCode = 0
     }
 
     private fun release(tag: String = "v0.1.1", prerelease: Boolean = false, draft: Boolean = false,
@@ -136,5 +137,38 @@ class ReleaseUpdatesTest {
         assertNull(updates.state.value.available)
         updates.check().join()
         assertEquals(1, calls)
+    }
+
+    private fun due(installed: Int = 100, dismissed: Int = 0, notified: Int = 0, available: AppRelease? = AppRelease("0.1.1", 101, "unused", false)) =
+        runBlocking {
+            val store = Store().apply { this.available = available; dismissedCode = dismissed; notifiedCode = notified }
+            ReleaseUpdates(this, { "[]" }, store, installed).dueNotification()?.code
+        }
+
+    @Test fun notifiesNewVersionOnlyOnce() = runBlocking<Unit> {
+        val store = Store().apply { available = AppRelease("0.1.1", 101, "unused", false) }
+        val updates = ReleaseUpdates(this, { "[]" }, store, 100)
+        val release = updates.dueNotification()
+        assertEquals(101, release?.code)
+        updates.markNotified(release!!)
+        assertNull(updates.dueNotification())
+        // Uma versão ainda mais nova volta a avisar.
+        store.available = AppRelease("0.1.2", 102, "unused", false)
+        assertEquals(102, updates.dueNotification()?.code)
+    }
+
+    @Test fun doesNotNotifyWhenNothingNewOrAlreadyDismissedOrInstalled() {
+        assertNull(due(available = null))
+        assertNull(due(installed = 101))
+        assertNull(due(installed = 200))
+        assertNull(due(dismissed = 101))
+        assertNull(due(notified = 101))
+        assertEquals(101, due())
+    }
+
+    @Test fun markNotifiedNeverLowersTheRecordedVersion() = runBlocking<Unit> {
+        val store = Store().apply { notifiedCode = 105 }
+        ReleaseUpdates(this, { "[]" }, store, 100).markNotified(AppRelease("0.1.1", 101, "unused", false))
+        assertEquals(105, store.notifiedCode)
     }
 }

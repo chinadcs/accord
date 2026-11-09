@@ -6,7 +6,11 @@
     <string name="updates_failed">Não foi possível verificar agora. Você pode continuar usando o Accord e tentar mais tarde.</string>
     <string name="updates_available">Nova versão disponível</string>
     <string name="updates_none">Nenhuma versão mais recente encontrada na última verificação.</string>
-    <string name="updates_automatic">O Accord verifica ao abrir, no máximo uma vez por dia. Pré-releases estão incluídas neste piloto.</string>
+    <string name="updates_automatic">O Accord verifica ao abrir e, de vez em quando, com o app fechado, no máximo uma vez por dia. Se houver versão nova e as notificações do Accord estiverem permitidas, ele avisa na barra de notificações. Pré-releases estão incluídas neste piloto.</string>
+    <string name="update_channel_name">Versão nova do Accord</string>
+    <string name="update_channel_description">Avisa uma vez por versão quando há atualização disponível. Não leva dados financeiros.</string>
+    <string name="update_notification_title">Accord %1$s disponível</string>
+    <string name="update_notification_text">Abra o Accord para baixar e instalar. Não desinstale: isso apagaria os dados guardados no aparelho.</string>
     <string name="updates_version">Accord %1$s</string>
     <string name="updates_prerelease">Accord %1$s · pré-release de teste</string>
     <string name="updates_download">Baixar atualização</string>
