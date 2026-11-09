@@ -41,3 +41,13 @@ __pycache__/
 .env.*
 /.beads/issues.jsonl
 /.beads/.~issues.jsonl.*
+
+# Skills e agentes ficam somente no ambiente local.
+/.agents/
+/.claude/skills/
+/.claude/agents/
+/.claude/agents-roster.md
+/.codex/agents/
+AGENTS.md
+CLAUDE.md
+/skills-lock.json
