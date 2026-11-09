@@ -1,10 +1,14 @@
 ---
-status: accepted
+status: superseded
 recorded_at: 2026-11-09
 decision_date: 2026-11-09
 ---
 
 # ADR 0062 — Código público, uso não comercial e sem redistribuição
+
+Substituído em 09/11/2026 pelo [ADR 0063](0063-licenca-gplv3-e-documentacao-local.md), por
+instrução explícita do usuário para adotar GNU GPLv3. A decisão restritiva abaixo é histórica;
+o arquivo `LICENSE.md` agora contém a GPLv3.
 
 ## Contexto
 
@@ -18,7 +22,8 @@ GitHub permite forks dentro da plataforma, respondeu: “aceito essa exceção�
 
 Manter a intenção de código público com licença própria de uso não comercial e sem
 redistribuição por terceiros, com exceção para forks no GitHub nos limites dos termos da
-plataforma. A licença está em [LICENSE.md](../../LICENSE.md). O código deve ser descrito como
+plataforma. A licença própria foi aplicada em `LICENSE.md` na entrega `accord-vr9x.2` e
+substituída posteriormente pela [licença atual](../../LICENSE.md). Na decisão original, o código deveria ser descrito como
 **source available**, pois essas restrições não satisfazem a definição de open source da OSI.
 
 As permissões locais permitem estudar, compilar, executar e modificar privadamente para

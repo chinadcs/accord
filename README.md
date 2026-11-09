@@ -7,10 +7,9 @@ compromissos conversando com o app ou preenchendo um formulário.
 Feito em **Kotlin e Jetpack Compose**, com banco e fila locais (**Room**) e **Supabase** (Auth e
 PostgreSQL) para sincronizar os dados financeiros entre os dois celulares.
 
-**Licença:** código disponível para consulta e uso não comercial (*source available*).
-A redistribuição por terceiros é proibida, inclusive gratuita e de versões modificadas,
-com exceção de forks no GitHub nos limites dos termos da plataforma. Veja a
-[licença completa](LICENSE.md). Componentes de terceiros mantêm suas próprias licenças.
+**Licença:** GNU GPL versão 3 (`GPL-3.0-only`). Copyright (c) 2026 Daniel Campos.
+O Accord pode ser usado, modificado e redistribuído, inclusive comercialmente, conforme a
+[licença completa](LICENSE.md). Componentes de terceiros mantêm suas próprias licenças e avisos.
 
 > **Estado:** em desenvolvimento. Build, testes e fumaça local não substituem
 > a validação nos Galaxy S20 FE e S23 FE, ainda pendente. Veja [Estado do projeto](#estado-do-projeto).
@@ -30,7 +29,7 @@ com exceção de forks no GitHub nos limites dos termos da plataforma. Veja a
 
 A barra inferior tem cinco destinos: **Lançamentos**, **Orçamento**, **Chat** (ícone Astroid, sem
 rótulo), **Revisar** e **Mais**. São 38 telas, descritas em
-[docs/specs/design](docs/specs/design/README.md): 28 de prioridade P0, cinco P1 e cinco P2.
+`docs/specs/design` (documentação local): 28 de prioridade P0, cinco P1 e cinco P2.
 
 ### Núcleo (P0)
 
@@ -69,7 +68,7 @@ contraste mínimo de 4,5:1. Ícones Lucide, logos de bancos e marcas empacotados
 
 ## Regras de negócio
 
-O resumo abaixo vem do [AGENTS.md](AGENTS.md) e do [plano](docs/plano-desenvolvimento.md); em
+O resumo abaixo vem do [AGENTS.md](AGENTS.md) e do plano local (`docs/plano-desenvolvimento.md`); em
 caso de divergência, vale o plano e os [ADRs](docs/adr/README.md).
 
 **Acesso**
@@ -274,8 +273,15 @@ Saída: `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Build de release
 
-Para preparar o APK com versão, conferir a assinatura e comparar com o APK anterior, veja o
-[guia de distribuição e atualização](docs/distribuicao.md). O fluxo GitHub Releases/Obtainium
+Para preparar o APK com versão, conferir a assinatura e comparar com o APK anterior, use o
+[script de release](scripts/release.ps1):
+
+```powershell
+.\scripts\release.ps1 -Tag v0.1.0 -PreviousApk CAMINHO_DO_APK_ANTERIOR.apk
+```
+
+O guia detalhado fica em `docs/distribuicao.md`, mantido apenas localmente. A decisão do canal
+está no [ADR 0061](docs/adr/0061-distribuicao-por-github-releases-e-obtainium.md). O fluxo GitHub Releases/Obtainium
 está em preparação local; ainda não há uma Release validada para instalação.
 
 O release aponta para o **Supabase hospedado** e é assinado com keystore própria. Ele lê as chaves
@@ -384,12 +390,15 @@ supabase stop
 | `persistence/` | Room, fachada local e fila de sincronização. |
 | `remote/` | Serviço fake e adaptador HTTP do Supabase. |
 | `supabase/` | Configuração local, migrações e testes pgTAP. |
-| `docs/` | Plano, specs e decisões de arquitetura. |
+| `docs/` | ADRs e modelos de arquivos versionados; os demais documentos ficam apenas locais. |
 
 - [Arquitetura e estado de implementação](ARCHITECTURE.md)
-- [Plano de desenvolvimento](docs/plano-desenvolvimento.md)
-- [Especificações das telas](docs/specs/design/README.md)
 - [Decisões de arquitetura (ADRs)](docs/adr/README.md)
+- [Modelo CSV de importação](docs/modelos/accord-importacao-exemplo.csv)
 - [Instruções para trabalhar no repositório](AGENTS.md)
+
+O plano (`docs/plano-desenvolvimento.md`), as specs (`docs/specs/`) e o restante da documentação
+de trabalho são mantidos no disco, fora do versionamento. Referências a esse acervo nos ADRs e
+nas instruções locais preservam suas fontes, mas não estarão disponíveis em um clone público.
 
 Build e testes locais não substituem a validação nos Galaxy S20 FE e S23 FE, ainda pendente.

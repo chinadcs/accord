@@ -23,6 +23,8 @@ A decisão não define visibilidade/licença, proprietário/nome do repositório
 Complemento de 09/11/2026: o [ADR 0062](0062-codigo-publico-nao-comercial-e-sem-redistribuicao.md)
 registra a decisão posterior de código público com uso não comercial, sem redistribuição por
 terceiros, exceto forks no GitHub nos limites dos termos da plataforma.
+Essa política foi posteriormente substituída pela GNU GPLv3 no
+[ADR 0063](0063-licenca-gplv3-e-documentacao-local.md), também em 09/11/2026.
 Criar repositório, fazer push e publicar Releases exigem autorização específica, conforme o
 próprio bead e [AGENTS.md](../../AGENTS.md).
 
