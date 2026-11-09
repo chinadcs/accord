@@ -23,7 +23,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.activity.compose.LocalActivity
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import kotlinx.coroutines.launch
@@ -429,7 +431,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
 
     // Avisos depois de salvar, com Desfazer; ficam aqui para sobreviver à troca de tela.
     val snackbar = remember { SnackbarHostState() }
-    val context = LocalContext.current
+    val resources = LocalResources.current
     // O aviso da ação anterior não cobre o botão Salvar do formulário que abre em seguida.
     val formRoute = destination?.route?.substringBefore('?')?.substringBefore('/')
     val inForm = formRoute in setOf(ROUTE_REGISTER, ROUTE_EDIT, ROUTE_CARD, ROUTE_ACCOUNTS, ROUTE_CATEGORIES, ROUTE_CATEGORY_EDIT, ROUTE_CATEGORY_MOVE, ROUTE_LIMITS, ROUTE_FIRST_STEPS, ROUTE_ALERT_PREFS, ROUTE_SIMULATOR, ROUTE_INTENTION)
@@ -456,8 +458,8 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 } else {
                     event.messageRes
                 }
-                val message = context.getString(messageRes, *event.args.toTypedArray())
-                val undoLabel = event.undoOperationId?.let { context.getString(R.string.action_undo) }
+                val message = resources.getString(messageRes, *event.args.toTypedArray())
+                val undoLabel = event.undoOperationId?.let { resources.getString(R.string.action_undo) }
                 // O Desfazer visível é sempre o da última ação: o aviso antigo não fica esperando na fila.
                 snackbar.currentSnackbarData?.dismiss()
                 val result = snackbar.showSnackbar(message, actionLabel = undoLabel, withDismissAction = true, duration = SnackbarDuration.Long)
@@ -468,7 +470,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                         UndoOutcome.ChangedAfter -> R.string.undo_changed_after
                         UndoOutcome.Failed -> R.string.undo_failed
                     }
-                    snackbar.showSnackbar(context.getString(text))
+                    snackbar.showSnackbar(resources.getString(text))
                 }
             }
         }
@@ -493,7 +495,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     FloatingActionButton(
                         onClick = { registerSpeedDialOpen = !registerSpeedDialOpen },
                         modifier = Modifier.testTag("root-register-fab").semantics {
-                            contentDescription = context.getString(
+                            contentDescription = resources.getString(
                                 if (registerSpeedDialOpen) R.string.register_speed_dial_close else R.string.register_speed_dial_open,
                             )
                         },
@@ -1244,7 +1246,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 })
             }
             composable("security") {
-                val activity = LocalContext.current as app.accord.MainActivity
+                val activity = LocalActivity.current as app.accord.MainActivity
                 app.accord.security.SecurityScreen(padding, container.appLock, activity.appAuthenticator) { navController.popBackStack() }
             }
             composable("privacy") {

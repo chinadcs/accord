@@ -29,7 +29,7 @@ object ImportFileLoader {
     /** [pdf] lê o texto do PDF no aparelho; sem ele o PDF é reconhecido, mas não lido (nunca finge ler). */
     fun load(input: InputStream, pdf: PdfTextExtractor? = null): LoadedFile {
         // Lê um byte a mais que o limite para distinguir "no limite" de "grande demais" sem carregar o arquivo inteiro.
-        val bytes = input.use { it.readNBytes(OfxReader.MAX_BYTES + 1) }
+        val bytes = input.use { it.readUpTo(OfxReader.MAX_BYTES + 1) }
         return load(bytes, pdf)
     }
 
@@ -50,12 +50,24 @@ object ImportFileLoader {
     fun detect(bytes: ByteArray): SourceFormat? {
         val head = String(bytes, 0, minOf(bytes.size, SNIFF_BYTES), Charsets.ISO_8859_1)
         return when {
-            head.trimStart('﻿', ' ', '\r', '\n', '\t').startsWith("%PDF") -> SourceFormat.Pdf
+            head.trimStart(Char(0xFEFF), ' ', '\r', '\n', '\t').startsWith("%PDF") -> SourceFormat.Pdf
             head.contains("OFXHEADER", ignoreCase = true) || head.contains("<OFX", ignoreCase = true) -> SourceFormat.Ofx
             // O CSV não tem assinatura: só é reconhecido pelo cabeçalho do formato do Accord (data, descricao e valor), nunca pela extensão.
             CsvReader.looksLikeAccordCsv(bytes) -> SourceFormat.Csv
             else -> null
         }
+    }
+
+    /** Equivalente a `readNBytes` (API 33): lê até [limit] bytes, parando antes se o fluxo acabar. */
+    private fun InputStream.readUpTo(limit: Int): ByteArray {
+        val out = java.io.ByteArrayOutputStream()
+        val buffer = ByteArray(8192)
+        while (out.size() < limit) {
+            val n = read(buffer, 0, minOf(buffer.size, limit - out.size()))
+            if (n < 0) break
+            out.write(buffer, 0, n)
+        }
+        return out.toByteArray()
     }
 
     private fun failed(format: SourceFormat?, size: Long, reason: ReadFailureReason, hint: String) =

@@ -12,8 +12,8 @@ import java.time.YearMonth
  * rascunho local. Só guarda o que a pessoa digitou ou escolheu; nada financeiro é calculado aqui.
  */
 object FormCodec {
-    private fun enc(v: String) = URLEncoder.encode(v, Charsets.UTF_8)
-    private fun dec(v: String) = URLDecoder.decode(v, Charsets.UTF_8)
+    private fun enc(v: String) = URLEncoder.encode(v, "UTF-8")
+    private fun dec(v: String) = URLDecoder.decode(v, "UTF-8")
 
     /** Campos legíveis, um por chave, para o rascunho local. */
     fun toFields(f: RegisterForm): Map<String, String> = buildMap {

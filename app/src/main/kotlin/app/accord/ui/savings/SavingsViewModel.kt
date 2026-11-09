@@ -31,9 +31,9 @@ internal object SavingsFormCodec {
         "pocketId" to f.pocketId, "name" to f.name, "amount" to f.amount, "date" to f.date, "goal" to f.goal,
         "deadline" to f.deadline, "initial" to f.initialFromAccount?.toString().orEmpty(),
         "pocketRevision" to f.pocketRevision.toString(), "accountRevision" to f.accountRevision.toString()).entries
-        .joinToString("&") { (k,v) -> "$k=${java.net.URLEncoder.encode(v, Charsets.UTF_8)}" }
+        .joinToString("&") { (k,v) -> "$k=${java.net.URLEncoder.encode(v, "UTF-8")}" }
     fun decode(text: String): SavingsForm {
-        val m = text.split('&').associate { val p = it.split('=', limit = 2); p[0] to java.net.URLDecoder.decode(p[1], Charsets.UTF_8) }
+        val m = text.split('&').associate { val p = it.split('=', limit = 2); p[0] to java.net.URLDecoder.decode(p[1], "UTF-8") }
         return SavingsForm(m.getValue("action"), m.getValue("commandId"), m.getValue("accountId"), m.getValue("pocketId"),
             m.getValue("name"), m.getValue("amount"), m.getValue("date"), m.getValue("goal"), m.getValue("deadline"),
             m.getValue("initial").toBooleanStrictOrNull(), m.getValue("pocketRevision").toLong(), m.getValue("accountRevision").toLong())
