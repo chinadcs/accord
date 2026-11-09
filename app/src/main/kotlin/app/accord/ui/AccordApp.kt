@@ -371,6 +371,18 @@ private fun MainApp(container: AppContainer, startRoute: String) {
             navController.navigate("$ROUTE_FORECAST/${Uri.encode(event.categoryId)}/${event.month}?${ForecastDetailViewModel.ARG_EVENT}=${Uri.encode(id)}")
         }
     }
+    val pendingShare by container.pendingShare.collectAsStateWithLifecycle()
+    // "Compartilhar" de outro app (accord-jcd9): só depois de entrar. Texto vai para o campo do Chat, que o toma e o deixa sem enviar;
+    // arquivo vai para a leitura da importação, que o consome. Nenhum dos dois grava nada por aqui.
+    LaunchedEffect(pendingShare, access.stage) {
+        val share = pendingShare ?: return@LaunchedEffect
+        if (access.stage != EntryStage.Ready) return@LaunchedEffect
+        when (share) {
+            is app.accord.share.SharedContent.Text -> openRoot(Root.Chat)
+            is app.accord.share.SharedContent.File ->
+                if (navController.currentDestination?.route != ROUTE_IMPORT) navController.navigate(ROUTE_IMPORT) { launchSingleTop = true }
+        }
+    }
     val entry by navController.currentBackStackEntryAsState()
     val destination = entry?.destination
     LaunchedEffect(entry, syncStatus) { reviewSummary.refresh() }
@@ -1279,6 +1291,13 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 val viewModel: ImportFileViewModel = viewModel(
                     factory = viewModelFactory { initializer { ImportFileViewModel(container, ContentResolverOpener(resolver), AndroidPdfTextExtractor(appContext)) } },
                 )
+                val shared by container.pendingShare.collectAsStateWithLifecycle()
+                LaunchedEffect(shared) {
+                    (shared as? app.accord.share.SharedContent.File)?.let {
+                        container.consumeShare()
+                        viewModel.onFilePicked(it.uri)
+                    }
+                }
                 ImportFileRoute(
                     viewModel, padding, onBack = { navController.popBackStack() },
                     onOpenReview = { id -> navController.navigate("$ROUTE_IMPORT_REVIEW/${Uri.encode(id)}") { popUpTo(ROUTE_IMPORT) { inclusive = true } } },

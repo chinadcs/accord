@@ -116,6 +116,10 @@ class ChatViewModel(
         // Retenção de 30 dias dos votos do joinha (accord-8q5).
         viewModelScope.launch { container.chat.collect { it?.purgeExpiredFeedback() } }
         viewModelScope.launch {
+            combine(container.pendingShare, snapshot) { share, snap -> share to snap?.activeConversation }
+                .collect { (share, active) -> if (share is app.accord.share.SharedContent.Text && active != null) takeSharedText(active, share) }
+        }
+        viewModelScope.launch {
             snapshot.collect { snap ->
                 val active = snap?.activeConversation ?: return@collect
                 saved.remove<String>("composer")?.takeIf { it.isNotEmpty() }?.let { legacy ->
@@ -123,6 +127,17 @@ class ChatViewModel(
                 }
             }
         }
+    }
+
+    /**
+     * Texto vindo do "Compartilhar" (accord-jcd9): entra no rascunho da conversa ativa, depois do que já estava escrito,
+     * e só a pessoa envia. O conteúdo fica na memória até aqui; sem conversa aberta ele espera.
+     */
+    private fun takeSharedText(active: app.accord.core.chat.ChatConversation, shared: app.accord.share.SharedContent.Text) {
+        container.consumeShare()
+        val current = composer.value?.takeIf { it.first == active.id }?.second
+            ?: saved.get<String>(draftKey(active.id)) ?: active.draftText
+        updateDraft(active.id, if (current.isBlank()) shared.text else current.trimEnd() + " " + shared.text)
     }
 
     fun onComposerChange(text: String) {

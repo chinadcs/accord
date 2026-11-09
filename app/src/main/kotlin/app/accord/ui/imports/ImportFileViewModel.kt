@@ -185,7 +185,7 @@ class ImportFileViewModel(
             val named = md.originName?.let { n -> CsvMapping.resolveOrigins(n, it.accounts.map { a -> a.id to a.nickname }, it.cards.map { c -> c.id to c.nickname }) }
             val message = when {
                 result.movements.isEmpty() -> ScreenMessage(MessageKind.Attention, R.string.import_no_movements)
-                md.kind != null && md.kind != kind -> ScreenMessage(MessageKind.Attention, if (md.kind == DocumentKind.Card) R.string.import_kind_mismatch_card else R.string.import_kind_mismatch_account)
+                md.kind != null && kind != null && md.kind != kind -> ScreenMessage(MessageKind.Attention, if (md.kind == DocumentKind.Card) R.string.import_kind_mismatch_card else R.string.import_kind_mismatch_account)
                 named != null && (named.kind != kind || named.originId != it.originId) -> ScreenMessage(MessageKind.Attention, R.string.import_origin_mismatch, listOf(md.originName.orEmpty()))
                 else -> null
             }

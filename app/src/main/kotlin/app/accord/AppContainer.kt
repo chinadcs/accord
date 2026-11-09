@@ -148,6 +148,19 @@ class AppContainer(
         alertToOpen.value = null
     }
 
+    private val shareToOpen = MutableStateFlow<app.accord.share.SharedContent?>(null)
+
+    /** Conteúdo recebido pelo "Compartilhar" do Android, em memória até o destino (Chat ou importação) tomá-lo (accord-jcd9). */
+    val pendingShare: StateFlow<app.accord.share.SharedContent?> = shareToOpen.asStateFlow()
+
+    fun openShare(content: app.accord.share.SharedContent?) {
+        if (content != null) shareToOpen.value = content
+    }
+
+    fun consumeShare() {
+        shareToOpen.value = null
+    }
+
     /** Notificações do Android para os avisos de possível excesso (S5.5): canal, situação real e publicação. */
     val notifications = AndroidNotifications(context).also { it.ensureChannel() }
 
