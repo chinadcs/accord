@@ -49,7 +49,7 @@ object CsvReader {
             }
             movements += movement(movements.size + 1, cells, index)
         }
-        val withRepeats = markRepeatedIds(movements)
+        val withRepeats = promoteUniqueIds(movements)
         // Um lote tem uma só origem: um arquivo que nomeia duas contas/cartões deve ser separado, em vez de atribuir tudo a uma delas.
         val origins = withRepeats.mapNotNull { m -> m.originalFields.firstOrNull { it.first == "ORIGEM" }?.second?.trim()?.takeIf { it.isNotEmpty() } }
         if (origins.map(CsvMapping::fold).toSet().size > 1) return fail(ReadFailureReason.UnrecognizedLayout, "csv_mixed_origins")
@@ -72,8 +72,6 @@ object CsvReader {
         val warnings = buildList {
             if (withRepeats.isEmpty()) add(ExtractionWarning(WarningCode.EmptyStatement, emptyList()))
             if (unread > 0) add(ExtractionWarning(WarningCode.UnreadRows, emptyList()))
-            withRepeats.filter { it.fitid == null }.map { it.ordinal }.takeIf { it.isNotEmpty() }?.let { add(ExtractionWarning(WarningCode.MissingFitid, it)) }
-            withRepeats.filter { MovementDoubt.RepeatedFitidInFile in it.doubts }.map { it.ordinal }.takeIf { it.isNotEmpty() }?.let { add(ExtractionWarning(WarningCode.RepeatedFitid, it)) }
         }
         return ReadOutcome.Extracted(ExtractionResult(sha256(bytes), metadata, withRepeats, unread, warnings))
     }
@@ -83,8 +81,8 @@ object CsvReader {
     private fun movement(ordinal: Int, cells: List<String>, index: Map<String, Int>): ExtractedMovement {
         fun raw(name: String) = index.getValue(name).takeIf { it >= 0 }?.let { cells[it] }
         val fields = buildList {
-            // O identificador do arquivo ocupa o lugar do FITID do OFX: é ele que a reimportação e a reconciliação já usam.
-            raw("id")?.trim()?.takeIf { it.isNotEmpty() }?.let { add("FITID" to it) }
+            // O id do arquivo é guardado como veio; só vira FITID (o que a reimportação usa) se for único no arquivo, em [promoteUniqueIds].
+            raw("id")?.trim()?.takeIf { it.isNotEmpty() }?.let { add(ID_FIELD to it) }
             for (name in listOf("data", "descricao", "valor", "moeda", "parcela", "categoria", "origem")) raw(name)?.let { add(name.uppercase() to it) }
         }
         val doubts = mutableSetOf<MovementDoubt>()
@@ -97,9 +95,18 @@ object CsvReader {
         return ExtractedMovement(ordinal, fields, date, amount, currency, description, raw("parcela")?.let(::installment), doubts)
     }
 
-    private fun markRepeatedIds(movements: List<ExtractedMovement>): List<ExtractedMovement> {
-        val repeated = movements.mapNotNull { it.fitid }.groupingBy { it }.eachCount().filterValues { it > 1 }.keys
-        return movements.map { if (it.fitid in repeated) it.copy(doubts = it.doubts + MovementDoubt.RepeatedFitidInFile) else it }
+    private const val ID_FIELD = "ID"
+
+    /**
+     * Ninguém precisa garantir um id único: só o id que aparece uma vez no arquivo ocupa o lugar do FITID do OFX. Id repetido ou ausente deixa o
+     * movimento sem FITID, e a reconciliação o reconhece por origem, data, valor, moeda, descrição e a ordem entre linhas idênticas (`Reconciler.key`),
+     * o que evita duplicar ao reimportar sem fundir compras legítimas iguais. O texto original do id continua em `ID`; a posição do campo não muda.
+     */
+    private fun promoteUniqueIds(movements: List<ExtractedMovement>): List<ExtractedMovement> {
+        val counts = movements.mapNotNull { m -> m.originalFields.firstOrNull { it.first == ID_FIELD }?.second }.groupingBy { it }.eachCount()
+        return movements.map { m ->
+            m.copy(originalFields = m.originalFields.map { (name, value) -> if (name == ID_FIELD && counts[value] == 1) "FITID" to value else name to value })
+        }
     }
 
     // ---- valores ----

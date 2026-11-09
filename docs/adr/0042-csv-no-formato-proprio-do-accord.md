@@ -19,7 +19,7 @@ Proposta, a aceitar pelo usuário. Definir um **CSV do Accord**, formato nosso e
 
 1. Colunas obrigatórias `data`, `descricao`, `valor`; opcionais `id`, `moeda`, `parcela`. O arquivo só é reconhecido como CSV do Accord pelo
    cabeçalho (o formato vem do conteúdo, como nos outros), nunca pela extensão. Colunas desconhecidas são ignoradas e não guardadas.
-2. Leitor `CsvReader` em `:core`, sem I/O, que devolve o mesmo `ExtractionResult` do OFX (`SourceFormat.Csv`). O `id` ocupa o campo `FITID`,
+2. Leitor `CsvReader` em `:core`, sem I/O, que devolve o mesmo `ExtractionResult` do OFX (`SourceFormat.Csv`). O `id` único no arquivo ocupa o campo `FITID` (ver o item 4 sobre repetido ou vazio),
    então reimportação, reconciliação e dúvidas já existentes valem sem alteração. Data fora de `AAAA-MM-DD`/`DD/MM/AAAA` e valor ambíguo
    (`1.234`) viram dúvida do movimento com o texto original preservado, sem adivinhar. Linha com número de colunas errado não é lida e deixa a cobertura parcial.
 3. Moeda diferente de BRL bloqueia a confirmação, sem conversão. Entrada não vira renda sozinha.
@@ -30,12 +30,17 @@ Proposta, a aceitar pelo usuário. Definir um **CSV do Accord**, formato nosso e
      restrita a este formato nosso: o arquivo de banco continua sem categoria própria. Nome inexistente ou ambíguo é ignorado.
    - `origem` é o apelido de uma conta ou do cartão. Casando com uma só, pré-seleciona tipo e origem na tela de importar (a pessoa confere). Como um lote
      tem uma só origem, um arquivo com mais de uma é recusado em vez de atribuir tudo a uma delas. Dividir um arquivo em lotes por origem não foi feito.
+   - **`id` não precisa ser único** (pedido do usuário em 09/11/2026: não há como garantir um id sem repetição na planilha; `accord-thyz`). Só um
+     `id` que aparece uma vez no arquivo vira FITID; vazio ou repetido, o movimento fica sem FITID e é reconhecido pela chave de origem do
+     `Reconciler` (data, valor, moeda, descrição, dica de parcela e ordem entre linhas idênticas). O texto do `id` continua nos campos originais (`ID`).
+     O CSV deixa de gerar o aviso "sem identificador" e a dúvida de id repetido. Limite: se o mesmo arquivo for reenviado com um `id` que passou de
+     único a repetido (ou o contrário), a chave muda e o movimento pode ser visto como novo; a revisão mostra a repetição provável.
 5. Não há leitor de CSV de banco. Compatibilidade com algum banco continua não afirmada; um layout fixo de banco exige amostra real e novo registro.
 
 ## Consequências
 
-O usuário (ou uma planilha dele) prepara o arquivo no modelo; o app não lê o CSV exportado direto pelo banco, e a tela diz isso. Sem `id`, cada movimento
-fica sem identificador estável (o aviso "sem identificador" aparece) e a reimportação depende de data, valor e descrição, com mais dúvidas. O período exibido
+O usuário (ou uma planilha dele) prepara o arquivo no modelo; o app não lê o CSV exportado direto pelo banco, e a tela diz isso. Sem `id` único, o movimento
+é reconhecido por data, valor, moeda, descrição e ordem entre idênticos, sem aviso. O período exibido
 vem da menor e da maior data lidas, não de uma declaração do arquivo. Mudar nomes ou semântica de colunas depois exige versionar o formato. Sem mudança de
 esquema Room nem do protocolo: o formato é gravado como texto e o serviço não o valida.
 
@@ -43,4 +48,4 @@ esquema Room nem do protocolo: o formato é gravado como texto e o serviço não
 
 - Pedido e resposta do usuário em 03/11/2026 (acima); tarefa Beads `accord-3m7k`.
 - [Spec S4](../specs/S4-importacao-retomada-pendencias.md), seção do leitor de CSV; [guia do formato](../importacao-csv.md).
-- Implementado e testado só com dados fictícios: `CsvReaderTest` (14), `ImportFileLoaderTest`, `CsvImportTest`. Nada foi exercitado em aparelho nem com CSV real de banco.
+- Implementado e testado só com dados fictícios: `CsvReaderTest` (16), `ImportFileLoaderTest`, `CsvImportTest`. Nada foi exercitado em aparelho nem com CSV real de banco.

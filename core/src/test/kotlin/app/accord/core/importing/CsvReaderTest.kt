@@ -31,17 +31,23 @@ class CsvReaderTest {
         assertTrue(r.movements.all { it.doubts.isEmpty() })
     }
 
-    @Test fun `the id column takes the place of the FITID and repeated ids are flagged`() {
+    @Test fun `only an id that is unique in the file takes the place of the FITID, and repeating one is not a doubt`() {
         val r = extracted("id;data;descricao;valor\nA;2026-10-01;Um;-1,00\nA;2026-10-01;Dois;-2,00\nB;2026-10-01;Tres;-3,00")
-        assertEquals(listOf("A", "A", "B"), r.movements.map { it.fitid })
-        assertEquals(listOf(true, true, false), r.movements.map { MovementDoubt.RepeatedFitidInFile in it.doubts })
-        assertEquals(listOf(1, 2), r.warnings.single { it.code == WarningCode.RepeatedFitid }.ordinals)
+        assertEquals(listOf(null, null, "B"), r.movements.map { it.fitid })
+        assertTrue(r.movements.all { it.doubts.isEmpty() })
+        assertEquals(emptyList(), r.warnings)
+        assertEquals(listOf("A", "A", "B"), r.movements.map { m -> m.originalFields.first { it.first == "ID" || it.first == "FITID" }.second }, "the original text stays")
+        assertEquals("ID", r.movements[0].originalFields.first().first)
+        assertEquals("FITID", r.movements[2].originalFields.first().first)
     }
 
-    @Test fun `without an id column every movement is reported as missing one`() {
-        val r = extracted("data;descricao;valor\n2026-10-01;Um;-1,00")
-        assertNull(r.movements.single().fitid)
-        assertEquals(listOf(1), r.warnings.single { it.code == WarningCode.MissingFitid }.ordinals)
+    @Test fun `without an id every movement is recognised by its content and the order among identical lines`() {
+        val r = extracted("data;descricao;valor\n2026-10-01;Um;-1,00\n2026-10-01;Um;-1,00")
+        assertTrue(r.movements.all { it.fitid == null })
+        assertEquals(emptyList(), r.warnings)
+        val keys = r.movements.map { Reconciler.key("o", it, r.movements) }
+        assertEquals(2, keys.toSet().size, "two legitimate identical purchases are not merged")
+        assertEquals(keys, r.movements.map { Reconciler.key("o", it, extracted("data;descricao;valor\n2026-10-01;Um;-1,00\n2026-10-01;Um;-1,00").movements) }, "stable on re-reading")
     }
 
     @Test fun `amounts are exact and an ambiguous or malformed one is a doubt that keeps the original text`() {
