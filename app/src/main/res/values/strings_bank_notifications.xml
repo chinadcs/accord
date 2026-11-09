@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Leitura opcional de notificações de banco (ADR 0069, accord-bced). -->
+<resources>
+    <string name="bank_notifications_title">Notificações de bancos</string>
+    <string name="bank_notifications_intro">Se você quiser, o Accord lê as notificações dos apps que escolher aqui e propõe um lançamento em Revisar.</string>
+    <string name="bank_notifications_privacy">O texto da notificação não é guardado, copiado nem enviado. Só ficam o valor, o nome, a data e o app de origem da proposta, neste aparelho.</string>
+    <string name="bank_notifications_review">Nada entra no orçamento sem você confirmar. Em Revisar, você abre a proposta, ajusta e salva, ou descarta.</string>
+    <string name="bank_notifications_access_title">Acesso do Android</string>
+    <string name="bank_notifications_access_on">O acesso às notificações está permitido para o Accord.</string>
+    <string name="bank_notifications_access_off">O acesso às notificações ainda não está permitido. Sem ele, nada é lido.</string>
+    <string name="bank_notifications_access_help">O Android pede a permissão nos ajustes do sistema. Procure o Accord na lista e ative.</string>
+    <string name="bank_notifications_access_open">Abrir ajustes do Android</string>
+    <string name="bank_notifications_access_manage">Gerenciar no Android</string>
+    <string name="bank_notifications_apps_title">Apps lidos</string>
+    <string name="bank_notifications_none">Nenhum app escolhido. Nenhuma notificação é lida.</string>
+    <plurals name="bank_notifications_selected">
+        <item quantity="one">%d app escolhido.</item>
+        <item quantity="other">%d apps escolhidos.</item>
+    </plurals>
+    <string name="bank_notifications_clear">Desmarcar todos</string>
+    <string name="bank_notifications_search">Buscar app</string>
+    <string name="bank_notifications_no_apps">Nenhum app encontrado.</string>
+
+    <string name="pending_filter_notifications">Notificações</string>
+    <string name="pending_reason_notification">Notificação de banco</string>
+    <string name="pending_notification_no_subject">Sem estabelecimento identificado</string>
+    <string name="pending_notification_income">Entrada</string>
+    <string name="pending_notification_expense">Saída</string>
+    <string name="pending_notification_discard">Descartar</string>
+    <string name="pending_notification_discard_title">Descartar esta proposta?</string>
+    <string name="pending_notification_discard_body">O texto da notificação não foi guardado, então não dá para recuperar a proposta depois. Nenhum lançamento é afetado.</string>
+</resources>

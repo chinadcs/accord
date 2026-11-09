@@ -31,7 +31,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** Filtros da fila (tela 18). [Records] são as pendências dos lançamentos e faturas do espaço (a conferir, divergentes), fora dos quatro da spec. */
-enum class QueueFilter { All, Chat, Import, Conflicts, Records }
+enum class QueueFilter { All, Chat, Import, Conflicts, Records, Notifications }
 
 /** Uma linha da fila única. Cada origem mantém a sua tela de resolução; a fila só as reúne. */
 sealed interface QueueItem {
@@ -56,6 +56,11 @@ sealed interface QueueItem {
     data class ChatCategory(val item: CategoryReviewItem) : QueueItem {
         override val key get() = item.key
     }
+
+    /** Proposta lida de uma notificação de banco deste aparelho (ADR 0069); só vale para o orçamento depois de confirmada no formulário. */
+    data class BankNotification(val draft: LocalDraft) : QueueItem {
+        override val key get() = "notification-${draft.id}"
+    }
     data class ChatDraft(val draft: LocalDraft, val messageId: String?) : QueueItem {
         override val key get() = "chat-draft-${draft.id}"
     }
@@ -70,6 +75,7 @@ fun QueueItem.matches(filter: QueueFilter): Boolean = when (filter) {
     QueueFilter.Import -> this is QueueItem.ImportDoubt
     QueueFilter.Conflicts -> this is QueueItem.Conflict
     QueueFilter.Records -> this is QueueItem.Record
+    QueueFilter.Notifications -> this is QueueItem.BankNotification
 }
 
 data class PendingQueueUiState(
@@ -131,8 +137,9 @@ class PendingQueueViewModel(
             val categories = snapshot?.let(::buildCategoryReview).orEmpty()
             val questions = snapshot?.questions.orEmpty().filter { it.state == QuestionState.Open }
             val draftQuestions = questions.mapNotNull { q -> (q.link as? QuestionLink.Draft)?.let { it.draftId to q.messageId } }.toMap()
-            val drafts = (provider.space().drafts() as? QueryResult.Data)?.value.orEmpty()
-                .filter { it.source == DraftSource.Chat || it.id in draftQuestions }
+            val allDrafts = (provider.space().drafts() as? QueryResult.Data)?.value.orEmpty()
+            val drafts = allDrafts.filter { it.source == DraftSource.Chat || it.id in draftQuestions }
+            val notifications = allDrafts.filter { it.source == DraftSource.Notification }
             val corrections = questions.filter { it.link is QuestionLink.Correction && snapshot?.messages?.none { m -> m.id == it.messageId } == true }.map { q ->
                 val ids = (q.detachedEntryIds + listOfNotNull((q.link as QuestionLink.Correction).request.entryId)).distinct()
                 val targets = ids.mapNotNull { id ->
@@ -150,6 +157,7 @@ class PendingQueueViewModel(
                 records.filterNot { it is PendingItem.CategoryToClarify && it.entryId in categoryEntries }.forEachIndexed { index, item -> add(QueueItem.Record(item, index)) }
                 categories.forEach { add(QueueItem.ChatCategory(it)) }
                 drafts.forEach { add(QueueItem.ChatDraft(it, draftQuestions[it.id])) }
+                notifications.forEach { add(QueueItem.BankNotification(it)) }
                 addAll(corrections)
             }
             _state.update { it.copy(loading = false, failed = false, items = items) }
@@ -171,6 +179,16 @@ class PendingQueueViewModel(
             else ChatPrefill.toForm(DraftCodec.fromFields(item.draft.fields), today)
         return "register?form=${Uri.encode(FormCodec.encode(form))}&sourceDraft=${Uri.encode(item.draft.id)}" +
             (item.messageId?.let { "&chatMessage=${Uri.encode(it)}" } ?: "")
+    }
+
+    /** O formulário de registro já preenchido com a proposta; salvar consome a proposta na mesma transação (rascunho citado no envelope). */
+    fun notificationRoute(item: QueueItem.BankNotification): String {
+        val form = FormCodec.fromFields(item.draft.fields, provider.clock.today())
+        return "register?form=${Uri.encode(FormCodec.encode(form))}&sourceDraft=${Uri.encode(item.draft.id)}"
+    }
+
+    fun discardNotification(item: QueueItem.BankNotification) {
+        viewModelScope.launch { provider.space().discardDraft(item.draft.id); refresh() }
     }
 
     fun dismissCorrection(item: QueueItem.ChatCorrection) {

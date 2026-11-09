@@ -179,6 +179,7 @@ observada em 24/10/2026. Os estados abaixo são de decisão, não de conclusão 
 | [0066](0066-verificacao-de-atualizacoes-pela-api-do-github.md) | Verificação de atualizações pela API pública do GitHub | accepted |
 | [0067](0067-inicio-como-abertura-e-revisar-em-mais.md) | Início como abertura e Revisar em Mais | accepted |
 | [0068](0068-margem-diaria-e-semanal-do-orcamento.md) | Margem diária e semanal do orçamento | accepted |
+| [0069](0069-notificacao-de-banco-como-proposta-em-revisar.md) | Notificação de banco como proposta em Revisar | accepted |
 
 Questões ainda sem decisão, como modelo/motor, leitores bancários, acesso local, retenção de
 idempotência e validação financeira no serviço, permanecem nos Beads/specs S2–S4. Suas tarefas

@@ -127,4 +127,25 @@ class DraftTest : SpaceTestBase() {
         assertEquals("1.500,00", limits.fields["total:food"])
         assertEquals("2026-11", limits.fields["month"])
     }
+    @Test
+    fun `proposta de notificação de banco é rascunho local, não gera operação nem altera totais e é consumida ao confirmar`() = runBlocking<Unit> {
+        val h = open()
+        h.withDefaultAccount()
+        val before = h.space.operations().value().size
+        val id = h.space.saveDraft(
+            LocalDraft(
+                source = DraftSource.Notification,
+                fields = mapOf("kind" to "Expense", "form" to "Pix", "description" to "Mercado", "amount" to "50,00", "date" to "2026-10-20", "sourcePackage" to "com.banco.app"),
+                reason = "Notificação de banco",
+            ),
+        ).value()
+
+        assertEquals(before, h.space.operations().value().size)
+        assertEquals(Money.ZERO, h.space.budget(oct).value().committed)
+        assertEquals(DraftSource.Notification, h.space.drafts().value().single().source)
+
+        h.space.execute(Envelope(CommandId("confirma-proposta"), draftId = id), pix(Money(5_000))).applied()
+        assertEquals(emptyList(), h.space.drafts().value())
+        assertEquals(1, h.space.movements(oct).value().size)
+    }
 }

@@ -68,8 +68,10 @@ fun PendingQueueRoute(
     val state by viewModel.state.collectAsStateWithLifecycle()
     RefreshOnResume(viewModel::refresh)
     var correction by remember { mutableStateOf<QueueItem.ChatCorrection?>(null) }
+    var discarding by remember { mutableStateOf<QueueItem.BankNotification?>(null) }
     PendingQueueScreen(
         state, padding, onBack, viewModel::setFilter, viewModel::clearBatchFilter, viewModel::refresh, viewModel::accept,
+        onDiscardNotification = { discarding = it },
         onOpen = { item ->
             when (item) {
                 is QueueItem.ImportDoubt -> onOpenImport(item.movement.batchId, item.movement.ordinal)
@@ -77,6 +79,7 @@ fun PendingQueueRoute(
                 is QueueItem.ChatCategory -> onOpenEntry((item.item.question.link as QuestionLink.Entry).entryId)
                 is QueueItem.ChatDraft -> onOpenManual(viewModel.draftRoute(item))
                 is QueueItem.ChatCorrection -> correction = item
+                is QueueItem.BankNotification -> onOpenManual(viewModel.notificationRoute(item))
                 is QueueItem.Record -> when (val p = item.item) {
                     is PendingItem.CategoryToClarify -> onOpenEntry(p.entryId)
                     is PendingItem.InvoiceLink -> onOpenInvoice(p.month, p.cardId)
@@ -87,6 +90,12 @@ fun PendingQueueRoute(
         },
         onOpenChat = onOpenChat,
     )
+    discarding?.let { item ->
+        AlertDialog(onDismissRequest = { discarding = null }, title = { Text(stringResource(R.string.pending_notification_discard_title)) },
+            text = { Text(stringResource(R.string.pending_notification_discard_body)) },
+            confirmButton = { TextButton(onClick = { viewModel.discardNotification(item); discarding = null }) { Text(stringResource(R.string.pending_notification_discard)) } },
+            dismissButton = { TextButton(onClick = { discarding = null }) { Text(stringResource(R.string.action_cancel)) } })
+    }
     correction?.let { item ->
         AlertDialog(onDismissRequest = { correction = null }, title = { Text(stringResource(R.string.pending_correction)) },
             text = { Column {
@@ -110,6 +119,7 @@ fun PendingQueueScreen(
     onAccept: (app.accord.ui.review.CategoryReviewItem) -> Unit,
     onOpen: (QueueItem) -> Unit,
     onOpenChat: () -> Unit,
+    onDiscardNotification: (QueueItem.BankNotification) -> Unit = {},
 ) {
     val shown = state.shown
     Column(Modifier.fillMaxSize().padding(padding)) {
@@ -148,7 +158,7 @@ fun PendingQueueScreen(
                         Text(stringResource(R.string.pending_empty_body), style = MaterialTheme.typography.bodyLarge)
                     }
                 }
-                else -> items(shown, key = { it.key }) { QueueRow(it, onAccept, onOpen, onOpenChat) }
+                else -> items(shown, key = { it.key }) { QueueRow(it, onAccept, onOpen, onOpenChat, onDiscardNotification) }
             }
         }
         if (!state.loading && !state.failed && shown.isNotEmpty()) {
@@ -185,6 +195,7 @@ private fun Filters(selected: QueueFilter, onFilter: (QueueFilter) -> Unit) {
                                 QueueFilter.Import -> R.string.pending_filter_import
                                 QueueFilter.Conflicts -> R.string.pending_filter_conflicts
                                 QueueFilter.Records -> R.string.pending_filter_records
+                                QueueFilter.Notifications -> R.string.pending_filter_notifications
                             },
                         ),
                     )
@@ -196,7 +207,10 @@ private fun Filters(selected: QueueFilter, onFilter: (QueueFilter) -> Unit) {
 }
 
 @Composable
-private fun QueueRow(item: QueueItem, onAccept: (app.accord.ui.review.CategoryReviewItem) -> Unit, onOpen: (QueueItem) -> Unit, onOpenChat: () -> Unit) {
+private fun QueueRow(
+    item: QueueItem, onAccept: (app.accord.ui.review.CategoryReviewItem) -> Unit, onOpen: (QueueItem) -> Unit, onOpenChat: () -> Unit,
+    onDiscardNotification: (QueueItem.BankNotification) -> Unit,
+) {
     val (reason, subject, icon) = describe(item)
     val summary = "$reason. $subject"
     Surface(
@@ -214,6 +228,11 @@ private fun QueueRow(item: QueueItem, onAccept: (app.accord.ui.review.CategoryRe
             Text(subject, style = MaterialTheme.typography.bodyMedium)
             if (item is QueueItem.ImportDoubt && item.movement.ready) {
                 Text(stringResource(R.string.pending_ready), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+            }
+            if (item is QueueItem.BankNotification) {
+                TextButton(onClick = { onDiscardNotification(item) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                    Text(stringResource(R.string.pending_notification_discard))
+                }
             }
             if (item is QueueItem.ChatCategory) {
                 val suggestion = item.item.suggestion
@@ -236,6 +255,20 @@ private fun QueueRow(item: QueueItem, onAccept: (app.accord.ui.review.CategoryRe
 @Composable
 private fun describe(item: QueueItem): Triple<String, String, Int> = when (item) {
     is QueueItem.ChatDraft -> Triple(stringResource(R.string.pending_chat_draft), item.draft.fields["description"].orEmpty(), Lucide.drawable.lucide_ic_message_circle)
+    is QueueItem.BankNotification -> {
+        val f = item.draft.fields
+        val amount = f["amount"]?.let { "R$ $it" }
+        val income = f["kind"] == "Income"
+        Triple(
+            stringResource(R.string.pending_reason_notification),
+            listOfNotNull(
+                f["description"]?.ifBlank { null } ?: stringResource(R.string.pending_notification_no_subject),
+                amount,
+                stringResource(if (income) R.string.pending_notification_income else R.string.pending_notification_expense),
+            ).joinToString(" · "),
+            Lucide.drawable.lucide_ic_bell,
+        )
+    }
     is QueueItem.ChatCorrection -> Triple(stringResource(R.string.pending_correction), listOfNotNull(item.question.description, item.question.amountCents?.let { Money(it).format() }).joinToString(" · "), Lucide.drawable.lucide_ic_message_circle)
     is QueueItem.ImportDoubt -> {
         val m = item.movement

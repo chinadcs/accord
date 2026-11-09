@@ -28,6 +28,9 @@ const val ROUTE_SPACE = "space"
 const val ROUTE_FIRST_STEPS = "first_steps"
 const val ROUTE_ALERT_PREFS = "alert_prefs"
 
+/** Escolha dos apps cujas notificações o Accord lê (ADR 0069). */
+const val ROUTE_BANK_NOTIFICATIONS = "bank_notifications"
+
 /** Previsões e alertas (tela 20), `forecasts?month=2026-10`, e o detalhe da previsão (tela 21), `forecast/{categoryId}/{month}?event=` (event: a chave do aviso que a abriu). */
 const val ROUTE_FORECASTS = "forecasts"
 const val ROUTE_FORECAST = "forecast"

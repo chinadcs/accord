@@ -161,6 +161,18 @@ class AppContainer(
         shareToOpen.value = null
     }
 
+    /** Apps cujas notificações podem virar propostas em Revisar (ADR 0069); nenhum por padrão, escolha por aparelho. */
+    val bankNotificationSettings = app.accord.banknotifications.BankNotificationSettings(context)
+
+    /** Propostas locais nascidas de notificações de banco; sem espaço aberto, a notificação é ignorada. */
+    val bankNotifications = app.accord.banknotifications.BankNotificationIntake(
+        allowed = bankNotificationSettings::isAllowed,
+        space = { access.runtime.value?.space },
+        today = { clock.today() },
+        scope = appScope,
+        ownPackage = context.packageName,
+    )
+
     /** Notificações do Android para os avisos de possível excesso (S5.5): canal, situação real e publicação. */
     val notifications = AndroidNotifications(context).also { it.ensureChannel() }
 

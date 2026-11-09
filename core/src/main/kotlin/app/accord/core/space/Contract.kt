@@ -255,7 +255,11 @@ data class ForecastDetail(
 
 // ---- rascunhos locais ----
 
-enum class DraftSource { Chat, Form, Limits }
+/**
+ * [Notification]: proposta lida de uma notificação de banco deste aparelho (ADR 0069). Os campos seguem o formulário de
+ * registro mais `sourcePackage`; o texto da notificação nunca é guardado. Nada vale para o orçamento até a pessoa confirmar.
+ */
+enum class DraftSource { Chat, Form, Limits, Notification }
 
 /**
  * Registro sem valor, intenção ou outro campo essencial, ou formulário em edição. Guarda só campos

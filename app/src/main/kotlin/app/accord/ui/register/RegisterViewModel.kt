@@ -344,11 +344,15 @@ class RegisterViewModel(
     fun saveDraftAndExit() {
         viewModelScope.launch {
             val form = _state.value.form
-            provider.space().saveDraft(
+            val space = provider.space()
+            // Proposta de notificação de banco continua proposta em Revisar (ADR 0069); só deixa de ser a do texto lido, mantendo o app de origem.
+            val proposal = draftId?.let { id -> (space.drafts() as? QueryResult.Data)?.value?.firstOrNull { it.id == id && it.source == DraftSource.Notification } }
+            space.saveDraft(
                 LocalDraft(
-                    id = draftId.orEmpty(), source = DraftSource.Form, fields = FormCodec.toFields(form),
+                    id = draftId.orEmpty(), source = if (proposal != null) DraftSource.Notification else DraftSource.Form,
+                    fields = FormCodec.toFields(form) + proposal?.fields?.filterKeys { it == "sourcePackage" }.orEmpty(),
                     missing = (form.build() as? RegisterForm.Built.Invalid)?.errors?.keys?.map { it.name }.orEmpty(),
-                    reason = "Formulário não salvo",
+                    reason = if (proposal != null) proposal.reason else "Formulário não salvo",
                 ),
             )
             _exit.value = true

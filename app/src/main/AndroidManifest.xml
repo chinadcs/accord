@@ -7,6 +7,14 @@
     <!-- Android 13+: pedida só pelo toque em "Permitir notificações" (passo dos Primeiros passos e tela 27). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
+    <!-- Lista dos apps instalados com ícone de abertura, para a pessoa escolher quais notificações o Accord lê (ADR 0069); sem QUERY_ALL_PACKAGES. -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
     <application
         android:name=".AccordApplication"
         android:allowBackup="false"
@@ -37,5 +45,16 @@
                 <data android:mimeType="text/comma-separated-values" />
             </intent-filter>
         </activity>
+
+        <!-- Leitura opcional de notificações de banco (ADR 0069): só funciona depois de a pessoa conceder o acesso nos ajustes do Android. -->
+        <service
+            android:name=".banknotifications.BankNotificationListener"
+            android:exported="true"
+            android:label="@string/bank_notifications_title"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>

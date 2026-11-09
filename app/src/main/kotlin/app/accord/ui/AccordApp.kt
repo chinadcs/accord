@@ -133,6 +133,9 @@ import app.accord.ui.forecast.ForecastsRoute
 import app.accord.ui.forecast.ForecastsViewModel
 import app.accord.ui.forecast.ReasonDestination
 import app.accord.ui.nav.ROUTE_ALERT_PREFS
+import app.accord.ui.nav.ROUTE_BANK_NOTIFICATIONS
+import app.accord.ui.banknotifications.BankNotificationsRoute
+import app.accord.ui.banknotifications.BankNotificationsViewModel
 import app.accord.ui.nav.ROUTE_FORECAST
 import app.accord.ui.nav.ROUTE_FORECASTS
 import app.accord.ui.nav.ROUTE_FIRST_STEPS
@@ -767,6 +770,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             onSavings = { navController.navigate("savings") },
                             onArchivedChats = if (access.archivedSpaces.isNotEmpty()) ({ navController.navigate("archived_chats") }) else null,
                             onAlertPreferences = { navController.navigate(ROUTE_ALERT_PREFS) },
+                            onBankNotifications = { navController.navigate(ROUTE_BANK_NOTIFICATIONS) },
                             onForecasts = { navController.navigate(ROUTE_FORECASTS) },
                             onAlertsToggle = { enabled ->
                                 alertsViewModel.toggleNow(enabled)
@@ -1156,6 +1160,15 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     factory = viewModelFactory { initializer { AlertPreferencesViewModel(container, container.notifications) } },
                 )
                 AlertPreferencesRoute(viewModel, container.notifications, padding, onBack = { navController.popBackStack() })
+            }
+            composable(ROUTE_BANK_NOTIFICATIONS) {
+                val appContext = LocalContext.current.applicationContext
+                val viewModel: BankNotificationsViewModel = viewModel(
+                    factory = viewModelFactory {
+                        initializer { BankNotificationsViewModel(container.bankNotificationSettings) { BankNotificationsViewModel.installedApps(appContext) } }
+                    },
+                )
+                BankNotificationsRoute(viewModel, padding, onBack = { navController.popBackStack() })
             }
             composable(ROUTE_FIRST_STEPS) {
                 val viewModel: FirstStepsViewModel = viewModel(
