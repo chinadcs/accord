@@ -1,0 +1,63 @@
+---
+status: accepted
+recorded_at: 2026-11-08
+decision_date: 2026-11-08
+---
+
+# ADR 0056 — Pistas conservadoras e calibração posterior
+
+## Contexto
+
+As pistas de revisão de S7 (telas 37/38) dependiam de critérios a decidir com dados do piloto.
+Em 08/11/2026, na conversa de `accord-9y6.12`, o usuário aprovou regras conservadoras iniciais
+e depois aceitou separar a calibração, permitindo implementar e testar antes de avaliar o
+histórico real. Não houve calibração nem medição de qualidade nesta decisão.
+
+## Decisão
+
+- Cobranças parecidas exigem mesmo valor exato, mesma descrição ou estabelecimento e mesma
+  data original da compra. Não ampliar a janela para dias próximos.
+- Frequência é agrupada por subcategoria e usa a data original da compra; uma compra
+  parcelada conta uma única vez. Comparar os últimos 28 dias completos com os 28 imediatamente
+  anteriores, excluindo o dia em andamento. Exigir simultaneamente anterior >=3 compras,
+  atual >=6 e atual >=2 × anterior: 3→6 e 4→8 geram pista; 4→6, 2→6 e 0→6 não geram.
+- Histórico insuficiente ou cobertura inadequada impede concluir aumento. Os números são
+  parâmetros provisórios aprovados, não resultados de calibração.
+- A avaliação de uma pessoa vale para todo o espaço, mostrando quem avaliou. Outros aparelhos
+  refletem essa avaliação após sincronizar; offline, podem ainda não tê-la recebido.
+- Uma pista avaliada só reabre por mudança de evidência relacionada ao motivo (valor, data,
+  estabelecimento ou compras consideradas), se o sinal ainda satisfizer a detecção. Alterações
+  sem relação não reabrem. Preservar a avaliação anterior; evidência insuficiente é limitação.
+- Encerrar a decisão inicial em `accord-9y6.12`, liberando C1–C4. Calibrar depois em
+  `accord-9y6.17`, com histórico autorizado do piloto, quantidades de pistas e dispensas como
+  legítimas. Mudanças nos limiares exigem nova decisão do usuário.
+
+## Consequências
+
+Os critérios permitem implementar exemplos e limites verificáveis sem inventar evidência de
+qualidade. A regra de frequência deixa de detectar aumentos a partir de bases menores que
+três compras e pode perder sinais úteis; isso faz parte da escolha conservadora inicial.
+Ainda pode haver pistas legítimas dispensadas. A calibração posterior verifica o ruído real.
+
+A dispensa compartilhada e a reabertura exigem relacionar avaliações a evidências relevantes,
+sem dispensar automaticamente uma evidência alterada só porque sua pista já foi avaliada.
+O contrato concreto de persistência/sincronização continua na implementação de S7.C2/C3;
+as propostas de chave e registros append-only na spec não foram implementadas por este ADR.
+
+Pistas não alteram dinheiro, não excluem/estornam compras nem geram notificações. Preservar as
+exclusões de parcelas, recorrências esperadas, pagamentos de fatura, estornos vinculados e
+pendências de importação descritas em S7. Dados reais permanecem locais; o relato da calibração
+usa agregados e limitações, sem conteúdo bancário ou conversas no repositório/Beads.
+
+## Fontes e evidências
+
+- Aceites explícitos do usuário na conversa de `accord-9y6.12`, em 08/11/2026; aceite final:
+  “Vamos seguir nessa regra conservadora inicialmente”.
+- [S7](../specs/S7-p2-intencoes-simulacao-pistas.md), telas
+  [37](../specs/design/37-pistas-de-revisao.md) e [38](../specs/design/38-detalhe-pista.md).
+- [ADR 0048](0048-intencoes-de-compra-conversao-e-simulacao.md): intenções e simulador;
+  pistas ficaram fora daquele ADR. [ADR 0024](0024-protocolo-por-agregados-e-cursor.md):
+  protocolo existente de sincronização, sem novo contrato concreto aprovado aqui.
+- `accord-9y6.13` a `.16`: implementação pendente; `accord-9y6.17`: calibração posterior.
+  Este registro entrega decisões e documentação; não comprova detector, serviço ou validação
+  nos Galaxy S20 FE/S23 FE.
