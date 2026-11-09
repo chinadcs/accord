@@ -122,4 +122,17 @@
     <string name="upcoming_loading">Consultando os próximos 7 dias…</string>
     <string name="upcoming_failed">Não foi possível consultar os próximos 7 dias.</string>
     <string name="upcoming_open">Ver compromissos</string>
+    <string name="projection_title">Projeção de estouro</string>
+    <string name="projection_none">Nenhuma categoria deve passar do limite no ritmo atual.</string>
+    <string name="projection_today">%1$s deve passar do limite hoje, no ritmo atual.</string>
+    <plurals name="projection_days">
+        <item quantity="one">%1$s deve passar do limite em %2$d dia (%3$s), no ritmo atual.</item>
+        <item quantity="other">%1$s deve passar do limite em %2$d dias (%3$s), no ritmo atual.</item>
+    </plurals>
+    <string name="projection_low_confidence">Estimativa com ressalvas.</string>
+    <string name="projection_more">E mais %1$d categorias na previsão.</string>
+    <string name="projection_note">Usa o ritmo dos gastos variáveis dos períodos anteriores e os compromissos conhecidos. Categorias sem limite ou sem histórico suficiente ficam de fora; excesso já ocorrido aparece na previsão. Não envia aviso.</string>
+    <string name="projection_loading">Calculando a projeção de estouro…</string>
+    <string name="projection_failed">Não foi possível calcular a projeção de estouro.</string>
+    <string name="projection_open">Ver previsões</string>
 </resources>
