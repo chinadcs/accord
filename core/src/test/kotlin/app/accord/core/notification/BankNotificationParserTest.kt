@@ -7,7 +7,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** Textos sintéticos: o produto ainda não tem amostras reais de notificação de nenhum banco (ADR 0069). */
+/** Textos sintéticos, exceto os três do teste de amostras reais do Itaú (fornecidos pelo usuário em 09/11/2026). */
 class BankNotificationParserTest {
     private fun parse(body: String, title: String? = null) = BankNotificationParser.parse(title, body)
 
@@ -88,5 +88,24 @@ class BankNotificationParserTest {
     fun `descricao longa e cortada`() {
         val p = parse("Compra aprovada de R$ 9,00 em " + "ABCDEFGHIJ ".repeat(8))!!
         assertTrue(p.description.length <= 40)
+    }
+    @Test
+    fun `amostras reais do Itau`() {
+        val compra = parse("Olá! Compra aprovada de R\$ 25,51 em DL *UberRides no dia 09/11 as 10:58 no seu cartão Uniclass, Boas compras")!!
+        assertEquals(2_551, compra.cents)
+        assertEquals(Direction.Expense, compra.direction)
+        assertEquals("DL *UberRides", compra.description)
+        assertFalse(compra.viaPix)
+
+        val enviado = parse("Você enviou R\$ 1,00 para Estabelecimento")!!
+        assertEquals(100, enviado.cents)
+        assertEquals(Direction.Expense, enviado.direction)
+        assertEquals("Estabelecimento", enviado.description)
+        assertTrue(enviado.viaPix) // sem a palavra Pix, mas é transferência da conta, não compra no cartão
+
+        val recebido = parse("Você recebeu R\$ 1,00 de Estabelecimento")!!
+        assertEquals(100, recebido.cents)
+        assertEquals(Direction.Income, recebido.direction)
+        assertEquals("Estabelecimento", recebido.description)
     }
 }

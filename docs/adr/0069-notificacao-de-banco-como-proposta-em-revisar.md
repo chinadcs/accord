@@ -15,8 +15,9 @@ notificações é outra coisa: não há conexão com o banco, credencial, API ou
 que o Android já mostrou à pessoa, com o acesso especial a notificações que ela concede nos ajustes do
 sistema. Este registro formaliza a decisão antes do código, como o [ADR 0067](0067-inicio-como-abertura-e-revisar-em-mais.md).
 
-A permissão é sensível: o serviço de escuta recebe todas as notificações do aparelho. O produto só tem uma
-amostra real do Itaú (OFX e fatura em PDF), nenhuma de notificação.
+A permissão é sensível: o serviço de escuta recebe todas as notificações do aparelho. Até 09/11/2026 o produto só tinha
+uma amostra real do Itaú (OFX e fatura em PDF), nenhuma de notificação; nesse dia o usuário forneceu três textos
+reais de notificação do Itaú (compra aprovada no cartão, “Você enviou …” e “Você recebeu …”), hoje cobertos pelos testes.
 
 ## Decisão
 
@@ -50,9 +51,10 @@ amostra real do Itaú (OFX e fatura em PDF), nenhuma de notificação.
   para conexões com o banco.
 - Em Android, o sistema pode encerrar o serviço ou o fabricante pode limitar o app em segundo plano; notificações
   perdidas não viram proposta e o aplicativo não promete cobertura. Proposta é “o que o Accord viu”.
-- Os padrões do analisador são hipóteses com textos sintéticos. Cada banco exige amostras reais de notificação
-  antes de afirmar compatibilidade; só há evidência de outros formatos do Itaú. Pedir amostras ao usuário
-  (anonimizadas) é pendência.
+- Os padrões do analisador foram validados só com esses três textos do Itaú e com textos sintéticos. Cada
+  banco, e cada formato de notificação do Itaú (boleto, débito, parcelado, estorno), exige amostras reais antes
+  de afirmar compatibilidade. “Você enviou …” sem a palavra Pix é tratada como transferência da conta, não como
+  compra no cartão. Pedir mais amostras (anonimizadas) é pendência (`accord-qowj`).
 - Revogar o acesso nos ajustes do Android ou desmarcar os apps encerra a leitura; propostas já criadas ficam até
   serem confirmadas ou descartadas. A remoção da conta não está coberta pela exportação, pois propostas são
   rascunhos locais (como os do Chat e do registro).
