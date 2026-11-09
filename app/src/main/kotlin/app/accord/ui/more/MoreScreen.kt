@@ -96,6 +96,9 @@ fun MoreScreen(
     onEntriesCriterionChange: (DateCriterion) -> Unit = {},
     /** Preferência e situação real das notificações deste aparelho; nulo onde o menu não se aplica. */
     alerts: AlertPreferencesUiState? = null,
+    updates: app.accord.updates.UpdateState? = null,
+    onCheckUpdates: () -> Unit = {},
+    onDownloadUpdate: (app.accord.updates.AppRelease) -> Boolean = { false },
 ) {
     var showChatSettings by rememberSaveable { mutableStateOf(false) }
     if (showChatSettings) {
@@ -187,6 +190,7 @@ fun MoreScreen(
             MoreRow(R.string.privacy_title, Lucide.drawable.lucide_ic_shield_check, actions.onPrivacy)
             MoreRow(R.string.appearance_title, Lucide.drawable.lucide_ic_palette, actions.onAppearance)
         }
+        updates?.let { app.accord.updates.UpdatePanel(it, onCheckUpdates, onDownloadUpdate) }
     }
 }
 

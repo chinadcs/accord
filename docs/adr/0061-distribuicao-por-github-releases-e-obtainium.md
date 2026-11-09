@@ -6,6 +6,11 @@ decision_date: 2026-11-08
 
 # ADR 0061 — Distribuição por GitHub Releases e Obtainium
 
+Parcialmente substituído em 09/11/2026 pelo
+[ADR 0066](0066-verificacao-de-atualizacoes-pela-api-do-github.md): o usuário abandonou Obtainium
+e determinou verificação automática pela API do GitHub dentro do Accord. As referências a
+Obtainium abaixo preservam a decisão histórica; canal, assinatura e versionamento continuam.
+
 ## Contexto
 
 O Accord precisa distribuir o APK assinado para pessoas externas e permitir sua atualização.

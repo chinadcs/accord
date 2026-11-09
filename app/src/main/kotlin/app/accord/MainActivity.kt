@@ -106,6 +106,7 @@ class MainActivity : ComponentActivity() {
             AccordTheme(preference, corners, palette) {
                 val iconChoices by container.icons.choices.collectAsStateWithLifecycle()
                 val security by container.appLock.state.collectAsStateWithLifecycle()
+                val updateState by container.updates.state.collectAsStateWithLifecycle()
                 val focus = LocalFocusManager.current
                 val keyboard = LocalSoftwareKeyboardController.current
                 LaunchedEffect(security.locked) {
@@ -119,6 +120,10 @@ class MainActivity : ComponentActivity() {
                             AccordApp(container)
                         }
                         if (security.locked) AppLockScreen(appAuthenticator, container.appLock)
+                        if (!security.locked) app.accord.updates.UpdateNotice(
+                            updateState, container.updates::dismissNotice,
+                            { app.accord.updates.openReleaseDownload(this@MainActivity, it) },
+                        )
                     }
                 }
             }

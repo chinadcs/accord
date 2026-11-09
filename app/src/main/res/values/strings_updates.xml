@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="updates_title">Atualizações do Accord</string>
+    <string name="updates_installed">Versão instalada: %1$s</string>
+    <string name="updates_checking">Verificando versões no GitHub…</string>
+    <string name="updates_failed">Não foi possível verificar agora. Você pode continuar usando o Accord e tentar mais tarde.</string>
+    <string name="updates_available">Nova versão disponível</string>
+    <string name="updates_none">Nenhuma versão mais recente encontrada na última verificação.</string>
+    <string name="updates_automatic">O Accord verifica ao abrir, no máximo uma vez por dia. Pré-releases estão incluídas neste piloto.</string>
+    <string name="updates_version">Accord %1$s</string>
+    <string name="updates_prerelease">Accord %1$s · pré-release de teste</string>
+    <string name="updates_download">Abrir download</string>
+    <string name="updates_check">Verificar atualizações</string>
+    <string name="updates_browser_failed">Não foi possível abrir o navegador. Tente novamente com um navegador disponível.</string>
+    <string name="updates_install_note">O download abre no navegador. Confirme a instalação no Android para atualizar, sem desinstalar o Accord.</string>
+    <string name="updates_later">Agora não</string>
+</resources>

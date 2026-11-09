@@ -26,7 +26,8 @@ object DevIdentity {
     /** Contêiner pronto: o estado salvo já foi lido e o banco aberto antes de qualquer tela. */
     fun container(context: Context): AppContainer =
         AppContainer(context, InMemoryAccessStore(snapshot()), UnconfiguredSpaceService, TestModel.source, TestModel.engine,
-            categoryPilot = app.accord.pilot.DisabledChatPilot).also {
+            categoryPilot = app.accord.pilot.DisabledChatPilot,
+            releaseFeed = app.accord.updates.ReleaseFeed { "[]" }).also {
             runBlocking { it.access.restore() }
         }
 }

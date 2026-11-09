@@ -77,7 +77,8 @@ interface SpaceProvider {
 
 /**
  * Dependências do aplicativo. Banco e fila são locais e persistidos, um por (conta, espaço); a rede
- * só entra pelo [RemoteSpaceService], com a URL e a chave pública do build (nunca a chave secreta).
+ * financeira entra pelo [RemoteSpaceService], com a URL e a chave pública do build (nunca a chave secreta).
+ * A consulta pública de versões é independente, sem conta ou dados financeiros (ADR 0066).
  * Tema e modelo são preferências do aparelho e não sincronizam.
  */
 class AppContainer(
@@ -89,6 +90,7 @@ class AppContainer(
     val categoryPilot: app.accord.pilot.ChatPilot = app.accord.pilot.createChatPilot(context),
     /** Fase do produto deste build: P1 por padrão; P2 (S7) só com `-Paccord.p2=true` em debug. Controles de fase futura não aparecem antes. */
     override val phase: app.accord.core.analysis.ProductPhase = defaultPhase(),
+    releaseFeed: app.accord.updates.ReleaseFeed = app.accord.updates.PublicGitHubReleaseFeed(),
 ) : SpaceProvider {
     override val clock: BudgetClock = BudgetClock.system()
     override val feedback = FeedbackBus()
@@ -110,6 +112,11 @@ class AppContainer(
     } ?: kotlinx.serialization.json.JsonObject(emptyMap())
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    val updates = app.accord.updates.ReleaseUpdates(
+        appScope, releaseFeed,
+        app.accord.updates.AndroidUpdateCheckStore(context), BuildConfig.VERSION_CODE,
+    )
 
     /**
      * Modelo deste aparelho. Sem hospedagem escolhida nem motor integrado, o Chat guarda a mensagem e
@@ -229,6 +236,7 @@ class AppContainer(
 
     /** Ao voltar ao primeiro plano: um ciclo e a leitura dos indicadores. */
     fun onForeground() {
+        updates.check()
         appScope.launch {
             access.reconcilePrivacy()
             sync.refresh()

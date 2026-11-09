@@ -292,8 +292,15 @@ Para preparar o APK com versão, conferir a assinatura e comparar com o APK ante
 ```
 
 O guia detalhado fica em `docs/distribuicao.md`, mantido apenas localmente. A decisão do canal
-está no [ADR 0061](docs/adr/0061-distribuicao-por-github-releases-e-obtainium.md). O fluxo GitHub Releases/Obtainium
-está em preparação local; ainda não há uma Release validada para instalação.
+está no [ADR 0061](docs/adr/0061-distribuicao-por-github-releases-e-obtainium.md).
+O Accord verifica novas versões pela API pública do GitHub ao abrir, no máximo uma vez por dia,
+e oferece **Mais > Verificar atualizações**. Pré-releases estão incluídas neste piloto.
+Uma versão nova permite abrir o download de `accord.apk` no navegador; confirme a atualização
+no Android, preservando a instalação existente. **Não desinstale**: isso apaga dados locais.
+Sem rede, continue usando o aplicativo e tente mais tarde. A consulta não envia dados financeiros
+nem exige token. Obtainium foi retirado por decisão do usuário
+([ADR 0066](docs/adr/0066-verificacao-de-atualizacoes-pela-api-do-github.md)).
+O fluxo ainda não tem uma Release publicada e validada entre duas versões em aparelho físico.
 
 Prepare a distribuição num checkout limpo do commit escolhido. O script confere versão,
 assinatura, ausência de CAMERA/modo depurável e presença dos avisos de licença no APK.

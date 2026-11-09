@@ -667,6 +667,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     // Voltar dos ajustes do sistema atualiza a situação real das notificações.
                     RefreshOnResume(alertsViewModel::refresh)
                     val allowNotifications = rememberAllowNotifications(container.notifications, onDone = alertsViewModel::refresh)
+                    val updatesState by container.updates.state.collectAsStateWithLifecycle()
                     MoreScreen(
                         padding,
                         actions = MoreActions(
@@ -718,6 +719,9 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                         entriesCriterion = entriesCriterion,
                         onEntriesCriterionChange = container.theme::setEntriesDateCriterion,
                         alerts = alertsState,
+                        updates = updatesState,
+                        onCheckUpdates = { container.updates.check(manual = true) },
+                        onDownloadUpdate = { app.accord.updates.openReleaseDownload(context, it) },
                     )
                     chatDialog?.let { dialog ->
                         ChatHistoryDialogView(

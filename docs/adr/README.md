@@ -171,11 +171,12 @@ observada em 24/10/2026. Os estados abaixo são de decisão, não de conclusão 
 | [0058](0058-exportacao-e-exclusao-autorizadas-e-recuperaveis.md) | Exportação e exclusão autorizadas e recuperáveis | accepted |
 | [0059](0059-conversas-locais-e-feedback-por-resultado.md) | Conversas locais independentes e feedback por resultado | accepted |
 | [0060](0060-cofrinhos-como-subcontas-reais.md) | Cofrinhos como subcontas reais, saldos e protocolo 3 | accepted |
-| [0061](0061-distribuicao-por-github-releases-e-obtainium.md) | Distribuição por GitHub Releases e Obtainium | accepted |
+| [0061](0061-distribuicao-por-github-releases-e-obtainium.md) | Distribuição por GitHub Releases e Obtainium | accepted; parcialmente substituído por [0066](0066-verificacao-de-atualizacoes-pela-api-do-github.md) |
 | [0062](0062-codigo-publico-nao-comercial-e-sem-redistribuicao.md) | Código público, uso não comercial e sem redistribuição | superseded |
 | [0063](0063-licenca-gplv3-e-documentacao-local.md) | GNU GPLv3 e documentação local, exceto ADRs e modelos | accepted |
 | [0064](0064-historico-publicavel-e-privacidade-da-autoria.md) | Histórico publicável e privacidade da autoria | accepted |
 | [0065](0065-convite-pela-camera-externa-sem-leitor-proprietario.md) | Convite pela câmera externa, sem leitor proprietário | accepted |
+| [0066](0066-verificacao-de-atualizacoes-pela-api-do-github.md) | Verificação de atualizações pela API pública do GitHub | accepted |
 
 Questões ainda sem decisão, como modelo/motor, leitores bancários, acesso local, retenção de
 idempotência e validação financeira no serviço, permanecem nos Beads/specs S2–S4. Suas tarefas

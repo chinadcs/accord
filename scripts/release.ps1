@@ -103,6 +103,6 @@ try {
         licenseNoticesChecked = $true
     } | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $output 'release.json') -Encoding UTF8
     Write-Host "APK verificado: $destination (versionCode $expectedCode)"
-    Write-Host 'Preparação local; publicação e validação por Obtainium continuam pendentes.'
+    Write-Host 'Preparação local; publicação e validação da atualização pelo aviso do Accord continuam pendentes.'
 }
 finally { Pop-Location }
