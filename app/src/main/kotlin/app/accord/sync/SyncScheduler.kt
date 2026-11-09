@@ -62,6 +62,7 @@ class SyncScheduler(private val context: Context) {
 class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val container = (applicationContext as AccordApplication).container
+        container.access.reconcilePrivacy()
         return when (val outcome = container.sync.syncNow()) {
             null, SyncOutcome.AlreadyRunning, is SyncOutcome.Completed -> Result.success()
             is SyncOutcome.Stopped -> when (val cause = outcome.cause) {

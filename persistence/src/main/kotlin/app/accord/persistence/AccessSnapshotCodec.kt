@@ -30,6 +30,16 @@ object AccessSnapshotCodec {
 
     fun encode(snapshot: AccessSnapshot): String = buildJsonObject {
         put("lastEmail", snapshot.lastEmail?.let(::JsonPrimitive) ?: JsonNull)
+        put("pendingAccountDeletion", snapshot.pendingAccountDeletion?.let { pending ->
+            buildJsonObject {
+                put("accountId", pending.accountId); put("requestId", pending.requestId); put("proof", pending.proof)
+            }
+        } ?: JsonNull)
+        put("archivedSpaces", buildJsonArray {
+            snapshot.archivedSpaces.forEach { add(buildJsonObject {
+                put("accountId", it.accountId); put("spaceId", it.spaceId); put("name", it.name)
+            }) }
+        })
         put(
             "session",
             snapshot.session?.let { s ->
@@ -111,6 +121,16 @@ object AccessSnapshotCodec {
         }
         return AccessSnapshot(
             lastEmail = root.str("lastEmail"),
+            pendingAccountDeletion = (root["pendingAccountDeletion"] as? JsonObject)?.let { p ->
+                app.accord.core.sync.PendingAccountDeletion(
+                    p.str("accountId") ?: return@let null, p.str("requestId") ?: return@let null,
+                    p.str("proof") ?: return@let null,
+                )
+            },
+            archivedSpaces = root["archivedSpaces"].objects().mapNotNull { a ->
+                app.accord.core.sync.ArchivedSpace(a.str("accountId") ?: return@mapNotNull null,
+                    a.str("spaceId") ?: return@mapNotNull null, a.str("name").orEmpty())
+            },
             session = session,
             bindings = root["bindings"].objects().mapNotNull { b ->
                 val account = b.str("accountId") ?: return@mapNotNull null

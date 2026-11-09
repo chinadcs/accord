@@ -19,6 +19,8 @@ class AccessSnapshotCodecTest {
         pending = mapOf("acc-2" to PendingSpace("esp-2", "Casa")),
         participants = mapOf("acc-1" to ParticipantsCache(listOf(Participant("acc-1", "ana", 5), Participant("acc-3", "bruno", 9)), 77)),
         invites = mapOf("acc-1" to InviteCache(123, expired = true, checkedAtMillis = 88)),
+        pendingAccountDeletion = app.accord.core.sync.PendingAccountDeletion("acc-1", "request-1", "a".repeat(64)),
+        archivedSpaces = listOf(app.accord.core.sync.ArchivedSpace("acc-1", "esp-antigo", "Espaço encerrado")),
     )
 
     @Test

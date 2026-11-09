@@ -383,6 +383,11 @@ inspector_port = 8083
 # The Deno major version to use.
 deno_version = 2
 
+# O handler valida sessão no Auth para todas as ações normais e comprovante restrito para retomar
+# uma exclusão já autorizada após a própria conta/sessão ter sido removida (ADR 0058).
+[functions.privacy]
+verify_jwt = false
+
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
 

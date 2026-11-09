@@ -55,6 +55,8 @@ data class AccessSnapshot(
     val pending: Map<String, PendingSpace> = emptyMap(),
     val participants: Map<String, ParticipantsCache> = emptyMap(),
     val invites: Map<String, InviteCache> = emptyMap(),
+    val pendingAccountDeletion: PendingAccountDeletion? = null,
+    val archivedSpaces: List<ArchivedSpace> = emptyList(),
 )
 
 /** Porta de armazenamento local de acesso; no Android, protegida pelo sistema. */
@@ -88,6 +90,9 @@ data class AccessState(
     val participants: ParticipantsView? = null,
     val invite: InviteView? = null,
     val busy: AccessAction? = null,
+    val accountDeletionPending: Boolean = false,
+    val accountDeletionCompleted: Boolean = false,
+    val archivedSpaces: List<ArchivedSpace> = emptyList(),
 )
 
 enum class AccessField { Email, Password, PasswordConfirmation, SpaceName, InviteCode }

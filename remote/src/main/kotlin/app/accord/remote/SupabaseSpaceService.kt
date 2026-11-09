@@ -92,6 +92,37 @@ class SupabaseSpaceService(
 
     // ---- conta ----
 
+    override suspend fun privacy(accessToken: String?, command: app.accord.core.sync.PrivacyCommand): RemoteResult<String> {
+        val action = when (command.action) {
+            app.accord.core.sync.PrivacyAction.PrepareAccountDeletion -> "prepare_account_deletion"
+            app.accord.core.sync.PrivacyAction.ContinueAccountDeletion -> "continue_account_deletion"
+            app.accord.core.sync.PrivacyAction.RequestSpaceDeletion -> "request_space_deletion"
+            app.accord.core.sync.PrivacyAction.ApproveSpaceDeletion -> "approve_space_deletion"
+            app.accord.core.sync.PrivacyAction.CancelSpaceDeletion -> "cancel_space_deletion"
+            app.accord.core.sync.PrivacyAction.Status -> "status"
+        }
+        val payload = buildJsonObject {
+            put("action", action)
+            command.requestId?.let { put("request_id", it) }
+            command.proof?.let { put("proof", it) }
+            command.password?.let { put("password", it) }
+            command.spaceId?.let { put("space_id", it) }
+        }
+        return when (val http = send("POST", "/functions/v1/privacy", accessToken, payload)) {
+            is Http.Down -> RemoteResult.Failed(http.failure)
+            is Http.Response -> {
+                val data = http.body.obj()?.get("data").obj()
+                when {
+                    http.body.obj()?.str("error") == "invalid_credentials" -> RemoteResult.Failed(RemoteFailure.InvalidCredentials)
+                    http.code == 403 -> RemoteResult.Failed(RemoteFailure.NotMember)
+                    commonFailure(http) != null -> RemoteResult.Failed(commonFailure(http)!!)
+                    http.code in 200..299 && data?.str("format") == "accord-privacy-lifecycle" && data.long("version") == 1L -> RemoteResult.Ok(data.toString())
+                    else -> RemoteResult.Failed(RemoteFailure.ServiceUnavailable)
+                }
+            }
+        }
+    }
+
     override suspend fun exportData(accessToken: String, scope: app.accord.core.sync.DataExportScope, spaceId: String?): RemoteResult<String> {
         val payload = buildJsonObject {
             put("action", if (scope == app.accord.core.sync.DataExportScope.Personal) "export_personal" else "export_financial")
@@ -291,7 +322,7 @@ class SupabaseSpaceService(
         version = o.long("version") ?: 0,
         state = o.str("state").orEmpty(),
         tombstone = (o["tombstone"] as? JsonPrimitive)?.booleanOrNull ?: false,
-        authorId = o.str("authorId").orEmpty(),
+        authorId = if (o["authorId"] is JsonNull) "deleted" else o.str("authorId").orEmpty(),
         serviceTimeMillis = o.long("serviceTimeMillis") ?: 0,
         cursor = o.long("cursor") ?: 0,
     )

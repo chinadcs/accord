@@ -59,6 +59,7 @@ data class MoreActions(
     val onAppearance: () -> Unit = {},
     val onSecurity: () -> Unit = {},
     val onPrivacy: () -> Unit = {},
+    val onArchivedChats: (() -> Unit)? = null,
     val onAlertPreferences: () -> Unit = {},
     val onForecasts: () -> Unit = {},
     val onSubscriptions: () -> Unit = {},
@@ -175,6 +176,7 @@ fun MoreScreen(
         }
 
         Section(R.string.more_group_chat) {
+            actions.onArchivedChats?.let { MoreRow(R.string.privacy_archived_chats, Lucide.drawable.lucide_ic_history, it) }
             MoreRow(R.string.more_chat_settings, Lucide.drawable.lucide_ic_message_circle, { showChatSettings = true })
         }
 

@@ -59,6 +59,15 @@ separados, sem reaplicar lançamentos; indisponibilidade do serviço exige escol
 cópia local incompleta. `privacy` (Edge Function) valida a sessão no Auth e chama a RPC de
 exportação restrita ao serviço. A estrutura é local, sem deploy hospedado nesta entrega.
 
+Exclusão (S8/ADR 0058): comprovante de 256 bits no AccessStore protegido permite concluir o ciclo
+SQL/Auth mesmo após perder a sessão. O endpoint valida sessão/senha nas ações iniciais e valida
+somente o comprovante para continuação; o gateway delega essas verificações ao handler. Exclusão
+do espaço exige todos os membros atuais, invalidando aprovações em mudança de membros; mantém
+contas e Chat local em leitor sem comandos. Notices autenticados são processados no primeiro
+plano e no Worker antes de sincronizar. Sessão recusada exige novo login para consultar dados
+locais, preservando fila/banco; indisponibilidade de rede não equivale a revogação. Limpeza de
+conta enumera somente seus bancos e rascunhos de intenção, estes com namespace de conta/espaço.
+
 Gráficos das telas 05, 33 e 20/21: Charty 3.2.0 atrás de `ui/components/MoneyChart`, com
 valores exatos/lista acessível, desenho local e sem animação de crescimento
 ([ADR 0055](docs/adr/0055-biblioteca-de-graficos-charty.md)). O wrapper consome as projeções

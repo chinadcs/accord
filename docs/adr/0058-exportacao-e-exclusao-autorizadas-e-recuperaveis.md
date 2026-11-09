@@ -31,6 +31,14 @@ ou texto jurídico pronto; a tabela dessa coleta não deve ganhar leitura direta
 - Etapas duráveis/idempotentes; retirada de acesso antes da remoção Auth, sem depender só da
   expiração de JWT. Resposta perdida permite retomar com o ID da solicitação, sem senha persistida.
   Aparelho offline não tem limpeza imediata garantida; cópias exportadas ficam fora do alcance.
+- Recuperação de exclusão de conta usa ID e comprovante aleatório de 256 bits persistidos no
+  AccessStore protegido antes da solicitação; senha nunca persiste. O serviço guarda somente
+  hash do comprovante. Preparar exige sessão verificada e senha; continuar permite somente a
+  exclusão já autorizada e sua consulta, mesmo após expirar/remover a sessão. Por isso o gateway
+  da função delega a validação ao handler: todas as demais ações continuam exigindo Auth válido.
+- Recusa confirmada de sessão no serviço restringe o conteúdo local até novo login, preservando
+  banco/fila. Não confundir ausência de rede com revogação. Espaço encerrado gera aviso por membro
+  para limpeza financeira e preservação do Chat local somente leitura ao reconectar.
 
 ## Consequências
 
@@ -48,6 +56,16 @@ jurídico segue responsabilidade do usuário, como no ADR 0054. Sem deploy hospe
   endpoint validando Auth e RPC restrita ao serviço. Migração `20261108200000` aplicada só local.
   661 testes persistence, 141 remote (inclui endpoint local real), 175 app JVM, 143 pgTAP,
   seis testes do handler e um fluxo UI AVD passam. Sem ignorados nas suítes citadas.
-- Exclusão continua em implementação separada (`accord-0grs.3.2`); coleta/Termos continuam em
-  `accord-g5r8`, sem novo consentimento, coleta ou texto jurídico inventado nesta entrega.
+- Exclusão implementada em `accord-0grs.3.2` (08–09/11/2026): senha conferida no Auth sem revogar
+  a sessão corrente, comprovante protegido, etapas SQL/Auth retomáveis, aprovação unânime,
+  invalidação por membros, autoria financeira removida e limpeza local. Avisos de encerramento
+  preservam somente o Chat, com leitor próprio sem coordenador ou ações financeiras. Consumidores
+  são cancelados antes de fechar o banco. Rascunhos de intenção novos têm namespace por conta/espaço,
+  exportação própria e limpeza que preserva as demais contas; os legados P2 sem titular não são
+  atribuídos automaticamente a outra pessoa. Migração `20261108210000` aplicada apenas localmente.
+- Após essa entrega: 706 core, 665 persistence, 147 remote (inclui Auth/Edge/SQL reais locais),
+  175 app JVM, 172 pgTAP, 12 handler e dois fluxos UI AVD passam, sem falhas/ignorados. Os fluxos
+  verificam exclusão real dos arquivos da conta, preservação do rascunho de outra conta e Chat
+  arquivado sem envio. Sem implantação hospedada. Coleta/Termos continuam em `accord-g5r8`,
+  sem novo consentimento, coleta ou texto jurídico inventado nesta entrega.
 - Galaxy/TalkBack/seleção real de destino no aparelho permanecem em `accord-0grs.2`.

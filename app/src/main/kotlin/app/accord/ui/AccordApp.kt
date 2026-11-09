@@ -268,6 +268,8 @@ import java.time.YearMonth
 @Composable
 fun AccordApp(container: AppContainer) {
     val access by container.access.status.collectAsStateWithLifecycle()
+    var utility by rememberSaveable { mutableStateOf<String?>(null) }
+    LaunchedEffect(access.account?.accountId) { utility = null }
     // O fluxo de espaço continua na tela 02 depois de criar ou entrar, até a pessoa seguir adiante.
     var spaceIntro by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(access.stage) {
@@ -279,8 +281,20 @@ fun AccordApp(container: AppContainer) {
     }
     when {
         access.stage == EntryStage.Loading -> LoadingGate()
+        access.accountDeletionPending || access.accountDeletionCompleted -> app.accord.privacy.AccountDeletionScreen(container, access.accountDeletionCompleted)
         access.stage == EntryStage.SignedOut -> AccessGate(container)
-        access.stage == EntryStage.NoSpace || spaceIntro -> SpaceGate(container, onContinue = { spaceIntro = false })
+        access.session == SessionState.NeedsRenewal -> AccessGate(container, renewal = true)
+        utility != null && access.account != null -> Scaffold { padding ->
+            if (utility == "archive") app.accord.privacy.ArchivedChatsScreen(padding, container) { utility = null }
+            else {
+                val vm: app.accord.privacy.PrivacyViewModel = viewModel(key = "privacy-${access.account?.accountId}", factory = viewModelFactory {
+                    initializer { app.accord.privacy.PrivacyViewModel(container) }
+                })
+                app.accord.privacy.PrivacyScreen(padding, vm) { utility = null }
+            }
+        }
+        access.stage == EntryStage.NoSpace || spaceIntro -> SpaceGate(container, onContinue = { spaceIntro = false },
+            onPrivacy = { utility = "privacy" }, onArchive = if (access.archivedSpaces.isNotEmpty()) ({ utility = "archive" }) else null)
         else -> {
             // Fixada na primeira composição: trocar a rota inicial depois recriaria o grafo de navegação.
             val startRoute = remember { if (access.stage == EntryStage.FirstSteps) ROUTE_FIRST_STEPS else Root.Chat.graph }
@@ -300,18 +314,22 @@ private fun LoadingGate() {
 }
 
 @Composable
-private fun AccessGate(container: AppContainer) {
+private fun AccessGate(container: AppContainer, renewal: Boolean = false) {
     Scaffold { padding ->
-        val viewModel: AccessViewModel = viewModel(factory = viewModelFactory { initializer { AccessViewModel(container.access) } })
+        val viewModel: AccessViewModel = viewModel(key = "access-gate-$renewal", factory = viewModelFactory { initializer { AccessViewModel(container.access, renewal = renewal) } })
         AccessRoute(viewModel, padding)
     }
 }
 
 @Composable
-private fun SpaceGate(container: AppContainer, onContinue: () -> Unit) {
+private fun SpaceGate(container: AppContainer, onContinue: () -> Unit, onPrivacy: () -> Unit, onArchive: (() -> Unit)?) {
     Scaffold { padding ->
         val viewModel: SpaceViewModel = viewModel(factory = viewModelFactory { initializer { SpaceViewModel(container.access) } })
-        SpaceRoute(viewModel, padding, firstRun = true, onContinue = onContinue)
+        Column(Modifier.fillMaxSize().padding(padding)) {
+            TextButton(onClick = onPrivacy) { Text(stringResource(R.string.privacy_title)) }
+            onArchive?.let { action -> TextButton(onClick = action) { Text(stringResource(R.string.privacy_archived_chats)) } }
+            Box(Modifier.weight(1f)) { SpaceRoute(viewModel, androidx.compose.foundation.layout.PaddingValues(), firstRun = true, onContinue = onContinue) }
+        }
     }
 }
 
@@ -670,6 +688,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             onAppearance = { navController.navigate("appearance") },
                             onSecurity = { navController.navigate("security") },
                             onPrivacy = { navController.navigate("privacy") },
+                            onArchivedChats = if (access.archivedSpaces.isNotEmpty()) ({ navController.navigate("archived_chats") }) else null,
                             onAlertPreferences = { navController.navigate(ROUTE_ALERT_PREFS) },
                             onForecasts = { navController.navigate(ROUTE_FORECASTS) },
                             onAlertsToggle = { enabled ->
@@ -1133,6 +1152,9 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     initializer { app.accord.privacy.PrivacyViewModel(container) }
                 })
                 app.accord.privacy.PrivacyScreen(padding, viewModel) { navController.popBackStack() }
+            }
+            composable("archived_chats") {
+                app.accord.privacy.ArchivedChatsScreen(padding, container) { navController.popBackStack() }
             }
             composable(ROUTE_ACCOUNTS) {
                 val viewModel: AccountsViewModel = viewModel(

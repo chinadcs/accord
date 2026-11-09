@@ -47,6 +47,7 @@ fun PrivacyScreen(padding: PaddingValues, viewModel: PrivacyViewModel, onBack: (
         if (state.busy) CircularProgressIndicator()
         if (state.error) Text(stringResource(R.string.privacy_export_failed), color = MaterialTheme.colorScheme.error)
         if (state.saved) Text(stringResource(R.string.privacy_export_saved))
+        DeletionControls(viewModel)
     }
     val bundle = state.bundle
     if (bundle != null && !state.busy) {

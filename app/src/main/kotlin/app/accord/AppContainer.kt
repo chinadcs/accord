@@ -97,8 +97,17 @@ class AppContainer(
     val theme = ThemeStore(context)
     val appLock = app.accord.security.AppLockStore(context)
 
-    private val intentionDraftStore = app.accord.ui.intentions.SharedPreferencesIntentionDrafts(context)
-    override fun intentionDrafts(): app.accord.ui.intentions.IntentionDrafts = intentionDraftStore
+    private val intentionDraftStores = java.util.concurrent.ConcurrentHashMap<String, app.accord.ui.intentions.SharedPreferencesIntentionDrafts>()
+    override fun intentionDrafts(): app.accord.ui.intentions.IntentionDrafts? {
+        val identity = access.runtime.value?.identity ?: return null
+        return intentionDraftStores.getOrPut("${identity.personId}|${identity.spaceId}") {
+            app.accord.ui.intentions.SharedPreferencesIntentionDrafts(context, identity.personId, identity.spaceId)
+        }
+    }
+
+    fun intentionDraftExport(): kotlinx.serialization.json.JsonObject = access.status.value.account?.accountId?.let {
+        app.accord.ui.intentions.SharedPreferencesIntentionDrafts.exportAccount(context, it)
+    } ?: kotlinx.serialization.json.JsonObject(emptyMap())
 
     private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
@@ -157,7 +166,8 @@ class AppContainer(
 
     /** Quem registra é a conta da sessão; as telas só existem com conta e espaço. */
     override val personId: String get() = access.status.value.account?.accountId.orEmpty()
-    override fun memberNames(): Map<String, String> = access.status.value.participants?.items.orEmpty().associate { it.accountId to it.nickname }
+    override fun memberNames(): Map<String, String> = access.status.value.participants?.items.orEmpty().associate { it.accountId to it.nickname } +
+        ("deleted" to context.getString(R.string.privacy_account_deleted))
 
     private val ready = CompletableDeferred<Unit>()
 
@@ -188,6 +198,8 @@ class AppContainer(
                 chatState.value = null
                 val store = runtime?.chatStore ?: return@collect
                 val chatScope = CoroutineScope(SupervisorJob(appScope.coroutineContext[Job]) + Dispatchers.Default).also { scope = it }
+                runtime.beforeClose = { chatScope.cancel() }
+                if (access.runtime.value !== runtime) { chatScope.cancel(); return@collect }
                 val coordinator = ChatCoordinator(
                     space = runtime.space,
                     store = store,
@@ -200,8 +212,10 @@ class AppContainer(
                     // S6: o aplicativo expõe as telas 29–33, então o Chat responde as consultas do catálogo (fase P1).
                     phase = phase,
                 )
-                coordinator.recover()
-                chatState.value = coordinator
+                chatScope.launch {
+                    coordinator.recover()
+                    if (access.runtime.value === runtime) chatState.value = coordinator
+                }
             }
         }
         // Todo registro salvo (e todo desfazer) entra na fila: atualiza os indicadores e agenda o envio.
@@ -216,6 +230,7 @@ class AppContainer(
     /** Ao voltar ao primeiro plano: um ciclo e a leitura dos indicadores. */
     fun onForeground() {
         appScope.launch {
+            access.reconcilePrivacy()
             sync.refresh()
             sync.syncNow()
         }

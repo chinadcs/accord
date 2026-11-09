@@ -37,6 +37,19 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
+import app.accord.core.sync.PrivacyAction
+import app.accord.core.sync.PrivacyCommand
+import app.accord.core.sync.ArchivedSpace
+import app.accord.core.sync.PendingAccountDeletion
 import java.time.YearMonth
 import java.util.UUID
 
@@ -52,7 +65,10 @@ class SpaceRuntime(
     /** Sessão de importação OFX/PDF do espaço (S4); nula onde o espaço não a oferece (testes de acesso). */
     val imports: app.accord.core.importing.ImportSession? = null,
     val dataExport: RoomDataExport? = null,
-)
+) {
+    /** Cancela consumidores antes de fechar/apagar o banco, sem acoplar a persistência ao Android. */
+    @Volatile var beforeClose: () -> Unit = {}
+}
 
 /**
  * Abre o banco do par (conta, espaço). Cada par tem o próprio banco: duas contas no mesmo aparelho
@@ -61,6 +77,9 @@ class SpaceRuntime(
 interface SpaceRuntimeFactory {
     suspend fun open(accountId: String, spaceId: String, access: SyncAccess): SpaceRuntime
     fun close(accountId: String, spaceId: String)
+    suspend fun eraseAccountData(accountId: String) {}
+    suspend fun archiveSpace(accountId: String, spaceId: String) {}
+    suspend fun archivedChatData(accountId: String, spaceId: String): String? = null
 }
 
 /**
@@ -80,6 +99,9 @@ class AccessCenter(
     private val currentMonth: () -> YearMonth,
     private val newId: () -> String = { UUID.randomUUID().toString() },
     private val nowMillis: () -> Long = System::currentTimeMillis,
+    private val newPrivacyProof: () -> String = {
+        ByteArray(32).also(java.security.SecureRandom()::nextBytes).joinToString("") { "%02x".format(it.toInt() and 255) }
+    },
 ) {
     private val mutex = Mutex()
     private val state = MutableStateFlow(AccessState())
@@ -313,6 +335,97 @@ class AccessCenter(
         return authorized { token -> remote.exportData(token, scope, spaceId) }
     }
 
+    /** A confirmação já foi feita na UI. A chamada preserva comprovante mesmo se a UI/processo sair. */
+    suspend fun prepareAccountDeletion(password: String): RemoteResult<String> = withContext(NonCancellable) {
+        mutex.withLock {
+            val snapshot = store.read()
+            val session = snapshot.session ?: return@withLock RemoteResult.Failed(RemoteFailure.SessionExpired)
+            val pending = snapshot.pendingAccountDeletion?.takeIf { it.accountId == session.accountId }
+                ?: PendingAccountDeletion(session.accountId, newId(), newPrivacyProof())
+            store.update { it.copy(pendingAccountDeletion = pending) }
+            val result = authorized { token -> remote.privacy(token, PrivacyCommand(PrivacyAction.PrepareAccountDeletion,
+                pending.requestId, pending.proof, password)) }
+            if (snapshot.pendingAccountDeletion == null && result is RemoteResult.Failed && result.failure == RemoteFailure.InvalidCredentials) {
+                store.update { it.copy(pendingAccountDeletion = null) }
+            }
+            publish(store.read())
+            result
+        }
+    }
+
+    suspend fun finishAccountDeletion(): RemoteResult<String> = withContext(NonCancellable) {
+        mutex.withLock {
+            val pending = store.read().pendingAccountDeletion
+                ?: return@withLock RemoteResult.Ok("{\"status\":\"Completed\"}")
+            val result = remote.privacy(null, PrivacyCommand(PrivacyAction.ContinueAccountDeletion, pending.requestId, pending.proof))
+            if (result is RemoteResult.Ok && Json.parseToJsonElement(result.value).jsonObject["status"]?.jsonPrimitive?.contentOrNull == "Completed") {
+                closeRuntime()
+                runtimes.eraseAccountData(pending.accountId)
+                val updated = store.update { current -> current.copy(
+                    lastEmail = if (current.session?.accountId == pending.accountId) null else current.lastEmail,
+                    session = current.session?.takeUnless { it.accountId == pending.accountId },
+                    bindings = current.bindings - pending.accountId, pending = current.pending - pending.accountId,
+                    participants = current.participants - pending.accountId, invites = current.invites - pending.accountId,
+                    archivedSpaces = current.archivedSpaces.filterNot { it.accountId == pending.accountId }, pendingAccountDeletion = null,
+                ) }
+                publish(updated)
+                state.update { it.copy(accountDeletionCompleted = true) }
+            }
+            result
+        }
+    }
+
+    /** Não guarda senha; aprovações são validadas novamente contra os membros atuais pelo serviço. */
+    suspend fun privacySpaceAction(action: PrivacyAction, requestId: String, password: String? = null): RemoteResult<String> = withContext(NonCancellable) {
+        val binding = store.read().let { it.session?.accountId?.let(it.bindings::get) }
+            ?: return@withContext RemoteResult.Failed(RemoteFailure.NotMember)
+        val result = authorized { token -> remote.privacy(token, PrivacyCommand(action, requestId, password = password, spaceId = binding.spaceId)) }
+        if (result is RemoteResult.Ok) reconcilePrivacy()
+        result
+    }
+
+    /** Avisos autenticados permitem limpar finanças encerradas preservando o Chat local somente leitura. */
+    suspend fun reconcilePrivacy(): RemoteResult<String> = mutex.withLock {
+        val snapshot = store.read()
+        val accountId = snapshot.session?.accountId ?: return@withLock RemoteResult.Failed(RemoteFailure.SessionExpired)
+        val result = authorized { remote.privacy(it, PrivacyCommand(PrivacyAction.Status)) }
+        if (result is RemoteResult.Ok) {
+            val data = Json.parseToJsonElement(result.value).jsonObject
+            val notices = data["closedSpaces"] as? JsonArray ?: JsonArray(emptyList())
+            for (element in notices) {
+                val notice = element as? JsonObject ?: continue
+                val spaceId = notice["spaceId"]?.jsonPrimitive?.contentOrNull ?: continue
+                if (store.read().archivedSpaces.any { it.accountId == accountId && it.spaceId == spaceId }) continue
+                if (openKey == (accountId to spaceId)) closeRuntime()
+                runtimes.archiveSpace(accountId, spaceId)
+                store.update { current -> current.copy(
+                    bindings = if (current.bindings[accountId]?.spaceId == spaceId) current.bindings - accountId else current.bindings,
+                    participants = current.participants - accountId, invites = current.invites - accountId,
+                    archivedSpaces = current.archivedSpaces + ArchivedSpace(accountId, spaceId,
+                        notice["name"]?.jsonPrimitive?.contentOrNull ?: "Espaço encerrado"),
+                ) }
+            }
+            val currentBinding = store.read().bindings[accountId]
+            if (currentBinding != null) {
+                val participants = authorized { remote.participants(it, currentBinding.spaceId) }
+                if (participants is RemoteResult.Ok) store.update { current -> current.copy(
+                    participants = current.participants + (accountId to ParticipantsCache(participants.value.items, participants.value.checkedAtMillis)),
+                ) }
+            }
+            publish(store.read())
+        }
+        result
+    }
+
+    suspend fun archivedChatData(spaceId: String): String? {
+        val snapshot = store.read()
+        val accountId = snapshot.session?.accountId ?: return null
+        if (snapshot.archivedSpaces.none { it.accountId == accountId && it.spaceId == spaceId }) return null
+        return runtimes.archivedChatData(accountId, spaceId)
+    }
+
+    fun dismissDeletionConfirmation() { state.update { it.copy(accountDeletionCompleted = false) } }
+
     suspend fun firstSteps(): List<FirstStep> {
         val runtime = runtimeState.value ?: return emptyList()
         val snapshot = store.read()
@@ -448,9 +561,10 @@ class AccessCenter(
     }
 
     private fun closeRuntime() {
+        runtimeState.value?.beforeClose?.invoke()
+        runtimeState.value = null
         openKey?.let { (account, space) -> runtimes.close(account, space) }
         openKey = null
-        runtimeState.value = null
     }
 
     private suspend fun publish(snapshot: AccessSnapshot) {
@@ -463,6 +577,8 @@ class AccessCenter(
         state.update {
             it.copy(
                 stage = stageOf(snapshot),
+                accountDeletionPending = snapshot.pendingAccountDeletion != null,
+                archivedSpaces = snapshot.archivedSpaces.filter { it.accountId == accountId },
                 lastEmail = snapshot.lastEmail,
                 account = session?.let { s -> AccountView(s.accountId, s.email) },
                 session = when {

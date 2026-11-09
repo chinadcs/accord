@@ -2,6 +2,7 @@ package app.accord.persistence
 
 import androidx.room.Transactor
 import androidx.room.useReaderConnection
+import androidx.room.useWriterConnection
 import app.accord.core.sync.DataExportScope
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -9,6 +10,17 @@ import kotlinx.serialization.json.jsonArray
 
 /** Snapshot consistente de tabelas explicitamente permitidas, sem acesso, tokens nem arquivos externos. */
 class RoomDataExport(private val db: AccordDatabase) {
+    /** Encerramento confirmado pelo serviço: preserva só o histórico pessoal do Chat. */
+    suspend fun clearFinancial() = db.useWriterConnection { connection ->
+        connection.withTransaction(Transactor.SQLiteTransactionType.IMMEDIATE) {
+            val tables = connection.usePrepared("SELECT name FROM sqlite_master WHERE type='table'") { statement ->
+                buildSet { while (statement.step()) add(statement.getText(0)) }
+            }
+            for (table in FINANCIAL_TABLES.filter { it in tables }) {
+                connection.usePrepared("DELETE FROM \"$table\"") { it.step() }
+            }
+        }
+    }
     suspend fun snapshot(scope: DataExportScope): JsonObject = db.useReaderConnection { connection ->
         connection.withTransaction(Transactor.SQLiteTransactionType.DEFERRED) {
             val tables = if (scope == DataExportScope.Personal) PERSONAL_TABLES else FINANCIAL_TABLES

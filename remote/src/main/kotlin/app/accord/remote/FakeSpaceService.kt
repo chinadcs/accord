@@ -2,6 +2,14 @@ package app.accord.remote
 
 import app.accord.core.sync.AppliedVersion
 import app.accord.core.sync.AuthSession
+import app.accord.core.sync.PrivacyAction
+import app.accord.core.sync.PrivacyCommand
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import app.accord.core.sync.EntityChangeEnvelope
 import app.accord.core.sync.EntityKey
 import app.accord.core.sync.InviteCode
@@ -79,6 +87,117 @@ class FakeSpaceService(
     private val entityOwner = mutableMapOf<EntityKey, String>()
     private val applied = mutableMapOf<String, AppliedRecord>()
     private val failedAttempts = mutableMapOf<String, MutableList<Long>>()
+    private class DeletionJob(var id: String, var subject: String?, var proofHash: String, var status: String = "Prepared")
+    private class SpaceDeletion(val id: String, val spaceId: String, val members: Set<String>, val approvals: MutableSet<String>, var status: String = "AwaitingApprovals")
+    private val deletions = mutableMapOf<String, DeletionJob>()
+    private val spaceDeletions = mutableMapOf<String, SpaceDeletion>()
+    private val closedSpaces = mutableMapOf<String, MutableMap<String, String>>()
+
+    private fun invalidateDeletion(spaceId: String) {
+        spaceDeletions.values.filter { it.spaceId == spaceId && it.status == "AwaitingApprovals" }.forEach { it.status = "Invalidated" }
+    }
+
+    private fun proofHash(proof: String): String = java.util.Base64.getEncoder().encodeToString(
+        java.security.MessageDigest.getInstance("SHA-256").digest(proof.toByteArray(Charsets.UTF_8)),
+    )
+
+    private fun deleteSpace(space: Space) {
+        space.members.forEach { member ->
+            closedSpaces.getOrPut(member.accountId) { mutableMapOf() }[space.id] = space.name
+            spaceOfAccount.remove(member.accountId)
+        }
+        space.entities.keys.forEach(entityOwner::remove)
+        applied.entries.removeAll { it.value.spaceId == space.id }
+        spaces.remove(space.id)
+    }
+
+    private fun scrubAuthor(value: JsonElement, accountId: String): JsonElement = when (value) {
+        is JsonObject -> JsonObject(value.mapValues { (key, child) ->
+            if (key in setOf("authorId", "personId", "accountId", "author_id", "account_id") && child == JsonPrimitive(accountId)) JsonPrimitive("deleted")
+            else scrubAuthor(child, accountId)
+        })
+        is JsonArray -> JsonArray(value.map { scrubAuthor(it, accountId) })
+        else -> value
+    }
+
+    private fun privacyResult(data: JsonObject): RemoteResult<String> = RemoteResult.Ok(
+        JsonObject(mapOf("format" to JsonPrimitive("accord-privacy-lifecycle"), "version" to JsonPrimitive(1)) + data).toString(),
+    )
+
+    override suspend fun privacy(accessToken: String?, command: PrivacyCommand): RemoteResult<String> = call {
+        if (command.action == PrivacyAction.ContinueAccountDeletion) {
+            val job = deletions[command.requestId] ?: return@call fail(RemoteFailure.NotMember)
+            val proof = command.proof ?: return@call fail(RemoteFailure.NotMember)
+            if (job.proofHash != proofHash(proof)) return@call fail(RemoteFailure.NotMember)
+            val subject = job.subject
+            if (job.status != "Completed" && subject != null) {
+                spaceOfAccount[subject]?.let(spaces::get)?.let { space ->
+                    if (space.members.size == 1) deleteSpace(space) else {
+                        invalidateDeletion(space.id)
+                        space.members.removeAll { it.accountId == subject }
+                        spaceOfAccount.remove(subject)
+                        space.entities.entries.forEach { entry ->
+                            val before = entry.value
+                            val parsed = runCatching { kotlinx.serialization.json.Json.parseToJsonElement(before.state) }.getOrNull()
+                            val scrubbed = parsed?.let { scrubAuthor(it, subject) }
+                            if (before.authorId == subject || scrubbed != parsed) {
+                                space.cursor++
+                                entry.setValue(before.copy(state = scrubbed?.toString() ?: before.state,
+                                    authorId = if (before.authorId == subject) "deleted" else before.authorId,
+                                    version = before.version + 1, cursor = space.cursor))
+                            }
+                        }
+                    }
+                }
+                val email = accounts[subject]?.email
+                accounts.remove(subject); email?.let { accountByEmail.remove(it) }
+                accessTokens.entries.removeAll { it.value.accountId == subject }
+                refreshTokens.entries.removeAll { it.value == subject }
+                failedAttempts.remove(subject); closedSpaces.remove(subject)
+                job.subject = null; job.status = "Completed"
+            }
+            return@call privacyResult(buildJsonObject { put("requestId", job.id); put("status", job.status) })
+        }
+        val account = accessToken?.let(::authenticate) ?: return@call fail(RemoteFailure.SessionExpired)
+        if (command.action in setOf(PrivacyAction.PrepareAccountDeletion, PrivacyAction.RequestSpaceDeletion, PrivacyAction.ApproveSpaceDeletion)
+            && account.password != command.password) return@call fail(RemoteFailure.InvalidCredentials)
+        if (command.action == PrivacyAction.PrepareAccountDeletion) {
+            val id = command.requestId ?: return@call fail(RemoteFailure.NotMember)
+            val proof = command.proof?.takeIf { it.length >= 64 } ?: return@call fail(RemoteFailure.NotMember)
+            val other = deletions[id]
+            if (other != null && other.subject != account.id) return@call fail(RemoteFailure.NotMember)
+            deletions.values.firstOrNull { it.subject == account.id }?.let { deletions.remove(it.id) }
+            deletions[id] = DeletionJob(id, account.id, proofHash(proof))
+            return@call privacyResult(buildJsonObject { put("requestId", id); put("status", "Prepared") })
+        }
+        if (command.action == PrivacyAction.Status) return@call privacyResult(buildJsonObject {
+            put("requests", JsonArray(spaceDeletions.values.filter { memberSpace(account, it.spaceId) != null }.map { job ->
+                buildJsonObject { put("requestId", job.id); put("spaceId", job.spaceId); put("status", job.status)
+                    put("members", JsonArray(job.members.map(::JsonPrimitive))); put("approvals", JsonArray(job.approvals.map(::JsonPrimitive))) }
+            }))
+            put("closedSpaces", JsonArray(closedSpaces[account.id].orEmpty().map { (id, name) -> buildJsonObject { put("spaceId", id); put("name", name) } }))
+        })
+        val id = command.requestId ?: return@call fail(RemoteFailure.NotMember)
+        val job = if (command.action == PrivacyAction.RequestSpaceDeletion) {
+            val space = command.spaceId?.let { memberSpace(account, it) } ?: return@call fail(RemoteFailure.NotMember)
+            spaceDeletions[id]?.takeIf { it.spaceId == space.id }
+                ?: spaceDeletions.values.firstOrNull { it.spaceId == space.id && it.status == "AwaitingApprovals" }
+                ?: SpaceDeletion(id, space.id, space.members.map { it.accountId }.toSet(), mutableSetOf(account.id)).also { spaceDeletions[id] = it }
+        } else spaceDeletions[id] ?: return@call fail(RemoteFailure.NotMember)
+        val space = memberSpace(account, job.spaceId)
+        if (space == null && !(job.status == "Completed" && account.id in job.members)) return@call fail(RemoteFailure.NotMember)
+        if (job.status == "AwaitingApprovals") {
+            if (space?.members?.map { it.accountId }?.toSet() != job.members) job.status = "Invalidated"
+            else if (command.action == PrivacyAction.CancelSpaceDeletion) job.status = "Cancelled"
+            else if (command.action == PrivacyAction.ApproveSpaceDeletion) job.approvals += account.id
+            if (job.status == "AwaitingApprovals" && job.approvals.containsAll(job.members)) {
+                job.status = "Completed"
+                deleteSpace(checkNotNull(space))
+            }
+        }
+        privacyResult(buildJsonObject { put("requestId", job.id); put("spaceId", job.spaceId); put("status", job.status)
+            put("members", JsonArray(job.members.map(::JsonPrimitive))); put("approvals", JsonArray(job.approvals.map(::JsonPrimitive))) })
+    }
 
     // ---- injeção de falhas e observação (só para testes e desenvolvimento) ----
 
@@ -275,7 +394,7 @@ class FakeSpaceService(
     private fun nicknameOf(account: Account) = account.email.substringBefore('@')
 
     private fun memberSpace(account: Account, spaceId: String): Space? =
-        spaces[spaceId]?.takeIf { s -> s.members.any { it.accountId == account.id } }
+        spaces[spaceId]?.takeIf { s -> s.members.any { it.accountId == account.id } && deletions.values.none { it.subject == account.id && it.status != "Completed" } }
 
     private fun newCode(space: Space): String {
         while (true) {
@@ -333,6 +452,7 @@ class FakeSpaceService(
         }
         if (space.members.size >= InviteCode.MAX_MEMBERS) return@call fail(RemoteFailure.SpaceFull)
         space.members += Member(account.id, nicknameOf(account), now)
+        invalidateDeletion(space.id)
         spaceOfAccount[account.id] = space.id
         invite.usedBy += account.id
         RemoteResult.Ok(SpaceRef(space.id, space.name))

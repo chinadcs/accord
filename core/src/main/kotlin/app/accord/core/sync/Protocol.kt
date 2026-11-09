@@ -206,6 +206,10 @@ fun RemoteFailure.isTransient(): Boolean = when (this) {
  * [RemoteFailure.SessionExpired].
  */
 interface RemoteSpaceService {
+    /** Resultado JSON versionado do ciclo de exclusão; não aceita titular escolhido pelo cliente. */
+    suspend fun privacy(accessToken: String?, command: PrivacyCommand): RemoteResult<String> =
+        RemoteResult.Failed(RemoteFailure.ServiceUnavailable)
+
     /** Serviço deriva a pessoa do token; financeiro exige associação atual ao espaço. */
     suspend fun exportData(accessToken: String, scope: DataExportScope, spaceId: String?): RemoteResult<String> =
         RemoteResult.Failed(RemoteFailure.ServiceUnavailable)

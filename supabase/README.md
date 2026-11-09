@@ -27,6 +27,17 @@ ADR 0054 usa `privacy_consent` e `chat_collection_event`, ambas com `account_id`
 não existem, a exportação informa a ausência de armazenamento, sem inventar consentimento ou
 coleta. O endpoint não concede SELECT dessas tabelas aos clientes.
 
+## Exclusão recuperável (S8)
+
+A migração `20261108210000` adiciona solicitações/avisos com RLS e RPCs exclusivas do serviço.
+`privacy` verifica a sessão no Auth e confere senha nas ações de preparar/aprovar. O comprovante
+aleatório persistido no AccessStore autoriza apenas continuar a própria exclusão já confirmada;
+o banco guarda só o hash. Essa ação funciona depois de remover o Auth. `verify_jwt=false` delega
+ao handler a autenticação; não autoriza exportação, aprovação ou consulta sem sessão válida.
+Não registrar corpos de requisição, senhas ou comprovantes. `SupabasePrivacyLifecycleTest`
+exercita Auth/Edge/SQL locais e remove suas fixtures; pgTAP verifica membros/versões/retomada.
+As duas migrações S8 são somente locais; nenhum deploy foi executado nesta entrega.
+
 ```powershell
 supabase start            # exige Docker em execução
 supabase db reset         # aplica as migrações em um banco limpo
