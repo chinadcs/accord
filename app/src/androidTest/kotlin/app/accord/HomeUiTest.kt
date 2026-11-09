@@ -25,7 +25,7 @@ class HomeUiTest {
 
     @Test fun cargaNaoDizQueNaoHaPendencias() {
         show(PendingQueueUiState())
-        compose.onNodeWithText("Consultando pendências…").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription("Consultando pendências…").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Nenhuma pendência neste aparelho").assertDoesNotExist()
     }
 
@@ -33,7 +33,7 @@ class HomeUiTest {
         var retries = 0
         var reviews = 0
         compose.setContent { AccordTheme {
-            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false, failed = true), { retries++ }, {}, {}, { reviews++ })
+            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false, failed = true), { retries++ }, {}, { reviews++ })
         } }
         compose.onNodeWithText("Não foi possível consultar as pendências").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Tentar de novo").performScrollTo().performClick()
@@ -86,6 +86,6 @@ class HomeUiTest {
     }
 
     private fun show(state: PendingQueueUiState) {
-        compose.setContent { AccordTheme { HomeScreen(PaddingValues(), state, {}, {}, {}, {}) } }
+        compose.setContent { AccordTheme { HomeScreen(PaddingValues(), state, {}, {}, {}) } }
     }
 }

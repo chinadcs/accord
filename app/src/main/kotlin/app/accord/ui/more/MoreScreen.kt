@@ -122,6 +122,10 @@ fun MoreScreen(
             Text(stringResource(R.string.action_register_manually))
         }
 
+        // "Salvo no aparelho" até haver sincronização concluída; depois, "Dados sincronizados até …", nunca um selo de "em dia".
+        // É o único lugar que mostra esta linha (ADR 0071).
+        app.accord.ui.sync.SyncIndicator()
+
         Section(R.string.more_group_review) {
             MoreRow(R.string.tab_review, Lucide.drawable.lucide_ic_circle_check, actions.onReview,
                 supporting = app.accord.ui.home.pendingSummary(reviewState))

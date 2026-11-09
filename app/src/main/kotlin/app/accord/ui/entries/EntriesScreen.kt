@@ -166,7 +166,6 @@ fun EntriesScreen(
                 Text(stringResource(R.string.action_register_manually), modifier = Modifier.padding(start = AccordSpacing.s1))
             }
         }
-        item { BalanceHeader(state.filter, state.balance, onOpenFilters = { showFilters = true }) }
         item {
             OutlinedTextField(
                 value = searchText,
@@ -185,6 +184,7 @@ fun EntriesScreen(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
+        item { EntriesFiltersButton(state.filter, onClick = { showFilters = true }, modifier = Modifier.fillMaxWidth()) }
         item {
             FilterBar(
                 state.filter, state.currentMonth,

@@ -25,10 +25,10 @@ class HomeCashFlowUiTest {
         val state = mutableStateOf<HomeCashFlowState>(HomeCashFlowState.Loading)
         var retries = 0
         compose.setContent { AccordTheme {
-            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {}, {},
+            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {},
                 cashFlow = state.value, onCashFlowRetry = { retries++ })
         } }
-        compose.onNodeWithText("Calculando o fluxo do mês…").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription("Calculando o fluxo do mês…").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Renda já recebida", substring = true).assertDoesNotExist()
         compose.runOnIdle { state.value = HomeCashFlowState.Failed }
         compose.onNodeWithText("Não foi possível calcular o fluxo do mês.").performScrollTo().assertIsDisplayed()
@@ -40,7 +40,7 @@ class HomeCashFlowUiTest {
     @Test fun mostraRendaRecebidaEPrevistaSeparadasEOsDoisResultados() {
         var opens = 0
         compose.setContent { AccordTheme {
-            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {}, {},
+            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {},
                 cashFlow = HomeCashFlowState.Ready(value), onBudget = { opens++ })
         } }
         compose.onNodeWithText("Renda já recebida: ${money(300_000)}").performScrollTo().assertIsDisplayed()
@@ -57,7 +57,7 @@ class HomeCashFlowUiTest {
     @Test fun resultadoNegativoSemEstimativaEProvisorioFicamExplicitos() {
         val negative = value.copy(receivedCents = 10_000, toReceiveCents = 0, categoriesWithoutEstimate = 2, provisional = true)
         compose.setContent { AccordTheme {
-            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {}, {},
+            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {},
                 cashFlow = HomeCashFlowState.Ready(negative))
         } }
         compose.onNodeWithText("Só com a renda recebida: ${money(-195_000)}").performScrollTo().assertIsDisplayed()

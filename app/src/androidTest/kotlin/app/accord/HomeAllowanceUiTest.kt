@@ -53,10 +53,10 @@ class HomeAllowanceUiTest {
         val state = androidx.compose.runtime.mutableStateOf<HomeAllowanceState>(HomeAllowanceState.Loading)
         var retries = 0
         compose.setContent { AccordTheme {
-            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {}, {},
+            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {},
                 allowance = state.value, onAllowanceRetry = { retries++ })
         } }
-        compose.onNodeWithText("Calculando margem do orçamento…").assertExists()
+        compose.onNodeWithContentDescription("Calculando margem do orçamento…").assertExists()
         compose.onNodeWithText("Hoje:", substring = true).assertDoesNotExist()
         compose.runOnIdle { state.value = HomeAllowanceState.Failed }
         compose.onNodeWithText("Não foi possível calcular a margem do orçamento.").performScrollTo().assertIsDisplayed()
@@ -68,7 +68,7 @@ class HomeAllowanceUiTest {
         val theme = androidx.compose.runtime.mutableStateOf(ThemePreference.Light)
         var opens = 0
         compose.setContent { AccordTheme(theme.value) { androidx.compose.material3.Surface(color = androidx.compose.material3.MaterialTheme.colorScheme.background) {
-            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {}, {},
+            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {},
                 allowance = HomeAllowanceState.Ready(value), onBudget = { opens++ })
         } } }
         for (choice in listOf(ThemePreference.Light, ThemePreference.Dark)) {
@@ -89,7 +89,7 @@ class HomeAllowanceUiTest {
     @Test fun ausenciaDeLimiteNaoViraZeroEExcessoFicaExplicito() {
         val state = androidx.compose.runtime.mutableStateOf(value.copy(limitedCategories = 0, todayCents = null, weekCents = null, remainingCents = null))
         compose.setContent { AccordTheme {
-            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {}, {}, allowance = HomeAllowanceState.Ready(state.value))
+            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {}, allowance = HomeAllowanceState.Ready(state.value))
         } }
         compose.onNodeWithText("Cadastre limites para calcular a margem do orçamento.").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Hoje:", substring = true).assertDoesNotExist()

@@ -21,7 +21,7 @@ class NavigationTest {
     @Test fun inicioAbreEAsCincoAbasTemAOrdemDecidida() {
         compose.onNodeWithText("Conversar no Chat").assertIsDisplayed()
         compose.onNodeWithTag("tab-Home").assertIsSelected()
-        val tabs = listOf("Entries", "Budget", "Chat", "Home", "More")
+        val tabs = listOf("Home", "Entries", "Chat", "Budget", "More")
         val positions = tabs.map { compose.onNodeWithTag("tab-$it").assertIsDisplayed().fetchSemanticsNode().boundsInRoot.center.x }
         assertTrue(positions.zipWithNext().all { (a, b) -> a < b })
         compose.onNodeWithTag("tab-Review").assertDoesNotExist()
@@ -30,7 +30,7 @@ class NavigationTest {
     }
 
     @Test fun revisarAbreDeMaisEDoInicioEVoltaParaAOrigem() {
-        compose.onNodeWithText("Abrir Revisar").performClick()
+        compose.onNodeWithText("Abrir Revisar").performScrollTo().performClick()
         compose.onNodeWithTag("root-navigation").assertDoesNotExist()
         back()
         compose.onNodeWithTag("tab-Home").assertIsSelected()
@@ -41,10 +41,27 @@ class NavigationTest {
         compose.onNodeWithTag("tab-More").assertIsSelected()
     }
 
+    @Test fun situacaoDeSincronizacaoAparecaSoEmMais() {
+        listOf("Home", "Entries", "Chat", "Budget").forEach { tab ->
+            compose.onNodeWithTag("tab-$tab").performClick()
+            compose.waitForIdle()
+            compose.onAllNodes(hasText("Salvo no aparelho") or hasText("Dados sincronizados", substring = true)).assertCountEquals(0)
+        }
+        compose.onNodeWithTag("tab-More").performClick()
+        compose.onAllNodes(hasText("Salvo no aparelho") or hasText("Dados sincronizados", substring = true)).assertCountEquals(1)
+    }
+
+    @Test fun inicioTemBotaoFlutuanteDeRegistroEMaisNaoTem() {
+        compose.onNodeWithTag("tab-Home").performClick()
+        compose.onNodeWithTag("root-register-fab").assertIsDisplayed()
+        compose.onNodeWithTag("tab-More").performClick()
+        compose.onNodeWithTag("root-register-fab").assertDoesNotExist()
+    }
+
     @Test fun registroManualAbreDeQualquerRaizEVoltaParaAOrigem() {
         listOf("Home", "Budget", "Entries", "More").forEach { tab ->
             compose.onNodeWithTag("tab-$tab").performClick()
-            if (tab == "Budget" || tab == "Entries") {
+            if (tab == "Home" || tab == "Budget" || tab == "Entries") {
                 compose.onNodeWithContentDescription("Abrir opções de registro").performClick()
                 compose.onAllNodes(hasText("Despesa") and hasClickAction()).onFirst().performClick()
             } else compose.onNodeWithText("Registrar manualmente").performClick()

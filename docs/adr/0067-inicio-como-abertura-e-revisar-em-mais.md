@@ -6,6 +6,8 @@ decision_date: 2026-11-09
 
 # ADR 0067 — Início como abertura e Revisar em Mais
 
+> Ordem da barra, botão de registro e conteúdo do Início foram substituídos em parte pelo [ADR 0071](0071-ordem-das-abas-saldo-e-botao-de-registro-no-inicio.md) (09/11/2026).
+
 ## Contexto
 
 O aplicativo abria no Chat e oferecia Revisar como uma das cinco abas. O usuário decidiu em

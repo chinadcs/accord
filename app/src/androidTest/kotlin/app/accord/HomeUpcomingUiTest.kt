@@ -29,10 +29,10 @@ class HomeUpcomingUiTest {
         val state = mutableStateOf<HomeUpcomingState>(HomeUpcomingState.Loading)
         var retries = 0
         compose.setContent { AccordTheme {
-            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {}, {},
+            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {},
                 upcoming = state.value, onUpcomingRetry = { retries++ })
         } }
-        compose.onNodeWithText("Consultando os próximos 7 dias…").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription("Consultando os próximos 7 dias…").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Nada previsto", substring = true).assertDoesNotExist()
         compose.runOnIdle { state.value = HomeUpcomingState.Failed }
         compose.onNodeWithText("Não foi possível consultar os próximos 7 dias.").performScrollTo().assertIsDisplayed()
@@ -50,7 +50,7 @@ class HomeUpcomingUiTest {
             UpcomingEvent.CardDue(card, LocalDate.parse("2026-11-20")),
         )
         compose.setContent { AccordTheme {
-            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {}, {},
+            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {},
                 upcoming = HomeUpcomingState.Ready(events), onCommitments = { opens++ })
         } }
         compose.onNodeWithText("12/11 · Fechamento da fatura de Itaú").performScrollTo().assertIsDisplayed()
@@ -63,7 +63,7 @@ class HomeUpcomingUiTest {
 
     @Test fun semEventosDizNadaPrevisto() {
         compose.setContent { AccordTheme {
-            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {}, {},
+            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {},
                 upcoming = HomeUpcomingState.Ready(emptyList()))
         } }
         compose.onNodeWithText("Nada previsto para os próximos 7 dias.").performScrollTo().assertIsDisplayed()

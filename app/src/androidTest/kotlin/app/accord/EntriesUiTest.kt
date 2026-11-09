@@ -27,7 +27,6 @@ import app.accord.core.space.EntryKind
 import app.accord.core.space.EntryRow
 import app.accord.core.space.EntrySituation
 import app.accord.core.space.EntrySummary
-import app.accord.core.space.TotalBalance
 import app.accord.core.space.PaymentMethod
 import app.accord.ui.entries.EntriesFilterState
 import app.accord.ui.entries.EntriesScreen
@@ -71,11 +70,10 @@ class EntriesUiTest {
         stale: Boolean = false,
         loadMoreFailed: Boolean = false,
         summary: EntrySummary? = EntrySummary(brl(250), Money.ZERO, Money.ZERO, Money.ZERO),
-        balance: TotalBalance? = summary?.let { TotalBalance(it, it) },
         currentMonth: YearMonth = oct,
     ) = EntriesUiState(
         filter = filter, rows = rows, total = rows.size,
-        summary = summary, balance = balance,
+        summary = summary,
         nextCursor = next, status = status, loadMoreFailed = loadMoreFailed, categories = categories, stale = stale,
         currentMonth = currentMonth,
     )
@@ -129,8 +127,7 @@ class EntriesUiTest {
     @Test
     fun resumoMostraContagemComReceitasEDespesasEOResultadoSemNota() {
         val summary = EntrySummary(brl(1200), brl(5000), Money.ZERO, Money.ZERO, incomeCount = 19, expenseCount = 3)
-        // sem o resumo do cabeçalho, para o resultado não repetir na Despesa do mês
-        show(state(sample, summary = summary, balance = null))
+        show(state(sample, summary = summary))
         compose.onNodeWithText("2 lançamentos (19/3)").assertIsDisplayed()
         compose.onNodeWithText(brl(3800).format()).assertIsDisplayed() // 5000 − 1200
         compose.onAllNodesWithText("Estes totais", substring = true).assertCountEquals(0)
@@ -140,57 +137,9 @@ class EntriesUiTest {
     @Test
     fun resultadoNegativoDoResumoMostraOSinal() {
         val summary = EntrySummary(brl(900), brl(400), Money.ZERO, Money.ZERO, incomeCount = 1, expenseCount = 4)
-        show(state(sample, summary = summary, balance = null))
+        show(state(sample, summary = summary))
         compose.onNodeWithText("2 lançamentos (1/4)").assertIsDisplayed()
         compose.onNodeWithText(Money(-50_000).format()).assertIsDisplayed()
-    }
-
-    private fun header(total: EntrySummary, month: EntrySummary = total) = TotalBalance(total, month)
-
-    @Test
-    fun cabecalhoMostraSaldoTotalAcumuladoComReceitaEDespesaSoDoMes() {
-        // sem o resumo da lista, para os valores do cabeçalho não aparecerem em dois lugares
-        val total = EntrySummary(brl(300), brl(1500), brl(50), Money.ZERO, receivedIncomes = brl(1000))
-        val month = EntrySummary(brl(120), brl(400), brl(20), Money.ZERO, receivedIncomes = brl(400))
-        show(state(sample, summary = null, balance = header(total, month)))
-        compose.onNodeWithText("Saldo total").assertIsDisplayed()
-        compose.onNodeWithText(brl(750).format()).assertIsDisplayed() // acumulado: 1000 − (300 − 50)
-        compose.onNodeWithText("Receita do mês").assertIsDisplayed()
-        compose.onNodeWithText(brl(400).format()).assertIsDisplayed()
-        compose.onNodeWithText("Despesa do mês").assertIsDisplayed()
-        compose.onNodeWithText(brl(100).format()).assertIsDisplayed() // do mês: 120 − 20
-    }
-
-    @Test
-    fun rendaPrevistaNaoEntraNoSaldo() {
-        show(state(sample, balance = header(EntrySummary(brl(100), brl(900), Money.ZERO, Money.ZERO, receivedIncomes = Money.ZERO))))
-        compose.onNodeWithText(Money(-10_000).format()).assertIsDisplayed()
-    }
-
-    @Test
-    fun saldoNegativoMostraOSinal() {
-        show(state(sample, balance = header(EntrySummary(brl(400), Money.ZERO, Money.ZERO, Money.ZERO, receivedIncomes = brl(100)))))
-        compose.onNodeWithText(Money(-30_000).format()).assertIsDisplayed()
-    }
-
-    @Test
-    fun semResumoOCabecalhoNaoInventaValores() {
-        show(state(emptyList(), status = EntriesStatus.Loading, summary = null))
-        compose.onNodeWithText("Saldo total").assertIsDisplayed()
-        compose.onAllNodesWithText("—").assertCountEquals(3)
-    }
-
-    @Test
-    fun saldoTotalNaoMudaComABuscaNemComOsFiltros() {
-        val total = EntrySummary(brl(300), brl(1500), Money.ZERO, Money.ZERO, receivedIncomes = brl(1000))
-        show(
-            state(
-                sample, filter = filter.copy(to = oct.plusMonths(2), search = "x"),
-                summary = EntrySummary(brl(9), Money.ZERO, Money.ZERO, Money.ZERO), balance = header(total),
-            ),
-        )
-        compose.onNodeWithText("Saldo total").assertIsDisplayed()
-        compose.onNodeWithText(brl(700).format()).assertIsDisplayed() // 1000 − 300, e não o resumo filtrado
     }
 
     @Test
@@ -216,7 +165,7 @@ class EntriesUiTest {
     }
 
     @Test
-    fun textoAmpliadoEmpilhaReceitaDespesaEMantemOBotao() {
+    fun textoAmpliadoMantemOBotaoDeFiltrosVisivel() {
         compose.setContent {
             val density = androidx.compose.ui.platform.LocalDensity.current
             androidx.compose.runtime.CompositionLocalProvider(
@@ -225,9 +174,8 @@ class EntriesUiTest {
                 AccordTheme { EntriesScreen(state(sample), PaddingValues(), {}, {}, {}, {}, {}, {}, {}) }
             }
         }
-        compose.onNodeWithText("Receita do mês").assertIsDisplayed()
-        compose.onNodeWithText("Despesa do mês").assertIsDisplayed()
         compose.onNodeWithContentDescription("Filtros").assertIsDisplayed()
+        compose.onAllNodesWithText("Saldo total").assertCountEquals(0) // o saldo mora no Início (ADR 0071)
     }
 
     @Test

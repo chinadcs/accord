@@ -204,7 +204,7 @@ class VisualReviewTest {
     @Test
     fun lancamentosEscuroLista() = capture("lancamentos-escuro-lista", ThemePreference.Dark, scrollTo = "Luz", content = entriesScreen(entriesState))
 
-    // Cabeçalho "Saldo total" com valores (accord-7cj): acumulado de 1000 − (300 − 50) = 750, receita e despesa só do mês.
+    // Card "Saldo total" do Início (accord-7cj, movido em accord-wecg): acumulado de 1000 − (300 − 50) = 750, receita e despesa só do mês.
     private val balancePositive = app.accord.core.space.TotalBalance(
         app.accord.core.space.EntrySummary(brl(300), brl(1500), brl(50), Money.ZERO, receivedIncomes = brl(1000)),
         app.accord.core.space.EntrySummary(brl(120), brl(400), brl(20), Money.ZERO, receivedIncomes = brl(400)),
@@ -214,17 +214,24 @@ class VisualReviewTest {
         app.accord.core.space.EntrySummary(brl(520), Money.ZERO, brl(40), Money.ZERO, receivedIncomes = brl(300)),
     )
 
-    @Test
-    fun lancamentosSaldoClaro() = capture("lancamentos-saldo-claro", ThemePreference.Light, content = entriesScreen(entriesState.copy(balance = balancePositive)))
+    private fun homeScreen(balance: app.accord.ui.home.HomeBalanceState) = @Composable {
+        app.accord.ui.home.HomeScreen(PaddingValues(), app.accord.ui.pending.PendingQueueUiState(loading = false), {}, {}, {}, balance = balance)
+    }
 
     @Test
-    fun lancamentosSaldoEscuro() = capture("lancamentos-saldo-escuro", ThemePreference.Dark, content = entriesScreen(entriesState.copy(balance = balancePositive)))
+    fun inicioSaldoClaro() = capture("inicio-saldo-claro", ThemePreference.Light, content = homeScreen(app.accord.ui.home.HomeBalanceState.Ready(balancePositive)))
 
     @Test
-    fun lancamentosSaldoNegativo() = capture("lancamentos-saldo-negativo", ThemePreference.Light, content = entriesScreen(entriesState.copy(balance = balanceNegative)))
+    fun inicioSaldoEscuro() = capture("inicio-saldo-escuro", ThemePreference.Dark, content = homeScreen(app.accord.ui.home.HomeBalanceState.Ready(balancePositive)))
 
     @Test
-    fun lancamentosSaldoTexto150() = capture("lancamentos-saldo-150", ThemePreference.Light, fontScale = 1.5f, content = entriesScreen(entriesState.copy(balance = balancePositive)))
+    fun inicioSaldoNegativo() = capture("inicio-saldo-negativo", ThemePreference.Light, content = homeScreen(app.accord.ui.home.HomeBalanceState.Ready(balanceNegative)))
+
+    @Test
+    fun inicioSaldoTexto150() = capture("inicio-saldo-150", ThemePreference.Light, fontScale = 1.5f, content = homeScreen(app.accord.ui.home.HomeBalanceState.Ready(balancePositive)))
+
+    @Test
+    fun inicioCarregandoEsqueleto() = capture("inicio-esqueleto-claro", ThemePreference.Light, content = homeScreen(app.accord.ui.home.HomeBalanceState.Loading))
 
     @Test
     fun painelDeFiltros() = capture("filtros-claro", ThemePreference.Light) {

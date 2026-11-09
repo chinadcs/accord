@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Saldo total no Início e esqueletos de carga (accord-wecg, ADR 0071). -->
+<resources>
+    <string name="balance_loading">Calculando o saldo total…</string>
+    <string name="balance_failed">Não foi possível calcular o saldo total.</string>
+</resources>

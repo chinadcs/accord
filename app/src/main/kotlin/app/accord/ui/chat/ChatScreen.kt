@@ -96,7 +96,6 @@ import app.accord.core.chat.StandardReply
 import app.accord.core.label
 import app.accord.ui.components.DecorativeIcon
 import app.accord.ui.fullLabel
-import app.accord.ui.sync.SyncIndicator
 import app.accord.ui.theme.Accord
 import app.accord.ui.theme.AccordSpacing
 import app.accord.ui.theme.isCompactHeight
@@ -245,7 +244,7 @@ private fun ChatHeader(badge: ModelBadge, onOpenModel: () -> Unit, onSearch: () 
             AccordMark()
             Text(stringResource(R.string.chat_title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
             ModelBadgeButton(badge, onOpenModel, wrap = true)
-            Box(Modifier.weight(1f)) { SyncIndicator() }
+            Box(Modifier.weight(1f)) {}
             IconButton(onClick = onSearch, modifier = Modifier.size(AccordSpacing.touchMin)) {
                 Icon(painterResource(Lucide.drawable.lucide_ic_search), contentDescription = stringResource(R.string.search_entries))
             }
@@ -265,7 +264,6 @@ private fun ChatHeader(badge: ModelBadge, onOpenModel: () -> Unit, onSearch: () 
             }
         }
         if (!keyboardOpen) ModelBadgeButton(badge, onOpenModel)
-        SyncIndicator()
     }
 }
 

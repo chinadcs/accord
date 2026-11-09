@@ -26,10 +26,10 @@ class HomeProjectionUiTest {
         val state = mutableStateOf<HomeProjectionState>(HomeProjectionState.Loading)
         var retries = 0
         compose.setContent { AccordTheme {
-            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {}, {},
+            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {},
                 projection = state.value, onProjectionRetry = { retries++ })
         } }
-        compose.onNodeWithText("Calculando a projeção de estouro…").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription("Calculando a projeção de estouro…").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Nenhuma categoria deve passar", substring = true).assertDoesNotExist()
         compose.runOnIdle { state.value = HomeProjectionState.Failed }
         compose.onNodeWithText("Não foi possível calcular a projeção de estouro.").performScrollTo().assertIsDisplayed()
@@ -42,7 +42,7 @@ class HomeProjectionUiTest {
         var opens = 0
         val rows = listOf(row("Mercado", 0), row("Lazer", 1), row("Transporte", 12, low = true), row("Saúde", 14), row("Casa", 15))
         compose.setContent { AccordTheme {
-            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {}, {},
+            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {},
                 projection = HomeProjectionState.Ready(rows), onForecasts = { opens++ })
         } }
         compose.onNodeWithText("Mercado deve passar do limite hoje, no ritmo atual.").performScrollTo().assertIsDisplayed()
@@ -56,7 +56,7 @@ class HomeProjectionUiTest {
 
     @Test fun semProjecaoDizQueNenhumaCategoriaEstoura() {
         compose.setContent { AccordTheme {
-            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {}, {},
+            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {},
                 projection = HomeProjectionState.Ready(emptyList()))
         } }
         compose.onNodeWithText("Nenhuma categoria deve passar do limite no ritmo atual.").performScrollTo().assertIsDisplayed()

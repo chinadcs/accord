@@ -6,7 +6,7 @@ import app.accord.R
 import com.composables.icons.lucide.R as Lucide
 
 /**
- * As cinco raízes da barra inferior (README §3). Cada uma é um grafo próprio: a pilha de cada aba
+ * As cinco raízes da barra inferior, na ordem Início, Lançamentos, Chat, Orçamento e Mais (ADR 0071; README §3). Cada uma é um grafo próprio: a pilha de cada aba
  * é salva e restaurada ao alternar, e tocar de novo na aba atual não apaga filtros nem muda o mês.
  */
 enum class Root(
@@ -15,10 +15,10 @@ enum class Root(
     @StringRes val label: Int,
     @DrawableRes val icon: Int,
 ) {
-    Entries("entries_graph", "entries", R.string.tab_entries, Lucide.drawable.lucide_ic_list),
-    Budget("budget_graph", "budget", R.string.tab_budget, Lucide.drawable.lucide_ic_wallet),
-    Chat("chat_graph", "chat", R.string.tab_chat, R.drawable.lucide_ic_astroid),
     Home("home_graph", "home", R.string.tab_home, Lucide.drawable.lucide_ic_house),
+    Entries("entries_graph", "entries", R.string.tab_entries, Lucide.drawable.lucide_ic_list),
+    Chat("chat_graph", "chat", R.string.tab_chat, R.drawable.lucide_ic_astroid),
+    Budget("budget_graph", "budget", R.string.tab_budget, Lucide.drawable.lucide_ic_wallet),
     More("more_graph", "more", R.string.tab_more, Lucide.drawable.lucide_ic_ellipsis),
 }
 

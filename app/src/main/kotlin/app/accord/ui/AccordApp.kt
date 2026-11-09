@@ -396,7 +396,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
     // O Chat já oferece registro manual abaixo do campo; ali um FAB cobriria o compositor.
     // Fonte grande ou paisagem (altura < 480 dp): o registro vai para o fluxo da raiz Lançamentos, sem FAB (spec 07).
     val largeFont = LocalDensity.current.fontScale >= 1.5f || isCompactHeight()
-    val showAdd = !imeVisible && onRoot && selectedRoot in setOf(Root.Budget, Root.Entries) &&
+    val showAdd = !imeVisible && onRoot && selectedRoot in setOf(Root.Home, Root.Budget, Root.Entries) &&
         !(selectedRoot == Root.Entries && largeFont)
     var registerSpeedDialOpen by rememberSaveable { mutableStateOf(false) }
     var registerChooserOpen by rememberSaveable { mutableStateOf(false) }
@@ -554,11 +554,15 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     val cashFlowModel: app.accord.ui.home.HomeCashFlowViewModel = viewModel(factory = viewModelFactory {
                         initializer { app.accord.ui.home.HomeCashFlowViewModel(container) }
                     })
+                    val balanceModel: app.accord.ui.home.HomeBalanceViewModel = viewModel(factory = viewModelFactory {
+                        initializer { app.accord.ui.home.HomeBalanceViewModel(container) { container.theme.entriesDateCriterion.value } }
+                    })
+                    val balance by balanceModel.state.collectAsStateWithLifecycle()
                     val allowance by home.state.collectAsStateWithLifecycle()
                     val upcoming by upcomingModel.state.collectAsStateWithLifecycle()
                     val projection by projectionModel.state.collectAsStateWithLifecycle()
                     val cashFlow by cashFlowModel.state.collectAsStateWithLifecycle()
-                    val refreshHome = { home.refresh(); upcomingModel.refresh(); projectionModel.refresh(); cashFlowModel.refresh() }
+                    val refreshHome = { home.refresh(); upcomingModel.refresh(); projectionModel.refresh(); cashFlowModel.refresh(); balanceModel.refresh() }
                     RefreshOnResume(refreshHome)
                     LaunchedEffect(syncStatus) { refreshHome() }
                     LaunchedEffect(home) {
@@ -577,12 +581,13 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     }
                     PullToRefresh({ reviewSummary.refresh(); refreshHome() }) {
                         app.accord.ui.home.HomeScreen(padding, reviewState, reviewSummary::refresh,
-                            onChat = { openRoot(Root.Chat) }, onRegister = register,
+                            onChat = { openRoot(Root.Chat) },
                             onReview = { navController.navigate(ROUTE_REVIEW) }, allowance = allowance,
                             onAllowanceRetry = home::refresh, onBudget = { openRoot(Root.Budget) },
                             upcoming = upcoming, onUpcomingRetry = upcomingModel::refresh,
                             onCommitments = { navController.navigate(ROUTE_COMMITMENTS) },
                             cashFlow = cashFlow, onCashFlowRetry = cashFlowModel::refresh,
+                            balance = balance, onBalanceRetry = balanceModel::refresh,
                             projection = projection, onProjectionRetry = projectionModel::refresh,
                             onForecasts = { navController.navigate("$ROUTE_FORECASTS?$ARG_MONTH=${container.clock.currentMonth()}") })
                     }

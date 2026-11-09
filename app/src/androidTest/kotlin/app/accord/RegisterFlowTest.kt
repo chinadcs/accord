@@ -115,7 +115,13 @@ class RegisterFlowTest {
             manual.onFirst().performClick()
             compose.onNodeWithTag("register-choice-expense").performClick()
         }
-        else compose.onAllNodes(hasText("Novo") and hasClickAction()).onFirst().performClick()
+        else if (compose.onAllNodes(hasText("Novo") and hasClickAction()).fetchSemanticsNodes().isNotEmpty()) {
+            compose.onAllNodes(hasText("Novo") and hasClickAction()).onFirst().performClick()
+        } else {
+            // Sem botão no corpo da lista, o registro vem do botão flutuante (Despesa abre o formulário de despesa).
+            compose.onNodeWithContentDescription("Abrir opções de registro").performClick()
+            compose.onAllNodes(hasText("Despesa") and hasClickAction()).onFirst().performClick()
+        }
         waitForText("Novo lançamento")
     }
 
@@ -157,7 +163,7 @@ class RegisterFlowTest {
 
     private fun findInEntries(text: String) {
         waitForText("Lançamentos")
-        compose.onNodeWithText("Lançamentos").performClick()
+        compose.onNodeWithTag("tab-Entries").performClick()
         compose.onNodeWithText("Buscar descrição ou estabelecimento").performTextReplacement(tag)
         waitForText(text)
     }
@@ -228,7 +234,7 @@ class RegisterFlowTest {
         compose.onNode(hasContentDescription("Voltar")).performSemanticsAction(SemanticsActions.OnClick)
         waitForText("Sair sem salvar?")
         compose.onNodeWithText("Guardar rascunho").performClick()
-        waitForText("Registrar manualmente")
+        waitForText("Buscar descrição ou estabelecimento")
 
         openForm()
         waitForText("Rascunho recuperado")
@@ -244,7 +250,7 @@ class RegisterFlowTest {
     fun saidaSemDigitarNadaNaoPerguntaNada() {
         openForm()
         compose.onNode(hasContentDescription("Voltar")).performClick()
-        waitForText("Registrar manualmente")
+        waitForText("Buscar descrição ou estabelecimento")
         assert(compose.onAllNodesWithText("Sair sem salvar?").fetchSemanticsNodes().isEmpty())
     }
 
@@ -272,7 +278,7 @@ class RegisterFlowTest {
         waitForText("Salvo neste aparelho")
         // A lista abre por data da compra (spec 07): a compra aparece uma vez, pelo total.
         // As parcelas por fatura são conferidas no critério do orçamento (EntriesUiTest).
-        compose.onNodeWithText("Lançamentos").performClick()
+        compose.onNodeWithTag("tab-Entries").performClick()
         compose.onNodeWithText("Buscar descrição ou estabelecimento").performTextInput(tag)
         waitForText("Equipamento $tag")
         compose.onAllNodesWithText("1.200,00", substring = true).onFirst().assertIsDisplayed()

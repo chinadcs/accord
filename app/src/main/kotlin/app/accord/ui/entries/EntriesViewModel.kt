@@ -9,7 +9,6 @@ import app.accord.core.space.CategoryNode
 import app.accord.core.space.EntryPage
 import app.accord.core.space.EntryRow
 import app.accord.core.space.EntrySummary
-import app.accord.core.space.TotalBalance
 import app.accord.core.space.QueryResult
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -30,8 +29,6 @@ data class EntriesUiState(
     val rows: List<EntryRow> = emptyList(),
     val total: Int = 0,
     val summary: EntrySummary? = null,
-    /** Cabeçalho: saldo acumulado até o mês exibido ([EntriesFilterState.to]) e resumo desse mês; independe da busca e dos demais filtros. */
-    val balance: TotalBalance? = null,
     /** Mês do calendário hoje; o atalho "Mês atual" só aparece quando o período da lista é outro. */
     val currentMonth: YearMonth = YearMonth.now(BudgetClock.ZONE),
     val nextCursor: Int? = null,
@@ -54,11 +51,10 @@ class EntriesViewModel(
     val state: StateFlow<EntriesUiState> = _state.asStateFlow()
 
     private var job: Job? = null
-    private var balanceJob: Job? = null
 
     init {
         refresh()
-        refreshBalance()
+        refreshCurrentMonth()
         viewModelScope.launch { provider.feedback.undone.collect { reload() } }
     }
 
@@ -72,13 +68,13 @@ class EntriesViewModel(
 
     fun retry() {
         refresh()
-        refreshBalance()
+        refreshCurrentMonth()
     }
 
     /** Volta de outra tela: relê o que está filtrado, mantendo as linhas até o resultado novo chegar. */
     fun reload() {
         refresh()
-        refreshBalance()
+        refreshCurrentMonth()
     }
 
     /** Carrega a página seguinte sem repetir nem reordenar linhas. */
@@ -97,28 +93,14 @@ class EntriesViewModel(
     }
 
     private fun apply(filter: EntriesFilterState, debounce: Boolean) {
-        val previous = _state.value.filter
-        val balanceChanged = filter.criterion != previous.criterion || filter.to != previous.to
         filter.saveTo(saved)
         _state.value = _state.value.copy(filter = filter, status = EntriesStatus.Loading, stale = true)
         refresh(debounce)
-        if (balanceChanged) refreshBalance()
     }
 
-    /** O saldo muda com os dados, o critério de data ou o mês exibido; falha mantém o valor anterior. */
-    private fun refreshBalance() {
-        balanceJob?.cancel()
-        val filter = _state.value.filter
+    /** O atalho "Mês atual" compara com o mês do calendário hoje. O saldo total mora no Início (ADR 0071). */
+    private fun refreshCurrentMonth() {
         _state.value = _state.value.copy(currentMonth = provider.clock.currentMonth())
-        balanceJob = viewModelScope.launch {
-            when (val result = provider.space().totalBalance(filter.criterion, filter.to)) {
-                is QueryResult.Data ->
-                    if (_state.value.filter.let { it.criterion == filter.criterion && it.to == filter.to }) {
-                        _state.value = _state.value.copy(balance = result.value)
-                    }
-                is QueryResult.Failure -> Unit
-            }
-        }
     }
 
     private fun refresh(debounce: Boolean = false) {

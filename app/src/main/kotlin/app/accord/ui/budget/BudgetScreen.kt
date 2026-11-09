@@ -46,7 +46,6 @@ import app.accord.core.space.CategoryBudget
 import app.accord.ui.components.AdaptiveRow
 import app.accord.ui.components.BudgetBar
 import app.accord.ui.components.DecorativeIcon
-import app.accord.ui.sync.SyncIndicator
 import app.accord.ui.components.MonthSelector
 import app.accord.ui.components.MoneyChart
 import app.accord.ui.components.MoneyChartValue
@@ -120,8 +119,6 @@ fun BudgetScreen(
                     }
                 }
                 MonthSelector(state.month, onPrevious, onNext)
-                // "Salvo no aparelho" até haver sincronização concluída; depois, a data, nunca um selo de "em dia".
-                SyncIndicator()
             }
         }
         when (val content = state.content) {
