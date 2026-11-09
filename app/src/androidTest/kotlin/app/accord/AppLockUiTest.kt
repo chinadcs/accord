@@ -23,6 +23,7 @@ class AppLockUiTest {
     private var scenario: ActivityScenario<MainActivity>? = null
 
     @Before fun prepare() {
+        container.appLock.setScreenshotsAllowed(false)
         container.appLock.setEnabled(true)
         scenario = ActivityScenario.launch(MainActivity::class.java)
     }
@@ -30,6 +31,22 @@ class AppLockUiTest {
     @After fun close() {
         scenario?.close()
         container.appLock.setEnabled(false)
+        container.appLock.setScreenshotsAllowed(false)
+    }
+
+    @Test fun permitirPrintsLiberaAJanelaEVoltarAProtegeNaHora() {
+        fun secure() = run {
+            var secure = false
+            scenario!!.onActivity { secure = it.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0 }
+            secure
+        }
+        assertTrue(secure())
+        container.appLock.setScreenshotsAllowed(true)
+        compose.waitUntil(5_000) { !secure() }
+        scenario!!.recreate()
+        assertTrue(!secure())
+        container.appLock.setScreenshotsAllowed(false)
+        compose.waitUntil(5_000) { secure() }
     }
 
     @Test fun bloqueadoNaoExpoeNavegacaoNaArvoreAcessivel() {

@@ -3,6 +3,13 @@ package app.accord.security
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.Switch
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -119,5 +126,19 @@ fun SecurityScreen(padding: PaddingValues, lock: AppLockStore, authenticator: An
             }
         }
         if (failed) Text(stringResource(R.string.security_auth_failed), color = MaterialTheme.colorScheme.error)
+        val screenshotsAllowed by lock.screenshotsAllowed.collectAsStateWithLifecycle()
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(
+                value = screenshotsAllowed, role = Role.Switch, onValueChange = lock::setScreenshotsAllowed,
+            ),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s4),
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.security_screenshots_title), style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.security_screenshots_hint), style = MaterialTheme.typography.bodyMedium)
+            }
+            Switch(checked = screenshotsAllowed, onCheckedChange = null)
+        }
     }
 }

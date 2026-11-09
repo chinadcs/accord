@@ -15,4 +15,6 @@
     <string name="security_disabled">Bloqueio desativado</string>
     <string name="security_enable">Ativar bloqueio</string>
     <string name="security_disable">Desativar bloqueio</string>
+    <string name="security_screenshots_title">Permitir prints de tela</string>
+    <string name="security_screenshots_hint">Desligado por padrão. Ligado, prints e gravações mostram valores e lançamentos, e a prévia do Accord aparece na tela de apps recentes. Vale só neste celular.</string>
 </resources>

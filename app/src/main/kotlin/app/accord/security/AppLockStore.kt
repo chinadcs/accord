@@ -12,6 +12,15 @@ class AppLockStore(context: Context) {
     private val mutableState = MutableStateFlow(policy.state)
     val state = mutableState.asStateFlow()
 
+    /** Prints e tela de recentes (FLAG_SECURE). Protegido por padrão; a escolha vale só neste aparelho. */
+    private val mutableScreenshotsAllowed = MutableStateFlow(preferences.getBoolean("screenshots_allowed", false))
+    val screenshotsAllowed = mutableScreenshotsAllowed.asStateFlow()
+
+    fun setScreenshotsAllowed(allowed: Boolean) {
+        // A janela só deixa de ser protegida depois de a preferência ter sido persistida.
+        if (preferences.edit().putBoolean("screenshots_allowed", allowed).commit()) mutableScreenshotsAllowed.value = allowed
+    }
+
     fun onBackground() = update { background(SystemClock.elapsedRealtime()) }
     fun onForeground(deviceLocked: Boolean) = update { foreground(SystemClock.elapsedRealtime(), deviceLocked) }
     fun onScreenOff() = update { screenOff() }

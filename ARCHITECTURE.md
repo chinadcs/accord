@@ -65,7 +65,8 @@ Proteção local ([ADR 0057](docs/adr/0057-bloqueio-local-com-credencial-do-andr
 biometria/credencial do Android, memória efêmera de desbloqueio e tolerância de um minuto fora
 do app. A árvore financeira permanece montada, invisível e sem semântica acessível atrás do
 bloqueio, preservando navegação e rascunhos. Preferência só no aparelho em Mais > Segurança;
-FLAG_SECURE protege recentes/capturas. Não substitui autorização do serviço ou criptografia.
+FLAG_SECURE protege recentes/capturas por padrão; a chave "Permitir prints de tela" em Segurança
+(preferência local, desligada por padrão, pedido do usuário em 09/11/2026) a retira neste aparelho. Não substitui autorização do serviço ou criptografia.
 
 Exportação ([ADR 0058](docs/adr/0058-exportacao-e-exclusao-autorizadas-e-recuperaveis.md)):
 Mais > Privacidade e dados oferece ZIPs separados pessoal/financeiro, com snapshot Room por

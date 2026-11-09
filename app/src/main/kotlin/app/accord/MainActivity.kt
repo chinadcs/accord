@@ -48,6 +48,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    /** Janela protegida (sem prints nem prévia nos recentes) salvo escolha explícita da pessoa em Segurança. */
+    private fun applyScreenshotProtection(allowed: Boolean) {
+        if (allowed) window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        else window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+    }
+
     override fun onResume() {
         super.onResume()
         appAuthenticator.refresh()
@@ -75,7 +81,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+        applyScreenshotProtection(appLock.screenshotsAllowed.value)
         appAuthenticator = AndroidAppAuthenticator(this)
         if (Build.VERSION.SDK_INT >= 33) {
             registerReceiver(screenOffReceiver, IntentFilter(Intent.ACTION_SCREEN_OFF), Context.RECEIVER_NOT_EXPORTED)
@@ -108,6 +114,8 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
+            val screenshotsAllowed by container.appLock.screenshotsAllowed.collectAsStateWithLifecycle()
+            LaunchedEffect(screenshotsAllowed) { applyScreenshotProtection(screenshotsAllowed) }
             LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { container.onForeground() }
             AccordTheme(preference, corners, palette) {
                 val iconChoices by container.icons.choices.collectAsStateWithLifecycle()
