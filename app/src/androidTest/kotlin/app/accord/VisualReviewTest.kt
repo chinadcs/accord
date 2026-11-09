@@ -204,6 +204,28 @@ class VisualReviewTest {
     @Test
     fun lancamentosEscuroLista() = capture("lancamentos-escuro-lista", ThemePreference.Dark, scrollTo = "Luz", content = entriesScreen(entriesState))
 
+    // Cabeçalho "Saldo total" com valores (accord-7cj): acumulado de 1000 − (300 − 50) = 750, receita e despesa só do mês.
+    private val balancePositive = app.accord.core.space.TotalBalance(
+        app.accord.core.space.EntrySummary(brl(300), brl(1500), brl(50), Money.ZERO, receivedIncomes = brl(1000)),
+        app.accord.core.space.EntrySummary(brl(120), brl(400), brl(20), Money.ZERO, receivedIncomes = brl(400)),
+    )
+    private val balanceNegative = app.accord.core.space.TotalBalance(
+        app.accord.core.space.EntrySummary(brl(1400), Money.ZERO, Money.ZERO, Money.ZERO, receivedIncomes = brl(900)),
+        app.accord.core.space.EntrySummary(brl(520), Money.ZERO, brl(40), Money.ZERO, receivedIncomes = brl(300)),
+    )
+
+    @Test
+    fun lancamentosSaldoClaro() = capture("lancamentos-saldo-claro", ThemePreference.Light, content = entriesScreen(entriesState.copy(balance = balancePositive)))
+
+    @Test
+    fun lancamentosSaldoEscuro() = capture("lancamentos-saldo-escuro", ThemePreference.Dark, content = entriesScreen(entriesState.copy(balance = balancePositive)))
+
+    @Test
+    fun lancamentosSaldoNegativo() = capture("lancamentos-saldo-negativo", ThemePreference.Light, content = entriesScreen(entriesState.copy(balance = balanceNegative)))
+
+    @Test
+    fun lancamentosSaldoTexto150() = capture("lancamentos-saldo-150", ThemePreference.Light, fontScale = 1.5f, content = entriesScreen(entriesState.copy(balance = balancePositive)))
+
     @Test
     fun painelDeFiltros() = capture("filtros-claro", ThemePreference.Light) {
         androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.height(900.dp)) {
