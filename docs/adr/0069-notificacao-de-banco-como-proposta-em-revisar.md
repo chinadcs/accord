@@ -53,8 +53,8 @@ reais de notificação do Itaú (compra aprovada no cartão, “Você enviou …
   perdidas não viram proposta e o aplicativo não promete cobertura. Proposta é “o que o Accord viu”.
 - Os padrões do analisador foram validados só com esses três textos do Itaú e com textos sintéticos. Cada
   banco, e cada formato de notificação do Itaú (boleto, débito, parcelado, estorno), exige amostras reais antes
-  de afirmar compatibilidade. “Você enviou …” sem a palavra Pix é tratada como transferência da conta, não como
-  compra no cartão. Pedir mais amostras (anonimizadas) é pendência (`accord-qowj`).
+  de afirmar compatibilidade. “Você enviou …” e “Você recebeu …” do Itaú são Pix, mesmo sem a palavra (confirmado pelo
+  usuário em 09/11/2026), e não compra no cartão. Pedir mais amostras (anonimizadas) é pendência (`accord-qowj`).
 - Revogar o acesso nos ajustes do Android ou desmarcar os apps encerra a leitura; propostas já criadas ficam até
   serem confirmadas ou descartadas. A remoção da conta não está coberta pela exportação, pois propostas são
   rascunhos locais (como os do Chat e do registro).

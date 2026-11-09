@@ -101,11 +101,12 @@ class BankNotificationParserTest {
         assertEquals(100, enviado.cents)
         assertEquals(Direction.Expense, enviado.direction)
         assertEquals("Estabelecimento", enviado.description)
-        assertTrue(enviado.viaPix) // sem a palavra Pix, mas é transferência da conta, não compra no cartão
+        assertTrue(enviado.viaPix) // o Itaú não escreve "Pix" aqui, mas foi um Pix (confirmado pelo usuário), não compra no cartão
 
         val recebido = parse("Você recebeu R\$ 1,00 de Estabelecimento")!!
         assertEquals(100, recebido.cents)
         assertEquals(Direction.Income, recebido.direction)
         assertEquals("Estabelecimento", recebido.description)
+        assertTrue(recebido.viaPix) // também foi um Pix recebido
     }
 }

@@ -36,8 +36,8 @@ object BankNotificationParser {
     private val INCOME = Regex("""\b(recebeu|recebido|recebida|recebemos|dep[oó]sito)\b""", RegexOption.IGNORE_CASE)
     private val EXPENSE = Regex("""\b(compra|comprou|pagou|pagamento|enviou|enviado|enviada|d[eé]bito|debitado|saque|transfer[eê]ncia)\b""", RegexOption.IGNORE_CASE)
     private val REFUND = Regex("""\b(estorno|estornado|estornada|reembolso|cancelad[ao]|cancelamento|devolu[cç][aã]o)\b""", RegexOption.IGNORE_CASE)
-    // "Você enviou R$ …" (sem a palavra Pix) é transferência da conta, não compra no cartão.
-    private val SENT = Regex("""\b(enviou|enviado|enviada)\b""", RegexOption.IGNORE_CASE)
+    // Itaú: "Você enviou R$ …" e "Você recebeu R$ …" são Pix, mesmo sem a palavra (confirmado pelo usuário em 09/11/2026); não são compra no cartão.
+    private val SENT = Regex("""\b(enviou|enviado|enviada|recebeu)\b""", RegexOption.IGNORE_CASE)
     private val PIX = Regex("""\bpix\b""", RegexOption.IGNORE_CASE)
 
     // Nome depois de preposição, até pontuação, horário, data ou outra preposição de contexto.
@@ -75,7 +75,7 @@ object BankNotificationParser {
         val subject = SUBJECT.findAll(withoutAmount).map { it.groupValues[1].trim() }
             .firstOrNull { it.isNotEmpty() && !BLOCKED_SUBJECT_START.containsMatchIn(it) && it.any(Char::isLetter) }
             ?.take(MAX_DESCRIPTION)?.trimEnd().orEmpty()
-        return NotificationProposal(cents, subject, direction, viaPix = PIX.containsMatchIn(text) || (direction == NotificationProposal.Direction.Expense && SENT.containsMatchIn(text)))
+        return NotificationProposal(cents, subject, direction, viaPix = PIX.containsMatchIn(text) || SENT.containsMatchIn(text))
     }
 
     private fun fold(text: String): String =
