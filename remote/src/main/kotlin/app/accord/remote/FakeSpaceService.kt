@@ -352,6 +352,10 @@ class FakeSpaceService(
             }
         }
         // Evento de aviso (ADR 0044): imutável. Já existente, só `createIfAbsent` é aceito e devolve o canônico, sem conflito nem nova versão.
+        for (change in op.changes.filter { it.type == "ClueEvaluation" }) {
+            if (change.tombstone || change.baseVersion != null || space.entities.containsKey(EntityKey(change.type, change.id)))
+                return reject(op, RejectReason.ClueEvaluationImmutable)
+        }
         val absorbed = mutableListOf<RemoteEntityState>()
         for (change in op.changes.filter { it.type == ALERT_EVENT }) {
             val current = space.entities[EntityKey(change.type, change.id)]

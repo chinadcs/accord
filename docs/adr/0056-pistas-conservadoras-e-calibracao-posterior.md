@@ -66,7 +66,21 @@ Para frequência, a cobertura inicial exige intervalos declarados conferidos, co
 56 dias, para cada canal importado conhecido. Registros manuais/origem desconhecida e dúvidas
 de importação impedem atestar cobertura adequada. Isso é conservador e não comprova que canais
 ausentes foram importados. Similaridade não exige histórico completo; limitações ficam visíveis.
-Contrato de avaliações persistidas/sincronizadas continua em C3.
+### Avaliação persistida e sincronizada (C3)
+
+`DismissClue(key, fingerprint, reference)` recalcula o sinal dentro da transação do comando.
+Se chave/impressão não coincidem, recusa e pede atualizar; se coincidem, acrescenta uma
+`ClueEvaluation` com UUID próprio, autor, horário e instantâneo das evidências (IDs, tipo,
+descrição, centavos, data original, categoria e revisão). Não copia campos bancários originais,
+arquivos ou Chat para a avaliação. Mesma identidade de comando repete o recibo, sem nova linha.
+Dois aparelhos podem avaliar offline e gerar dois registros de histórico, sem conflito.
+
+Room 20 acrescenta `clue_evaluation` com migração automática 19→20. O agregado sincroniza
+pelo protocolo 2 existente; o serviço e o fake recusam editar, remover ou recriar o mesmo ID
+com outra operação (`ClueEvaluationImmutable`). A repetição idempotente é conferida antes
+dessa recusa. `space_entities` e o RLS existentes limitam leituras/escritas aos membros;
+não há tabela pública de conversas nem efeito em valores, meses ou avisos. A migração
+`20261108150000` foi aplicada apenas no Supabase local, sem autorização de implantação remota.
 
 - Aceites explícitos do usuário na conversa de `accord-9y6.12`, em 08/11/2026; aceite final:
   “Vamos seguir nessa regra conservadora inicialmente”.
@@ -75,6 +89,7 @@ Contrato de avaliações persistidas/sincronizadas continua em C3.
 - [ADR 0048](0048-intencoes-de-compra-conversao-e-simulacao.md): intenções e simulador;
   pistas ficaram fora daquele ADR. [ADR 0024](0024-protocolo-por-agregados-e-cursor.md):
   protocolo existente de sincronização, sem novo contrato concreto aprovado aqui.
-- `accord-9y6.13` a `.16`: implementação pendente; `accord-9y6.17`: calibração posterior.
-  Este registro entrega decisões e documentação; não comprova detector, serviço ou validação
-  nos Galaxy S20 FE/S23 FE.
+- C1/C2/C3 (`accord-9y6.13` a `.15`) implementados e exercitados: 706 testes core, 658 de
+  persistência, 138 remote (incluindo Supabase local obrigatório) e 134 pgTAP passam.
+  Compilação Kotlin do app passou. Telas C4 (`accord-9y6.16`), calibração (`accord-9y6.17`)
+  e validação nos Galaxy S20 FE/S23 FE ainda pendentes. Nenhuma migração hospedada nesta entrega.

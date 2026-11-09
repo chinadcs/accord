@@ -471,6 +471,9 @@ data class KindSum(val classificationId: String?, val multi: Boolean, val totalC
 
 @Dao
 interface SpaceDao {
+    @Upsert suspend fun upsertClueEvaluation(row: ClueEvaluationRow)
+    @Query("SELECT * FROM clue_evaluation WHERE id = :id") suspend fun clueEvaluation(id: String): ClueEvaluationRow?
+    @Query("SELECT * FROM clue_evaluation ORDER BY evaluatedAtMillis DESC, id") suspend fun clueEvaluations(): List<ClueEvaluationRow>
     // categorias
     /** A semente é determinística; reinserir é inofensivo. */
     @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insertSeedCategories(rows: List<CategoryRow>)
@@ -805,9 +808,9 @@ interface SpaceDao {
         ChatMessageRow::class, ChatAttemptRow::class, ChatQuestionRow::class, ChatReceiptRow::class, ChatFeedbackRow::class,
         ImportBatchRow::class, ImportMovementRow::class, ImportDecisionRow::class, ImportPairRow::class,
         AlertEventRow::class, AlertDisplayRow::class, AlertPreferenceRow::class, IconAssociationRow::class, IntentionRow::class,
-        AccountMoveRow::class,
+        AccountMoveRow::class, ClueEvaluationRow::class,
     ],
-    version = 19,
+    version = 20,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2, spec = Migration1To2::class),
@@ -842,6 +845,7 @@ interface SpaceDao {
         // ADR 0051: saldo inicial, data de corte e Carteira na conta; transferência e ajuste de saldo (compartilhados).
         AutoMigration(from = 17, to = 18),
         AutoMigration(from = 18, to = 19, spec = Migration18To19::class),
+        AutoMigration(from = 19, to = 20),
     ],
 )
 abstract class AccordDatabase : RoomDatabase() {

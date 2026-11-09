@@ -41,6 +41,7 @@ internal object EntityStates {
     /** Estado atual da entidade, ou nulo se ela não existe neste aparelho. */
     suspend fun read(dao: SpaceDao, type: EntityType, id: String): EntityState? {
         val root: JsonObject = when (type) {
+            EntityType.ClueEvaluation -> dao.clueEvaluation(id)?.let { obj(ClueEvaluationRow.serializer(), it, true) }
             EntityType.Category -> dao.category(id)?.let {
                 obj(CategoryRow.serializer(), it, true).with("moves" to list(CategoryMoveRow.serializer(), dao.categoryMovesOf(id)))
             }
@@ -84,6 +85,7 @@ internal object EntityStates {
 
     /** Revisão local atual (zero se a entidade ainda não existe), para a próxima ser maior. */
     suspend fun revisionOf(dao: SpaceDao, type: EntityType, id: String): Long = when (type) {
+        EntityType.ClueEvaluation -> dao.clueEvaluation(id)?.revision
         EntityType.Category -> dao.category(id)?.revision
         EntityType.Account -> dao.account(id)?.revision
         EntityType.Preferences -> dao.preferences(id)?.revision
@@ -121,6 +123,7 @@ internal object EntityStates {
             (root[key] as? JsonArray)?.let { json.decodeFromJsonElement(ListSerializer(serializer), it) }.orEmpty()
 
         when (type) {
+            EntityType.ClueEvaluation -> dao.upsertClueEvaluation(json.decodeFromJsonElement(ClueEvaluationRow.serializer(), withRevision()))
             EntityType.Category -> {
                 dao.upsertCategory(json.decodeFromJsonElement(CategoryRow.serializer(), withRevision()))
                 children("moves", CategoryMoveRow.serializer()).forEach { dao.upsertCategoryMove(it.copy(subcategoryId = id)) }

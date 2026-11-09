@@ -268,6 +268,7 @@ class RoomFinanceSpace private constructor(
     // ---- planejamento ----
 
     private suspend fun plan(session: Session, origin: Origin, command: Command): Planned = when (command) {
+        is app.accord.core.space.DismissClue -> ClueEvaluationPlanner(dao, clueQueries, nowMillis).plan(session, command)
         is CreateCategory -> categoryPlanner.planCreate(command)
         is CreateIncomeCategory -> incomePlanner.planCreateCategory(command)
         is RenameIncomeCategory -> incomePlanner.planRenameCategory(command)
@@ -332,7 +333,7 @@ class RoomFinanceSpace private constructor(
     /** Cadastros de conta e de categoria de renda não mudam número nenhum do orçamento; o próprio registro do evento nunca dispara avaliação. */
     private fun changesBudgetNumbers(command: Command) = command !is RecordAlertEvent && command !is AddAccount && command !is SetMyDefaultAccount &&
         command !is CreateIncomeCategory && command !is RenameIncomeCategory && command !is SetIconAssociation && command !is ClearIconAssociation &&
-        command !is CreateIntention && command !is EditIntention
+        command !is CreateIntention && command !is EditIntention && command !is app.accord.core.space.DismissClue
 
     /**
      * Avaliação dos avisos de possível excesso (S5, ADR 0044). Só mudança nos dados avalia: a fachada a chama depois dos comandos confirmados e o motor de
@@ -477,6 +478,14 @@ class RoomFinanceSpace private constructor(
     override suspend fun pendings(): QueryResult<List<PendingItem>> = query { entryQueries.pendings() }
 
     private val clueQueries by lazy { ClueQueries(dao, entryQueries, ::entryDetail) }
+
+    override suspend fun clueEvaluations(): QueryResult<List<app.accord.core.clues.ClueEvaluation>> = query {
+        dao.clueEvaluations().map {
+            app.accord.core.clues.ClueEvaluation(it.id, it.clueKey, it.fingerprint, it.authorId, it.evaluatedAtMillis,
+                kotlinx.serialization.json.Json.decodeFromString(app.accord.core.clues.ClueSnapshot.serializer(), it.snapshot),
+                syncStatus.statusOf(EntityType.ClueEvaluation, it.id))
+        }
+    }
 
     override suspend fun clueSource(from: LocalDate, untilExclusive: LocalDate): QueryResult<app.accord.core.clues.ClueSource> =
         query { clueQueries.source(from, untilExclusive) }

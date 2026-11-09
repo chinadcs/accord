@@ -648,6 +648,27 @@ abstract class SpaceServiceContract {
 
     private fun intention(id: String) = change(id, state = """{"name":"Televisão"}""", type = "Intention")
 
+    @Test
+    fun `avaliacoes de pista concorrentes acrescentam historico imutavel com reenvio idempotente`() = test {
+        val couple = newCouple()
+        val evaluationA = UUID.randomUUID().toString()
+        val evaluationB = UUID.randomUUID().toString()
+        val first = op(couple.spaceId, change(evaluationA, state = """{"clueKey":"same","fingerprint":"v1"}""", type = "ClueEvaluation"))
+        assertIs<OperationResult.Applied>(push(couple.creator, couple.spaceId, first).single())
+        assertTrue(assertIs<OperationResult.Applied>(push(couple.creator, couple.spaceId, first).single()).repeated)
+        assertIs<OperationResult.Applied>(push(couple.partner!!, couple.spaceId,
+            op(couple.spaceId, change(evaluationB, state = """{"clueKey":"same","fingerprint":"v1"}""", type = "ClueEvaluation"))).single())
+        val changes = ok(service.pull(couple.partner!!.accessToken, couple.spaceId, 0, 10_000)).changes.filter { it.type == "ClueEvaluation" }
+        assertEquals(2, changes.size)
+        for (tombstone in listOf(false, true)) {
+            val result = push(couple.creator, couple.spaceId, op(couple.spaceId,
+                change(evaluationA, 1, "{}", "ClueEvaluation", tombstone))).single()
+            assertEquals(RejectReason.ClueEvaluationImmutable, assertIs<OperationResult.Rejected>(result).reason)
+        }
+        assertEquals(RejectReason.ClueEvaluationImmutable, assertIs<OperationResult.Rejected>(push(couple.creator, couple.spaceId,
+            op(couple.spaceId, change(evaluationA, state = "{}", type = "ClueEvaluation"))).single()).reason)
+    }
+
     private fun commitment(id: String, origin: String?, type: String = "CardPurchase", base: Long? = null, extra: String = ""): EntityChangeEnvelope {
         val originField = if (origin != null) "," + quote("originIntentionId") + ":" + quote(origin) else ""
         return change(id, base, "{" + quote("description") + ":" + quote("Televisão") + extra + originField + "}", type)

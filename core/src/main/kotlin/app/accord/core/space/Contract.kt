@@ -34,6 +34,7 @@ import java.time.YearMonth
  * e alterar dados financeiros e cadastros; Chat, importação e formulários usam os mesmos comandos.
  */
 interface FinanceSpace {
+    suspend fun clueEvaluations(): QueryResult<List<app.accord.core.clues.ClueEvaluation>>
     /** S7: original-date purchases and linked credits, versions, import limitations; no writes. */
     suspend fun clueSource(from: LocalDate, untilExclusive: LocalDate): QueryResult<app.accord.core.clues.ClueSource>
 
@@ -198,6 +199,9 @@ interface FinanceSpace {
     /** Salvar a preferência não avalia nem exibe nada, nem retroativo, e não muda limite ou cálculo algum. */
     suspend fun setAlertPreference(preference: AlertPreference): QueryResult<Unit>
 }
+
+/** S7: recomputed under the command transaction; no change to money or alert quota. */
+data class DismissClue(val key: String, val fingerprint: String, val reference: LocalDate) : Command
 
 /** Um aviso pronto para exibir. [id] é a chave da notificação (idempotente); o texto público não leva valores. */
 data class AlertNotice(val id: String, val categoryId: String, val kind: AlertKind, val windowMonday: LocalDate, val snapshot: AlertSnapshot)
@@ -932,7 +936,7 @@ data class FieldError(
     val month: YearMonth? = null,
 )
 
-enum class EntityType { Category, Account, Preferences, Movement, Card, CardPurchase, Boleto, Income, Recurrence, Refund, Invoice, InvoicePayment, LimitPlan, IncomeCategory, ImportBatch, AlertEvent, IconAssociation, Intention, AccountMove }
+enum class EntityType { Category, Account, Preferences, Movement, Card, CardPurchase, Boleto, Income, Recurrence, Refund, Invoice, InvoicePayment, LimitPlan, IncomeCategory, ImportBatch, AlertEvent, IconAssociation, Intention, AccountMove, ClueEvaluation }
 
 data class EntityRef(val type: EntityType, val id: String)
 

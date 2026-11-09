@@ -130,6 +130,7 @@ object ConflictFormat {
 
     @StringRes
     fun entityLabel(type: EntityType): Int = when (type) {
+        EntityType.ClueEvaluation -> R.string.clue_evaluation
         EntityType.AccountMove -> R.string.balance_move
         EntityType.Movement -> R.string.conflict_entity_movement
         EntityType.CardPurchase -> R.string.conflict_entity_card_purchase
