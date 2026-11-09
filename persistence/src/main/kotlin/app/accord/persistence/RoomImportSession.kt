@@ -265,6 +265,9 @@ internal class RoomImportSession(
                 }
                 is ImportDecision.AsIncome -> {
                     if (decision.ordinal !in movements) return@write unknownMovement(decision.ordinal)
+                    if (evaluation().kind == DocumentKind.Card) {
+                        return@write DecideOutcome.Rejected(listOf(FieldError("ordinal", ErrorCode.NotAllowed, "No cartão, todo valor positivo é estorno de uma compra, nunca renda.")))
+                    }
                     if (dao.incomeCategory(decision.incomeCategoryId) == null) {
                         return@write DecideOutcome.Rejected(listOf(FieldError("incomeCategoryId", ErrorCode.UnknownReference, "Categoria de renda não encontrada.")))
                     }
@@ -397,7 +400,8 @@ internal class RoomImportSession(
 
     /**
      * Purchases (card document) or payments (account document) of the origin in the months before the credit, newest first, that can still be refunded.
-     * The ones that share a word with the credit's description come first, so the likely original is at the top.
+     * On a card document only the purchases of that card. The ones with the credit's value left to refund come first, then the ones that share a word with its
+     * description, so the likely original is at the top; nothing is chosen for the person.
      */
     private suspend fun refundCandidates(e: Evaluation, credit: app.accord.core.importing.ExtractedMovement): List<RefundCandidate> {
         val date = credit.date ?: return emptyList()
@@ -405,7 +409,7 @@ internal class RoomImportSession(
         val from = date.minusDays(REFUND_WINDOW_DAYS).toEpochDay()
         val to = date.toEpochDay()
         val rows: List<RefundCandidate> = when (e.kind) {
-            DocumentKind.Card -> dao.purchasesBetween(from, to).map {
+            DocumentKind.Card -> dao.purchasesBetween(from, to).filter { it.cardId == null || it.cardId == e.originId }.map {
                 RefundCandidate(it.id, java.time.LocalDate.ofEpochDay(it.purchaseEpochDay), it.totalCents, it.totalCents - refunded(it.id), it.description)
             }
             DocumentKind.Account -> dao.movementsOfAccount(e.originId, from, to).map {
@@ -414,7 +418,11 @@ internal class RoomImportSession(
             null -> emptyList()
         }
         return rows.filter { it.remainingCents > 0 }
-            .sortedWith(compareByDescending<RefundCandidate> { Reconciler.sharesAWord(it.description, credit.description) }.thenByDescending { it.date })
+            .sortedWith(
+                compareByDescending<RefundCandidate> { it.remainingCents == credit.amountCents }
+                    .thenByDescending { Reconciler.sharesAWord(it.description, credit.description) }
+                    .thenByDescending { it.date },
+            )
             .take(REFUND_CANDIDATES_SHOWN)
     }
 

@@ -63,10 +63,11 @@ object Reconciler {
             if (keys[i] in decisions.postponed) r += DoubtReason.ReviewLater
             if (keys[i] in decisions.refused) r += DoubtReason.CannotApply
             // Decisions of 02/11/2026: money coming back from an investment is income; money going in (aplicação) is an ordinary expense on the account.
-            val investment = BillingRules.isInvestment(m.description)
+            // Decision of 09/11/2026 (ADR 0074): on a card document every positive value is a refund, never income, so the account-only paths do not apply there.
+            val investment = !isCard && BillingRules.isInvestment(m.description)
             if (!knownMatch[i] && (m.amountCents ?: 0) > 0 && !r.contains(DoubtReason.RemovedPreviously)) {
                 if (investment) investmentCredit[i] = true
-                else if (keys[i] in decisions.incomeByKey) chosenIncome[i] = true
+                else if (!isCard && keys[i] in decisions.incomeByKey) chosenIncome[i] = true
                 else if (keys[i] in decisions.refundByKey) chosenRefund[i] = true
                 else r += DoubtReason.CreditToClassify
             }

@@ -94,7 +94,7 @@ fun ImportResultScreen(
                     item { Counts(result) }
                     item { Coverage(result, partial) }
                     item { MessageBanner(syncMessage(content.sync)) }
-                    items(result.items, key = { it.ordinal }) { item -> ItemRow(item, item.ordinal in state.expanded, onToggle, onOpenEntry) }
+                    items(result.items, key = { it.ordinal }) { item -> ItemRow(item, item.ordinal in state.expanded, onToggle, onOpenEntry, card = result.info.source.kind == app.accord.core.importing.DocumentKind.Card) }
                     item { Text(stringResource(R.string.import_result_originals), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 }
                 Surface(color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
@@ -186,7 +186,7 @@ private fun Coverage(result: BatchResult, partial: Boolean) {
 private val ENTRY_TYPES = setOf(EntityType.Movement, EntityType.CardPurchase, EntityType.Boleto, EntityType.Income)
 
 @Composable
-private fun ItemRow(item: ResultItem, expanded: Boolean, onToggle: (Int) -> Unit, onOpenEntry: (String) -> Unit) {
+private fun ItemRow(item: ResultItem, expanded: Boolean, onToggle: (Int) -> Unit, onOpenEntry: (String) -> Unit, card: Boolean = false) {
     val amount = movementAmount(item.cents, item.currency) ?: stringResource(R.string.import_amount_unknown)
     val resolution = item.resolution.label()
     Surface(
@@ -206,7 +206,7 @@ private fun ItemRow(item: ResultItem, expanded: Boolean, onToggle: (Int) -> Unit
             }
             item.repeatOf?.let { Text(stringResource(R.string.import_result_repeat_of, it), style = MaterialTheme.typography.bodySmall) }
             if (expanded) {
-                item.doubts.forEach { Text(it.label(), style = MaterialTheme.typography.bodySmall) }
+                item.doubts.forEach { Text(it.label(card), style = MaterialTheme.typography.bodySmall) }
                 item.originalFields.forEach { (name, value) -> Text("$name: $value", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 val target = item.targetId
                 if (target != null && item.targetType in ENTRY_TYPES) {

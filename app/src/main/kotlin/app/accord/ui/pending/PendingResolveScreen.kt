@@ -38,6 +38,7 @@ import app.accord.core.importing.DoubtReason
 import app.accord.core.importing.LinkableEntry
 import app.accord.core.importing.PendingDetail
 import app.accord.core.importing.ProposedEffect
+import app.accord.core.importing.DocumentKind
 import app.accord.core.importing.RefundCandidate
 import app.accord.core.space.CategoryNode
 import app.accord.core.space.IncomeCategoryNode
@@ -184,7 +185,7 @@ private fun Evidence(detail: PendingDetail, showOriginal: Boolean, onToggle: () 
                 style = MaterialTheme.typography.bodyLarge,
             )
             if (detail.pending.postponed) Text(stringResource(R.string.pending_postponed_note), style = MaterialTheme.typography.bodyMedium)
-            detail.reconciled.doubts.forEach { Text(it.label(), style = MaterialTheme.typography.bodyMedium) }
+            detail.reconciled.doubts.forEach { Text(it.label(card = detail.pending.kind == DocumentKind.Card), style = MaterialTheme.typography.bodyMedium) }
             TextButton(onClick = onToggle, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
                 Text(stringResource(if (showOriginal) R.string.import_original_hide else R.string.import_original_show))
             }
@@ -240,10 +241,13 @@ private fun Options(
             OutlinedButton(onClick = onDismiss, enabled = enabled, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.pending_dismiss)) }
         }
         if (DoubtReason.CreditToClassify in doubts) {
-            Text(stringResource(R.string.pending_credit_title), style = MaterialTheme.typography.titleSmall)
-            OutlinedButton(onClick = { onPick(Picking.IncomeCategory) }, enabled = enabled, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.pending_credit_income)) }
+            val onCard = detail.pending.kind == DocumentKind.Card
+            Text(stringResource(if (onCard) R.string.pending_credit_title_card else R.string.pending_credit_title), style = MaterialTheme.typography.titleSmall)
+            if (!onCard) {
+                OutlinedButton(onClick = { onPick(Picking.IncomeCategory) }, enabled = enabled, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.pending_credit_income)) }
+            }
             OutlinedButton(onClick = { onPick(Picking.Refund) }, enabled = enabled, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.pending_credit_refund)) }
-            Text(stringResource(R.string.pending_credit_refund_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(if (onCard) R.string.pending_credit_refund_hint_card else R.string.pending_credit_refund_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             OutlinedButton(onClick = onDismiss, enabled = enabled, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.pending_dismiss)) }
         }
         if (DoubtReason.CategoryUnknown in doubts) {

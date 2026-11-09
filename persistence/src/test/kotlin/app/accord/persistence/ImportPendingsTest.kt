@@ -427,4 +427,31 @@ class ImportPendingsTest : SpaceTestBase() {
         assertEquals(app.accord.core.importing.Classification.SafeLink, line.classification)
         assertIs<app.accord.core.importing.ProposedEffect.LinkInstallment>(line.effect)
     }
+
+    // ---- accord-96km (ADR 0074): no cartão, todo positivo é estorno ----
+
+    @Test fun `a credit on a card document is never income, and the candidates are the card's purchases with the same value first`() = runBlocking<Unit> {
+        val h = open()
+        h.account()
+        val old = h.space.execute(h.env(), RegisterCardPurchase("loja antiga", Classification.Category(groceries), d(2026, 9, 10), brl(50), invoice = oct)).applied().changes.single().id
+        h.space.execute(h.env(), RegisterCardPurchase("loja recente", Classification.Category(groceries), d(2026, 10, 20), brl(20), invoice = nov)).applied()
+        val id = h.confirmedCard("c1", cardDoc("card-cr", cmv(1, d(2026, 10, 25), 5000, "CANCELAMENTO COMPRA"), cmv(2, d(2026, 10, 26), -1000, "PADARIA")), dec)
+        val pending = h.imports().pendings().value().single()
+        assertEquals(setOf(DoubtReason.CreditToClassify), pending.doubts)
+
+        // "É um recebimento" não existe no cartão: a decisão é recusada e nada é guardado.
+        val income = (h.space.incomeCategories().value()).first().id
+        assertIs<DecideOutcome.Rejected>(h.imports().decide(id, ImportDecision.AsIncome(pending.ordinal, income), h.revision(id)).value())
+        assertEquals(setOf(DoubtReason.CreditToClassify), h.imports().pendings().value().single().doubts)
+
+        // O de valor igual vem primeiro, mesmo sendo mais antigo.
+        val candidates = h.detail(id, pending.ordinal).refundCandidates
+        assertEquals(old, candidates.first().id)
+        assertEquals(2, candidates.size)
+
+        h.decide(id, ImportDecision.AsRefund(pending.ordinal, old))
+        assertEquals(Resolution.RefundCreated, assertIs<ResolveOutcome.Applied>(h.resolve(id, pending.ordinal)).resolution)
+        assertEquals(5000, h.space.refunds(old).value().single().amount.cents)
+        assertEquals(0, h.space.incomes(oct).value().received.cents, "a refund is never income")
+    }
 }

@@ -60,7 +60,7 @@ fun Classification.label(): String = stringResource(
 )
 
 @Composable
-fun DoubtReason.label(): String = stringResource(
+fun DoubtReason.label(card: Boolean = false): String = stringResource(
     when (this) {
         DoubtReason.AmountNotInterpreted -> R.string.import_doubt_amount
         DoubtReason.DateNotInterpreted -> R.string.import_doubt_date
@@ -69,7 +69,7 @@ fun DoubtReason.label(): String = stringResource(
         DoubtReason.FitidDivergent -> R.string.import_doubt_fitid
         DoubtReason.PossibleRepetition -> R.string.import_doubt_repetition
         DoubtReason.RemovedPreviously -> R.string.import_doubt_removed
-        DoubtReason.CreditToClassify -> R.string.import_doubt_credit
+        DoubtReason.CreditToClassify -> if (card) R.string.import_doubt_credit_card else R.string.import_doubt_credit
         DoubtReason.PossibleMatch -> R.string.import_doubt_match
         DoubtReason.CategoryUnknown -> R.string.import_doubt_category
         DoubtReason.InvoiceDiverges -> R.string.import_doubt_invoice

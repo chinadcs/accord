@@ -197,6 +197,7 @@
     <string name="import_doubt_repetition">Pode ser repetição de um movimento já importado.</string>
     <string name="import_doubt_removed">Este movimento já foi importado e o lançamento foi excluído depois.</string>
     <string name="import_doubt_credit">Crédito a classificar: estorno ou recebimento?</string>
+    <string name="import_doubt_credit_card">Crédito no cartão: qual compra foi estornada?</string>
     <string name="import_doubt_match">Pode corresponder a um lançamento que você já registrou.</string>
     <string name="import_doubt_category">Falta escolher a categoria.</string>
     <string name="import_doubt_invoice">A fatura da compra registrada é diferente da fatura do documento.</string>

@@ -72,7 +72,7 @@ data class Decisions(
     val categorySuggestions: Map<String, String> = emptyMap(),
     /** The person looked at the doubt and says it is a new movement: clears "FITID divergent", "possible repetition" and "removed previously". */
     val confirmedNew: Set<String> = emptySet(),
-    /** A credit the person says is income, by income category id. Without this a credit stays a doubt (S4 rule 12). */
+    /** A credit the person says is income, by income category id. Without this a credit stays a doubt (S4 rule 12). Ignored on a card document, where a credit is a refund. */
     val incomeByKey: Map<String, String> = emptyMap(),
     /** The person says the movement repeats one already registered: nothing is created and the origin is remembered so it is not asked again. */
     val dismissed: Set<String> = emptySet(),

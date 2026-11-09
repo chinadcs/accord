@@ -103,7 +103,7 @@ sealed interface ImportDecision {
     /** "It is a new movement": clears the doubts that only say it may not be (divergent FITID, possible repetition, removed before). */
     data class ConfirmNew(val ordinal: Int) : ImportDecision
 
-    /** A credit that is income, in the chosen income category. Never decided from the sign of the value. */
+    /** A credit that is income, in the chosen income category. Never decided from the sign of the value. Refused on a card document: there a credit is a refund. */
     data class AsIncome(val ordinal: Int, val incomeCategoryId: String) : ImportDecision
 
     /** "It repeats a movement already registered": nothing is created; the origin is remembered so a re-import does not ask again. */

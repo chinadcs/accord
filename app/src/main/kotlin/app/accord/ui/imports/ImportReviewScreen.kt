@@ -182,7 +182,7 @@ fun ImportReviewScreen(
                             )
                         }
                     }
-                    items(shown, key = { it.movement.ordinal }) { MovementRow(it, state.categories) { onOpen(it.movement.ordinal) } }
+                    items(shown, key = { it.movement.ordinal }) { MovementRow(it, state.categories, card = review.info.source.kind == DocumentKind.Card) { onOpen(it.movement.ordinal) } }
                     item { OutlinedButton(onClick = onAskDiscard, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.import_discard)) } }
                 }
                 ConfirmBar(review, state.working, onOpenSummary)
@@ -321,7 +321,7 @@ private fun BulkActions(
 }
 
 @Composable
-private fun MovementRow(item: ReconciledMovement, categories: Map<String, CategoryNode>, onClick: () -> Unit) {
+private fun MovementRow(item: ReconciledMovement, categories: Map<String, CategoryNode>, card: Boolean = false, onClick: () -> Unit) {
     val m = item.movement
     val amount = movementAmount(m.amountCents, m.currency) ?: stringResource(R.string.import_amount_unknown)
     val state = item.classification.label()
@@ -344,7 +344,7 @@ private fun MovementRow(item: ReconciledMovement, categories: Map<String, Catego
                 )
             }
             if (item.doubts.isNotEmpty()) {
-                Text(item.doubts.map { it.label() }.joinToString(" "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(item.doubts.map { it.label(card) }.joinToString(" "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             item.effect?.let { Text(it.label(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             val shownCategory = item.categoryId ?: item.suggestedCategoryId
@@ -435,7 +435,7 @@ private fun MovementDialog(
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
                 Text(listOfNotNull(m.date?.let { "${it.shortLabel()}/${it.year}" }, movementAmount(m.amountCents, m.currency)).joinToString(" · "), style = MaterialTheme.typography.bodyLarge)
                 Text(item.classification.label(), style = MaterialTheme.typography.titleSmall)
-                item.doubts.forEach { Text(it.label(), style = MaterialTheme.typography.bodyMedium) }
+                item.doubts.forEach { Text(it.label(review.info.source.kind == DocumentKind.Card), style = MaterialTheme.typography.bodyMedium) }
                 item.effect?.let { Text(it.label(), style = MaterialTheme.typography.bodyMedium) }
                 CategoryTag(categories, item.categoryId)
 

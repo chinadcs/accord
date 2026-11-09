@@ -273,7 +273,7 @@ private fun describe(item: QueueItem): Triple<String, String, Int> = when (item)
     is QueueItem.ImportDoubt -> {
         val m = item.movement
         val amount = movementAmount(m.cents, m.currency)
-        val reason = m.doubts.firstOrNull()?.label() ?: stringResource(R.string.pending_reason_import)
+        val reason = m.doubts.firstOrNull()?.label(card = m.kind == app.accord.core.importing.DocumentKind.Card) ?: stringResource(R.string.pending_reason_import)
         Triple(
             when {
                 m.postponed -> stringResource(R.string.pending_reason_postponed)
