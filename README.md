@@ -269,6 +269,10 @@ Saída: `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## Build de release
 
+Para preparar o APK com versão, conferir a assinatura e comparar com o APK anterior, veja o
+[guia de distribuição e atualização](docs/distribuicao.md). O fluxo GitHub Releases/Obtainium
+está em preparação local; ainda não há uma Release validada para instalação.
+
 O release aponta para o **Supabase hospedado** e é assinado com keystore própria. Ele lê as chaves
 abaixo de `local.properties` ou das variáveis `ACCORD_RELEASE_*` equivalentes (nunca das chaves do
 debug, que apontam para o serviço local). Sem todas elas o build falha, e a URL precisa ser HTTPS:

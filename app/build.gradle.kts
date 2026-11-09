@@ -54,6 +54,15 @@ val prepareCategoryPilotAssets = tasks.register<Copy>("prepareCategoryPilotAsset
     into(pilotAssets)
 }
 
+// Releases usam vMAJOR.MINOR.PATCH; a propriedade permite compilar antes de criar a tag.
+// Reservar dois dígitos para minor/patch torna a ordem SemVer crescente no Android.
+val appVersionName = providers.gradleProperty("accord.version").orElse("0.1.0").get()
+val appVersionParts = Regex("(0|[1-9][0-9]{0,3})\\.(0|[1-9][0-9]?)\\.(0|[1-9][0-9]?)")
+    .matchEntire(appVersionName)?.groupValues?.drop(1)?.map(String::toInt)
+    ?: error("accord.version deve ser MAJOR.MINOR.PATCH (major 0..9999, minor/patch 0..99).")
+val appVersionCode = appVersionParts[0] * 10_000 + appVersionParts[1] * 100 + appVersionParts[2]
+check(appVersionCode > 1) { "A versão deve superar o versionCode 1 já instalado no piloto." }
+
 android {
     namespace = "app.accord"
     compileSdk = 37
@@ -63,8 +72,8 @@ android {
         // Android 10: o Galaxy S20 FE (referência mínima) sai de fábrica com ele.
         minSdk = 29
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = appVersionCode
+        versionName = appVersionName
         testInstrumentationRunner = "app.accord.AccordTestRunner"
         buildConfigField("String", "SUPABASE_URL", "\"${serviceSetting("accord.supabase.url", "ACCORD_SUPABASE_URL")}\"")
         buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"${serviceSetting("accord.supabase.publishableKey", "ACCORD_SUPABASE_PUBLISHABLE_KEY")}\"")

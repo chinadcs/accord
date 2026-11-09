@@ -31,3 +31,9 @@ pocpc
 # Chaves de assinatura nunca versionadas
 *.jks
 *.keystore
+
+# Credenciais de ambiente e exportações locais do Beads não vão à distribuição.
+.env
+.env.*
+/.beads/issues.jsonl
+/.beads/.~issues.jsonl.*
