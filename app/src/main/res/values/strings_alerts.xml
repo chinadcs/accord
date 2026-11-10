@@ -32,12 +32,14 @@
     <string name="alert_prefs_saving">Salvando…</string>
     <string name="alert_prefs_saved">Preferência salva neste aparelho.</string>
     <string name="alert_prefs_save_failed">Não foi possível salvar agora. Nada mudou; tente de novo.</string>
-    <string name="more_alert_prefs">Preferências de alertas</string>
-    <string name="alert_menu_on">Ativados neste aparelho</string>
-    <string name="alert_menu_off">Desativados neste aparelho. As previsões continuam no aplicativo.</string>
-    <string name="alert_menu_undefined">Você ainda não escolheu. Nenhum aviso aparece neste aparelho.</string>
-    <string name="alert_menu_need_permission">Ativados, mas falta permitir as notificações neste aparelho</string>
-    <string name="alert_menu_channel">Ativados, mas o canal “Possível excesso” está desativado nos ajustes do sistema</string>
+    <!-- Notificações (ADR 0077): a linha de Mais só mostra a situação; a chave e o botão Permitir ficam no hub. -->
+    <string name="notifications_title">Notificações</string>
+    <string name="notifications_row_alerts">Alertas de excesso</string>
+    <string name="alert_menu_on">Ligadas</string>
+    <string name="alert_menu_off">Desligadas</string>
+    <string name="alert_menu_undefined">Ainda não escolhidas</string>
+    <string name="alert_menu_need_permission">Falta permissão do Android</string>
+    <string name="alert_menu_channel">Canal desativado no Android</string>
 
     <!-- Passo obrigatório dos Primeiros passos -->
     <string name="steps_notifications">Notificações</string>

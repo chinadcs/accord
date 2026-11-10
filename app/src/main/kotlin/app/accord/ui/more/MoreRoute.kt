@@ -24,17 +24,13 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.NavHostController
 import app.accord.AppContainer
 import app.accord.R
-import app.accord.core.alerts.NotificationAccess
 import app.accord.core.analysis.ProductPhase
 import app.accord.core.sync.AccessState
 import app.accord.ui.alerts.AlertPreferencesViewModel
-import app.accord.ui.alerts.rememberAllowNotifications
 import app.accord.ui.components.RefreshOnResume
 import app.accord.ui.nav.ROUTE_ACCESS
 import app.accord.ui.nav.ROUTE_ACCOUNTS
 import app.accord.ui.nav.ROUTE_ACTIVITY
-import app.accord.ui.nav.ROUTE_ALERT_PREFS
-import app.accord.ui.nav.ROUTE_BANK_NOTIFICATIONS
 import app.accord.ui.nav.ROUTE_CARD
 import app.accord.ui.nav.ROUTE_CATEGORIES
 import app.accord.ui.nav.ROUTE_CHAT_SETTINGS
@@ -46,6 +42,7 @@ import app.accord.ui.nav.ROUTE_IMPORT_HUB
 import app.accord.ui.nav.ROUTE_INCOMES
 import app.accord.ui.nav.ROUTE_INTENTIONS
 import app.accord.ui.nav.ROUTE_LIMITS
+import app.accord.ui.nav.ROUTE_NOTIFICATIONS
 import app.accord.ui.nav.ROUTE_PRIVACY_SECURITY
 import app.accord.ui.nav.ROUTE_RECEIVABLES
 import app.accord.ui.nav.ROUTE_REVIEW
@@ -80,9 +77,8 @@ internal fun MoreRoute(
         factory = viewModelFactory { initializer { AlertPreferencesViewModel(container, container.notifications) } },
     )
     val alertsState by alertsViewModel.state.collectAsStateWithLifecycle()
-    // Voltar dos ajustes do sistema atualiza a situação real das notificações.
+    // Voltar do hub Notificações (ou dos ajustes do sistema) atualiza o subtítulo da linha com a situação real.
     RefreshOnResume(alertsViewModel::refresh)
-    val allowNotifications = rememberAllowNotifications(container.notifications, onDone = alertsViewModel::refresh)
     val updatesState by container.updates.state.collectAsStateWithLifecycle()
     val apkState by container.apkUpdate.state.collectAsStateWithLifecycle()
     val p2 = container.phase.includes(ProductPhase.P2)
@@ -118,14 +114,7 @@ internal fun MoreRoute(
                 }
             },
             onRenew = { navController.navigate(ROUTE_ACCESS) },
-            onAlertsToggle = { enabled ->
-                alertsViewModel.toggleNow(enabled)
-                // Ligar sem permissão leva direto ao pedido do sistema (ou aos ajustes), sem esconder o que falta.
-                if (enabled && alertsState.access != NotificationAccess.Granted) allowNotifications()
-            },
-            onAlertsAllow = allowNotifications,
-            onAlertPreferences = { navController.navigate(ROUTE_ALERT_PREFS) },
-            onBankNotifications = { navController.navigate(ROUTE_BANK_NOTIFICATIONS) },
+            onNotifications = { navController.navigate(ROUTE_NOTIFICATIONS) },
             onChatSettings = { navController.navigate(ROUTE_CHAT_SETTINGS) },
             onAppearance = { navController.navigate("appearance") },
             onPrivacySecurity = { navController.navigate(ROUTE_PRIVACY_SECURITY) },

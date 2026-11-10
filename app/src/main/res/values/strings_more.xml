@@ -6,7 +6,6 @@
     <string name="more_group_plan">Planejar</string>
     <string name="more_group_follow">Acompanhar</string>
     <string name="more_group_device">Neste aparelho</string>
-    <string name="more_group_notifications">Notificações</string>
     <string name="more_group_app">Aplicativo</string>
     <!-- Data nos lançamentos (ADR 0077): valor atual na linha e folha com as duas opções. -->
     <string name="more_entries_date">Data nos lançamentos</string>

@@ -28,6 +28,9 @@ const val ROUTE_SPACE = "space"
 const val ROUTE_FIRST_STEPS = "first_steps"
 const val ROUTE_ALERT_PREFS = "alert_prefs"
 
+/** Notificações (ADR 0077): hub da aba Mais com a chave dos avisos e as entradas de Alertas de excesso e Notificações de bancos. */
+const val ROUTE_NOTIFICATIONS = "notifications"
+
 /** Escolha dos apps cujas notificações o Accord lê (ADR 0069). */
 const val ROUTE_BANK_NOTIFICATIONS = "bank_notifications"
 

@@ -15,6 +15,7 @@ import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.printToLog
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
@@ -156,6 +157,36 @@ class MoreFlowTest {
             scenario!!.onActivity { it.onBackPressedDispatcher.onBackPressed() }
         }
         compose.waitForIdle()
+    }
+
+    /** Notificações (ADR 0077): a linha de Mais só navega; o hub tem a chave e leva às duas telas existentes, e Voltar retorna passo a passo. */
+    @Test
+    fun notificacoesAbreOHubComAChaveEAsDuasEntradasEVoltarRetornaAMais() {
+        compose.onNodeWithText("Mais").performClick()
+        waitForText("Categorias e subcategorias")
+        // Nada de chave nem de "Notificações de bancos" em Mais: só a linha única, sem papel de chave.
+        assert(compose.onAllNodesWithText("Notificações de bancos").fetchSemanticsNodes().isEmpty())
+        assert(compose.onAllNodesWithText("Avisos de possível excesso").fetchSemanticsNodes().isEmpty())
+        scrollTo("Notificações")
+        compose.onNode(hasText("Notificações") and hasClickAction()).assertExists().performSemanticsAction(SemanticsActions.OnClick)
+        waitForText("Avisos de possível excesso")
+        for (entry in listOf("Alertas de excesso", "Notificações de bancos")) {
+            assert(compose.onAllNodesWithText(entry).fetchSemanticsNodes().size == 1) { "faltou: $entry" }
+        }
+
+        compose.onNodeWithText("Alertas de excesso").performScrollTo().performClick()
+        waitForText("Salvar preferências")
+        pressSystemBack()
+        waitForText("Avisos de possível excesso")
+
+        compose.onNodeWithText("Notificações de bancos").performScrollTo().performClick()
+        waitGone("Avisos de possível excesso")
+        waitForText("Notificações de bancos")
+        pressSystemBack()
+        waitForText("Avisos de possível excesso")
+        pressSystemBack()
+        waitForText("Categorias e subcategorias")
+        assert(compose.onAllNodesWithText("Avisos de possível excesso").fetchSemanticsNodes().isEmpty())
     }
 
     @Test

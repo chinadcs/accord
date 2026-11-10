@@ -1,9 +1,6 @@
 package app.accord.ui.more
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.selection.toggleable
-import androidx.compose.material3.Switch
-import app.accord.core.alerts.NotificationAccess
 import app.accord.ui.alerts.AlertPreferencesUiState
 import app.accord.ui.alerts.menuStatus
 import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
@@ -22,7 +19,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import app.accord.ui.components.AccordButton as Button
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -95,14 +91,9 @@ data class MoreActions(
     // Conta.
     val onSignOut: () -> Unit = {},
     val onRenew: () -> Unit = {},
-    // Notificações.
-    /** Liga ou desliga os avisos neste aparelho (salva na hora). */
-    val onAlertsToggle: (Boolean) -> Unit = {},
-    /** "Permitir notificações" (ou abrir os ajustes do sistema), quando falta a permissão ou o canal está desativado. */
-    val onAlertsAllow: () -> Unit = {},
-    val onAlertPreferences: () -> Unit = {},
-    val onBankNotifications: () -> Unit = {},
     // Neste aparelho.
+    /** Hub Notificações (rota própria): chave dos avisos, permissão do Android, Alertas de excesso e Notificações de bancos. */
+    val onNotifications: () -> Unit = {},
     /** Hub Ajustes do Chat (rota própria): modelo, histórico e chats de espaços encerrados. */
     val onChatSettings: () -> Unit = {},
     val onAppearance: () -> Unit = {},
@@ -204,12 +195,14 @@ fun MoreScreen(
             actions.onClues?.let { MoreRow(R.string.clues_title, Lucide.drawable.lucide_ic_search, it) }
         }
 
-        // Notificações segue na seção atual até o bead E do ADR 0077.
-        state.alerts?.takeIf { !it.loading && !it.failed }?.let { alerts ->
-            Section(R.string.more_group_notifications) { NotificationsMenu(alerts, actions) }
-        }
-
         Section(R.string.more_group_device) {
+            // Só navega: a chave e o botão Permitir ficam no hub. Sem estado (carregando ou falha) a linha continua, sem subtítulo.
+            val notificationsStatus = state.alerts?.takeIf { !it.loading && !it.failed }?.menuStatus()
+            MoreRow(
+                R.string.notifications_title, Lucide.drawable.lucide_ic_bell, actions.onNotifications,
+                supporting = notificationsStatus?.let { stringResource(it.text) },
+                attention = notificationsStatus?.attention == true,
+            )
             MoreRow(
                 R.string.more_entries_date, Lucide.drawable.lucide_ic_calendar, { showEntriesDate = true },
                 supporting = stringResource(state.entriesCriterion.labelRes()),
@@ -229,7 +222,6 @@ fun MoreScreen(
                 R.string.privacy_security_title, Lucide.drawable.lucide_ic_shield_check, actions.onPrivacySecurity,
                 supporting = stringResource(R.string.more_privacy_security_hint),
             )
-            MoreRow(R.string.bank_notifications_title, Lucide.drawable.lucide_ic_bell, actions.onBankNotifications)
         }
 
         // Sem verificação de versões (nulo), o grupo não aparece. O download vive em AppContainer.apkUpdate: fechar a folha não o interrompe.
@@ -379,49 +371,6 @@ private fun Section(title: Int, modifier: Modifier = Modifier, content: @Composa
             Column { content() }
         }
     }
-}
-
-/**
- * Controle das notificações a um toque (S5.5b): a chave liga e desliga neste aparelho, a linha diz a situação real do sistema e, se falta permissão
- * ou o canal está desativado, o botão leva a resolver. A tela 27 guarda os detalhes. Nada aqui é obrigatório depois do primeiro uso.
- */
-@Composable
-private fun NotificationsMenu(state: AlertPreferencesUiState, actions: MoreActions) {
-    val status = state.menuStatus()
-    val label = stringResource(R.string.alert_prefs_switch)
-    val statusText = stringResource(status.text)
-    Row(
-        Modifier.fillMaxWidth().heightIn(min = AccordSpacing.rowMedium)
-            .toggleable(value = state.enabled, role = Role.Switch, onValueChange = actions.onAlertsToggle)
-            .padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
-    ) {
-        Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.small) {
-            DecorativeIcon(
-                if (state.enabled) Lucide.drawable.lucide_ic_bell else Lucide.drawable.lucide_ic_bell_off,
-                modifier = Modifier.padding(AccordSpacing.s2), tint = MaterialTheme.colorScheme.primary,
-            )
-        }
-        Column(Modifier.weight(1f)) {
-            Text(label, style = MaterialTheme.typography.bodyLarge)
-            Text(
-                statusText, style = MaterialTheme.typography.bodySmall,
-                color = if (status.attention) Accord.colors.attention else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-        Switch(checked = state.enabled, onCheckedChange = null)
-    }
-    if (state.access != NotificationAccess.Granted) {
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        OutlinedButton(
-            onClick = actions.onAlertsAllow,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2).heightIn(min = AccordSpacing.touchMin),
-        ) {
-            Text(stringResource(if (state.access == NotificationAccess.ChannelDisabled) R.string.alert_prefs_open_settings else R.string.alert_prefs_allow))
-        }
-    }
-    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-    MoreRow(R.string.more_alert_prefs, Lucide.drawable.lucide_ic_sliders_horizontal, actions.onAlertPreferences)
 }
 
 @Composable

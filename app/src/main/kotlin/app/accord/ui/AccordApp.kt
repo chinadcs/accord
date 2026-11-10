@@ -136,6 +136,7 @@ import app.accord.ui.forecast.ForecastsViewModel
 import app.accord.ui.forecast.ReasonDestination
 import app.accord.ui.nav.ROUTE_ALERT_PREFS
 import app.accord.ui.nav.ROUTE_BANK_NOTIFICATIONS
+import app.accord.ui.nav.ROUTE_NOTIFICATIONS
 import app.accord.ui.banknotifications.BankNotificationsRoute
 import app.accord.ui.banknotifications.BankNotificationsViewModel
 import app.accord.ui.nav.ROUTE_FORECAST
@@ -1042,6 +1043,16 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     factory = viewModelFactory { initializer { AlertPreferencesViewModel(container, container.notifications) } },
                 )
                 AlertPreferencesRoute(viewModel, container.notifications, padding, onBack = { navController.popBackStack() })
+            }
+            composable(ROUTE_NOTIFICATIONS) {
+                val viewModel: AlertPreferencesViewModel = viewModel(
+                    factory = viewModelFactory { initializer { AlertPreferencesViewModel(container, container.notifications) } },
+                )
+                app.accord.ui.more.NotificationsRoute(
+                    viewModel, container.notifications, padding, onBack = { navController.popBackStack() },
+                    onAlertPreferences = { navController.navigate(ROUTE_ALERT_PREFS) },
+                    onBankNotifications = { navController.navigate(ROUTE_BANK_NOTIFICATIONS) },
+                )
             }
             composable(ROUTE_BANK_NOTIFICATIONS) {
                 val appContext = LocalContext.current.applicationContext

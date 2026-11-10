@@ -1,7 +1,14 @@
 package app.accord
 
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isHeading
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -18,6 +25,7 @@ import app.accord.ui.firststeps.FirstStepsScreen
 import app.accord.ui.more.MoreActions
 import app.accord.ui.more.MoreScreen
 import app.accord.ui.more.MoreUiState
+import app.accord.ui.more.NotificationsScreen
 import app.accord.ui.firststeps.StepActions
 import app.accord.ui.firststeps.StepRow
 import app.accord.ui.firststeps.StepText
@@ -128,45 +136,119 @@ class AlertPreferencesUiTest {
         compose.onNodeWithText("Para começar, permita as notificações neste aparelho. Você pode desativá-las depois em Mais.").assertDoesNotExist()
     }
 
-    // ---- menu Mais (S5.5b) ----
+    // ---- linha Notificações em Mais (ADR 0077): só navega e mostra a situação ----
 
-    private fun showMore(state: AlertPreferencesUiState?, onToggle: (Boolean) -> Unit = {}, onAllow: () -> Unit = {}, onDetails: () -> Unit = {}) = compose.setContent {
+    private fun showMore(state: AlertPreferencesUiState?, onNotifications: () -> Unit = {}) = compose.setContent {
         AccordTheme {
-            MoreScreen(
-                padding,
-                actions = MoreActions(onAlertPreferences = onDetails, onAlertsToggle = onToggle, onAlertsAllow = onAllow),
-                state = MoreUiState(alerts = state),
-            )
+            MoreScreen(padding, actions = MoreActions(onNotifications = onNotifications), state = MoreUiState(alerts = state))
         }
     }
 
-    @Test fun menuMaisMostraAChaveEAsituacaoDasNotificacoes() {
+    private fun notificationsRow() = compose.onNode(hasText("Notificações") and hasClickAction())
+
+    @Test fun maisMostraNotificacoesComoLinhaQueSoNavegaComASituacaoNoSubtitulo() {
+        var opened = 0
+        showMore(ready(), onNotifications = { opened++ })
+        compose.onNode(hasText("Notificações") and hasText("Ligadas")).performScrollTo().assertIsDisplayed()
+        // Sem chave nem botão de permissão em Mais: o que muda o estado mora no hub.
+        compose.onAllNodes(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch)).assertCountEquals(0)
+        compose.onNodeWithText("Avisos de possível excesso").assertDoesNotExist()
+        compose.onNodeWithText("Permitir notificações").assertDoesNotExist()
+        compose.onNodeWithText("Preferências de alertas").assertDoesNotExist()
+        compose.onNodeWithText("Notificações de bancos").assertDoesNotExist()
+        notificationsRow().performClick()
+        compose.runOnIdle { assertEquals(1, opened) }
+    }
+
+    @Test fun maisSemPermissaoDizOQueFaltaNoSubtituloSemOferecerOBotao() {
+        showMore(ready(access = NotificationAccess.PermissionDenied))
+        compose.onNode(hasText("Notificações") and hasText("Falta permissão do Android")).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Permitir notificações").assertDoesNotExist()
+    }
+
+    @Test fun maisDesativadoDizDesligadasENaoCobraPermissao() {
+        showMore(ready(saved = AlertPreference.Disabled, access = NotificationAccess.PermissionDenied))
+        compose.onNode(hasText("Notificações") and hasText("Desligadas")).performScrollTo().assertIsDisplayed()
+    }
+
+    @Test fun maisSemEstadoMantemALinhaNavegavelSemSubtitulo() {
+        var opened = 0
+        showMore(null, onNotifications = { opened++ })
+        notificationsRow().performScrollTo().assertIsDisplayed().performClick()
+        compose.runOnIdle { assertEquals(1, opened) }
+        for (text in listOf("Ligadas", "Desligadas", "Falta permissão do Android", "Ainda não escolhidas")) compose.onNodeWithText(text).assertDoesNotExist()
+    }
+
+    @Test fun maisCarregandoOuComFalhaNaoInventaSituacao() {
+        showMore(AlertPreferencesUiState(loading = false, failed = true))
+        notificationsRow().performScrollTo().assertIsDisplayed()
+        for (text in listOf("Ligadas", "Desligadas", "Falta permissão do Android", "Ainda não escolhidas")) compose.onNodeWithText(text).assertDoesNotExist()
+    }
+
+    // ---- hub Notificações ----
+
+    private fun showHub(
+        state: AlertPreferencesUiState,
+        onToggle: (Boolean) -> Unit = {}, onAllow: () -> Unit = {}, onAlerts: () -> Unit = {}, onBanks: () -> Unit = {}, onRetry: () -> Unit = {},
+    ) = compose.setContent {
+        AccordTheme { NotificationsScreen(state, padding, {}, onToggle, onAllow, onAlerts, onBanks, onRetry) }
+    }
+
+    @Test fun hubTemTituloChaveESituacaoERespondeAoToque() {
         var toggled: Boolean? = null
-        showMore(ready(), onToggle = { toggled = it })
-        compose.onNodeWithText("Notificações").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Ativados neste aparelho").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Avisos de possível excesso").performScrollTo().performClick()
+        showHub(ready(), onToggle = { toggled = it })
+        compose.onNode(hasText("Notificações") and isHeading()).assertIsDisplayed()
+        compose.onNodeWithText("Ligadas").assertIsDisplayed()
+        compose.onNodeWithText("Permitir notificações").assertDoesNotExist()
+        compose.onAllNodes(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch)).assertCountEquals(1)
+        compose.onNodeWithText("Avisos de possível excesso").performClick()
         compose.runOnIdle { assertEquals(false, toggled) }
     }
 
-    @Test fun menuMaisSemPermissaoDizOQueFaltaEOferecePermitir() {
+    @Test fun hubSemPermissaoDizOQueFaltaEOferecePermitir() {
         var allowed = 0
-        showMore(ready(access = NotificationAccess.PermissionDenied), onAllow = { allowed++ })
-        compose.onNodeWithText("Ativados, mas falta permitir as notificações neste aparelho").performScrollTo().assertIsDisplayed()
+        showHub(ready(access = NotificationAccess.PermissionDenied), onAllow = { allowed++ })
+        compose.onNodeWithText("Falta permissão do Android").assertIsDisplayed()
         compose.onNodeWithText("Permitir notificações").performScrollTo().performClick()
         compose.runOnIdle { assertEquals(1, allowed) }
     }
 
-    @Test fun menuMaisDesativadoNaoCobraPermissaoENaoEscondeOsDetalhes() {
-        var details = 0
-        showMore(ready(saved = AlertPreference.Disabled), onDetails = { details++ })
-        compose.onNodeWithText("Desativados neste aparelho. As previsões continuam no aplicativo.").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Preferências de alertas").performScrollTo().performClick()
-        compose.runOnIdle { assertEquals(1, details) }
+    @Test fun hubComCanalDesativadoOfereceOsAjustesDoSistema() {
+        showHub(ready(access = NotificationAccess.ChannelDisabled))
+        compose.onNodeWithText("Canal desativado no Android").assertIsDisplayed()
+        compose.onNodeWithText("Abrir ajustes do sistema").performScrollTo().assertIsEnabled()
     }
 
-    @Test fun menuMaisSomeEnquantoCarregaOuSemEstado() {
-        showMore(null)
-        compose.onNodeWithText("Avisos de possível excesso").assertDoesNotExist()
+    @Test fun hubDesativadoDizDesligadasENaoEscondeAsEntradas() {
+        showHub(ready(saved = AlertPreference.Disabled))
+        compose.onNodeWithText("Desligadas").assertIsDisplayed()
+        compose.onNodeWithText("Alertas de excesso").assertIsDisplayed()
+        compose.onNodeWithText("Notificações de bancos").assertIsDisplayed()
+    }
+
+    @Test fun hubAsDuasEntradasChegamAsTelasCertas() {
+        var alerts = 0
+        var banks = 0
+        showHub(ready(), onAlerts = { alerts++ }, onBanks = { banks++ })
+        compose.onNodeWithText("Alertas de excesso").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals(listOf(1, 0), listOf(alerts, banks)) }
+        compose.onNodeWithText("Notificações de bancos").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals(listOf(1, 1), listOf(alerts, banks)) }
+    }
+
+    @Test fun hubCarregandoOuComFalhaNaoMostraChaveMasMantemAsEntradas() {
+        showHub(AlertPreferencesUiState(loading = true))
+        compose.onNodeWithText("Carregando…").assertIsDisplayed()
+        compose.onAllNodes(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Switch)).assertCountEquals(0)
+        compose.onNodeWithText("Alertas de excesso").assertIsDisplayed()
+        compose.onNodeWithText("Notificações de bancos").assertIsDisplayed()
+    }
+
+    @Test fun hubComFalhaOferecerTentarDeNovo() {
+        var retried = 0
+        showHub(AlertPreferencesUiState(loading = false, failed = true), onRetry = { retried++ })
+        compose.onNodeWithText("Tentar de novo").performClick()
+        compose.runOnIdle { assertEquals(1, retried) }
+        compose.onNodeWithText("Notificações de bancos").assertIsDisplayed()
     }
 }

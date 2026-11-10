@@ -212,7 +212,20 @@ class UiAuditCaptureTest {
         waitFor("Sincronização")
         capturePages("26_sincronizacao")
     }
-    @Test fun preferenciasDeAlertas() = destination("Preferências de alertas", "27_preferencias_alertas")
+    @Test fun notificacoes() = destination("Notificações", "22_notificacoes", destinationText = "Alertas de excesso")
+    @Test fun preferenciasDeAlertas() {
+        // Passa pelo hub Notificações (ADR 0077): Mais > Notificações > Alertas de excesso.
+        openMore("Notificações", "Alertas de excesso")
+        compose.onAllNodes(hasText("Alertas de excesso") and hasClickAction()).onFirst().performClick()
+        waitFor("Preferências de alertas")
+        capturePages("27_preferencias_alertas")
+    }
+    @Test fun notificacoesDeBancos() {
+        openMore("Notificações", "Alertas de excesso")
+        compose.onAllNodes(hasText("Notificações de bancos") and hasClickAction()).onFirst().performClick()
+        waitFor("Notificações de bancos")
+        capturePages("extra_notificacoes_bancos")
+    }
 
     @Test fun configuracoesDoChatEModelo() {
         openMore("Ajustes do Chat")
