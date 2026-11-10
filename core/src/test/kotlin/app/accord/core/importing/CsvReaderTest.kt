@@ -42,6 +42,14 @@ class CsvReaderTest {
         assertEquals(YearMonth.of(2027, 1), extracted("data;descricao;valor;fatura\n2026-10-01;A;-1,00; 01 / 27 ").movements.single().invoice)
     }
 
+    @Test fun `a line marked oculto is not a movement, not stored and not counted as unread`() {
+        val r = extracted("data;descricao;valor;oculto"+"\n"+"2026-10-01;Visivel;-1,00;nao"+"\n"+"2026-10-02;Escondida;-2,00;sim"+"\n"+"2026-10-03;Outra;-3,00;"+"\n"+"2026-10-04;Tambem;-4,00;SIM"+"\n"+"2026-10-05;X;-5,00;1")
+        assertEquals(listOf("Visivel", "Outra"), r.movements.map { it.description })
+        assertEquals(listOf(1, 2), r.movements.map { it.ordinal })
+        assertEquals(0, r.unrecognizedSegments)
+        assertEquals(LocalDate.of(2026, 10, 3), r.metadata.periodEnd, "the period ignores hidden lines")
+    }
+
     @Test fun `only an id that is unique in the file takes the place of the FITID, and repeating one is not a doubt`() {
         val r = extracted("id;data;descricao;valor\nA;2026-10-01;Um;-1,00\nA;2026-10-01;Dois;-2,00\nB;2026-10-01;Tres;-3,00")
         assertEquals(listOf(null, null, "B"), r.movements.map { it.fitid })

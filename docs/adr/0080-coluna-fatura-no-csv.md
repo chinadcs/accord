@@ -21,7 +21,9 @@ primeira. O usuário pediu (10/11/2026) que o CSV traga a fatura de cada linha, 
    (menor número) decide a 1ª fatura: fatura da líder − (n − 1) meses. As demais linhas entram na compra como antes.
 4. **Sem migração:** o valor fica no campo original `FATURA` do movimento (os campos originais já são guardados e retomados); `ExtractedMovement.invoice` o lê. Nada muda no esquema, no protocolo nem na
    sincronização.
-5. Compra já registrada com a mesma fatura é vinculada; com fatura diferente, segue a divergência de sempre (`InvoiceDiverges`, `InstallmentInvoiceDiverges`), com a opção de corrigir a fatura.
+5. **Coluna `oculto` (10/11/2026, pedido do usuário):** linha com `oculto` = `sim` (também `s`, `true`, `1`, `x`, `yes`; sem caixa nem acento) é um registro que o arquivo traz mas que não deve ser importado
+   (por exemplo o pagamento da fatura anterior). Não é lida, guardada nem contada como trecho não lido; o período do arquivo ignora essas linhas. Qualquer outro valor, inclusive vazio, deixa a linha valer.
+6. Compra já registrada com a mesma fatura é vinculada; com fatura diferente, segue a divergência de sempre (`InvoiceDiverges`, `InstallmentInvoiceDiverges`), com a opção de corrigir a fatura.
 
 ## Consequências
 

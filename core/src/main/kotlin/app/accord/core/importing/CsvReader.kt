@@ -17,7 +17,7 @@ import java.time.YearMonth
  */
 object CsvReader {
     private val REQUIRED = listOf("data", "descricao", "valor")
-    private val KNOWN = REQUIRED + listOf("id", "moeda", "parcela", "categoria", "origem", "fatura")
+    private val KNOWN = REQUIRED + listOf("id", "moeda", "parcela", "categoria", "origem", "fatura", "oculto")
 
     /** Os bytes parecem um CSV do Accord: a primeira linha com texto traz as três colunas obrigatórias. Usado só para reconhecer o formato. */
     fun looksLikeAccordCsv(bytes: ByteArray): Boolean {
@@ -48,6 +48,8 @@ object CsvReader {
                 unread++
                 continue
             }
+            // Linha marcada como oculta (`oculto` = sim) não é um movimento: não é lida, guardada nem contada como trecho não lido.
+            if (isHidden(index.getValue("oculto").takeIf { it >= 0 }?.let { cells[it] })) continue
             movements += movement(movements.size + 1, cells, index)
         }
         val withRepeats = promoteUniqueIds(movements)
@@ -154,6 +156,9 @@ object CsvReader {
         }
         return OfxReader.cents(sign + plain)
     }
+
+    /** `oculto` marca a linha que o arquivo traz mas que não deve ser importada: `sim`, `s`, `true`, `1`, `x` ou `yes`, sem diferenciar caixa nem acento. */
+    private fun isHidden(raw: String?): Boolean = raw != null && CsvMapping.fold(raw) in setOf("sim", "s", "true", "1", "x", "yes")
 
     /** Mês de vencimento da fatura: `MM/AA`, `MM/AAAA` ou `AAAA-MM`, e nada além disso (`11/26` é novembro de 2026). */
     internal fun invoiceMonth(raw: String): YearMonth? {
