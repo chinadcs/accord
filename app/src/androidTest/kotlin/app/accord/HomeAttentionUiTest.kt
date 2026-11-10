@@ -34,7 +34,10 @@ import org.junit.Rule
 import org.junit.Test
 import java.time.LocalDate
 
-/** Faixa "Pede atenção" da Início (ADR 0078, accord-b557): uma linha por leitura, estados sem zero e um só "Tentar de novo". */
+/**
+ * Faixa "Pede atenção" da Início (ADR 0078, accord-b557): uma linha por leitura e estados sem zero. A faixa não tem botão de
+ * repetir; o único "Tentar de novo" da tela é o do banner do topo (accord-u8zo), que refaz só as leituras que falharam.
+ */
 class HomeAttentionUiTest {
     @get:Rule val compose = createComposeRule()
 
@@ -97,8 +100,10 @@ class HomeAttentionUiTest {
             .performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Não foi possível calcular a projeção de estouro.", substring = true).assertIsDisplayed()
         compose.onNodeWithText("Nada nos próximos 7 dias", substring = true).assertDoesNotExist()
+        compose.onNodeWithText("Não foi possível carregar: datas dos próximos 7 dias e estouro de categorias. Isso não significa valor zero nem que não há itens.")
+            .assertIsDisplayed()
         compose.onAllNodesWithText("Tentar de novo").assertCountEquals(1)
-        compose.onNodeWithText("Tentar de novo").performScrollTo().performClick()
+        compose.onNodeWithText("Tentar de novo").performClick()
         assertEquals(listOf(0, 1, 1), listOf(pendingRetries, upcomingRetries, projectionRetries))
     }
 
@@ -108,7 +113,8 @@ class HomeAttentionUiTest {
         show(PendingQueueUiState(loading = false, failed = true), onRetry = { retries++ }, onReview = { reviews++ })
         compose.onNodeWithText("Não foi possível consultar as pendências. Isso não significa que não há pendências.")
             .performScrollTo().assertIsDisplayed().performClick()
-        compose.onNodeWithText("Tentar de novo").performScrollTo().performClick()
+        compose.onAllNodesWithText("Tentar de novo").assertCountEquals(1)
+        compose.onNodeWithText("Tentar de novo").performClick()
         assertEquals(1, reviews)
         assertEquals(1, retries)
         compose.onNodeWithText("Nada nos próximos 7 dias", substring = true).assertDoesNotExist()

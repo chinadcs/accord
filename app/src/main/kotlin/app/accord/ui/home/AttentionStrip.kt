@@ -3,7 +3,6 @@ package app.accord.ui.home
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -17,7 +16,6 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import app.accord.R
-import app.accord.ui.components.AccordOutlinedButton
 import app.accord.ui.components.SkeletonLines
 import app.accord.ui.components.SummaryRow
 import app.accord.ui.pending.PendingQueueUiState
@@ -29,8 +27,8 @@ import com.composables.icons.lucide.R as Lucide
  * Faixa "Pede atenção" da Início (ADR 0078, decisão 2): um título (cabeçalho) e um cartão de linhas inteiras tocáveis, na ordem
  * fixa Revisar, datas dos próximos 7 dias e estouro. Só lê o que as três leituras já trazem; não grava nada.
  *
- * Carga e falha têm linha própria e nunca viram vazio, zero ou "tudo em dia". Enquanto o banner único do topo não existe
- * (accord-u8zo), um "Tentar de novo" no fim do cartão refaz só as leituras que falharam.
+ * Carga e falha têm linha própria e nunca viram vazio, zero ou "tudo em dia". Não há botão de repetir aqui: o "Tentar de novo"
+ * é do banner único do topo da Início, que refaz só as leituras que falharam.
  *
  * Devolver o foco à linha tocada ao voltar de um destino não foi feito: `FocusRequester.requestFocus()` devolve falso em modo
  * toque (o clicável só aceita foco fora dele), então não há como garantir o foco do TalkBack por aí (pendência do accord-qjlo).
@@ -41,11 +39,8 @@ fun AttentionStrip(
     upcoming: HomeUpcomingState,
     projection: HomeProjectionState,
     onReview: () -> Unit,
-    onRetryPending: () -> Unit,
     onCommitments: () -> Unit,
-    onRetryUpcoming: () -> Unit,
     onForecasts: () -> Unit,
-    onRetryProjection: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val plan = attentionPlan(pending, upcoming, projection)
@@ -68,16 +63,6 @@ fun AttentionStrip(
                     Text(stringResource(R.string.home_attention_all_clear), style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(bottom = AccordSpacing.s2))
-                }
-                if (plan.failed.isNotEmpty()) {
-                    AccordOutlinedButton(
-                        onClick = {
-                            if (AttentionSource.Review in plan.failed) onRetryPending()
-                            if (AttentionSource.Dates in plan.failed) onRetryUpcoming()
-                            if (AttentionSource.Exceed in plan.failed) onRetryProjection()
-                        },
-                        modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).padding(vertical = AccordSpacing.s2),
-                    ) { Text(stringResource(R.string.action_retry)) }
                 }
             }
         }

@@ -253,7 +253,7 @@ private fun BudgetFlowSection(flow: BudgetFlowState, onRetry: () -> Unit) {
             ) { Text(stringResource(R.string.action_retry)) }
         },
     ) {
-        if (flow is BudgetFlowState.Ready) CashFlowBody(flow.value, showTitle = false, detailed = true)
+        if (flow is BudgetFlowState.Ready) CashFlowBody(flow.value)
     }
 }
 

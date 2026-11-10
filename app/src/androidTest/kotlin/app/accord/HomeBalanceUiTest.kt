@@ -28,7 +28,6 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.assertCountEquals
-import androidx.compose.ui.test.onFirst
 import app.accord.core.Money
 import app.accord.core.space.EntrySummary
 import app.accord.core.space.TotalBalance
@@ -139,12 +138,15 @@ class HomeBalanceUiTest {
         compose.onAllNodesWithText("R$", substring = true).assertCountEquals(0)
     }
 
-    @Test fun falhaNaoViraZeroEPermiteRepetir() {
+    @Test fun falhaNaoViraZeroEOBannerUnicoPermiteRepetir() {
         var retries = 0
         home(HomeBalanceState.Failed, onBalanceRetry = { retries++ })
         compose.onNodeWithText("Não foi possível calcular o saldo total.").assertIsDisplayed()
         compose.onAllNodesWithText("R$", substring = true).assertCountEquals(0)
-        compose.onAllNodesWithText("Tentar de novo").onFirst().performClick()
+        // O cartão só diz a frase; o "Tentar de novo" é um só, no banner, e refaz a leitura do saldo.
+        compose.onNodeWithText("Não foi possível carregar: saldo. Isso não significa valor zero nem que não há itens.").assertIsDisplayed()
+        compose.onAllNodesWithText("Tentar de novo").assertCountEquals(1)
+        compose.onNodeWithText("Tentar de novo").performClick()
         assertEquals(1, retries)
     }
 

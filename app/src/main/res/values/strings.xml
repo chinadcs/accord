@@ -130,13 +130,6 @@
     <string name="projection_more">E mais %1$d categorias na previsão.</string>
     <string name="projection_note">Usa o ritmo dos gastos variáveis dos períodos anteriores e os compromissos conhecidos. Categorias sem limite ou sem histórico suficiente ficam de fora; excesso já ocorrido aparece na previsão. Não envia aviso.</string>
     <string name="projection_loading">Calculando a projeção de estouro…</string>
-    <string name="cashflow_title">Fluxo do mês até o fim</string>
-    <string name="cashflow_received">Renda já recebida: %1$s</string>
-    <string name="cashflow_to_receive">Renda prevista a receber: %1$s</string>
-    <string name="cashflow_known">Gastos comprometidos no mês: %1$s (dos quais %2$s já pagos)</string>
-    <string name="cashflow_estimated">Gastos variáveis estimados até o fim do mês: %1$s</string>
-    <string name="cashflow_result_received">Só com a renda recebida: %1$s</string>
-    <string name="cashflow_result_expected">Se toda a renda prevista chegar: %1$s</string>
     <plurals name="cashflow_no_estimate">
         <item quantity="one">%1$d categoria sem histórico para estimar ficou fora da estimativa; o resultado pode estar otimista.</item>
         <item quantity="other">%1$d categorias sem histórico para estimar ficaram fora da estimativa; o resultado pode estar otimista.</item>
@@ -145,5 +138,4 @@
     <string name="cashflow_note">Renda prevista não é saldo confirmado. O pago já está nos gastos comprometidos. Não é saldo bancário e não inclui intenções nem simulações.</string>
     <string name="cashflow_loading">Calculando o fluxo do mês…</string>
     <string name="cashflow_failed">Não foi possível calcular o fluxo do mês.</string>
-    <string name="cashflow_open">Ver orçamento do mês</string>
 </resources>

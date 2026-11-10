@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Previsão até o fim do mês, banner único de falha e rodapé da Início (accord-u8zo, ADR 0078 fatia E). As notas "sem estimativa" e "provisório" reaproveitam cashflow_no_estimate e cashflow_provisional. -->
+<resources>
+    <string name="monthforecast_title">Previsão até o fim do mês</string>
+    <string name="monthforecast_subtitle">Só com a renda recebida</string>
+    <string name="monthforecast_loading">Calculando a previsão até o fim do mês…</string>
+    <string name="monthforecast_failed">Não foi possível calcular a previsão. Este valor não é zero.</string>
+    <string name="monthforecast_no_data">Ainda não há dados para prever o mês</string>
+    <string name="monthforecast_open">Ver o mês no Orçamento</string>
+
+    <string name="monthforecast_result_surplus">Sobra %1$s</string>
+    <string name="monthforecast_result_shortfall">Falta %1$s</string>
+    <string name="monthforecast_result_even">Fica em %1$s, sem sobra nem falta</string>
+    <string name="monthforecast_expected_surplus">Se a renda prevista chegar: sobra %1$s</string>
+    <string name="monthforecast_expected_shortfall">Se a renda prevista chegar: falta %1$s</string>
+    <string name="monthforecast_expected_even">Se a renda prevista chegar: fica em %1$s, sem sobra nem falta</string>
+
+    <string name="monthforecast_inflows_label">Entradas</string>
+    <string name="monthforecast_outflows_label">Saídas</string>
+    <string name="monthforecast_inflows_description">Entradas %1$s, dos quais %2$s já recebidos.</string>
+    <string name="monthforecast_inflows_none_description">Entradas: nenhuma renda no mês.</string>
+    <string name="monthforecast_outflows_description">Saídas %1$s, dos quais %2$s comprometidos e %3$s estimados.</string>
+    <string name="monthforecast_outflows_none_description">Saídas: nenhum gasto previsto no mês.</string>
+    <string name="monthforecast_legend">Cheio: já confirmado · tracejado: previsto</string>
+
+    <string name="home_banner_title">Parte das informações não carregou</string>
+    <string name="home_banner_support">Não foi possível carregar: %1$s. Isso não significa valor zero nem que não há itens.</string>
+    <string name="home_banner_and">e</string>
+    <string name="home_banner_block_balance">saldo</string>
+    <string name="home_banner_block_review">pendências</string>
+    <string name="home_banner_block_dates">datas dos próximos 7 dias</string>
+    <string name="home_banner_block_exceed">estouro de categorias</string>
+    <string name="home_banner_block_allowance">margem</string>
+    <string name="home_banner_block_forecast">previsão</string>
+
+    <string name="home_footer">Cálculos com os registros deste aparelho; nada aqui é saldo bancário.</string>
+</resources>

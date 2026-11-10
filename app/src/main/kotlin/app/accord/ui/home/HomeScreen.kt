@@ -1,6 +1,12 @@
 package app.accord.ui.home
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Icon
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.painterResource
+import com.composables.icons.lucide.R as Lucide
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,9 +21,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import app.accord.R
 import app.accord.ui.RootScaffold
-import app.accord.ui.components.AccordOutlinedButton
 import app.accord.ui.components.SkeletonBlock
-import app.accord.ui.components.SkeletonLines
 import app.accord.ui.entries.TotalBalanceCard
 import app.accord.ui.theme.Accord
 import androidx.compose.ui.semantics.contentDescription
@@ -36,7 +40,7 @@ fun pendingSummary(state: PendingQueueUiState): String = when {
     else -> pluralStringResource(R.plurals.home_pending_count, state.items.size, state.items.size)
 }
 
-/** Base do Início (ADR 0067). Os painéis financeiros têm entregas próprias. */
+/** Início (ADR 0067, remodelado no ADR 0078): banner de falha, Saldo, Pede atenção, Margem, Previsão e rodapé. */
 @Composable
 fun HomeScreen(
     padding: PaddingValues,
@@ -57,36 +61,49 @@ fun HomeScreen(
     balance: HomeBalanceState = HomeBalanceState.Loading,
     onBalanceRetry: () -> Unit = {},
 ) {
+    val failures = homeFailures(pending, balance, upcoming, projection, allowance, cashFlow)
     RootScaffold(stringResource(R.string.tab_home), padding) {
-        BalanceSection(balance, onBalanceRetry)
+        // Um só "Tentar de novo" para a tela: refaz apenas as leituras que falharam, sem recarregar o que já está pronto.
+        HomeFailureBanner(failures, onRetry = {
+            failures.forEach { block ->
+                when (block) {
+                    HomeBlock.Balance -> onBalanceRetry()
+                    HomeBlock.Review -> onRetry()
+                    HomeBlock.Dates -> onUpcomingRetry()
+                    HomeBlock.Exceed -> onProjectionRetry()
+                    HomeBlock.Allowance -> onAllowanceRetry()
+                    HomeBlock.Forecast -> onCashFlowRetry()
+                }
+            }
+        })
+        BalanceSection(balance)
         AttentionStrip(
             pending, upcoming, projection,
-            onReview = onReview, onRetryPending = onRetry,
-            onCommitments = onCommitments, onRetryUpcoming = onUpcomingRetry,
-            onForecasts = onForecasts, onRetryProjection = onProjectionRetry,
+            onReview = onReview, onCommitments = onCommitments, onForecasts = onForecasts,
         )
-        AllowanceSummary(allowance, onBudget = onBudget, onRetry = onAllowanceRetry)
-        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
-            Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
-                when (cashFlow) {
-                    HomeCashFlowState.Loading -> SkeletonLines(stringResource(R.string.cashflow_loading), lines = 4)
-                    HomeCashFlowState.Failed -> {
-                        Text(stringResource(R.string.cashflow_failed))
-                        AccordOutlinedButton(onClick = onCashFlowRetry) { Text(stringResource(R.string.action_retry)) }
-                    }
-                    is HomeCashFlowState.Ready -> CashFlowBody(cashFlow.value)
-                }
-                AccordOutlinedButton(onClick = onBudget) { Text(stringResource(R.string.cashflow_open)) }
-            }
-        }
-        // O botão flutuante de registro fica sobre o canto inferior; este espaço deixa o último cartão acessível.
+        AllowanceSummary(allowance, onBudget = onBudget)
+        ForecastSummary(cashFlow, onBudget = onBudget)
+        HomeFooter()
+        // O botão flutuante de registro fica sobre o canto inferior; este espaço deixa o último bloco acessível.
         Spacer(Modifier.height(AccordSpacing.fabClearance))
     }
 }
 
-/** Saldo total do mês: esqueleto enquanto carrega, mensagem com repetir em falha, nunca zero no lugar de "não sei". */
+/** Rodapé único da Início (ADR 0078, decisão 5): substitui as notas repetidas dentro dos cartões. Ícone decorativo. */
 @Composable
-private fun BalanceSection(state: HomeBalanceState, onRetry: () -> Unit) {
+private fun HomeFooter() {
+    Row(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalAlignment = Alignment.Top) {
+        Icon(
+            painterResource(Lucide.drawable.lucide_ic_info), contentDescription = null,
+            modifier = Modifier.padding(top = 2.dp).size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(stringResource(R.string.home_footer), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+/** Saldo total do mês: esqueleto enquanto carrega, frase curta em falha (o "Tentar de novo" é do banner), nunca zero no lugar de "não sei". */
+@Composable
+private fun BalanceSection(state: HomeBalanceState) {
     when (state) {
         HomeBalanceState.Loading -> {
             val description = stringResource(R.string.balance_loading)
@@ -102,11 +119,8 @@ private fun BalanceSection(state: HomeBalanceState, onRetry: () -> Unit) {
                 }
             }
         }
-        HomeBalanceState.Failed -> Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
-            Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
-                Text(stringResource(R.string.balance_failed))
-                AccordOutlinedButton(onClick = onRetry) { Text(stringResource(R.string.action_retry)) }
-            }
+        HomeBalanceState.Failed -> Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.balance_failed), Modifier.fillMaxWidth().padding(AccordSpacing.s4))
         }
         is HomeBalanceState.Ready -> TotalBalanceCard(state.value)
     }

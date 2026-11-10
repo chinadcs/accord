@@ -11,7 +11,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import app.accord.R
@@ -24,41 +23,20 @@ import app.accord.ui.theme.AccordSpacing
 import com.composables.icons.lucide.R as Lucide
 
 /**
- * Fluxo do mês até o fim dele, com renda recebida e prevista em linhas separadas; só leitura. Corpo compartilhado pela
- * Início e pelo Orçamento (ADR 0078), com os mesmos números e notas.
- *
- * - [showTitle]: a Início o mostra aqui; o Orçamento já tem o título no cartão da seção.
- * - [detailed]: falso é a apresentação da Início (frases); verdadeiro é a do Orçamento, com rótulo à esquerda e valor
- *   à direita, e resultado com ícone e a palavra sobra/falta, para a leitura não depender do sinal nem da cor.
+ * Detalhe do fluxo do mês no Orçamento (ADR 0078): quatro linhas de valor com rótulo à esquerda e valor à direita, os dois
+ * resultados com ícone e a palavra sobra/falta (a leitura não depende do sinal nem da cor) e as notas. Só leitura. O resumo da
+ * Início é [ForecastSummary], que usa os mesmos números de [MonthCashFlow]; o título da seção vem do cartão que o hospeda.
  */
 @Composable
-fun CashFlowBody(value: MonthCashFlow, showTitle: Boolean = true, detailed: Boolean = false) {
+fun CashFlowBody(value: MonthCashFlow) {
     Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-        if (showTitle) {
-            Text(stringResource(R.string.cashflow_title), style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.semantics { heading() })
-        }
-        if (detailed) DetailedValues(value) else CompactValues(value)
+        DetailedValues(value)
         if (value.categoriesWithoutEstimate > 0) {
             Text(pluralStringResource(R.plurals.cashflow_no_estimate, value.categoriesWithoutEstimate, value.categoriesWithoutEstimate),
                 style = MaterialTheme.typography.bodySmall)
         }
         if (value.provisional) Text(stringResource(R.string.cashflow_provisional), style = MaterialTheme.typography.bodySmall)
         Text(stringResource(R.string.cashflow_note), style = MaterialTheme.typography.bodySmall)
-    }
-}
-
-@Composable
-private fun CompactValues(value: MonthCashFlow) {
-    Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-        Text(stringResource(R.string.cashflow_received, Money(value.receivedCents).format()))
-        Text(stringResource(R.string.cashflow_to_receive, Money(value.toReceiveCents).format()))
-        Text(stringResource(R.string.cashflow_known, Money(value.knownCents).format(), Money(value.paidCents).format()))
-        Text(stringResource(R.string.cashflow_estimated, Money(value.estimatedCents).format()))
-        Text(stringResource(R.string.cashflow_result_received, Money(value.resultWithReceivedCents).format()),
-            style = MaterialTheme.typography.titleMedium, color = resultColor(value.resultWithReceivedCents))
-        Text(stringResource(R.string.cashflow_result_expected, Money(value.resultWithExpectedCents).format()),
-            style = MaterialTheme.typography.titleMedium, color = resultColor(value.resultWithExpectedCents))
     }
 }
 

@@ -127,13 +127,17 @@ class HomeAllowanceUiTest {
         compose.onAllNodesWithContentDescription("Como é calculado").assertCountEquals(0)
     }
 
-    @Test fun falhaDizQueNaoEZeroENaoMostraValor() {
+    @Test fun falhaDizQueNaoEZeroENaoMostraValorESoOBannerRepete() {
         var retries = 0
         home(HomeAllowanceState.Failed, onRetry = { retries++ })
         compose.onNodeWithText("Não foi possível calcular a margem. Este valor não é zero.").performScrollTo().assertIsDisplayed()
         compose.onAllNodesWithText("R$", substring = true).assertCountEquals(0)
         compose.onAllNodesWithText("Hoje").assertCountEquals(0)
-        compose.onNodeWithText("Tentar de novo").performScrollTo().assertHeightIsAtLeast(48.dp).performClick()
+        compose.onAllNodesWithText("Ver limites").assertCountEquals(0)
+        // O cartão não tem botão próprio: o único "Tentar de novo" é o do banner do topo, que nomeia a margem.
+        compose.onNodeWithText("Não foi possível carregar: margem. Isso não significa valor zero nem que não há itens.").assertIsDisplayed()
+        compose.onAllNodesWithText("Tentar de novo").assertCountEquals(1)
+        compose.onNodeWithText("Tentar de novo").assertHeightIsAtLeast(48.dp).performClick()
         assertEquals(1, retries)
     }
 

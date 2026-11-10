@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.TextAutoSize
@@ -32,7 +31,7 @@ import androidx.compose.ui.unit.sp
 import app.accord.R
 import app.accord.core.Money
 import app.accord.core.SpendingAllowance
-import app.accord.ui.components.AccordOutlinedButton
+import app.accord.ui.components.CardLinkRow
 import app.accord.ui.components.FlowBar
 import app.accord.ui.components.HomeSectionCard
 import app.accord.ui.components.SectionStatus
@@ -46,13 +45,12 @@ private val MinAmountSize = 12.sp
  * "Margem para gastar" na Início (ADR 0078, antes "Margem do orçamento"). Resumo do mesmo cálculo do ADR 0068: Hoje e Esta
  * semana, barra de uso com o texto equivalente, excesso com ícone e texto, cobertura e avisos curtos, e o "Como é calculado"
  * aberto pelo botão de informação (irmão do alvo do cartão, que abre o Orçamento). Carga, falha e pronto são independentes
- * e nunca viram zero. Não substitui [AllowanceBody], que continua sendo o corpo da resposta no Chat.
+ * e nunca viram zero; em falha só há a frase curta, e o "Tentar de novo" é do banner único da tela. Não substitui [AllowanceBody], que continua sendo o corpo da resposta no Chat.
  */
 @Composable
 fun AllowanceSummary(
     state: HomeAllowanceState,
     onBudget: () -> Unit,
-    onRetry: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val ready = (state as? HomeAllowanceState.Ready)?.value
@@ -80,8 +78,6 @@ fun AllowanceSummary(
                 )
             }
         },
-        // Neste estágio cada bloco ainda tem o seu botão; o banner único de "Tentar de novo" vem depois (ADR 0078).
-        failedAction = { AccordOutlinedButton(onClick = onRetry) { Text(stringResource(R.string.action_retry)) } },
     ) {
         if (ready != null) AllowanceReady(ready)
     }
@@ -118,7 +114,7 @@ private fun AllowanceReady(value: SpendingAllowance) {
             Notice(pluralStringResource(R.plurals.allowance_unclassified_notice, value.unclassifiedCount, value.unclassifiedCount))
         }
         if (value.provisional) Notice(stringResource(R.string.allowance_provisional_notice))
-        SeeLimits()
+        CardLinkRow(stringResource(R.string.allowance_see_limits))
     }
 }
 
@@ -195,7 +191,7 @@ private fun ExcessNotice(excessCents: Long) {
 
 /** Aviso curto (provisório, lançamentos a classificar fora do cálculo): ícone e texto, sem depender de cor. */
 @Composable
-private fun Notice(text: String) {
+internal fun Notice(text: String) {
     Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, contentColor = MaterialTheme.colorScheme.onSurface, shape = MaterialTheme.shapes.small) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s3, vertical = AccordSpacing.s2),
@@ -205,17 +201,5 @@ private fun Notice(text: String) {
             Icon(painterResource(Lucide.drawable.lucide_ic_info), contentDescription = null, modifier = Modifier.size(18.dp).padding(top = 2.dp))
             Text(text, style = MaterialTheme.typography.bodySmall)
         }
-    }
-}
-
-/** Parte visual do alvo do cartão inteiro (que abre o Orçamento); o toque é do cartão, aqui só há o rótulo e a seta. */
-@Composable
-private fun SeeLimits() {
-    Row(
-        Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(stringResource(R.string.allowance_see_limits), style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
-        Icon(painterResource(Lucide.drawable.lucide_ic_chevron_right), contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
