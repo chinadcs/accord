@@ -17,8 +17,8 @@ import kotlin.test.assertTrue
  * Contraste dos elementos novos da Início (ADR 0078, accord-qjlo) nas sete paletas e nos dois temas: barras de Entradas
  * (`success`) e de Saídas (`primary`) contra o trilho e o cartão (3:1), ícones de resultado sobre o cartão (3:1) e os textos de
  * erro (`onErrorContainer` sobre `errorContainer` no banner e na falta da previsão; a cor efetiva do texto de falta no detalhe
- * do Orçamento, que recua para `onSurface` quando `error` não alcança 4,5:1), 4,5:1. Não cobre os demais usos de `colorScheme.error`
- * como texto no app (ver o bead de contraste de `error` em tokyonight-light e catppuccin-light). Cores resolvidas como o app: recurso da paleta ou o padrão do esquema; as paletas
+ * do Orçamento, que recua para `onSurface` quando `error` não alcança 4,5:1), 4,5:1. O token `error` em si, usado como texto em
+ * todo o app, tem 4,5:1 sobre `surface` e `surfaceContainerLow` (accord-5wr2). Cores resolvidas como o app: recurso da paleta ou o padrão do esquema; as paletas
  * comunitárias herdam `success` de `secondary`, como em [PaletteSemanticContrastTest].
  */
 class HomeContrastTest {
@@ -95,6 +95,23 @@ class HomeContrastTest {
                 for ((name, pair) in pairs) {
                     val ratio = chartContrast(pair.first, pair.second)
                     if (ratio < 4.5f) add("${v.name} $name: %.2f".format(ratio))
+                }
+            }
+        }
+        assertTrue(failures.isEmpty(), failures.joinToString("; "))
+    }
+
+    @Test fun `token error como texto tem 4,5 para 1 sobre surface e o cartao`() {
+        val failures = buildList {
+            for (v in variants()) {
+                val s = scheme(v)
+                val error = v.c("error", s.error)
+                for ((against, bg) in mapOf(
+                    "surface" to v.c("surface", s.surface),
+                    "cartão" to v.c("surface_container_low", s.surfaceContainerLow),
+                )) {
+                    val ratio = chartContrast(error, bg)
+                    if (ratio < 4.5f) add("${v.name} error sobre $against: %.2f".format(ratio))
                 }
             }
         }

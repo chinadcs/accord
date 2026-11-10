@@ -17,8 +17,8 @@
   <color name="tokyonight_light_on_tertiary">#000000</color>
   <color name="tokyonight_light_tertiary_container">#cfbfea</color>
   <color name="tokyonight_light_on_tertiary_container">#15386a</color>
-  <color name="tokyonight_light_error">#f52a65</color>
-  <color name="tokyonight_light_on_error">#000000</color>
+  <color name="tokyonight_light_error">#b01036</color>
+  <color name="tokyonight_light_on_error">#ffffff</color>
   <color name="tokyonight_light_error_container">#e6b4c7</color>
   <color name="tokyonight_light_on_error_container">#6e132d</color>
   <color name="tokyonight_light_background">#e1e2e7</color>
