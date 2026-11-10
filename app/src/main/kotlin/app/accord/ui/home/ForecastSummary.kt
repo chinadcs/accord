@@ -30,6 +30,7 @@ import app.accord.ui.components.CardLinkRow
 import app.accord.ui.components.FlowBar
 import app.accord.ui.components.HomeSectionCard
 import app.accord.ui.components.SectionStatus
+import app.accord.ui.components.chartInk
 import app.accord.ui.theme.Accord
 import app.accord.ui.theme.AccordSpacing
 import com.composables.icons.lucide.R as Lucide
@@ -55,7 +56,8 @@ fun ForecastSummary(state: HomeCashFlowState, onBudget: () -> Unit, modifier: Mo
         modifier = modifier,
         onClick = onBudget,
         onClickLabel = stringResource(R.string.monthforecast_open),
-        skeletonLines = 5,
+        skeletonLines = 8,
+        loadingMinHeight = 260.dp,
     ) {
         if (state is HomeCashFlowState.Ready) ForecastReady(state.value)
     }
@@ -72,13 +74,14 @@ private fun ForecastReady(value: MonthCashFlow) {
             MainResult(value.resultWithReceivedCents)
             Text(expectedText(value.resultWithExpectedCents), style = MaterialTheme.typography.bodyLarge)
             Bars(value)
+            // As ressalvas qualificam um resultado: sem dados não há resultado a qualificar ("pode estar otimista" não faria sentido).
+            if (value.categoriesWithoutEstimate > 0) {
+                Notice(pluralStringResource(R.plurals.cashflow_no_estimate, value.categoriesWithoutEstimate, value.categoriesWithoutEstimate))
+            }
+            if (value.provisional) Notice(stringResource(R.string.cashflow_provisional))
         } else {
             Text(stringResource(R.string.monthforecast_no_data), style = MaterialTheme.typography.bodyLarge)
         }
-        if (value.categoriesWithoutEstimate > 0) {
-            Notice(pluralStringResource(R.plurals.cashflow_no_estimate, value.categoriesWithoutEstimate, value.categoriesWithoutEstimate))
-        }
-        if (value.provisional) Notice(stringResource(R.string.cashflow_provisional))
         CardLinkRow(stringResource(R.string.monthforecast_open))
     }
 }
@@ -127,7 +130,12 @@ private fun MainResult(cents: Long) {
         }
     } else {
         Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-            ResultIcon(Lucide.drawable.lucide_ic_circle_check, if (cents > 0) Accord.colors.success else MaterialTheme.colorScheme.onSurfaceVariant)
+            // Ícone de gráfico: 3:1 sobre o cartão; em paletas claras o `success` fica abaixo e o ícone usa o texto do tema.
+            ResultIcon(
+                Lucide.drawable.lucide_ic_circle_check,
+                if (cents > 0) chartInk(Accord.colors.success, MaterialTheme.colorScheme.surfaceContainerLow, MaterialTheme.colorScheme.onSurface)
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Text(text, style = style)
         }
     }

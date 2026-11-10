@@ -18,6 +18,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
@@ -43,6 +44,10 @@ val SectionMinHeight: Dp = 120.dp
  *   fora dela, quem não tem banner próprio passa [failedAction] (por exemplo, o Orçamento).
  * - [SectionStatus.Ready]: [content]. Com [onClick], o cartão inteiro é um botão com [onClickLabel]; sem ele, é só leitura.
  *
+ * [loadingMinHeight] reserva, só na carga, uma altura próxima à do estado pronto típico (em dp com fonte 100%; cresce com a escala
+ * da fonte), para o cartão não crescer centenas de dp quando o valor chega e empurrar o que está abaixo. Vale só na carga: em
+ * falha ou sem dados o cartão volta a ser menor, e isso é aceito para não deixar um vazio grande onde há só uma frase.
+ *
  * [headerAction] (por exemplo, o botão de informação) fica como irmão do alvo do cartão, no canto superior, para não
  * ser um clicável dentro de outro; só aparece no estado pronto.
  */
@@ -59,6 +64,7 @@ fun HomeSectionCard(
     headerAction: (@Composable () -> Unit)? = null,
     minHeight: Dp = SectionMinHeight,
     skeletonLines: Int = 2,
+    loadingMinHeight: Dp = 0.dp,
     failedAction: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
@@ -68,7 +74,8 @@ fun HomeSectionCard(
         Surface(
             color = MaterialTheme.colorScheme.surfaceContainerLow,
             shape = MaterialTheme.shapes.medium,
-            modifier = Modifier.fillMaxWidth().heightIn(min = minHeight)
+            modifier = Modifier.fillMaxWidth()
+                .heightIn(min = if (status == SectionStatus.Loading) maxOf(minHeight, loadingMinHeight * LocalDensity.current.fontScale) else minHeight)
                 .let { if (actionable) it.clickable(onClickLabel = onClickLabel, role = Role.Button, onClick = onClick!!) else it },
         ) {
             Column(

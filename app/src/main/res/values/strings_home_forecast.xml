@@ -25,6 +25,10 @@
 
     <string name="home_banner_title">Parte das informações não carregou</string>
     <string name="home_banner_support">Não foi possível carregar: %1$s. Isso não significa valor zero nem que não há itens.</string>
+    <string name="home_banner_updating_title">Atualizando as informações</string>
+    <string name="home_banner_updating_support">Lendo de novo: %1$s. Isso usa só os registros deste aparelho.</string>
+    <string name="home_banner_updating_button">Atualizando…</string>
+    <string name="home_refreshed">Informações da Início atualizadas.</string>
     <string name="home_banner_and">e</string>
     <string name="home_banner_block_balance">saldo</string>
     <string name="home_banner_block_review">pendências</string>

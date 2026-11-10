@@ -28,6 +28,27 @@ fun homeFailures(
     }
 }
 
+/**
+ * Os blocos cuja leitura ainda corre. Serve ao banner: depois de "Tentar de novo" ele fica em "Atualizando…" enquanto algum dos
+ * blocos que falharam estiver aqui, em vez de sumir no primeiro instante em que a falha vira carga.
+ */
+fun homeLoadingBlocks(
+    pending: PendingQueueUiState,
+    balance: HomeBalanceState,
+    upcoming: HomeUpcomingState,
+    projection: HomeProjectionState,
+    allowance: HomeAllowanceState,
+    cashFlow: HomeCashFlowState,
+): Set<HomeBlock> = buildSet {
+    if (balance is HomeBalanceState.Loading) add(HomeBlock.Balance)
+    // A fila de pendências falha antes de carregar, como em attentionPlan.
+    if (pending.loading && !pending.failed) add(HomeBlock.Review)
+    if (upcoming is HomeUpcomingState.Loading) add(HomeBlock.Dates)
+    if (projection is HomeProjectionState.Loading) add(HomeBlock.Exceed)
+    if (allowance is HomeAllowanceState.Loading) add(HomeBlock.Allowance)
+    if (cashFlow is HomeCashFlowState.Loading) add(HomeBlock.Forecast)
+}
+
 /** "a", "a e b" ou "a, b e c": lista legível para o apoio do banner. [and] é a conjunção da língua da tela. */
 internal fun joinWithAnd(items: List<String>, and: String): String = when (items.size) {
     0 -> ""

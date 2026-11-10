@@ -5,13 +5,20 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.junit4.v2.createComposeRule
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
@@ -29,6 +36,7 @@ import app.accord.core.space.DraftSource
 import app.accord.core.space.EntrySummary
 import app.accord.core.space.LocalDraft
 import app.accord.core.space.TotalBalance
+import app.accord.ui.AccordApp
 import app.accord.ui.home.HomeAllowanceState
 import app.accord.ui.home.HomeBalanceState
 import app.accord.ui.home.HomeCashFlowState
@@ -46,8 +54,8 @@ import java.io.File
 import java.time.LocalDate
 
 /**
- * Capturas da Início completa (accord-u8zo, ADR 0078): cada cenário rola do topo ao rodapé e grava uma imagem por tela, em
- * `screens/u8zo`. Não afirma nada além de o rodapé ser alcançado; a inspeção é visual. Dados fictícios.
+ * Capturas da Início completa (accord-u8zo e accord-qjlo, ADR 0078): cada cenário rola do topo ao rodapé e grava uma imagem por
+ * tela, em `screens/qjlo`. Só afirma que o rodapé é alcançado e fica acima da barra inferior; a inspeção é visual. Dados fictícios.
  */
 class HomeVisualReviewTest {
     @get:Rule val compose = createComposeRule()
@@ -93,40 +101,93 @@ class HomeVisualReviewTest {
         Scenario(it.pending, it.balance, it.upcoming, it.projection, it.allowance, HomeCashFlowState.Ready(flow.copy(receivedCents = 10_000, toReceiveCents = 0)))
     }
 
-    private fun shoot(name: String, scenario: Scenario, theme: ThemePreference, fontScale: Float = 1f) {
-        compose.setContent {
-            val density = LocalDensity.current
-            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
-                AccordTheme(theme) { Surface(color = MaterialTheme.colorScheme.background) {
-                    HomeScreen(PaddingValues(), scenario.pending, {}, {}, allowance = scenario.allowance, upcoming = scenario.upcoming,
-                        projection = scenario.projection, cashFlow = scenario.cashFlow, balance = scenario.balance)
-                } }
-            }
+    private var theme by mutableStateOf(ThemePreference.Light)
+    private var fontScale by mutableFloatStateOf(1f)
+    private var scenario by mutableStateOf(full())
+    private var scenarioId by mutableStateOf("")
+
+    private fun capture(folder: File, name: String) {
+        compose.waitForIdle()
+        File(folder, "$name.png").outputStream().use {
+            compose.onRoot().captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it)
         }
-        val app = ApplicationProvider.getApplicationContext<AccordApplication>()
-        val folder = File(app.getExternalFilesDir(null), "screens/u8zo").apply { mkdirs() }
+    }
+
+    /** Rola do topo ao rodapé gravando uma imagem por tela; [maxSteps] cobre a fonte a 200%. */
+    private fun scrollAndShoot(folder: File, name: String, maxSteps: Int = 12) {
         var step = 1
         while (true) {
-            compose.waitForIdle()
-            File(folder, "$name-$step.png").outputStream().use {
-                compose.onRoot().captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it)
-            }
+            capture(folder, "$name-$step")
             val atEnd = runCatching { compose.onNodeWithText(footer).assertIsDisplayed() }.isSuccess
-            if (atEnd || step >= 8) break
+            if (atEnd || step >= maxSteps) {
+                check(atEnd) { "$name: o rodapé não foi alcançado em $maxSteps telas" }
+                break
+            }
             compose.onNode(hasScrollAction()).performTouchInput { swipeUp(startY = height * 0.85f, endY = height * 0.30f) }
             step++
         }
     }
 
-    @Test fun cheioClaro() = shoot("cheio-claro", full(), ThemePreference.Light)
-    @Test fun cheioEscuro() = shoot("cheio-escuro", full(), ThemePreference.Dark)
-    @Test fun faltaClaro() = shoot("falta-claro", shortfall(), ThemePreference.Light)
-    @Test fun tudoEmDiaClaro() = shoot("tudo-em-dia-claro", allClear(), ThemePreference.Light)
-    @Test fun tudoEmDiaEscuro() = shoot("tudo-em-dia-escuro", allClear(), ThemePreference.Dark)
-    @Test fun falhaParcialClaro() = shoot("falha-claro", partialFailure(), ThemePreference.Light)
-    @Test fun falhaParcialEscuro() = shoot("falha-escuro", partialFailure(), ThemePreference.Dark)
-    @Test fun cargaClaro() = shoot("carga-claro", loading(), ThemePreference.Light)
-    @Test fun cargaEscuro() = shoot("carga-escuro", loading(), ThemePreference.Dark)
-    @Test fun fonte150Claro() = shoot("fonte150-claro", full(), ThemePreference.Light, fontScale = 1.5f)
-    @Test fun fonte150Escuro() = shoot("fonte150-escuro", shortfall(), ThemePreference.Dark, fontScale = 1.5f)
+    /**
+     * Matriz final (accord-qjlo): quatro cenários (cheio, tudo em dia, falha parcial, carga) em claro e escuro, nas fontes 100%,
+     * 130%, 150% e 200% (200% é só informativo; o critério vigente é retrato e fonte padrão, accord-rub9). O Início inteiro é
+     * rolado até o rodapé em cada combinação. Com a escala de animação do sistema em 0 (o AVD rápido), `Accord.motion.reduced`
+     * é verdadeiro e o esqueleto fica parado; isso não valida movimento reduzido em aparelho.
+     */
+    @Test fun matrizFinal() {
+        compose.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
+                AccordTheme(theme) { Surface(color = MaterialTheme.colorScheme.background) {
+                    key(scenarioId) {
+                        HomeScreen(PaddingValues(), scenario.pending, {}, {}, allowance = scenario.allowance, upcoming = scenario.upcoming,
+                            projection = scenario.projection, cashFlow = scenario.cashFlow, balance = scenario.balance)
+                    }
+                } }
+            }
+        }
+        val app = ApplicationProvider.getApplicationContext<AccordApplication>()
+        val folder = File(app.getExternalFilesDir(null), "screens/qjlo").apply { mkdirs() }
+        val scenarios = mapOf<String, () -> Scenario>(
+            "cheio" to ::full, "falta" to ::shortfall, "emdia" to ::allClear, "falha" to ::partialFailure, "carga" to ::loading,
+        )
+        for ((themeName, choice) in listOf("claro" to ThemePreference.Light, "escuro" to ThemePreference.Dark)) for (scale in listOf(1f, 1.3f, 1.5f, 2f)) {
+            for ((name, build) in scenarios) {
+                compose.runOnIdle { theme = choice; fontScale = scale; scenario = build(); scenarioId = "$name-$themeName-$scale" }
+                val id = "$name-$themeName-f${(scale * 100).toInt()}"
+                if (name == "carga") capture(folder, "$id-1")
+                else scrollAndShoot(folder, id)
+            }
+        }
+    }
+
+    /**
+     * O Início real (AccordApp, banco do aparelho de teste, barra e botão de registro) em claro e escuro e nas quatro fontes: o último
+     * bloco e o rodapé precisam ficar acima da barra e do botão ao rolar até o fim.
+     */
+    @Test fun inicioRealComBarraEBotao() {
+        val app = ApplicationProvider.getApplicationContext<AccordApplication>()
+        compose.setContent {
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
+                AccordTheme(theme) { AccordApp(app.container) }
+            }
+        }
+        val folder = File(app.getExternalFilesDir(null), "screens/qjlo").apply { mkdirs() }
+        for ((themeName, choice) in listOf("claro" to ThemePreference.Light, "escuro" to ThemePreference.Dark)) for (scale in listOf(1f, 1.3f, 1.5f, 2f)) {
+            compose.runOnIdle { theme = choice; fontScale = scale }
+            compose.onNodeWithTag("tab-Home").performClick()
+            val id = "app-$themeName-f${(scale * 100).toInt()}"
+            capture(folder, "$id-1")
+            var swipes = 0
+            while (swipes < 14 && runCatching { compose.onNodeWithText(footer).assertIsDisplayed() }.isFailure) {
+                compose.onNode(hasScrollAction()).performTouchInput { swipeUp(startY = height * 0.85f, endY = height * 0.30f) }
+                swipes++
+            }
+            capture(folder, "$id-fim")
+            val footerBottom = compose.onNodeWithText(footer).assertIsDisplayed().fetchSemanticsNode().boundsInRoot.bottom
+            val navTop = compose.onNodeWithTag("root-navigation", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot.top
+            check(footerBottom <= navTop) { "$id: o rodapé ($footerBottom) fica sob a barra inferior ($navTop)" }
+        }
+    }
 }

@@ -1,5 +1,6 @@
 package app.accord.ui.home
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,10 +15,12 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
 import app.accord.R
 import app.accord.ui.components.DecorativeIcon
 import app.accord.ui.theme.AccordSpacing
@@ -27,11 +30,15 @@ import com.composables.icons.lucide.R as Lucide
  * Banner único de falha da Início (ADR 0078): aparece só quando alguma leitura falhou, diz quais blocos ficaram sem valor
  * (nunca como zero) e oferece um único "Tentar de novo", que quem chama liga só às leituras que falharam. É o único aviso
  * dinâmico da tela (`liveRegion`); os blocos falhos mostram só a frase curta, sem botão. Ícone e texto, nunca só a cor.
+ *
+ * Depois do toque, [updating] mantém o mesmo banner, com o botão desabilitado e o texto "Atualizando…", até as leituras
+ * terminarem: o botão não some sob o dedo (o foco do TalkBack não se perde), a troca de texto é anunciada pela região viva e,
+ * se uma leitura falhar de novo, o banner volta ao estado de falha no mesmo lugar. [blocks] são os blocos citados no apoio.
  */
 @Composable
-fun HomeFailureBanner(failures: List<HomeBlock>, onRetry: () -> Unit, modifier: Modifier = Modifier) {
-    if (failures.isEmpty()) return
-    val names = joinWithAnd(failures.map { stringResource(it.labelRes()) }, stringResource(R.string.home_banner_and))
+fun HomeFailureBanner(blocks: List<HomeBlock>, onRetry: () -> Unit, modifier: Modifier = Modifier, updating: Boolean = false) {
+    if (blocks.isEmpty()) return
+    val names = joinWithAnd(blocks.map { stringResource(it.labelRes()) }, stringResource(R.string.home_banner_and))
     val content = MaterialTheme.colorScheme.onErrorContainer
     Surface(
         color = MaterialTheme.colorScheme.errorContainer, contentColor = content,
@@ -48,19 +55,30 @@ fun HomeFailureBanner(failures: List<HomeBlock>, onRetry: () -> Unit, modifier: 
                     Modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
                     verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
                 ) {
-                    Text(stringResource(R.string.home_banner_title), style = MaterialTheme.typography.titleMedium)
-                    Text(stringResource(R.string.home_banner_support, names), style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        stringResource(if (updating) R.string.home_banner_updating_title else R.string.home_banner_title),
+                        style = MaterialTheme.typography.titleMedium,
+                    )
+                    Text(
+                        stringResource(if (updating) R.string.home_banner_updating_support else R.string.home_banner_support, names),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
                 }
                 // Botão cheio na cor do conteúdo do banner: o contraste vem do par errorContainer/onErrorContainer.
                 Button(
                     onClick = onRetry,
+                    enabled = !updating,
                     modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
                     shape = MaterialTheme.shapes.medium,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.onErrorContainer,
                         contentColor = MaterialTheme.colorScheme.errorContainer,
+                        // Enquanto atualiza o botão vira só contorno com o texto na cor cheia: continua legível (4,5:1), sem parecer ativo.
+                        disabledContainerColor = Color.Transparent,
+                        disabledContentColor = MaterialTheme.colorScheme.onErrorContainer,
                     ),
-                ) { Text(stringResource(R.string.action_retry)) }
+                    border = if (updating) BorderStroke(1.dp, MaterialTheme.colorScheme.onErrorContainer) else null,
+                ) { Text(stringResource(if (updating) R.string.home_banner_updating_button else R.string.action_retry)) }
             }
         }
     }

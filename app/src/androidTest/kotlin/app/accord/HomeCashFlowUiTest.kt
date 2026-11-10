@@ -110,7 +110,8 @@ class HomeCashFlowUiTest {
         // O único botão de repetir da tela é o do banner; o cartão da previsão não tem outro nem alvo de toque.
         compose.onAllNodesWithText("Tentar de novo").assertCountEquals(1)
         compose.onNode(hasText("Não foi possível calcular a previsão", substring = true) and hasClickAction()).assertDoesNotExist()
-        compose.onNodeWithText("Tentar de novo").assertHeightIsAtLeast(48.dp).performClick()
+        // O banner fica no topo e a rolagem até o cartão pode tê-lo levado para fora da tela: volta a ele antes de tocar.
+        compose.onNodeWithText("Tentar de novo").performScrollTo().assertHeightIsAtLeast(48.dp).performClick()
         assertEquals(1, retries)
     }
 
@@ -182,6 +183,14 @@ class HomeCashFlowUiTest {
         compose.onAllNodesWithText("Cheio:", substring = true).assertCountEquals(0)
         // Mesmo assim o cartão leva ao Orçamento, onde o mês se organiza.
         compose.onNodeWithText("Ver o mês no Orçamento").assertIsDisplayed()
+    }
+
+    @Test fun semDadosNaoMostraRessalvasDeEstimativaNemProvisorio() {
+        // Sem resultado não há o que ressalvar, mesmo que o cálculo conte categorias sem histórico e valores provisórios.
+        home(HomeCashFlowState.Ready(MonthCashFlow(0, 0, 0, 0, 0, 0, 10, true)))
+        compose.onNodeWithText("Ainda não há dados para prever o mês").performScrollTo().assertIsDisplayed()
+        compose.onAllNodesWithText("sem histórico", substring = true).assertCountEquals(0)
+        compose.onAllNodesWithText("Há valores provisórios", substring = true).assertCountEquals(0)
     }
 
     @Test fun semEstimativaEProvisorioSoAparecemQuandoHa() {

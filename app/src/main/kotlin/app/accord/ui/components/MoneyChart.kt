@@ -58,6 +58,13 @@ internal fun chartContrast(foreground: Color, background: Color): Float {
     return (maxOf(a, b) + 0.05f) / (minOf(a, b) + 0.05f)
 }
 
+/**
+ * Texto na cor semântica [preferred] só se ela alcança 4,5:1 sobre [background]; senão, [fallback] (o texto do tema). Algumas
+ * paletas claras têm `error` abaixo disso sobre os cartões. O significado nunca depende só da cor: quem chama também usa ícone e palavra.
+ */
+internal fun textInk(preferred: Color, background: Color, fallback: Color): Color =
+    if (chartContrast(preferred, background) >= 4.5f) preferred else fallback
+
 /** Some appearance palettes have pastel dataNeutral. Use the semantic text color when needed. */
 internal fun chartInk(preferred: Color, background: Color, fallback: Color): Color =
     if (chartContrast(preferred, background) >= 3f) preferred else fallback

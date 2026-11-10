@@ -18,6 +18,8 @@ import app.accord.core.Money
 import app.accord.core.MonthCashFlow
 import app.accord.ui.components.AdaptiveRow
 import app.accord.ui.components.DecorativeIcon
+import app.accord.ui.components.chartInk
+import app.accord.ui.components.textInk
 import app.accord.ui.theme.Accord
 import app.accord.ui.theme.AccordSpacing
 import com.composables.icons.lucide.R as Lucide
@@ -84,7 +86,9 @@ private fun ResultRow(label: String, cents: Long) {
         cents < 0 -> stringResource(R.string.cashflow_outcome_shortfall, amount)
         else -> stringResource(R.string.cashflow_outcome_even, amount)
     }
-    val color = resultColor(cents)
+    val card = MaterialTheme.colorScheme.surfaceContainerLow
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    val color = if (cents < 0) textInk(MaterialTheme.colorScheme.error, card, onSurface) else Color.Unspecified
     Row(
         Modifier.semantics(mergeDescendants = true) {},
         verticalAlignment = Alignment.Top,
@@ -92,11 +96,8 @@ private fun ResultRow(label: String, cents: Long) {
     ) {
         DecorativeIcon(
             if (cents < 0) Lucide.drawable.lucide_ic_circle_alert else Lucide.drawable.lucide_ic_circle_check,
-            tint = if (cents < 0) MaterialTheme.colorScheme.error else Accord.colors.success,
+            tint = if (cents < 0) chartInk(MaterialTheme.colorScheme.error, card, onSurface) else chartInk(Accord.colors.success, card, onSurface),
         )
         Text(stringResource(R.string.cashflow_result_line, label, outcome), style = MaterialTheme.typography.titleMedium, color = color)
     }
 }
-
-@Composable
-private fun resultColor(cents: Long): Color = if (cents < 0) MaterialTheme.colorScheme.error else Color.Unspecified

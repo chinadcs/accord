@@ -67,7 +67,8 @@ fun AllowanceSummary(
         modifier = modifier,
         onClick = onBudget,
         onClickLabel = stringResource(R.string.allowance_see_limits),
-        skeletonLines = 3,
+        skeletonLines = 7,
+        loadingMinHeight = 280.dp,
         headerAction = {
             IconButton(onClick = { showMethod = true }, modifier = Modifier.size(AccordSpacing.touchMin)) {
                 Icon(

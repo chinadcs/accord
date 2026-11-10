@@ -587,6 +587,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             onCommitments = { navController.navigate(ROUTE_COMMITMENTS) },
                             cashFlow = cashFlow, onCashFlowRetry = cashFlowModel::refresh,
                             balance = balance, onBalanceRetry = balanceModel::refresh,
+                            onRefreshed = { container.feedback.post(FeedbackEvent(R.string.home_refreshed)) },
                             projection = projection, onProjectionRetry = projectionModel::refresh,
                             onForecasts = { navController.navigate("$ROUTE_FORECASTS?$ARG_MONTH=${container.clock.currentMonth()}") })
                     }

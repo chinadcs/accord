@@ -15,6 +15,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -60,11 +65,28 @@ fun HomeScreen(
     onCashFlowRetry: () -> Unit = {},
     balance: HomeBalanceState = HomeBalanceState.Loading,
     onBalanceRetry: () -> Unit = {},
+    onRefreshed: () -> Unit = {},
 ) {
     val failures = homeFailures(pending, balance, upcoming, projection, allowance, cashFlow)
+    val loadingBlocks = homeLoadingBlocks(pending, balance, upcoming, projection, allowance, cashFlow)
+    // Depois de "Tentar de novo" o banner continua no lugar, em "Atualizando…", até todas as leituras terminarem (accord-qjlo):
+    // sem isso ele sumia no instante em que a falha virava carga, o foco do TalkBack se perdia e nada anunciava o resultado.
+    var retrying by remember { mutableStateOf(false) }
+    var retryBlocks by remember { mutableStateOf(emptyList<HomeBlock>()) }
+    // Só contam as leituras que o toque refez: outro painel ainda na carga inicial não prende o banner.
+    val retryRunning = retryBlocks.any { it in loadingBlocks }
+    val updating = retrying && retryRunning
+    LaunchedEffect(retrying, retryRunning, failures.isEmpty()) {
+        if (retrying && !retryRunning) {
+            retrying = false
+            if (failures.isEmpty()) onRefreshed()
+        }
+    }
     RootScaffold(stringResource(R.string.tab_home), padding) {
         // Um só "Tentar de novo" para a tela: refaz apenas as leituras que falharam, sem recarregar o que já está pronto.
-        HomeFailureBanner(failures, onRetry = {
+        HomeFailureBanner(if (updating) retryBlocks else failures, updating = updating, onRetry = {
+            retryBlocks = failures
+            retrying = true
             failures.forEach { block ->
                 when (block) {
                     HomeBlock.Balance -> onBalanceRetry()

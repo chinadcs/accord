@@ -125,6 +125,9 @@ class PendingQueueViewModel(
 
     fun refresh() {
         refreshJob?.cancel()
+        // Tentar de novo depois de uma falha volta a "carregando" (como nos outros painéis da Início): a falha antiga não fica
+        // na tela enquanto a nova leitura corre, e quem observa sabe quando ela termina.
+        if (_state.value.failed) _state.update { it.copy(loading = true, failed = false) }
         refreshJob = viewModelScope.launch {
             val imports = (provider.imports().pendings() as? QueryResult.Data)?.value
             val records = (provider.space().pendings() as? QueryResult.Data)?.value
