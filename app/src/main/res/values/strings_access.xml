@@ -151,8 +151,6 @@
 
     <!-- Conta, sair e renovação (Mais) -->
     <string name="more_group_account">Conta</string>
-    <string name="more_signed_as">Conectado como %1$s</string>
-    <string name="more_space">Espaço da casa</string>
     <string name="more_first_steps">Primeiros passos</string>
     <string name="more_sign_out">Sair</string>
     <string name="more_renew_access">Entrar de novo</string>

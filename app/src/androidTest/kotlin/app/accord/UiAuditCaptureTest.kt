@@ -192,7 +192,7 @@ class UiAuditCaptureTest {
     }
     @Test fun categorias() = destination("Categorias e subcategorias", "23_categorias", "Nova")
     @Test fun limites() = destination("Limites do orçamento", "24_limites")
-    @Test fun cartao() = destination("Cartão e faturas", "12_cartao")
+    @Test fun cartao() = destination("Cartões e faturas", "12_cartao", destinationText = "Cartão e faturas")
     @Test fun rendas() = destination("Rendas", "28_rendas")
     @Test fun compromissos() = destination("Compromissos futuros", "10_compromissos")
     @Test fun previsoes() {
@@ -204,7 +204,14 @@ class UiAuditCaptureTest {
         }
         capturePages("20_previsoes")
     }
-    @Test fun sincronizacao() = destination("Sincronização", "26_sincronizacao")
+    @Test fun sincronizacao() {
+        // Entrada única: a linha de sincronização do topo de Mais (ADR 0077).
+        compose.onAllNodes(hasText("Mais") and hasClickAction()).onFirst().performClick()
+        waitFor("Categorias e subcategorias")
+        compose.onNode(androidx.compose.ui.test.hasTestTag("more-sync")).performClick()
+        waitFor("Sincronização")
+        capturePages("26_sincronizacao")
+    }
     @Test fun preferenciasDeAlertas() = destination("Preferências de alertas", "27_preferencias_alertas")
 
     @Test fun configuracoesDoChatEModelo() {

@@ -2,14 +2,18 @@
 <resources>
     <!-- Mais (tela 22) -->
     <string name="more_title">Mais</string>
-    <string name="more_group_budget">Orçamento</string>
-    <string name="more_group_space">Espaço</string>
+    <string name="more_group_budget">Orçamento e contas</string>
+    <string name="more_group_plan">Planejar</string>
+    <string name="more_group_follow">Acompanhar</string>
     <string name="more_group_device">Neste aparelho</string>
     <string name="more_group_notifications">Notificações</string>
     <string name="more_group_entries">Lançamentos</string>
+    <!-- Cabeçalho de pessoa e espaço (ADR 0077): o número de participantes só aparece quando o aparelho já conhece a lista. -->
+    <string name="more_header_open">Abrir espaço, participantes e convite</string>
+    <string name="more_header_space_participants">%1$s · %2$d de %3$d participantes</string>
     <string name="more_categories">Categorias e subcategorias</string>
     <string name="more_limits">Limites do orçamento</string>
-    <string name="more_card">Cartão e faturas</string>
+    <string name="more_card">Cartões e faturas</string>
     <string name="more_incomes">Rendas</string>
     <string name="more_commitments">Compromissos futuros</string>
     <string name="more_accounts">Contas</string>

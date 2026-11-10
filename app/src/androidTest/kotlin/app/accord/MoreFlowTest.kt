@@ -5,6 +5,7 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onLast
@@ -126,8 +127,9 @@ class MoreFlowTest {
     fun maisListaSoORecursoDisponivelETemaEscolhidoFicaGuardadoNoAparelho() {
         compose.onNodeWithText("Mais").performClick()
         waitForText("Categorias e subcategorias")
-        // recursos de fases seguintes não aparecem como botão vazio; a Sincronização já existe (S2)
-        assert(compose.onAllNodesWithText("Sincronização", substring = true).fetchSemanticsNodes().isNotEmpty())
+        // recursos de fases seguintes não aparecem como botão vazio; a Sincronização já existe (S2) e tem uma só entrada, a linha do topo
+        assert(compose.onAllNodesWithTag("more-sync").fetchSemanticsNodes().size == 1)
+        assert(compose.onAllNodesWithText("Sincronização", substring = true).fetchSemanticsNodes().isEmpty())
         // O Chat (modelo, exportar e limpar o histórico) existe desde o S3 e fica em "Configurações do Chat".
         assert(compose.onAllNodesWithText("Configurações do Chat", substring = true).fetchSemanticsNodes().isNotEmpty())
         tap("Aparência")

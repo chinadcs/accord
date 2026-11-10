@@ -108,9 +108,6 @@
     <string name="indicator_service">Serviço indisponível</string>
     <string name="indicator_session">Entre de novo para sincronizar</string>
     <string name="indicator_open">Abrir Sincronização</string>
-    <string name="more_sync">Sincronização</string>
-    <string name="more_sync_conflicts">%1$d em conflito</string>
-    <string name="more_sync_pending">%1$d por enviar</string>
     <string name="feedback_saved_awaiting">Salvo neste aparelho · aguardando envio.</string>
     <string name="feedback_saved_local">Salvo neste aparelho.</string>
 

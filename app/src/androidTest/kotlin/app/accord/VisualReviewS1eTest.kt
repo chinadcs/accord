@@ -311,7 +311,7 @@ class VisualReviewS1eTest {
 
     @Test
     fun mais() {
-        val actions = app.accord.ui.more.MoreActions({}, {}, {}, {}, {}, {})
+        val actions = app.accord.ui.more.MoreActions()
         both("s1f_mais") { app.accord.ui.more.MoreScreen(PaddingValues(), actions) }
         capture("s1f_mais_fonte150", ThemePreference.Light, 1.5f) { app.accord.ui.more.MoreScreen(PaddingValues(), actions) }
     }

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="tab_home">Início</string>
-    <string name="more_group_review">Revisão e importação</string>
+    <string name="more_group_review">Revisar e importar</string>
     <string name="home_pending_loading">Consultando pendências…</string>
     <string name="home_pending_failed">Não foi possível consultar as pendências</string>
     <string name="home_pending_empty">Nenhuma pendência neste aparelho</string>

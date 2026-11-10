@@ -67,7 +67,7 @@ class RedesignVisualReviewTest {
         }
     }
 
-    private val moreActions = MoreActions({}, {}, {}, {}, {}, {})
+    private val moreActions = MoreActions()
 
     private val more = @Composable { MoreScreen(PaddingValues(), moreActions) }
     private val login = @Composable { access(AccessUi()) }

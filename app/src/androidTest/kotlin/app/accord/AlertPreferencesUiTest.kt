@@ -17,6 +17,7 @@ import app.accord.ui.alerts.AlertPreferencesUiState
 import app.accord.ui.firststeps.FirstStepsScreen
 import app.accord.ui.more.MoreActions
 import app.accord.ui.more.MoreScreen
+import app.accord.ui.more.MoreUiState
 import app.accord.ui.firststeps.StepActions
 import app.accord.ui.firststeps.StepRow
 import app.accord.ui.firststeps.StepText
@@ -133,10 +134,8 @@ class AlertPreferencesUiTest {
         AccordTheme {
             MoreScreen(
                 padding,
-                actions = MoreActions(
-                    {}, {}, {}, {}, {}, {}, onAlertPreferences = onDetails, onAlertsToggle = onToggle, onAlertsAllow = onAllow,
-                ),
-                alerts = state,
+                actions = MoreActions(onAlertPreferences = onDetails, onAlertsToggle = onToggle, onAlertsAllow = onAllow),
+                state = MoreUiState(alerts = state),
             )
         }
     }

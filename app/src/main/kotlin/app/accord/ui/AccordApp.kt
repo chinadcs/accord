@@ -255,8 +255,7 @@ import app.accord.ui.limits.LimitsRoute
 import app.accord.ui.limits.LimitsViewModel
 import app.accord.ui.more.AccountsRoute
 import app.accord.ui.more.AccountsViewModel
-import app.accord.ui.more.MoreActions
-import app.accord.ui.more.MoreScreen
+import app.accord.ui.more.MoreRoute
 import app.accord.ui.more.AppearanceScreen
 import app.accord.ui.theme.Accord
 import com.composables.icons.lucide.R as Lucide
@@ -705,127 +704,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
             }
             navigation(startDestination = Root.More.start, route = Root.More.graph) {
                 composable(Root.More.start) {
-                    val scope = rememberCoroutineScope()
-                    val entriesCriterion by container.theme.entriesDateCriterion.collectAsStateWithLifecycle()
-                    var signOutPending by remember { mutableStateOf<Int?>(null) }
-                    var chatDialog by remember { mutableStateOf<ChatHistoryDialog?>(null) }
-                    val resolver = LocalContext.current.contentResolver
-                    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-                        if (uri != null) scope.launch {
-                            val text = container.exportChat()
-                            val saved = text != null && runCatching {
-                                withContext(Dispatchers.IO) { resolver.openOutputStream(uri, "wt")?.use { it.write(text.toByteArray(Charsets.UTF_8)) } ?: error("sem saída") }
-                            }.isSuccess
-                            container.feedback.post(FeedbackEvent(if (saved) R.string.chat_exported else R.string.chat_export_failed))
-                        }
-                    }
-                    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-                        if (uri != null) scope.launch {
-                            val text = runCatching { withContext(Dispatchers.IO) { resolver.openInputStream(uri)?.use { String(it.readBytes(), Charsets.UTF_8) } } }.getOrNull()
-                            val result = text?.let { container.importChat(it) } ?: ChatImportResult.Unreadable
-                            container.feedback.post(
-                                when (result) {
-                                    is ChatImportResult.Imported ->
-                                        if (result.messages == 0) FeedbackEvent(R.string.chat_imported_none) else FeedbackEvent(R.string.chat_imported_count, listOf(result.messages))
-                                    ChatImportResult.OtherOwner -> FeedbackEvent(R.string.chat_import_other_owner)
-                                    ChatImportResult.Unreadable -> FeedbackEvent(R.string.chat_import_unreadable)
-                                },
-                            )
-                        }
-                    }
-                    val alertsViewModel: AlertPreferencesViewModel = viewModel(
-                        factory = viewModelFactory { initializer { AlertPreferencesViewModel(container, container.notifications) } },
-                    )
-                    val alertsState by alertsViewModel.state.collectAsStateWithLifecycle()
-                    // Voltar dos ajustes do sistema atualiza a situação real das notificações.
-                    RefreshOnResume(alertsViewModel::refresh)
-                    val allowNotifications = rememberAllowNotifications(container.notifications, onDone = alertsViewModel::refresh)
-                    val updatesState by container.updates.state.collectAsStateWithLifecycle()
-                    val apkState by container.apkUpdate.state.collectAsStateWithLifecycle()
-                    MoreScreen(
-                        padding,
-                        reviewState = reviewState,
-                        actions = MoreActions(
-                            onReview = { navController.navigate(ROUTE_REVIEW) },
-                            onImport = { navController.navigate(ROUTE_IMPORT_HUB) },
-                            onCategories = { navController.navigate(ROUTE_CATEGORIES) },
-                            onAccounts = { navController.navigate(ROUTE_ACCOUNTS) },
-                            onLimits = { navController.navigate(ROUTE_LIMITS) },
-                            onCard = { navController.navigate(ROUTE_CARD) },
-                            onIncomes = { navController.navigate(ROUTE_INCOMES) },
-                            onReceivables = { navController.navigate(ROUTE_RECEIVABLES) },
-                            onCommitments = { navController.navigate(ROUTE_COMMITMENTS) },
-                            onSubscriptions = { navController.navigate(ROUTE_SUBSCRIPTIONS) },
-                            onActivity = { navController.navigate(ROUTE_ACTIVITY) },
-                            onComparison = { navController.navigate(ROUTE_COMPARISON) },
-                            onWeeklyReview = { navController.navigate(ROUTE_WEEKLY_REVIEW) },
-                            onSimulator = if (container.phase.includes(ProductPhase.P2)) ({ navController.navigate(ROUTE_SIMULATOR) }) else null,
-                            onIntentions = if (container.phase.includes(ProductPhase.P2)) ({ navController.navigate(ROUTE_INTENTIONS) }) else null,
-                            onClues = if (container.phase.includes(ProductPhase.P2)) ({ navController.navigate(ROUTE_CLUES) }) else null,
-                            onRegister = register,
-                            onSpace = { navController.navigate(ROUTE_SPACE) },
-                            onAppearance = { navController.navigate("appearance") },
-                            onSecurity = { navController.navigate("security") },
-                            onPrivacy = { navController.navigate("privacy") },
-                            onSavings = { navController.navigate("savings") },
-                            onArchivedChats = if (access.archivedSpaces.isNotEmpty()) ({ navController.navigate("archived_chats") }) else null,
-                            onAlertPreferences = { navController.navigate(ROUTE_ALERT_PREFS) },
-                            onBankNotifications = { navController.navigate(ROUTE_BANK_NOTIFICATIONS) },
-                            onForecasts = { navController.navigate(ROUTE_FORECASTS) },
-                            onAlertsToggle = { enabled ->
-                                alertsViewModel.toggleNow(enabled)
-                                // Ligar sem permissão leva direto ao pedido do sistema (ou aos ajustes), sem esconder o que falta.
-                                if (enabled && alertsState.access != NotificationAccess.Granted) allowNotifications()
-                            },
-                            onAlertsAllow = allowNotifications,
-                            onSignOut = {
-                                // Sempre uma decisão explícita, com o número de operações por enviar à vista.
-                                scope.launch {
-                                    val summary = container.access.runtime.value?.syncStore?.summary()
-                                    signOutPending = summary?.let { it.awaitingOperations + it.openConflicts + it.rejectedOperations } ?: 0
-                                }
-                            },
-                            onRenew = { navController.navigate(ROUTE_ACCESS) },
-                            onSync = { navController.navigate(ROUTE_SYNC) },
-                            onChatModel = { navController.navigate(ROUTE_MODEL) },
-                            onChatExport = { chatDialog = ChatHistoryDialog.Export },
-                            onChatImport = { importLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) },
-                            onChatClear = { chatDialog = ChatHistoryDialog.Clear },
-                        ),
-                        account = access.account,
-                        sessionState = access.session,
-                        syncStatus = syncStatus,
-                        entriesCriterion = entriesCriterion,
-                        onEntriesCriterionChange = container.theme::setEntriesDateCriterion,
-                        alerts = alertsState,
-                        updates = updatesState,
-                        onCheckUpdates = { container.updates.check(manual = true) },
-                        installState = apkState.install,
-                        updateActions = container.updateActions,
-                    )
-                    chatDialog?.let { dialog ->
-                        ChatHistoryDialogView(
-                            dialog,
-                            onConfirm = {
-                                chatDialog = null
-                                when (dialog) {
-                                    ChatHistoryDialog.Export -> exportLauncher.launch("historico-do-chat.json")
-                                    ChatHistoryDialog.Clear -> scope.launch {
-                                        container.clearChat()
-                                        container.feedback.post(FeedbackEvent(R.string.chat_cleared))
-                                    }
-                                }
-                            },
-                            onDismiss = { chatDialog = null },
-                        )
-                    }
-                    signOutPending?.let { pending ->
-                        SignOutDialog(
-                            pending,
-                            onConfirm = { signOutPending = null; scope.launch { container.access.signOut(confirmPending = true) } },
-                            onDismiss = { signOutPending = null },
-                        )
-                    }
+                    MoreRoute(container, navController, padding, reviewState, access, onRegister = register)
                 }
             }
 
@@ -1593,38 +1472,3 @@ private fun RenewalBanner(onRenew: () -> Unit) {
     }
 }
 
-private enum class ChatHistoryDialog { Export, Clear }
-
-@Composable
-private fun ChatHistoryDialogView(dialog: ChatHistoryDialog, onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    val export = dialog == ChatHistoryDialog.Export
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(if (export) R.string.chat_export_title else R.string.chat_clear_title)) },
-        text = { Text(stringResource(if (export) R.string.chat_export_body else R.string.chat_clear_body)) },
-        confirmButton = {
-            TextButton(onClick = onConfirm, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                Text(stringResource(if (export) R.string.chat_export_confirm else R.string.chat_clear_confirm))
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.chat_dialog_cancel)) } },
-    )
-}
-
-@Composable
-private fun SignOutDialog(pendingOperations: Int, onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.signout_title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                Text(stringResource(R.string.signout_body))
-                if (pendingOperations > 0) {
-                    Text(pluralStringResource(R.plurals.signout_pending, pendingOperations, pendingOperations), style = MaterialTheme.typography.bodyMedium)
-                }
-            }
-        },
-        confirmButton = { TextButton(onClick = onConfirm, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.signout_confirm)) } },
-        dismissButton = { TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.signout_cancel)) } },
-    )
-}

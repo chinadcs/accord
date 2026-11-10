@@ -7,7 +7,9 @@ import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onLast
 import androidx.compose.ui.test.onNodeWithText
@@ -134,6 +136,12 @@ class SyncFlowTest {
         compose.onAllNodes(hasText(text, substring = true) and hasClickAction()).onFirst().performClick()
     }
 
+    /** A linha única de sincronização do topo de Mais (ADR 0077) é a entrada da tela; ela é achada pelo testTag, não pelo texto. */
+    private fun openSyncFromMore() {
+        compose.waitUntil(25_000) { compose.onAllNodesWithTag("more-sync").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithTag("more-sync").performSemanticsAction(SemanticsActions.OnClick)
+    }
+
     private fun dialogButton(text: String) {
         compose.onAllNodes(hasText(text) and hasClickAction()).onLast().performClick()
     }
@@ -160,8 +168,7 @@ class SyncFlowTest {
         service.online = false
         launch(ana)
         compose.onNodeWithText("Mais").performClick()
-        waitForText("Sincronização")
-        tap("Sincronização")
+        openSyncFromMore()
         waitForText("1 operação local por enviar")
         waitForText("A visão do espaço pode estar desatualizada. O que está salvo aqui ainda não foi enviado.")
         service.online = true
@@ -182,8 +189,7 @@ class SyncFlowTest {
         ana.sync.syncNow()
         launch(ana)
         compose.onNodeWithText("Mais").performClick()
-        waitForText("Sincronização")
-        tap("Sincronização")
+        openSyncFromMore()
         waitForText("Sem conexão. A fila está preservada e a visão compartilhada pode estar incompleta.")
         waitForText("1 operação local por enviar")
         service.online = true
@@ -209,8 +215,7 @@ class SyncFlowTest {
         }
         launch(ana)
         compose.onNodeWithText("Mais").performClick()
-        waitForText("Sincronização")
-        tap("Sincronização")
+        openSyncFromMore()
         waitForText("1 operação local por enviar")
         service.online = true
         tap("Sincronizar agora")

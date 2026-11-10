@@ -326,7 +326,8 @@ class AccessFlowTest {
         }
         waitForText("Pede atenção")
         compose.onNodeWithText("Mais").performClick()
-        waitForText("Conectado como $email")
+        // O e-mail agora está no cabeçalho de Mais (ADR 0077), no lugar da frase "Conectado como".
+        waitForText(email)
         tap("Sair")
         waitForText("Sair da conta?")
         waitForText("Os dados deste aparelho continuam guardados para esta conta.")

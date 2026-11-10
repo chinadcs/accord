@@ -9,6 +9,7 @@ import app.accord.ui.alerts.menuStatus
 import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
 import app.accord.ui.theme.Accord
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import app.accord.ui.components.AccordButton as Button
 import androidx.compose.material3.HorizontalDivider
@@ -33,75 +35,100 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import app.accord.R
-import app.accord.core.sync.AccountView
+import app.accord.core.sync.InviteCode
 import app.accord.core.sync.SessionState
-import app.accord.core.sync.SyncStatus
 import app.accord.core.space.DateCriterion
 import app.accord.ui.components.DecorativeIcon
+import app.accord.ui.pending.PendingQueueUiState
 import app.accord.ui.theme.AccordSpacing
-import androidx.compose.ui.unit.dp
 import androidx.compose.material3.RadioButton
 import com.composables.icons.lucide.R as Lucide
 
-/** Destinos que a aba Mais abre nesta fase; o que ainda não existe não aparece como botão vazio. */
+/**
+ * Destinos que a aba Mais abre, agrupados como na tela (ADR 0077). Todos têm padrão vazio: quem monta a tela informa só o que usa.
+ * O que ainda não existe (fase P2) é nulo e a linha não aparece, sem botão vazio.
+ */
 data class MoreActions(
-    val onCategories: () -> Unit,
-    val onAccounts: () -> Unit,
-    val onLimits: () -> Unit,
-    val onCard: () -> Unit,
-    val onIncomes: () -> Unit,
-    val onCommitments: () -> Unit,
+    // Topo: cabeçalho, registro manual e sincronização.
+    val onSpace: () -> Unit = {},
+    val onRegister: () -> Unit = {},
+    val onSync: () -> Unit = {},
+    // Revisar e importar.
     val onReview: () -> Unit = {},
     val onImport: () -> Unit = {},
-    val onRegister: () -> Unit = {},
-    val onSpace: () -> Unit = {},
-    val onAppearance: () -> Unit = {},
-    val onSecurity: () -> Unit = {},
-    val onPrivacy: () -> Unit = {},
+    // Orçamento e contas.
+    val onLimits: () -> Unit = {},
+    val onCategories: () -> Unit = {},
+    val onIncomes: () -> Unit = {},
+    val onCard: () -> Unit = {},
+    val onAccounts: () -> Unit = {},
     val onSavings: () -> Unit = {},
-    val onArchivedChats: (() -> Unit)? = null,
-    val onAlertPreferences: () -> Unit = {},
-    val onBankNotifications: () -> Unit = {},
-    val onForecasts: () -> Unit = {},
-    val onSubscriptions: () -> Unit = {},
-    val onActivity: () -> Unit = {},
-    val onComparison: () -> Unit = {},
-    val onWeeklyReview: () -> Unit = {},
-    /** Simulador de compra (tela 36, P2); nulo enquanto a fase P2 não estiver ativa: a linha não aparece. */
-    val onSimulator: (() -> Unit)? = null,
-    /** Intenções de compra (tela 34, P2); nulo antes da fase P2. */
-    val onIntentions: (() -> Unit)? = null,
-    val onClues: (() -> Unit)? = null,
+    // Planejar.
+    val onCommitments: () -> Unit = {},
     /** "Quem me deve" (ADR 0083, spec 39). */
     val onReceivables: () -> Unit = {},
+    val onSubscriptions: () -> Unit = {},
+    val onForecasts: () -> Unit = {},
+    /** Intenções de compra (tela 34, P2); nulo antes da fase P2. */
+    val onIntentions: (() -> Unit)? = null,
+    /** Simulador de compra (tela 36, P2); nulo enquanto a fase P2 não estiver ativa: a linha não aparece. */
+    val onSimulator: (() -> Unit)? = null,
+    // Acompanhar.
+    val onWeeklyReview: () -> Unit = {},
+    val onActivity: () -> Unit = {},
+    val onComparison: () -> Unit = {},
+    /** Pistas de revisão (tela 37, P2); nulo antes da fase P2. */
+    val onClues: (() -> Unit)? = null,
+    // Conta.
+    val onSignOut: () -> Unit = {},
+    val onRenew: () -> Unit = {},
+    // Notificações.
     /** Liga ou desliga os avisos neste aparelho (salva na hora). */
     val onAlertsToggle: (Boolean) -> Unit = {},
     /** "Permitir notificações" (ou abrir os ajustes do sistema), quando falta a permissão ou o canal está desativado. */
     val onAlertsAllow: () -> Unit = {},
-    val onSignOut: () -> Unit = {},
-    val onRenew: () -> Unit = {},
-    val onSync: () -> Unit = {},
+    val onAlertPreferences: () -> Unit = {},
+    val onBankNotifications: () -> Unit = {},
+    // Chat.
+    val onArchivedChats: (() -> Unit)? = null,
     val onChatModel: () -> Unit = {},
     val onChatExport: () -> Unit = {},
     val onChatImport: () -> Unit = {},
     val onChatClear: () -> Unit = {},
+    // Neste aparelho.
+    val onAppearance: () -> Unit = {},
+    val onSecurity: () -> Unit = {},
+    val onPrivacy: () -> Unit = {},
 )
+
+/**
+ * Cabeçalho de pessoa e espaço (ADR 0077). [participants] só vem preenchido quando o aparelho já conhece a lista (cache local);
+ * nulo nunca vira "1" nem "0".
+ */
+data class MoreHeaderState(val email: String, val spaceName: String?, val participants: Int?)
+
+/** O que a tela Mais lê para se desenhar; sem conta, [header] é nulo e a tela some com o cabeçalho e o grupo Conta. */
+data class MoreUiState(
+    val header: MoreHeaderState? = null,
+    val review: PendingQueueUiState = PendingQueueUiState(),
+    val session: SessionState = SessionState.Valid,
+    val entriesCriterion: DateCriterion = DateCriterion.PurchaseDate,
+    /** Preferência e situação real das notificações deste aparelho; nulo onde o menu não se aplica. */
+    val alerts: AlertPreferencesUiState? = null,
+)
+
+private val ChevronSize = AccordSpacing.s5 - AccordSpacing.s1
 
 @Composable
 fun MoreScreen(
     padding: PaddingValues,
     actions: MoreActions,
-    reviewState: app.accord.ui.pending.PendingQueueUiState = app.accord.ui.pending.PendingQueueUiState(),
-    account: AccountView? = null,
-    sessionState: SessionState = SessionState.Valid,
-    syncStatus: SyncStatus? = null,
-    entriesCriterion: DateCriterion = DateCriterion.PurchaseDate,
+    state: MoreUiState = MoreUiState(),
     onEntriesCriterionChange: (DateCriterion) -> Unit = {},
-    /** Preferência e situação real das notificações deste aparelho; nulo onde o menu não se aplica. */
-    alerts: AlertPreferencesUiState? = null,
     updates: app.accord.updates.UpdateState? = null,
     onCheckUpdates: () -> Unit = {},
     installState: app.accord.updates.InstallState = app.accord.updates.InstallState.Idle,
@@ -116,9 +143,11 @@ fun MoreScreen(
         Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
         verticalArrangement = Arrangement.spacedBy(AccordSpacing.s4),
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+        // Com conta, o cartão abre o espaço; sem conta, a tela mantém o título "Mais" como cabeçalho acessível.
+        if (state.header != null) {
+            MoreHeader(state.header, actions.onSpace)
+        } else {
             Text(stringResource(R.string.more_title), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { heading() })
-            Text(stringResource(R.string.more_intro), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
         // O registro manual continua a um toque de qualquer raiz, sem depender de modelo nem de rede.
@@ -127,75 +156,65 @@ fun MoreScreen(
         }
 
         // "Salvo no aparelho" até haver sincronização concluída; depois, "Dados sincronizados até …", nunca um selo de "em dia".
-        // É o único lugar que mostra esta linha (ADR 0071).
+        // É a única entrada da tela Sincronização (ADR 0071, ADR 0077); o destino vem de LocalOpenSync.
         app.accord.ui.sync.SyncIndicator()
 
         Section(R.string.more_group_review) {
             MoreRow(R.string.tab_review, Lucide.drawable.lucide_ic_circle_check, actions.onReview,
-                supporting = app.accord.ui.home.pendingSummary(reviewState))
+                supporting = app.accord.ui.home.pendingSummary(state.review))
             MoreRow(R.string.more_import, Lucide.drawable.lucide_ic_download, actions.onImport)
         }
 
         Section(R.string.more_group_budget) {
-            MoreRow(R.string.more_categories, Lucide.drawable.lucide_ic_tag, actions.onCategories)
             MoreRow(R.string.more_limits, Lucide.drawable.lucide_ic_gauge, actions.onLimits)
-            MoreRow(R.string.more_card, Lucide.drawable.lucide_ic_credit_card, actions.onCard)
+            MoreRow(R.string.more_categories, Lucide.drawable.lucide_ic_tag, actions.onCategories)
             MoreRow(R.string.more_incomes, Lucide.drawable.lucide_ic_wallet, actions.onIncomes)
-            MoreRow(R.string.more_receivables, Lucide.drawable.lucide_ic_users, actions.onReceivables)
+            MoreRow(R.string.more_card, Lucide.drawable.lucide_ic_credit_card, actions.onCard)
+            MoreRow(R.string.more_accounts, Lucide.drawable.lucide_ic_landmark, actions.onAccounts)
+            MoreRow(R.string.savings_title, Lucide.drawable.lucide_ic_piggy_bank, actions.onSavings)
+        }
+
+        Section(R.string.more_group_plan) {
             MoreRow(R.string.more_commitments, Lucide.drawable.lucide_ic_calendar, actions.onCommitments)
+            // Linha que o ADR 0077 não listava (ADR 0083): valores a receber olham adiante, então ficam em Planejar.
+            MoreRow(R.string.more_receivables, Lucide.drawable.lucide_ic_users, actions.onReceivables)
             MoreRow(R.string.more_subscriptions, Lucide.drawable.lucide_ic_repeat, actions.onSubscriptions)
-            MoreRow(R.string.more_activity, Lucide.drawable.lucide_ic_shopping_bag, actions.onActivity)
-            MoreRow(R.string.more_comparison, Lucide.drawable.lucide_ic_chart_column, actions.onComparison)
-            MoreRow(R.string.more_weekly, Lucide.drawable.lucide_ic_calendar_check, actions.onWeeklyReview)
-            actions.onClues?.let { MoreRow(R.string.clues_title, Lucide.drawable.lucide_ic_search, it) }
             MoreRow(R.string.forecast_title, Lucide.drawable.lucide_ic_trending_up, actions.onForecasts)
             actions.onIntentions?.let { MoreRow(R.string.more_intentions, Lucide.drawable.lucide_ic_lightbulb, it) }
             actions.onSimulator?.let { MoreRow(R.string.more_simulator, Lucide.drawable.lucide_ic_calculator, it) }
         }
 
-        Section(R.string.more_group_space) {
-            MoreRow(R.string.more_space, Lucide.drawable.lucide_ic_users, actions.onSpace)
-            MoreRow(R.string.more_accounts, Lucide.drawable.lucide_ic_landmark, actions.onAccounts)
-            MoreRow(R.string.savings_title, Lucide.drawable.lucide_ic_wallet, actions.onSavings)
-            if (syncStatus != null) {
-                val summary = syncStatus.summary
-                MoreRow(
-                    R.string.more_sync, Lucide.drawable.lucide_ic_refresh_cw, actions.onSync,
-                    supporting = when {
-                        summary.openConflicts > 0 -> stringResource(R.string.more_sync_conflicts, summary.openConflicts)
-                        summary.awaitingOperations > 0 -> stringResource(R.string.more_sync_pending, summary.awaitingOperations)
-                        else -> null
-                    },
-                )
-            }
+        Section(R.string.more_group_follow) {
+            MoreRow(R.string.more_weekly, Lucide.drawable.lucide_ic_calendar_check, actions.onWeeklyReview)
+            MoreRow(R.string.more_activity, Lucide.drawable.lucide_ic_shopping_bag, actions.onActivity)
+            MoreRow(R.string.more_comparison, Lucide.drawable.lucide_ic_chart_column, actions.onComparison)
+            actions.onClues?.let { MoreRow(R.string.clues_title, Lucide.drawable.lucide_ic_search, it) }
         }
 
+        // Daqui para baixo, os grupos seguem como antes: cada um tem o seu próprio bead no ADR 0077.
         Section(R.string.more_group_entries) {
             Text(stringResource(R.string.entries_criterion_settings_note), style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2))
-            CriterionOption(R.string.entries_criterion_purchase, entriesCriterion == DateCriterion.PurchaseDate) {
+            CriterionOption(R.string.entries_criterion_purchase, state.entriesCriterion == DateCriterion.PurchaseDate) {
                 onEntriesCriterionChange(DateCriterion.PurchaseDate)
             }
-            CriterionOption(R.string.entries_criterion_budget, entriesCriterion == DateCriterion.BudgetMonth) {
+            CriterionOption(R.string.entries_criterion_budget, state.entriesCriterion == DateCriterion.BudgetMonth) {
                 onEntriesCriterionChange(DateCriterion.BudgetMonth)
             }
         }
 
-        if (account != null) {
+        if (state.header != null) {
             Section(R.string.more_group_account) {
-                Text(stringResource(R.string.more_signed_as, account.email), style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s3))
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                if (sessionState == SessionState.NeedsRenewal) {
+                if (state.session == SessionState.NeedsRenewal) {
                     MoreRow(R.string.more_renew_access, Lucide.drawable.lucide_ic_log_in, actions.onRenew)
                 }
                 MoreRow(R.string.more_sign_out, Lucide.drawable.lucide_ic_log_out, actions.onSignOut)
             }
         }
 
-        alerts?.takeIf { !it.loading && !it.failed }?.let { state ->
-            Section(R.string.more_group_notifications) { NotificationsMenu(state, actions) }
+        state.alerts?.takeIf { !it.loading && !it.failed }?.let { alerts ->
+            Section(R.string.more_group_notifications) { NotificationsMenu(alerts, actions) }
         }
 
         Section(R.string.more_group_chat) {
@@ -210,6 +229,42 @@ fun MoreScreen(
             MoreRow(R.string.appearance_title, Lucide.drawable.lucide_ic_palette, actions.onAppearance)
         }
         updates?.let { app.accord.updates.UpdatePanel(it, installState, onCheckUpdates, updateActions) }
+    }
+}
+
+/**
+ * Cartão de pessoa e espaço: um único nó acessível (e-mail, espaço e, se conhecidos, participantes) com a ação "Abrir espaço…".
+ * A inicial do avatar é só decoração. Sem altura fixa nem limite de linhas, para o e-mail e o texto ampliado caberem.
+ */
+@Composable
+private fun MoreHeader(header: MoreHeaderState, onOpen: () -> Unit) {
+    val openLabel = stringResource(R.string.more_header_open)
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = AccordSpacing.rowMedium)
+                .clickable(onClickLabel = openLabel, role = Role.Button, onClick = onOpen)
+                .padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s3),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
+        ) {
+            Surface(
+                color = MaterialTheme.colorScheme.primaryContainer, contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                shape = CircleShape, modifier = Modifier.size(AccordSpacing.touchMin).clearAndSetSemantics { },
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(header.email.firstOrNull()?.uppercase().orEmpty(), style = MaterialTheme.typography.titleMedium)
+                }
+            }
+            Column(Modifier.weight(1f)) {
+                Text(header.email, style = MaterialTheme.typography.bodyLarge)
+                header.spaceName?.let { name ->
+                    Text(
+                        header.participants?.let { stringResource(R.string.more_header_space_participants, name, it, InviteCode.MAX_MEMBERS) } ?: name,
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            DecorativeIcon(Lucide.drawable.lucide_ic_chevron_right, modifier = Modifier.size(ChevronSize))
+        }
     }
 }
 
@@ -317,6 +372,6 @@ private fun MoreRow(label: Int, icon: Int, onClick: () -> Unit, supporting: Stri
             Text(stringResource(label), style = MaterialTheme.typography.bodyLarge)
             supporting?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
-        DecorativeIcon(Lucide.drawable.lucide_ic_chevron_right, modifier = Modifier.size(20.dp))
+        DecorativeIcon(Lucide.drawable.lucide_ic_chevron_right, modifier = Modifier.size(ChevronSize))
     }
 }
