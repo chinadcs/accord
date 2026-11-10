@@ -219,5 +219,6 @@ internal fun IncomeRow.toView(): IncomeView {
         revision = revision,
         voided = voided,
         incomeCategoryId = incomeCategoryId,
+        receivableId = receivableId,
     )
 }

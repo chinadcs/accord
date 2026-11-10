@@ -38,11 +38,21 @@ internal class BudgetQueries(
                 voided = false,
             )
         }
-        val items = dao.incomesBetween(month.atDay(1).toEpochDay(), month.atEndOfMonth().toEpochDay()).map { it.toView() } + recurring
+        // Recebimento de devedor só conta na renda do mês quando o valor a receber foi criado com "contar como despesa e renda" (ADR 0083).
+        val counted = dao.receivables().associate { it.id to it.countsInBudget }
+        val items = dao.incomesBetween(month.atDay(1).toEpochDay(), month.atEndOfMonth().toEpochDay()).map { row ->
+            row.toView().let { view -> if (row.receivableId == null) view else view.copy(countsInIncome = counted[row.receivableId] == true) }
+        } + recurring
+        val inIncome = items.filter { it.countsInIncome }
+        val fromDebtors = items.filter { !it.countsInIncome }
         return IncomeSummary(
-            received = items.mapNotNull { it.receivedAmount }.sum(),
-            toReceive = items.filter { it.receivedDate == null }.map { it.expectedAmount }.sum(),
+            received = inIncome.mapNotNull { it.receivedAmount }.sum(),
+            toReceive = inIncome.filter { it.receivedDate == null }.map { it.expectedAmount }.sum(),
             items = items,
+            fromDebtors = IncomeTotals(
+                fromDebtors.mapNotNull { it.receivedAmount }.sum(),
+                fromDebtors.filter { it.receivedDate == null }.map { it.expectedAmount }.sum(),
+            ),
         )
     }
 

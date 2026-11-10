@@ -53,7 +53,7 @@ class RoomDataExport(private val db: AccordDatabase) {
             "recurrence_segment", "recurrence_override", "recurrence_settlement", "refund", "invoice", "invoice_payment",
             "limit_plan", "limit_entry", "local_draft", "entity_sync", "operation", "operation_change", "sync_state",
             "sync_conflict", "sync_conflict_entity", "import_batch", "import_movement", "import_decision", "import_pair",
-            "alert_event", "alert_display", "alert_preference", "clue_evaluation", "savings_pocket", "savings_move",
+            "alert_event", "alert_display", "alert_preference", "clue_evaluation", "savings_pocket", "savings_move", "debtor", "receivable",
         )
     }
 }

@@ -556,6 +556,33 @@ class SyncStore(
                 adopted += key(k.type,k.id)
             }
         }
+        // Valor a receber é uma unidade atômica (ADR 0083): o que o serviço nunca reconheceu sai inteiro, com as rendas e a despesa ligadas,
+        // e o devedor novo que sobraria sem nenhum valor a receber também.
+        for (k in keys.filter { it.type == EntityType.Receivable.name && dao.serviceVersion(it.type, it.id) == null }) {
+            for (income in dao.allIncomesOfReceivable(k.id).filter { dao.serviceVersion(EntityType.Income.name, it.id) == null && !it.voided }) {
+                dao.upsertIncome(income.copy(voided = true, revision = income.revision + 1))
+                adopted += key(EntityType.Income.name, income.id)
+            }
+            for (movement in dao.movementsOfReceivable(k.id).filter { dao.serviceVersion(EntityType.Movement.name, it.id) == null && !it.voided }) {
+                dao.upsertMovement(movement.copy(voided = true, revision = movement.revision + 1))
+                adopted += key(EntityType.Movement.name, movement.id)
+            }
+            dao.discardUnrecognizedReceivable(k.id)
+            adopted += key(k.type, k.id)
+        }
+        // Um recebimento ("Recebi") é uma unidade: a renda nova que a operação descartada criou também sai, senão seria reenviada e contaria em dobro.
+        for (k in keys.filter { it.type == EntityType.Income.name && dao.serviceVersion(it.type, it.id) == null }) {
+            dao.income(k.id)?.takeIf { it.receivableId != null && !it.voided }?.let {
+                dao.upsertIncome(it.copy(voided = true, revision = it.revision + 1))
+                adopted += key(k.type, k.id)
+            }
+        }
+        for (k in keys.filter { it.type == EntityType.Debtor.name && dao.serviceVersion(it.type, it.id) == null }) {
+            if (dao.receivables().none { it.debtorId == k.id }) {
+                dao.discardUnrecognizedDebtor(k.id)
+                adopted += key(k.type, k.id)
+            }
+        }
         closure.forEach { sync.setOperationState(it.operationId, OpState.SUPERSEDED, false, null) }
         sync.upsertConflict(conflict.copy(status = ConflictStatus.RESOLVED, choice = "REMOTE"))
         val leftovers = keys.filter { key(it.type, it.id) !in adopted }

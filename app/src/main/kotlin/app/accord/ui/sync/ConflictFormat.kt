@@ -75,6 +75,15 @@ object ConflictFormat {
             Spec("name", R.string.field_name, Kind.Text), Spec("iconKey", R.string.field_icon, Kind.Text),
             Spec("sortOrder", R.string.field_order, Kind.Text),
         ),
+        // "Quem me deve" (ADR 0083): o nome do devedor e o que se combinou no valor a receber.
+        EntityType.Debtor to listOf(
+            Spec("name", R.string.field_name, Kind.Text), Spec("voided", R.string.field_status, Kind.Deleted),
+        ),
+        EntityType.Receivable to listOf(
+            Spec("totalCents", R.string.field_amount, Kind.Cents), Spec("accountId", R.string.field_account, Kind.Account),
+            Spec("incomeCategoryId", R.string.field_income_category, Kind.IncomeCategory), Spec("registeredEpochDay", R.string.field_date, Kind.Day),
+            Spec("note", R.string.field_note, Kind.Text), Spec("voided", R.string.field_status, Kind.Deleted),
+        ),
         EntityType.IconAssociation to listOf(
             Spec("scope", R.string.field_icon_scope, Kind.Text), Spec("target", R.string.field_icon_target, Kind.Text),
             Spec("iconSource", R.string.field_icon_source, Kind.Text), Spec("iconKey", R.string.field_icon, Kind.Text),
@@ -164,6 +173,8 @@ object ConflictFormat {
         EntityType.Account -> R.string.conflict_entity_account
         EntityType.Card -> R.string.conflict_entity_card
         EntityType.Preferences -> R.string.conflict_entity_preferences
+        EntityType.Debtor -> R.string.conflict_entity_debtor
+        EntityType.Receivable -> R.string.conflict_entity_receivable
     }
 
     /**

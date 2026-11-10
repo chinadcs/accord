@@ -66,6 +66,9 @@ interface FinanceSpace {
     suspend fun savingsPockets(): QueryResult<List<SavingsPocket>>
     suspend fun savingsMoves(pocketId: String): QueryResult<List<SavingsMove>>
 
+    /** "Quem me deve" (ADR 0083): total a receber e devedores; os valores cancelados ficam de fora. */
+    suspend fun receivables(): QueryResult<ReceivablesOverview>
+
     /** Transferências e ajustes de saldo, sem os desfeitos, do mais recente para o mais antigo. */
     suspend fun accountMoves(): QueryResult<List<AccountMoveView>>
     suspend fun budget(month: YearMonth): QueryResult<MonthBudget>
@@ -960,7 +963,7 @@ data class FieldError(
     val month: YearMonth? = null,
 )
 
-enum class EntityType { Category, Account, Preferences, Movement, Card, CardPurchase, Boleto, Income, Recurrence, Refund, Invoice, InvoicePayment, LimitPlan, IncomeCategory, ImportBatch, AlertEvent, IconAssociation, Intention, AccountMove, ClueEvaluation, SavingsPocket, SavingsMove }
+enum class EntityType { Category, Account, Preferences, Movement, Card, CardPurchase, Boleto, Income, Recurrence, Refund, Invoice, InvoicePayment, LimitPlan, IncomeCategory, ImportBatch, AlertEvent, IconAssociation, Intention, AccountMove, ClueEvaluation, SavingsPocket, SavingsMove, Debtor, Receivable }
 
 data class EntityRef(val type: EntityType, val id: String)
 
@@ -1149,10 +1152,22 @@ data class IncomeView(
     val revision: Long,
     val voided: Boolean,
     val incomeCategoryId: String? = null,
+    /** Valor a receber de uma pessoa a que esta renda pertence ("Quem me deve", ADR 0083); nulo nas demais. */
+    val receivableId: String? = null,
+    /** Falso nos recebimentos de devedor que não contam na renda do mês (padrão do ADR 0083); verdadeiro nas demais rendas. */
+    val countsInIncome: Boolean = true,
 )
 
-/** Renda do mês: recebido e a receber como partes do esperado (R$ 6.000 + R$ 500 = R$ 6.500). */
-data class IncomeSummary(val received: Money, val toReceive: Money, val items: List<IncomeView>) {
+/**
+ * Renda do mês: recebido e a receber como partes do esperado (R$ 6.000 + R$ 500 = R$ 6.500). Os recebimentos de devedores que não contam
+ * na renda ficam em [fromDebtors], fora de [received] e [toReceive], mas continuam em [items].
+ */
+data class IncomeSummary(
+    val received: Money,
+    val toReceive: Money,
+    val items: List<IncomeView>,
+    val fromDebtors: IncomeTotals = IncomeTotals(Money(0), Money(0)),
+) {
     val expected: Money get() = received + toReceive
 }
 

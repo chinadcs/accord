@@ -187,6 +187,7 @@ class RoomFinanceSpace private constructor(
     private val cardPurchasePlanner = CardPurchasePlanner(dao, commonRules, accountPlanner) { cardCycle(it) }
     private val boletoPlanner = BoletoPlanner(dao, commonRules, accountPlanner)
     private val incomePlanner = IncomePlanner(dao, commonRules, accountPlanner)
+    private val receivablePlanner = ReceivablePlanner(dao, commonRules, accountPlanner)
     private val recurrencePlanner = RecurrencePlanner(dao, commonRules, accountPlanner, sessions) { cardCycle(it) }
     private val classifyPlanner = ClassifyPlanner(dao)
     private val invoiceQueries = InvoiceQueries(dao, clock, { recurrencePlanner.occurrencesIn(it) }) { id -> cardCycle(id ?: accountPlanner.effectiveCard(sessions.current())) }
@@ -274,6 +275,13 @@ class RoomFinanceSpace private constructor(
         is CreateIncomeCategory -> incomePlanner.planCreateCategory(command)
         is RenameIncomeCategory -> incomePlanner.planRenameCategory(command)
         is app.accord.core.space.EditIncomeCategory -> incomePlanner.planEditCategory(command)
+        is app.accord.core.space.CreateReceivable -> receivablePlanner.planCreate(session, origin, command)
+        is app.accord.core.space.ReceiveFromDebtor -> receivablePlanner.planReceive(session, origin, command)
+        is app.accord.core.space.RescheduleReceivable -> receivablePlanner.planReschedule(command)
+        is app.accord.core.space.ReplanReceivable -> receivablePlanner.planReplan(session, origin, command)
+        is app.accord.core.space.VoidReceivable -> receivablePlanner.planVoid(command)
+        is app.accord.core.space.RenameDebtor -> receivablePlanner.planRenameDebtor(command)
+        is app.accord.core.space.RemoveReceipt -> receivablePlanner.planRemoveReceipt(command)
         is SetIconAssociation -> iconPlanner.planSet(session, command)
         is ClearIconAssociation -> iconPlanner.planClear(session, command)
         is CreateIntention -> intentionPlanner.planCreate(session, command)
@@ -338,7 +346,7 @@ class RoomFinanceSpace private constructor(
 
     /** Cadastros de conta e de categoria de renda não mudam número nenhum do orçamento; o próprio registro do evento nunca dispara avaliação. */
     private fun changesBudgetNumbers(command: Command) = command !is RecordAlertEvent && command !is AddAccount && command !is SetMyDefaultAccount &&
-        command !is CreateIncomeCategory && command !is RenameIncomeCategory && command !is app.accord.core.space.EditIncomeCategory && command !is SetIconAssociation && command !is ClearIconAssociation &&
+        command !is app.accord.core.space.RenameDebtor && command !is CreateIncomeCategory && command !is RenameIncomeCategory && command !is app.accord.core.space.EditIncomeCategory && command !is SetIconAssociation && command !is ClearIconAssociation &&
         command !is CreateIntention && command !is EditIntention && command !is app.accord.core.space.DismissClue &&
         command !is app.accord.core.space.CreateSavingsPocket && command !is app.accord.core.space.EditSavingsPocket &&
         command !is app.accord.core.space.ArchiveSavingsPocket && command !is app.accord.core.space.MoveSavingsPocket
@@ -802,6 +810,8 @@ class RoomFinanceSpace private constructor(
             )
         }
     }
+
+    override suspend fun receivables(): QueryResult<app.accord.core.space.ReceivablesOverview> = query { receivablePlanner.overview() }
 
     override suspend fun savingsPockets(): QueryResult<List<app.accord.core.space.SavingsPocket>> = query {
         dao.savingsPockets().map { savingsPlanner.view(it) }

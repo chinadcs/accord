@@ -64,6 +64,10 @@ internal class BalanceReader(private val dao: SpaceDao) {
             val sign = if (recurrence.kind == "Income") 1 else -1
             events += BalanceEvent(at(s.epochDay), Money(sign * s.cents), BalanceSource.Recurrence)
         }
+        // Dinheiro emprestado que só reduz o saldo (ADR 0083); com "contar como despesa" a saída é um movimento comum, já somado acima.
+        dao.receivables().filter { !it.voided && it.lentFromAccountId == id && (it.lentEpochDay ?: 0) >= cutoffEpochDay }.forEach {
+            events += BalanceEvent(at(it.lentEpochDay!!), Money(-it.totalCents), BalanceSource.Expense)
+        }
         dao.accountMoves().filter { it.epochDay >= cutoffEpochDay }.forEach { m ->
             val adjustment = m.kind == AccountMoveKind.Adjustment.name
             if (m.toAccountId == id) events += BalanceEvent(at(m.epochDay), Money(m.amountCents), if (adjustment) BalanceSource.Adjustment else BalanceSource.TransferIn)

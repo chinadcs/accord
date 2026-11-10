@@ -79,7 +79,7 @@ class SyncStoreTest : SpaceTestBase() {
         // Formato fixo do protocolo: renomear uma coluna é mudar o protocolo.
         val fields = Regex("\"(\\w+)\":").findAll(change.state).map { it.groupValues[1] }.toList()
         assertEquals(
-            listOf("id", "kind", "description", "classificationId", "epochDay", "amountCents", "accountId", "spentBy", "authorId", "origin", "voided", "isCharge", "originIntentionId"),
+            listOf("id", "kind", "description", "classificationId", "epochDay", "amountCents", "accountId", "spentBy", "authorId", "origin", "voided", "isCharge", "originIntentionId", "receivableId"),
             fields,
         )
         assertTrue(change.references.any { it.type == "Category" && it.id == seed("alimentacao.delivery") })

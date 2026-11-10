@@ -141,6 +141,8 @@
     <string name="conflict_entity_card_purchase">Compra no cartão</string>
     <string name="conflict_entity_boleto">Boleto</string>
     <string name="conflict_entity_income">Renda</string>
+    <string name="conflict_entity_debtor">Devedor</string>
+    <string name="conflict_entity_receivable">Valor a receber</string>
     <string name="conflict_entity_recurrence">Recorrência</string>
     <string name="conflict_entity_refund">Estorno</string>
     <string name="conflict_entity_invoice">Fatura</string>

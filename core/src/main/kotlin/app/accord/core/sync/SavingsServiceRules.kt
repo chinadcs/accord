@@ -90,6 +90,8 @@ object SavingsServiceRules {
                 "Income" -> if (mine && r.number("receivedEpochDay") != null) add(event(r, "receivedEpochDay", 1, if (r.number("receivedCents") == null) "expectedCents" else "receivedCents"))
                 "Boleto" -> if (mine && r.number("paidEpochDay") != null) add(event(r, "paidEpochDay", -1, if (r.number("paidCents") == null) "expectedCents" else "paidCents"))
                 "InvoicePayment" -> if (mine) add(event(r, "epochDay", -1, "amountCents"))
+                // "Quem me deve" (ADR 0083): dinheiro emprestado que só reduz o saldo; com "contar como despesa" a saída é um Movement.
+                "Receivable" -> if (r.text("lentFromAccountId") == id && r.number("lentEpochDay") != null) add(event(r, "lentEpochDay", -1, "totalCents"))
                 "AccountMove" -> {
                     if (r.text("toAccountId") == id) add(event(r, "epochDay", 1, "amountCents"))
                     if (r.text("fromAccountId") == id) add(event(r, "epochDay", -1, "amountCents"))

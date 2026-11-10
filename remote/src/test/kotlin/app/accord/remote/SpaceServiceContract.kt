@@ -836,6 +836,40 @@ abstract class SpaceServiceContract {
     private fun savingsMove(id: String, pocket: String, account: String, actor: String, amount: Long, direction: String = "Deposit", base: Long? = null, voided: Boolean = false) = change(id, base, type = "SavingsMove", tombstone = voided,
         state = """{"id":"$id","pocketId":"$pocket","accountId":"$account","direction":"$direction","amountCents":$amount,"epochDay":10001,"authorId":"$actor","voided":$voided}""")
 
+    private fun debtor(id: String, actor: String) = change(id, null, type = "Debtor",
+        state = """{"id":"$id","name":"Teste","nameKey":"teste","authorId":"$actor","voided":false}""")
+    private fun receivable(id: String, debtor: String, account: String, actor: String, total: Long, lent: Boolean) = change(id, null, type = "Receivable",
+        state = """{"id":"$id","debtorId":"$debtor","totalCents":$total,"accountId":"$account","incomeCategoryId":null,"registeredEpochDay":10001,"note":"",""" +
+            """"countsInBudget":false,"lentFromAccountId":${if (lent) "\"$account\"" else "null"},"lentEpochDay":${if (lent) "10001" else "null"},""" +
+            """"authorId":"$actor","voided":false}""",
+        references = listOf(EntityKey("Debtor", debtor)))
+    private fun linkedIncome(id: String, receivable: String, account: String, actor: String) = change(id, null, type = "Income",
+        state = """{"id":"$id","description":"Recebimento de Teste","expectedCents":33333,"expectedEpochDay":10031,"accountId":"$account","receivedEpochDay":null,""" +
+            """"receivedCents":null,"authorId":"$actor","origin":"Manual","voided":false,"incomeCategoryId":null,"receivableId":"$receivable"}""",
+        references = listOf(EntityKey("Receivable", receivable)))
+
+    @Test fun `quem me deve aceita devedor, valor a receber e renda prevista na mesma operacao e le tudo de volta`() = test {
+        val c = newCouple(); val d = UUID.randomUUID().toString(); val r = UUID.randomUUID().toString(); val i = UUID.randomUUID().toString()
+        val actor = c.creator.accountId
+        val result = push(c.creator, c.spaceId, op(c.spaceId, debtor(d, actor), receivable(r, d, UUID.randomUUID().toString(), actor, 100000, lent = false), linkedIncome(i, r, "a", actor))).single()
+        assertIs<OperationResult.Applied>(result)
+        val stored = ok(service.pull(c.partner!!.accessToken, c.spaceId, 0, 100)).changes
+        assertEquals(setOf("Debtor", "Receivable", "Income"), stored.map { it.type }.toSet())
+        assertTrue(stored.single { it.id == i }.state.contains("\"receivableId\":\"$r\""))
+    }
+
+    @Test fun `emprestimo que so reduz o saldo conta no saldo proprio da conta ao guardar no cofrinho`() = test {
+        val c = newCouple(); val a = UUID.randomUUID().toString(); val p = UUID.randomUUID().toString(); val m = UUID.randomUUID().toString()
+        val d = UUID.randomUUID().toString(); val r = UUID.randomUUID().toString(); val actor = c.creator.accountId
+        assertIs<OperationResult.Applied>(push(c.creator, c.spaceId, op(c.spaceId, savingsAccount(a), savingsPocket(p, a, actor))).single())
+        // Saldo próprio 100.000; 70.000 emprestados no dia 10001 deixam 30.000, menos que o depósito de 40.000.
+        assertIs<OperationResult.Applied>(push(c.creator, c.spaceId, op(c.spaceId, debtor(d, actor), receivable(r, d, a, actor, 70000, lent = true))).single())
+        val tooMuch = op(c.spaceId, savingsAccount(a, 1), savingsPocket(p, a, actor, 1), savingsMove(m, p, a, actor, 40000))
+        assertIs<OperationResult.Conflict>(push(c.creator, c.spaceId, tooMuch).single())
+        val fits = op(c.spaceId, savingsAccount(a, 1), savingsPocket(p, a, actor, 1), savingsMove(UUID.randomUUID().toString(), p, a, actor, 30000))
+        assertIs<OperationResult.Applied>(push(c.creator, c.spaceId, fits).single())
+    }
+
     @Test fun `campos opcionais malformados de cofrinho sao recusados sem quebrar leitura posterior`() = test {
         val c=newSpace(); val a=UUID.randomUUID().toString(); val p=UUID.randomUUID().toString()
         val pocket=savingsPocket(p,a,c.creator.accountId)

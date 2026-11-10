@@ -162,6 +162,8 @@ data class MovementEntity(
     @ColumnInfo(defaultValue = "0") val isCharge: Boolean = false,
     /** Intenção de origem (S7): imutável depois da criação; a conversão da intenção é derivada deste vínculo. */
     val originIntentionId: String? = null,
+    /** Valor a receber de uma pessoa de que este movimento é a saída contada como despesa (ADR 0083): imutável depois da criação. */
+    val receivableId: String? = null,
 )
 
 @Entity(tableName = "operation", indices = [Index(value = ["operationId"], unique = true)])
@@ -297,6 +299,8 @@ data class IncomeRow(
     val revision: Long,
     val voided: Boolean,
     val incomeCategoryId: String? = null,
+    /** Valor a receber de uma pessoa a que esta renda pertence (ADR 0083): imutável depois da criação. */
+    val receivableId: String? = null,
 )
 
 @Entity(tableName = "recurrence")
@@ -481,6 +485,19 @@ interface SpaceDao {
     @Query("SELECT * FROM savings_move ORDER BY epochDay DESC, id") suspend fun savingsMoves(): List<SavingsMoveRow>
     @Query("SELECT * FROM savings_move WHERE id = :id") suspend fun savingsMove(id: String): SavingsMoveRow?
     @Upsert suspend fun upsertSavingsMove(row: SavingsMoveRow)
+    // "Quem me deve" (ADR 0083)
+    @Query("SELECT * FROM debtor ORDER BY name, id") suspend fun debtors(): List<DebtorRow>
+    @Query("SELECT * FROM debtor WHERE id = :id") suspend fun debtor(id: String): DebtorRow?
+    @Upsert suspend fun upsertDebtor(row: DebtorRow)
+    @Query("SELECT * FROM receivable ORDER BY registeredEpochDay, id") suspend fun receivables(): List<ReceivableRow>
+    @Query("SELECT * FROM receivable WHERE id = :id") suspend fun receivable(id: String): ReceivableRow?
+    @Upsert suspend fun upsertReceivable(row: ReceivableRow)
+    @Query("SELECT * FROM income WHERE receivableId = :receivableId AND voided = 0 ORDER BY COALESCE(receivedEpochDay, expectedEpochDay), id")
+    suspend fun incomesOfReceivable(receivableId: String): List<IncomeRow>
+    @Query("SELECT * FROM income WHERE receivableId = :receivableId ORDER BY id") suspend fun allIncomesOfReceivable(receivableId: String): List<IncomeRow>
+    @Query("SELECT * FROM movement WHERE receivableId = :receivableId ORDER BY id") suspend fun movementsOfReceivable(receivableId: String): List<MovementEntity>
+    @Query("DELETE FROM receivable WHERE id = :id") suspend fun discardUnrecognizedReceivable(id: String)
+    @Query("DELETE FROM debtor WHERE id = :id") suspend fun discardUnrecognizedDebtor(id: String)
     @Query("DELETE FROM savings_move WHERE id = :id") suspend fun discardUnrecognizedSavingsMove(id: String)
     @Query("DELETE FROM savings_pocket WHERE id = :id") suspend fun discardUnrecognizedSavingsPocket(id: String)
     @Upsert suspend fun upsertClueEvaluation(row: ClueEvaluationRow)
@@ -820,9 +837,9 @@ interface SpaceDao {
         ChatMessageRow::class, ChatAttemptRow::class, ChatQuestionRow::class, ChatReceiptRow::class, ChatFeedbackRow::class, ChatConversationRow::class,
         ImportBatchRow::class, ImportMovementRow::class, ImportDecisionRow::class, ImportPairRow::class,
         AlertEventRow::class, AlertDisplayRow::class, AlertPreferenceRow::class, IconAssociationRow::class, IntentionRow::class,
-        AccountMoveRow::class, ClueEvaluationRow::class, SavingsPocketRow::class, SavingsMoveRow::class,
+        AccountMoveRow::class, ClueEvaluationRow::class, SavingsPocketRow::class, SavingsMoveRow::class, DebtorRow::class, ReceivableRow::class,
     ],
-    version = 24,
+    version = 25,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2, spec = Migration1To2::class),
@@ -864,6 +881,8 @@ interface SpaceDao {
         AutoMigration(from = 22, to = 23),
         // ADR 0082: subcategoria de renda (parentId anulável na categoria de renda).
         AutoMigration(from = 23, to = 24),
+        // ADR 0083: devedor e valor a receber (compartilhados); vínculo `receivableId` em renda e movimento.
+        AutoMigration(from = 24, to = 25),
     ],
 )
 abstract class AccordDatabase : RoomDatabase() {

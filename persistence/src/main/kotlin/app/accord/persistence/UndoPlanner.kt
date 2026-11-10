@@ -29,7 +29,7 @@ internal class UndoPlanner(
     private companion object {
         val CREATION_COMMANDS = setOf(
             "RegisterDirectPayment", "RegisterCardPurchase", "RegisterBoleto", "RegisterIncome",
-            "RegisterRefund", "CreateRecurrence", "TransferBetweenAccounts", "AdjustAccountBalance",
+            "RegisterRefund", "CreateRecurrence", "TransferBetweenAccounts", "AdjustAccountBalance", "CreateReceivable",
         )
     }
 
@@ -45,6 +45,8 @@ internal class UndoPlanner(
         EntityType.Invoice -> dao.invoiceRows().firstOrNull { it.id == change.entityId }?.revision
         EntityType.InvoicePayment -> dao.invoicePayment(change.entityId)?.revision
         EntityType.AccountMove -> dao.accountMove(change.entityId)?.revision
+        EntityType.Debtor -> dao.debtor(change.entityId)?.revision
+        EntityType.Receivable -> dao.receivable(change.entityId)?.revision
         else -> null
     }
 
@@ -146,6 +148,17 @@ internal class UndoPlanner(
                                 else -> row.copy(revision = row.revision + 1, receivedEpochDay = null, receivedCents = null)
                             },
                         )
+                        row.revision + 1
+                    }
+                    // Valor a receber criado: o devedor novo, o valor e tudo o que veio com ele (previstos, despesa) somem juntos.
+                    EntityType.Debtor -> {
+                        val row = dao.debtor(ch.entityId)!!
+                        dao.upsertDebtor(row.copy(revision = row.revision + 1, voided = true))
+                        row.revision + 1
+                    }
+                    EntityType.Receivable -> {
+                        val row = dao.receivable(ch.entityId)!!
+                        dao.upsertReceivable(row.copy(revision = row.revision + 1, voided = true))
                         row.revision + 1
                     }
                     EntityType.Recurrence -> {
