@@ -5,7 +5,10 @@
 #   .\scripts\run-debug.ps1 -Shot tela.png        # salva captura da tela depois de abrir
 #   .\scripts\run-debug.ps1 -Dump                 # imprime a hierarquia de views (uiautomator)
 #   .\scripts\run-debug.ps1 -TestClass app.accord.AccessUiTest   # um teste instrumentado só
-# Com mais de um dispositivo conectado, informe -Serial (ex.: emulator-5554 ou o serial do S20 FE).
+# Com mais de um dispositivo conectado, informe -Serial (ex.: emulator-5554).
+# Só para emulador: o debug usa o mesmo applicationId do release (app.accord) e o instalaria por cima (ou o
+# desinstalaria) num aparelho com o app do usuário. Em aparelho físico use o pacote isolado app.accord.uivalidation
+# (-Paccord.uiValidation=true), como em scripts/run-ui-audit.ps1.
 param(
     [string]$Serial,
     [switch]$Fresh,
@@ -22,6 +25,16 @@ $adb = Join-Path $env:ANDROID_HOME 'platform-tools\adb.exe'
 $pkg = 'app.accord'
 
 if ($Serial) { $env:ANDROID_SERIAL = $Serial }
+
+$target = $env:ANDROID_SERIAL
+if (-not $target) {
+    $attached = @(& $adb devices | Select-Object -Skip 1 | Where-Object { $_ -match '\sdevice$' } | ForEach-Object { ($_ -split '\s+')[0] })
+    if ($attached.Count -eq 1) { $target = $attached[0] }
+    elseif ($attached.Count -gt 1) { throw 'Mais de um dispositivo conectado: informe -Serial.' }
+}
+if ($target -and $target -notlike 'emulator-*') {
+    throw "Recusado: '$target' não é emulador. Este script instala app.accord, o mesmo id do release, e poderia substituir ou apagar o app do usuário. Use o pacote isolado app.accord.uivalidation (-Paccord.uiValidation=true; ver scripts/run-ui-audit.ps1)."
+}
 
 Push-Location $root
 try {
