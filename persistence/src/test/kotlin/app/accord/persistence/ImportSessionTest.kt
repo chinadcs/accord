@@ -391,7 +391,7 @@ class ImportSessionTest : SpaceTestBase() {
         val invoiceOf = result.items.associate { item -> item.ordinal to h.space.purchase(item.targetId!!).value()!!.installments.single().invoiceMonth }
         assertEquals(oct, invoiceOf.getValue(1))
         assertEquals(nov, invoiceOf.getValue(2))
-        assertEquals(nov, invoiceOf.getValue(3), "on the closing day the purchase goes to the next invoice")
+        assertEquals(oct, invoiceOf.getValue(3), "on the closing day the purchase enters the invoice that closes (ADR 0079)")
     }
 
     @Test fun `a single invoice chosen for the document still overrides the date`() = runBlocking<Unit> {

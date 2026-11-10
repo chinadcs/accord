@@ -23,9 +23,9 @@ class MultiCardForecastTest {
         assertEquals(3, channels.size)
         assertEquals(ChannelState.Ended, channels.single { it.cardId == "a" }.state)
         assertEquals(ChannelState.Estimated, channels.single { it.cardId == "b" }.state)
-        assertEquals(10, channels.single { it.cardId == "b" }.remainingDays)
-        assertEquals(1935, channels.single { it.cardId == "b" }.estimateCents)
+        assertEquals(11, channels.single { it.cardId == "b" }.remainingDays)
+        assertEquals(2129, channels.single { it.cardId == "b" }.estimateCents)
         assertEquals(6600, channels.single { it.channel == Channel.Other }.estimateCents)
-        assertEquals(18535, result.categories.single().totalCents)
+        assertEquals(18729, result.categories.single().totalCents)
     }
 }

@@ -455,7 +455,7 @@ class ChatCoordinatorTest : ChatTestBase() {
         val expected = listOf(
             "2026-10-06" to Triple("2026-10", false, "véspera-1"),
             "2026-10-07" to Triple("2026-10", true, "véspera"),
-            "2026-10-08" to Triple("2026-11", true, "dia"),
+            "2026-10-08" to Triple("2026-10", true, "dia"), // entra na fatura que fecha (ADR 0079)
             "2026-10-09" to Triple("2026-11", true, "seguinte"),
             "2026-10-10" to Triple("2026-11", false, "depois"),
         )

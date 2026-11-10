@@ -32,8 +32,9 @@ data class CardCycle(val closingDay: Int = 8, val dueDay: Int = 15) {
     /** Fatura estimada para uma compra em [purchase], com o selo "a conferir" da janela. */
     fun assign(purchase: LocalDate): InvoiceAssignment {
         val month = YearMonth.from(purchase)
-        // No dia do fechamento ou depois dele, a compra vai para a próxima fatura.
-        val closingMonth = if (purchase.isBefore(closingDate(month))) month else month.plusMonths(1)
+        // Até o dia do fechamento, inclusive, a compra entra na fatura que fecha nele (a hora decide no emissor, por isso o dia fica "a conferir");
+        // só depois dele vai para a próxima fatura (decisão do usuário, 10/11/2026, ADR 0079).
+        val closingMonth = if (!purchase.isAfter(closingDate(month))) month else month.plusMonths(1)
         val due = dueDate(closingMonth)
         return InvoiceAssignment(
             dueMonth = YearMonth.from(due),
@@ -62,9 +63,9 @@ data class CardCycle(val closingDay: Int = 8, val dueDay: Int = 15) {
         return closingDate(closingMonth)
     }
 
-    /** "Em aberto" até o dia de fechamento; depois dele, "fechada (estimada)". Só exibição. */
+    /** "Em aberto" até o dia de fechamento, inclusive; depois dele, "fechada (estimada)". Só exibição. */
     fun phase(dueMonth: YearMonth, today: LocalDate): InvoicePhase =
-        if (today.isBefore(closingDateOfInvoice(dueMonth))) InvoicePhase.Open else InvoicePhase.ClosedEstimated
+        if (!today.isAfter(closingDateOfInvoice(dueMonth))) InvoicePhase.Open else InvoicePhase.ClosedEstimated
 }
 
 data class InvoiceAssignment(

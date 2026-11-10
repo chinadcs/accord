@@ -86,20 +86,20 @@ class ForecastTest : SpaceTestBase() {
     @Test fun `a purchase on the card feeds the card channel and the next invoice carries its own pace`() = runBlocking<Unit> {
         val h = open()
         h.history()
-        // Faturas de agosto, setembro e outubro (8/7 a 8/10): R$ 200 + R$ 300 + R$ 270 em 92 dias.
+        // Faturas de agosto, setembro e outubro (9/7 a 8/10, o dia do fechamento entra na que fecha): R$ 200 + R$ 300 + R$ 270 em 92 dias.
         h.cardOnce(d(2026, 7, 20), 200)
         h.cardOnce(d(2026, 8, 20), 300)
         h.cardOnce(d(2026, 9, 20), 270)
         h.cardOnce(d(2026, 10, 12), 100)
         val c = h.category(nov)
         assertEquals(10_000, c.knownCents, "a compra de 12/10 está na fatura que vence em novembro")
-        // Cartão: R$ 770 em 92 dias × 15 dias (24/10 a 7/11) = 125,54. Demais meios: R$ 1.380 em 92 dias × 30 dias de novembro = R$ 450.
+        // Cartão: R$ 770 em 92 dias × 16 dias (24/10 a 8/11) = 133,91. Demais meios: R$ 1.380 em 92 dias × 30 dias de novembro = R$ 450.
         val card = c.explanation.single { it.channel == app.accord.core.forecast.Channel.Card }
         val other = c.explanation.single { it.channel == app.accord.core.forecast.Channel.Other }
-        assertEquals(12_554, card.estimateCents)
+        assertEquals(13_391, card.estimateCents)
         assertEquals(45_000, other.estimateCents)
-        assertEquals(Estimate.Value(57_554), c.estimate)
-        assertEquals(67_554, c.totalCents)
+        assertEquals(Estimate.Value(58_391), c.estimate)
+        assertEquals(68_391, c.totalCents)
     }
 
     @Test fun `installments, boletos, fees and what is still to classify never feed the pace`() = runBlocking<Unit> {

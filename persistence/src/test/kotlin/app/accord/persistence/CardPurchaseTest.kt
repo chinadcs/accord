@@ -126,7 +126,7 @@ class CardPurchaseTest : SpaceTestBase() {
         val cases = listOf(
             Triple(d(2026, 10, 5), ym(2026, 10), AssignmentState.Estimated),
             Triple(d(2026, 10, 7), ym(2026, 10), AssignmentState.ToConfirm),
-            Triple(d(2026, 10, 8), ym(2026, 11), AssignmentState.ToConfirm),
+            Triple(d(2026, 10, 8), ym(2026, 10), AssignmentState.ToConfirm), // dia do fechamento: entra na que fecha (ADR 0079)
             Triple(d(2026, 10, 9), ym(2026, 11), AssignmentState.ToConfirm),
             Triple(d(2026, 10, 22), ym(2026, 11), AssignmentState.Estimated),
         )
@@ -135,8 +135,8 @@ class CardPurchaseTest : SpaceTestBase() {
             assertEquals(month, first.invoiceMonth, "fatura de $date")
             assertEquals(state, first.assignment, "estado de $date")
         }
-        assertEquals(1, h.space.budget(ym(2026, 10)).value().invoiceLinksToConfirm)
-        assertEquals(2, h.space.budget(ym(2026, 11)).value().invoiceLinksToConfirm)
+        assertEquals(2, h.space.budget(ym(2026, 10)).value().invoiceLinksToConfirm)
+        assertEquals(1, h.space.budget(ym(2026, 11)).value().invoiceLinksToConfirm)
     }
 
     @Test
@@ -162,7 +162,7 @@ class CardPurchaseTest : SpaceTestBase() {
     @Test
     fun `corrigir compra a conferir de novembro para outubro move o valor, mantém a identidade e fecha a pendência`() = runBlocking<Unit> {
         val h = open()
-        val id = h.register(purchase(d(2026, 10, 8), brl(100)))
+        val id = h.register(purchase(d(2026, 10, 9), brl(100)))
         assertEquals(brl(100), h.space.budget(ym(2026, 11)).value().committed)
 
         h.space.execute(h.env(), CorrectInvoiceAssignment(id, 1, ym(2026, 10))).applied()
@@ -170,9 +170,23 @@ class CardPurchaseTest : SpaceTestBase() {
         assertEquals(Money.ZERO, h.space.budget(ym(2026, 11)).value().committed)
         assertEquals(brl(100), h.space.budget(ym(2026, 10)).value().committed)
         val detail = h.detail(id)
-        assertEquals(d(2026, 10, 8), detail.purchaseDate)
+        assertEquals(d(2026, 10, 9), detail.purchaseDate)
         assertEquals(AssignmentState.Confirmed, detail.installments.single().assignment)
         assertEquals(0, h.space.budget(ym(2026, 10)).value().invoiceLinksToConfirm)
+    }
+
+    @Test
+    fun `compra no dia do fechamento entra na fatura que fecha e a pessoa pode mudá-la para a seguinte`() = runBlocking<Unit> {
+        val h = open()
+        val id = h.register(purchase(d(2026, 10, 8), brl(100)))
+        assertEquals(brl(100), h.space.budget(ym(2026, 10)).value().committed)
+        assertEquals(AssignmentState.ToConfirm, h.detail(id).installments.single().assignment)
+
+        h.space.execute(h.env(), CorrectInvoiceAssignment(id, 1, ym(2026, 11))).applied()
+
+        assertEquals(Money.ZERO, h.space.budget(ym(2026, 10)).value().committed)
+        assertEquals(brl(100), h.space.budget(ym(2026, 11)).value().committed)
+        assertEquals(AssignmentState.Confirmed, h.detail(id).installments.single().assignment)
     }
 
     @Test
@@ -214,7 +228,7 @@ class CardPurchaseTest : SpaceTestBase() {
     @Test
     fun `corrigir com versão antiga devolve a versão atual e não altera`() = runBlocking<Unit> {
         val h = open()
-        val id = h.register(purchase(d(2026, 10, 8)))
+        val id = h.register(purchase(d(2026, 10, 9)))
         val current = h.detail(id).revision
         val r = h.space.execute(h.env(), CorrectInvoiceAssignment(id, 1, ym(2026, 10), expectedRevision = current - 1))
         val stale = assertIs<CommandResult.StaleVersion>(r)
@@ -225,7 +239,7 @@ class CardPurchaseTest : SpaceTestBase() {
     @Test
     fun `corrigir a fatura gera uma operação com a compra e revisão seguinte`() = runBlocking<Unit> {
         val h = open()
-        val id = h.register(purchase(d(2026, 10, 8)))
+        val id = h.register(purchase(d(2026, 10, 9)))
         val receipt = h.space.execute(h.env(), CorrectInvoiceAssignment(id, 1, ym(2026, 10))).applied()
         val change = receipt.changes.single()
         assertEquals(id, change.id)
@@ -262,7 +276,9 @@ class CardPurchaseTest : SpaceTestBase() {
         val fresh = h.register(purchase(d(2026, 10, 10)))
         assertEquals(ym(2026, 11), h.detail(fresh).installments.single().invoiceMonth)
         val fresh2 = h.register(purchase(d(2026, 10, 25)))
-        assertEquals(ym(2026, 12), h.detail(fresh2).installments.single().invoiceMonth)
+        assertEquals(ym(2026, 11), h.detail(fresh2).installments.single().invoiceMonth, "no dia do fechamento entra na fatura que fecha (ADR 0079)")
+        val fresh3 = h.register(purchase(d(2026, 10, 26)))
+        assertEquals(ym(2026, 12), h.detail(fresh3).installments.single().invoiceMonth)
     }
 
     @Test
@@ -274,7 +290,7 @@ class CardPurchaseTest : SpaceTestBase() {
         val a25 = h.detail(h.register(purchase(d(2026, 11, 25)))).installments.single()
         assertEquals(ym(2026, 12), a29.invoiceMonth)
         assertEquals(AssignmentState.ToConfirm, a29.assignment)
-        assertEquals(ym(2027, 1), a30.invoiceMonth)
+        assertEquals(ym(2026, 12), a30.invoiceMonth, "30/11 é o dia do fechamento ajustado: entra na fatura que fecha nele")
         assertEquals(AssignmentState.ToConfirm, a30.assignment)
         assertEquals(ym(2026, 12), a25.invoiceMonth)
         assertEquals(AssignmentState.Estimated, a25.assignment)

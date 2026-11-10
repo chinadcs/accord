@@ -272,7 +272,7 @@ class CorrectEntryTest : SpaceTestBase() {
     fun `data na janela do fechamento reestima com selo a conferir`() = runBlocking<Unit> {
         val h = open()
         val id = h.card(amount = 100, installments = 1, invoice = null, date = d(2026, 10, 22))
-        h.correct(CorrectEntry(id, date = d(2026, 10, 8))).applied()
+        h.correct(CorrectEntry(id, date = d(2026, 10, 9))).applied()
         val first = h.space.purchase(id).value()!!.installments.single()
         assertEquals(nov, first.invoiceMonth)
         assertEquals(AssignmentState.ToConfirm, first.assignment)

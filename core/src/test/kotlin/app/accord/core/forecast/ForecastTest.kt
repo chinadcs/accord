@@ -106,15 +106,15 @@ class ForecastTest {
 
     // ---- cartão ----
 
-    @Test fun `a card purchase on the closing day belongs to the next invoice period`() {
-        // Fatura de outubro: 8/9 a 7/10 (fim exclusivo 8/10). A compra de 8/10 é da fatura de novembro.
-        val spends = arrayOf(card(d(9, 8), 10_000), card(d(10, 7), 20_000), card(d(10, 8), 40_000))
+    @Test fun `a card purchase on the closing day belongs to the invoice that closes on it`() {
+        // Fatura de outubro: 9/9 a 8/10 (fim exclusivo 9/10). A compra de 8/10 é da fatura que fecha em 8/10 (ADR 0079); a de 9/10, da de novembro.
+        val spends = arrayOf(card(d(9, 8), 10_000), card(d(10, 8), 20_000), card(d(10, 9), 40_000))
         val c = run(nov, d(10, 20), category(0, null, *spends), historyStart = d(1, 1))
         val cardChannel = c.explanation.single { it.channel == Channel.Card }
-        assertEquals(Period(d(10, 8), d(11, 8)), cardChannel.exposure)
-        val october = cardChannel.samples.first { it.period == Period(d(9, 8), d(10, 8)) }
-        assertEquals(30_000, october.cents, "a compra de 8/10 não entra na fatura que fecha em 8/10")
-        assertEquals(19, cardChannel.remainingDays)
+        assertEquals(Period(d(10, 9), d(11, 9)), cardChannel.exposure)
+        val october = cardChannel.samples.first { it.period == Period(d(9, 9), d(10, 9)) }
+        assertEquals(20_000, october.cents, "a compra de 8/10 entra na fatura que fecha em 8/10 e a de 9/10 não")
+        assertEquals(20, cardChannel.remainingDays)
     }
 
     @Test fun `a closed invoice estimates nothing more for the card and says so when the closing is only configured`() {

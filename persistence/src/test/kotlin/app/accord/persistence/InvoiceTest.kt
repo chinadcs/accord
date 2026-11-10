@@ -122,11 +122,11 @@ class InvoiceTest : SpaceTestBase() {
     }
 
     @Test
-    fun `fechamento 8 e relógio em 07 10 deixa a fatura em aberto, em 08 10 fechada estimada e com total registrado fechada`() = runBlocking<Unit> {
-        val before = open(now = Instant.parse("2026-10-07T15:00:00Z"))
-        assertEquals(InvoiceStatus.Open, before.invoice(oct).status)
+    fun `fechamento 8 e relógio em 08 10 deixa a fatura em aberto, em 09 10 fechada estimada e com total registrado fechada`() = runBlocking<Unit> {
+        val before = open(now = Instant.parse("2026-10-08T15:00:00Z"))
+        assertEquals(InvoiceStatus.Open, before.invoice(oct).status, "no dia do fechamento a fatura ainda recebe compras (ADR 0079)")
 
-        val closing = open(now = Instant.parse("2026-10-08T15:00:00Z"))
+        val closing = open(now = Instant.parse("2026-10-09T15:00:00Z"))
         assertEquals(InvoiceStatus.ClosedEstimated, closing.invoice(oct).status)
         closing.buy(100)
         closing.registerTotal(oct, 100)
@@ -138,7 +138,7 @@ class InvoiceTest : SpaceTestBase() {
         val h = open(now = Instant.parse("2026-10-09T15:00:00Z"))
         val id = h.space.execute(
             h.env(),
-            RegisterCardPurchase("Compra", Classification.Category(seed("compras")), d(2026, 10, 8), brl(100)),
+            RegisterCardPurchase("Compra", Classification.Category(seed("compras")), d(2026, 10, 9), brl(100)),
         ).applied().changes.single().id
         assertEquals(InvoiceStatus.Open, h.invoice(nov).status)
         h.space.execute(h.env(), CorrectInvoiceAssignment(id, 1, oct)).applied()

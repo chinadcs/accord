@@ -170,7 +170,7 @@ internal class ForecastQueries(
      * lote é o período declarado; na falta dele, o das datas dos movimentos; e, na fatura, também o mês de vencimento. Lote sem nenhuma data não toca.
      */
     private suspend fun coverageComplete(month: YearMonth): Boolean {
-        val start = (dao.cards().map { CardCycle(it.closingDay, it.dueDay).closingDateOfInvoice(month.minusMonths(1)) } + month.atDay(1)).min().toEpochDay()
+        val start = (dao.cards().map { CardCycle(it.closingDay, it.dueDay).closingDateOfInvoice(month.minusMonths(1)).plusDays(1) } + month.atDay(1)).min().toEpochDay()
         val end = month.atEndOfMonth().toEpochDay()
         val withPending = dao.batchesWithPending().toSet()
         return dao.confirmedImportBatches().none { batch ->

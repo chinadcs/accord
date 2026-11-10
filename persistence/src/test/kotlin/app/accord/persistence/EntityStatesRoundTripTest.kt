@@ -152,7 +152,7 @@ class EntityStatesRoundTripTest : SpaceTestBase() {
             h.env(),
             CreateRecurrence(
                 kind = RecurrenceKind.Expense, description = "Streaming", categoryId = seed("assinaturas"), amount = brl(40),
-                form = RecurrenceForm.Card, frequency = Frequency.Monthly, firstDate = d(2026, 10, 8),
+                form = RecurrenceForm.Card, frequency = Frequency.Monthly, firstDate = d(2026, 10, 9),
             ),
         ).applied().changes.single().id
         h.space.execute(h.env(), CorrectOccurrenceInvoice(streaming, 1, YearMonth.of(2026, 12))).applied()

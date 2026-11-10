@@ -40,14 +40,15 @@ object Forecast {
     /** A conferência de S1/S4 vale mais que o dia configurado; só o dia configurado aparece rotulado como estimado (plano §4.1). */
     private fun closureOf(r: ForecastRequest): InvoiceClosure = when {
         r.invoiceConferredClosed == true -> InvoiceClosure(closed = true, source = ClosureSource.Conferred)
-        else -> InvoiceClosure(closed = !r.today.isBefore(r.cycle.closingDateOfInvoice(r.month)), source = ClosureSource.Configuration)
+        else -> InvoiceClosure(closed = r.today.isAfter(r.cycle.closingDateOfInvoice(r.month)), source = ClosureSource.Configuration)
     }
 
     // ---- períodos de exposição ----
 
     /** O período em que um canal ocupa o mês [month]: fatura que vence nele (cartão) ou o mês civil (demais). Fim exclusivo. */
     internal fun exposure(channel: Channel, month: YearMonth, cycle: CardCycle): Period = when (channel) {
-        Channel.Card -> Period(cycle.closingDateOfInvoice(month.minusMonths(1)), cycle.closingDateOfInvoice(month))
+        // A fatura vai do dia seguinte ao fechamento anterior até o dia do fechamento, inclusive (ADR 0079).
+        Channel.Card -> Period(cycle.closingDateOfInvoice(month.minusMonths(1)).plusDays(1), cycle.closingDateOfInvoice(month).plusDays(1))
         Channel.Other -> Period(month.atDay(1), month.plusMonths(1).atDay(1))
     }
 

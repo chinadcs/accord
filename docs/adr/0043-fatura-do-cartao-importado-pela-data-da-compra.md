@@ -19,7 +19,7 @@ antes se a importação é pra conta ou cartão".
 Proposta, a aceitar pelo usuário.
 
 1. **A fatura de cada compra vem da data dela**, pelo ciclo do cartão (`CardCycle.assign`, a mesma regra do registro manual e do Chat, S1 §7.2): na véspera, no
-   dia ou no dia seguinte ao fechamento a compra fica "a conferir"; a do dia do fechamento já vai para a fatura seguinte. É o padrão de um documento de cartão.
+   dia ou no dia seguinte ao fechamento a compra fica "a conferir"; a do dia do fechamento entra na fatura que fecha (regra alterada pelo [ADR 0079](0079-compra-no-dia-do-fechamento-entra-na-fatura-que-fecha.md); antes ia para a seguinte). É o padrão de um documento de cartão.
 2. **Fatura única do arquivo** continua existindo, como escolha explícita: ou porque o arquivo declara o vencimento (hoje, a fatura Itaú em PDF), ou porque a pessoa
    escolhe "uma fatura só". Com ela, vale o que a spec já definia (todas as compras na fatura do documento, correção de vínculos "a conferir", parcelas).
 3. O bloqueio `InvoiceUndefined` deixa de existir: "pela data" é uma resposta válida, não uma pendência.

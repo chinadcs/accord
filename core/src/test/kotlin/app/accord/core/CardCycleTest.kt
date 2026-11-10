@@ -19,7 +19,7 @@ class CardCycleTest {
         val cases = listOf(
             Triple(d(2026, 10, 5), ym(2026, 10), false),
             Triple(d(2026, 10, 7), ym(2026, 10), true),
-            Triple(d(2026, 10, 8), ym(2026, 11), true),
+            Triple(d(2026, 10, 8), ym(2026, 10), true), // dia do fechamento: entra na que fecha (ADR 0079)
             Triple(d(2026, 10, 9), ym(2026, 11), true),
             Triple(d(2026, 10, 22), ym(2026, 11), false),
             Triple(d(2026, 9, 25), ym(2026, 10), false),
@@ -56,9 +56,9 @@ class CardCycleTest {
         val a29 = c.assign(d(2026, 11, 29))
         assertEquals(d(2026, 11, 30), a29.closingDate)
         assertEquals(true, a29.toConfirm)
-        // compra em 30/11 (dia do fechamento ajustado): próxima fatura, a conferir
+        // compra em 30/11 (dia do fechamento ajustado): a fatura que fecha nele, a conferir
         val a30 = c.assign(d(2026, 11, 30))
-        assertEquals(d(2026, 12, 31), a30.closingDate)
+        assertEquals(d(2026, 11, 30), a30.closingDate)
         assertEquals(true, a30.toConfirm)
         // compra em 25/11: essa fatura, sem marca
         val a25 = c.assign(d(2026, 11, 25))
@@ -93,8 +93,9 @@ class CardCycleTest {
     @Test
     fun `fatura fica em aberto até o dia de fechamento e depois é fechada estimada`() {
         assertEquals(InvoicePhase.Open, card.phase(ym(2026, 10), today = d(2026, 10, 7)))
-        assertEquals(InvoicePhase.ClosedEstimated, card.phase(ym(2026, 10), today = d(2026, 10, 8)))
-        assertEquals(InvoicePhase.Open, card.phase(ym(2026, 11), today = d(2026, 10, 8)))
+        assertEquals(InvoicePhase.Open, card.phase(ym(2026, 10), today = d(2026, 10, 8)), "no dia do fechamento ainda entra compra")
+        assertEquals(InvoicePhase.ClosedEstimated, card.phase(ym(2026, 10), today = d(2026, 10, 9)))
+        assertEquals(InvoicePhase.Open, card.phase(ym(2026, 11), today = d(2026, 10, 9)))
     }
 
     @Test
