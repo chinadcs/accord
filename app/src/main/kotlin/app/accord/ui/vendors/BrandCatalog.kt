@@ -68,7 +68,7 @@ class BrandCatalog(val brands: List<Brand>) {
                 val p = line.split('\t')
                 val color = p.getOrNull(2)?.toIntOrNull(16)
                 if (p.size != 8 || p[0].isBlank() || p[1].isBlank() || color == null || p[7].isBlank()) null
-                else Brand(p[0], p[1], color, p[3].split('|').filter(String::isNotBlank), p[4], p[5], p[6], p[7])
+                else Brand(p[0], p[1], color, p[3].split('|').filter(String::isNotBlank), p[4], p[5], p[6], SvgPathNormalizer.normalize(p[7]))
             }.sortedBy { it.titleKey }.toList(),
         )
     }

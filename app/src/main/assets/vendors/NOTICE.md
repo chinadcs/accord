@@ -13,6 +13,8 @@ interface e pelos genéricos do seletor; [não oferece logos de marcas](https://
 - [catalog.json](catalog.json) registra a origem, a versão, o SHA-256 do pacote de origem, o SHA-256 do ativo, a contagem e as colunas.
 - O ativo é gerado por [scripts/vendors/build-simple-icons.py](../../../../../scripts/vendors/build-simple-icons.py), que confere o SHA-256 e
   a versão fixados, lê só os membros esperados do pacote e não extrai nada em disco. Rodar duas vezes dá o mesmo arquivo.
+- Ao ler o catálogo, o app reescreve o caminho com um comando explícito por segmento e flags de arco separados (`SvgPathNormalizer`): o `PathParser` do Compose
+  lê errado os flags compactados (`0 00-.5.5`) nas repetições implícitas do `a`, o que deformava marcas como o Discord. A geometria não muda.
 - O app desenha o caminho com o `PathParser` do Compose, sobre uma placa branca, na cor oficial (ou na tinta escura da placa quando a cor
   tem menos de 1,5:1 de contraste com o branco, cerca de 4% das marcas; logotipos são isentos de contraste mínimo e o limite de 3:1 apagaria a cor de 27% delas). Não há biblioteca nova em execução, parser SVG completo, JavaScript, CDN nem busca de imagem.
 - [generic-words.txt](generic-words.txt) lista palavras que são nome de marca mas, num lançamento, costumam querer dizer outra coisa; o
