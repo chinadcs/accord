@@ -58,3 +58,4 @@ APK debug e APK de teste compilados. Emulador API 33: quatro testes novos de pai
 cinco regressões do Início e seis do cartão de consulta aprovados. Capturas claro/escuro locais
 em `app/build/jpj7-screens-final/` inspecionadas. UTF-8, links e `git diff --check` verificados.
 Galaxy e TalkBack manual permanecem em `accord-4uu2`; sem implantação remota nesta entrega.
+- Em 10/11/2026 o [ADR 0078](0078-remodelagem-da-tela-inicio.md) (aceito, `accord-4d5m`) renomeia o painel para "Margem para gastar" e o resume na Início; a fórmula e a cobertura deste ADR não mudam.
