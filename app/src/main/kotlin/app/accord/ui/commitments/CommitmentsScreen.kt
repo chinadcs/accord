@@ -60,7 +60,7 @@ fun CommitmentsRoute(
     RefreshOnResume(viewModel::refresh)
     CommitmentsScreen(
         state, padding, onBack, viewModel::previousMonth, viewModel::nextMonth, viewModel::setKind, viewModel::retry,
-        onOpen, onRegister, onOpenCard, onOpenSubscriptions,
+        onOpen, onRegister, onOpenCard, onOpenSubscriptions, viewModel::retryUpcoming,
     )
 }
 
@@ -78,6 +78,7 @@ fun CommitmentsScreen(
     onRegister: () -> Unit,
     onOpenCard: () -> Unit,
     onOpenSubscriptions: (() -> Unit)? = null,
+    onRetryUpcoming: () -> Unit = {},
 ) {
     LazyColumn(
         Modifier.fillMaxSize().padding(padding),
@@ -110,6 +111,8 @@ fun CommitmentsScreen(
             }
             is CommitmentsContent.Ready -> commitmentItems(content.data, onOpen, onRegister, onOpenCard)
         }
+        // Depois do bloco do mês: seletor, total e lista não mudam de lugar ao navegar entre meses; esta seção é de hoje.
+        item(key = "upcoming") { CommitmentsUpcomingSection(state.upcoming, onRetryUpcoming, onOpen, onOpenCard) }
         onOpenSubscriptions?.let { open ->
             item {
                 OutlinedButton(onClick = open, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {

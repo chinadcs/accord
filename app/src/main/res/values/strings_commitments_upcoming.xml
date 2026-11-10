@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Seção "Próximos 7 dias" de Compromissos futuros (accord-l6lu, ADR 0078). Título, vazio, nota e frases dos eventos são as de strings.xml (upcoming_*), compartilhadas com a Início. -->
+<resources>
+    <string name="commitments_upcoming_range">De hoje (%1$s) até %2$s. Vale para a data de hoje, seja qual for o mês escolhido acima.</string>
+    <string name="commitments_upcoming_failed">Não foi possível consultar os próximos 7 dias. Isso não quer dizer que não há nada a vencer.</string>
+    <string name="commitments_upcoming_retry_description">Tentar de novo: próximos 7 dias</string>
+    <string name="commitments_upcoming_open_commitment">Abrir detalhe do compromisso</string>
+    <string name="commitments_upcoming_open_card">Abrir cartão e faturas</string>
+</resources>

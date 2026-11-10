@@ -23,19 +23,22 @@ fun UpcomingBody(events: List<UpcomingEvent>) {
         if (events.isEmpty()) {
             Text(stringResource(R.string.upcoming_empty))
         } else {
-            val format = DateTimeFormatter.ofPattern("dd/MM")
-            events.forEach { event ->
-                val date = event.date.format(format)
-                Text(
-                    when (event) {
-                        is UpcomingEvent.BillDue -> stringResource(R.string.upcoming_bill, date, event.commitment.description, event.commitment.amount.format())
-                        is UpcomingEvent.RecurrenceDue -> stringResource(R.string.upcoming_recurrence, date, event.commitment.description, event.commitment.amount.format())
-                        is UpcomingEvent.CardClosing -> stringResource(R.string.upcoming_card_closing, date, event.card.nickname)
-                        is UpcomingEvent.CardDue -> stringResource(R.string.upcoming_card_due, date, event.card.nickname)
-                    },
-                )
-            }
+            events.forEach { event -> Text(upcomingEventText(event)) }
         }
         Text(stringResource(R.string.upcoming_note), style = MaterialTheme.typography.bodySmall)
     }
 }
+
+/** Frase de um evento (data dd/MM, tipo, descrição e valor quando houver); a mesma na Início e em Compromissos. */
+@Composable
+fun upcomingEventText(event: UpcomingEvent, format: DateTimeFormatter = UpcomingDateFormat): String {
+    val date = event.date.format(format)
+    return when (event) {
+        is UpcomingEvent.BillDue -> stringResource(R.string.upcoming_bill, date, event.commitment.description, event.commitment.amount.format())
+        is UpcomingEvent.RecurrenceDue -> stringResource(R.string.upcoming_recurrence, date, event.commitment.description, event.commitment.amount.format())
+        is UpcomingEvent.CardClosing -> stringResource(R.string.upcoming_card_closing, date, event.card.nickname)
+        is UpcomingEvent.CardDue -> stringResource(R.string.upcoming_card_due, date, event.card.nickname)
+    }
+}
+
+val UpcomingDateFormat: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM")

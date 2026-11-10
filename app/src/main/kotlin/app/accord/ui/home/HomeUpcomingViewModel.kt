@@ -13,11 +13,23 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 sealed interface HomeUpcomingState {
     data object Loading : HomeUpcomingState
     data object Failed : HomeUpcomingState
     data class Ready(val events: List<UpcomingEvent>) : HomeUpcomingState
+}
+
+/**
+ * Lê cartões e os compromissos dos meses que a janela de 7 dias toca e devolve os eventos a partir de [today];
+ * nulo se qualquer leitura falhar (falha nunca vira "nada previsto"). Compartilhada pela Início e por Compromissos; só lê.
+ */
+suspend fun loadUpcomingEvents(provider: SpaceProvider, today: LocalDate): List<UpcomingEvent>? {
+    val space = provider.space()
+    val cards = (space.cards() as? QueryResult.Data)?.value ?: return null
+    val months = upcomingMonths(today).map { (space.commitments(it, CommitmentKind.All) as? QueryResult.Data)?.value ?: return null }
+    return upcomingWeek(months.flatMap { it.items }, cards, today)
 }
 
 /** "Próximos 7 dias" do Início: lê compromissos e cartões locais; falha ou carga nunca viram "nada previsto". */
@@ -32,12 +44,8 @@ class HomeUpcomingViewModel(private val provider: SpaceProvider) : ViewModel() {
         if (mutable.value !is HomeUpcomingState.Ready) mutable.value = HomeUpcomingState.Loading
         job = viewModelScope.launch {
             try {
-                val today = provider.clock.today()
-                val space = provider.space()
-                val cards = (space.cards() as? QueryResult.Data)?.value
-                val months = upcomingMonths(today).map { (space.commitments(it, CommitmentKind.All) as? QueryResult.Data)?.value }
-                mutable.value = if (cards == null || months.any { it == null }) HomeUpcomingState.Failed
-                else HomeUpcomingState.Ready(upcomingWeek(months.flatMap { it!!.items }, cards, today))
+                mutable.value = loadUpcomingEvents(provider, provider.clock.today())
+                    ?.let(HomeUpcomingState::Ready) ?: HomeUpcomingState.Failed
             } catch (cancelled: CancellationException) {
                 throw cancelled
             } catch (_: Exception) {

@@ -11,7 +11,10 @@ import app.accord.core.space.CommitmentDetail
 import app.accord.core.space.CommitmentKind
 import app.accord.core.space.MonthCommitments
 import app.accord.core.space.QueryResult
+import app.accord.ui.home.loadUpcomingEvents
 import app.accord.ui.intentions.originIntention
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,6 +38,8 @@ data class CommitmentsUiState(
     val content: CommitmentsContent = CommitmentsContent.Loading,
     /** Cenário do simulador (S7), recebido como argumento de navegação e nunca persistido; vira só uma camada rotulada. */
     val scenario: Scenario? = null,
+    /** "Próximos 7 dias" (ADR 0078, accord-l6lu): lido à parte do resto da tela e a partir de hoje, sem relação com [month] nem [scenario]. */
+    val upcoming: CommitmentsUpcomingState = CommitmentsUpcomingState.Loading,
 )
 
 /**
@@ -55,8 +60,11 @@ class CommitmentsViewModel(
     )
     val state: StateFlow<CommitmentsUiState> = _state.asStateFlow()
 
+    private var upcomingJob: Job? = null
+
     init {
         load()
+        loadUpcoming(keepReady = false)
         viewModelScope.launch { provider.feedback.undone.collect { refresh() } }
     }
 
@@ -79,7 +87,33 @@ class CommitmentsViewModel(
 
     fun retry() = load()
 
-    fun refresh() = load(keepContent = true)
+    fun refresh() {
+        load(keepContent = true)
+        loadUpcoming(keepReady = true)
+    }
+
+    /** Tentar de novo só dos próximos 7 dias: não recarrega nem esconde o mês. */
+    fun retryUpcoming() = loadUpcoming(keepReady = false)
+
+    /**
+     * Os 7 dias partem de hoje e não mudam com o mês nem com o filtro, então só a abertura, a volta à tela e o "Tentar de novo" os leem.
+     * Só relê sem voltar ao esqueleto ([keepReady]) quando já há resultado pronto; falha anterior mostra a carga.
+     */
+    private fun loadUpcoming(keepReady: Boolean) {
+        upcomingJob?.cancel()
+        _state.update { if (keepReady && it.upcoming is CommitmentsUpcomingState.Ready) it else it.copy(upcoming = CommitmentsUpcomingState.Loading) }
+        upcomingJob = viewModelScope.launch {
+            val result = try {
+                val today = provider.clock.today()
+                loadUpcomingEvents(provider, today)?.let { CommitmentsUpcomingState.Ready(it, today) } ?: CommitmentsUpcomingState.Failed
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                CommitmentsUpcomingState.Failed
+            }
+            _state.update { it.copy(upcoming = result) }
+        }
+    }
 
     private fun load(keepContent: Boolean = false) {
         val request = _state.value
