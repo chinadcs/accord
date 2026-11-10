@@ -118,9 +118,9 @@ accord/
                              aceita pelo usuário como validação suficiente também para o S23 FE;
                              não comprova desempenho conjunto do Chat (docs/poc/auditoria-categorias-e-s20fe.md)
   pocpc/                     bancada JVM de qualidade e classificação de categoria, fora do produto
-  categorybench/             núcleo experimental de categoria compartilhado por :pocpc/:poc;
-                             :app depende dele apenas em debug para o piloto opt-in com fake,
-                             sugestões e confirmação (ADR 0032); sem pesos/adaptador no release
+  categorybench/             núcleo de categoria compartilhado por :pocpc/:poc;
+                             :app depende dele em debug e release para o sugestor (top 3, ADR 0032);
+                             o fake do Chat segue só no debug, com a flag accord.categoryPilot=true
   scripts/poc/               scripts da bancada (preparar, enviar modelos, rodar, coletar) e report.py
   gradle/libs.versions.toml  versões fixadas; wrapper Gradle 9.8.2 (gradlew)
   docs/

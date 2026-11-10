@@ -6,7 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.serialization)
 }
 
-// Experimental classifier shared by benches and the opt-in debug product pilot. Never a release dependency.
+// Classificador do sugestor de categorias: usado pelas bancadas e pelo app (debug e release, ADR 0032 — release aprovado em 09/11/2026).
 kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_17); allWarningsAsErrors.set(true) } }
 java { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
 dependencies {

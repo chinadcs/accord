@@ -6,7 +6,7 @@ import app.accord.core.space.DeterministicIds
 import kotlinx.serialization.json.Json
 import java.security.MessageDigest
 
-/** Frozen experiment adapter. Only debug builds of the product may instantiate it. */
+/** Frozen adapter of the category suggester (ADR 0032): model070 + evidence-v1, debug and release. */
 class PilotCategorySuggester(private val spaceId: String, private val readArtifact: () -> ByteArray) : CategorySuggester {
     private var loaded: Result<LinearCategoryScorer>? = null
     private val purpose = RoutedInterpreter(StepModel { _, _, _ -> error("No SLM in category pilot") }, PromptStyle.ChatMlNoThink, RoutedOptions(19))

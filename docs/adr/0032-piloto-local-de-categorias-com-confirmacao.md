@@ -76,6 +76,28 @@ categoria", restrita à importação: o lote segue editável e nada vira lançam
 Vale só onde o piloto está ligado; o release não tem pesos. A qualidade do modelo em descrições
 bancárias (validado em frases do Chat) **não foi medida**.
 
+## Atualização de 09/11/2026 — sugestor no release (`accord-7qa8`)
+
+O usuário aprovou levar o sugestor (o que devolve até três categorias) ao release: “Se for ele, eu aprovo
+levar ele ao release”. Isso **substitui** "Release não inclui pesos nem adaptador" e a exceção só-debug acima
+para o sugestor; o fake do Chat continua exclusivo do build debug (`-Paccord.categoryPilot=true`).
+
+- `:categorybench` vira dependência `implementation` do `:app`; `CategorySuggesterPilot` (main) fornece o
+  sugestor e os diagnósticos; release e debug o ligam por padrão, com o Chat por regras (ADR 0036).
+- O modelo070 (7.887.106 bytes, SHA-256 `5d40a47a…fa016`) passa a ficar versionado em
+  `app/src/main/assets/category-suggester/model.json`, conferido no build (`validateCategorySuggesterArtifact`)
+  e na carga; o original em `poc/results/` é ignorado pelo git e deixa de ser requisito de build.
+- Mantidas as garantias: só o toque aplica categoria, abstenção, descarte de resultado antigo, sem rede nem
+  sincronização. O catálogo ainda precisa ser idêntico às sementes: depois de editar, mover ou remover
+  categorias (ADR 0039), as sugestões ficam desativadas (`CatalogIncompatible`) e a escolha é manual. Cobrir
+  catálogos personalizados é decisão futura.
+- Não medido: top 3 com frases livres, descrições bancárias da importação e desempenho no S23 FE (aceite do
+  S20 FE estendido pelo usuário em 26/10). Verificado por compilação, testes JVM de `:categorybench` e
+  `:app:testDebugUnitTest` e, no emulador `Accord_Rapido_API_33`, `CategoryPilotOffFlowTest` (2/2, sugestor
+  ligado por padrão) e `CategoryPilotFlowTest` com `-Paccord.categoryPilot=true` (3 de 5; um pulado por exigir
+  fonte 2.0; `abstentionOffersAllCategoriesAndUnknownPhraseKeepsManualPath` falha igual em `HEAD` sem esta
+  mudança, ver `accord-p2qz`). Release assinado não gerado; nada medido nos aparelhos físicos.
+
 ## Fontes e evidências
 
 - Pedido explícito do usuário em 26/10/2026: “Vamos de interpretador fake por enquanto”.

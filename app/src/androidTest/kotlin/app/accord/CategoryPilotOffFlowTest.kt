@@ -25,7 +25,7 @@ class CategoryPilotOffFlowTest {
         container.awaitReady()
         container.chat.filterNotNull().first()
         container.clearChat()
-        assertFalse(container.categoryPilot.enabled)
+        assertFalse("O sugestor não troca o interpretador do Chat", container.categoryPilot.replacesInterpreter)
         assertTrue("ADR 0036: sem motor injetado o Chat usa as regras locais", container.usesRuleInterpreter)
         var activity: ActivityScenario<MainActivity>? = null
         try {
