@@ -33,18 +33,27 @@ internal class IncomePlanner(
         if (name.isEmpty()) return stop("name", ErrorCode.Required, "Informe o nome da categoria de renda.")
         val key = NameKey.of(name)
         val all = dao.incomeCategories()
-        if (all.any { it.nameKey == key }) {
-            return stop("name", ErrorCode.DuplicateName, "Já existe uma categoria de renda com esse nome. Escolha outro nome.")
+        val parentId = c.parentId
+        if (parentId != null) {
+            val parent = all.firstOrNull { it.id == parentId }
+                ?: return stop("parentId", ErrorCode.UnknownReference, "Categoria de renda não encontrada.")
+            if (parent.parentId != null) {
+                return stop("parentId", ErrorCode.NotAllowed, "Uma subcategoria de renda não pode ter subcategorias.")
+            }
+        }
+        if (all.any { it.parentId == parentId && it.nameKey == key }) {
+            return stop("name", ErrorCode.DuplicateName, DUPLICATE_NAME)
         }
         return Planned.Go(months = emptySet()) {
             val row = IncomeCategoryRow(
                 id = UUID.randomUUID().toString(),
                 name = name,
                 nameKey = key,
-                sortOrder = (all.maxOfOrNull { it.sortOrder } ?: -1) + 1,
+                sortOrder = (all.filter { it.parentId == parentId }.maxOfOrNull { it.sortOrder } ?: -1) + 1,
                 iconKey = IncomeCategorySeed.CUSTOM_ICON,
                 seedKey = null,
                 revision = 1,
+                parentId = parentId,
             )
             dao.insertIncomeCategory(row)
             listOf(EntityChange(EntityType.IncomeCategory, row.id, null, 1))
@@ -60,8 +69,8 @@ internal class IncomePlanner(
         val name = c.name.trim()
         if (name.isEmpty()) return stop("name", ErrorCode.Required, "Informe o nome da categoria de renda.")
         val key = NameKey.of(name)
-        if (dao.incomeCategories().any { it.id != row.id && it.nameKey == key }) {
-            return stop("name", ErrorCode.DuplicateName, "Já existe uma categoria de renda com esse nome. Escolha outro nome.")
+        if (dao.incomeCategories().any { it.id != row.id && it.parentId == row.parentId && it.nameKey == key }) {
+            return stop("name", ErrorCode.DuplicateName, DUPLICATE_NAME)
         }
         return Planned.Go(months = emptySet()) {
             val next = row.copy(name = name, nameKey = key, revision = row.revision + 1)
@@ -89,8 +98,8 @@ internal class IncomePlanner(
         }
         if (!name.isNullOrEmpty()) {
             val key = NameKey.of(name)
-            if (dao.incomeCategories().any { it.id != row.id && it.nameKey == key }) {
-                errors += FieldError("name", ErrorCode.DuplicateName, "Já existe uma categoria de renda com esse nome. Escolha outro nome.")
+            if (dao.incomeCategories().any { it.id != row.id && it.parentId == row.parentId && it.nameKey == key }) {
+                errors += FieldError("name", ErrorCode.DuplicateName, DUPLICATE_NAME)
             }
         }
         if (errors.isNotEmpty()) return stop(errors)
@@ -191,6 +200,8 @@ internal class IncomePlanner(
         }
     }
 }
+
+private const val DUPLICATE_NAME = "Já existe uma categoria de renda com esse nome. Escolha outro nome."
 
 /** Visão de contrato de uma renda; usada nas consultas da fachada e no orçamento. */
 internal fun IncomeRow.toView(): IncomeView {

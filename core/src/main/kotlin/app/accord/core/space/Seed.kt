@@ -126,7 +126,8 @@ object CategorySeed {
  */
 /** Categorias de renda iniciais (decisão de 02/11/2026). A pessoa pode criar outras; o ícone das criadas é genérico. */
 object IncomeCategorySeed {
-    data class Item(val key: String, val name: String, val icon: String)
+    /** [parentKey] é a chave da principal; nulo nas principais (ADR 0082). A chave da subcategoria é `pai.filho`. */
+    data class Item(val key: String, val name: String, val icon: String, val parentKey: String? = null)
 
     /** Ícone das categorias de renda criadas pela pessoa. */
     const val CUSTOM_ICON = "tag"
@@ -134,12 +135,64 @@ object IncomeCategorySeed {
     const val INVESTMENT = "investimento"
     const val SALARY = "salario"
     const val EXTRA = "renda-extra"
+    const val FREELANCE = "freela-autonomo"
+    const val RENT = "alugueis"
+    const val OTHER = "outros"
 
-    val items: List<Item> = listOf(
-        Item(INVESTMENT, "Investimento", "trending-up"),
-        Item(SALARY, "Salário", "briefcase"),
-        Item(EXTRA, "Renda Extra", "circle-plus"),
-    )
+    /** Subcategoria padrão das rendas que voltam de quem devia (ADR 0083). */
+    const val LOANS_RECEIVED = "outros.emprestimos-recebidos"
+
+    /**
+     * Principais e subcategorias iniciais (ADR 0082). As três primeiras principais mantêm a ordem anterior;
+     * as demais vêm depois. Os nomes de semente já existentes não são renomeados.
+     */
+    val items: List<Item> = buildList {
+        fun main(key: String, name: String, icon: String, vararg subs: Triple<String, String, String>) {
+            add(Item(key, name, icon))
+            subs.forEach { (subKey, subName, subIcon) -> add(Item("$key.$subKey", subName, subIcon, key)) }
+        }
+        main(
+            INVESTMENT, "Investimento", "trending-up",
+            Triple("dividendos", "Dividendos", "coins"),
+            Triple("juros-rendimentos", "Juros / Rendimentos", "percent"),
+            Triple("venda-de-ativos", "Venda de Ativos", "hand-coins"),
+            Triple("outros", "Outros", "tag"),
+        )
+        main(
+            SALARY, "Salário", "briefcase",
+            Triple("clt", "CLT", "briefcase-business"),
+            Triple("13o", "13º", "gift"),
+            Triple("plr-bonus", "PLR / Bônus", "award"),
+            Triple("outros", "Outros", "tag"),
+        )
+        main(
+            EXTRA, "Renda Extra", "circle-plus",
+            Triple("vendas", "Vendas", "store"),
+            Triple("cashback", "Cashback", "badge-dollar-sign"),
+            Triple("restituicao-de-ir", "Restituição de IR", "receipt-text"),
+            Triple("outros", "Outros", "tag"),
+        )
+        main(
+            FREELANCE, "Freela / Autônomo", "laptop",
+            Triple("servicos-prestados", "Serviços prestados", "handshake"),
+            Triple("consultoria", "Consultoria", "messages-square"),
+            Triple("projetos", "Projetos", "folder-kanban"),
+            Triple("outros", "Outros", "tag"),
+        )
+        main(
+            RENT, "Aluguéis", "house",
+            Triple("imovel-residencial", "Imóvel Residencial", "house"),
+            Triple("imovel-comercial", "Imóvel Comercial", "building-2"),
+            Triple("outros", "Outros", "tag"),
+        )
+        main(
+            OTHER, "Outros", "ellipsis",
+            Triple("emprestimos-recebidos", "Empréstimos Recebidos", "hand-coins"),
+            Triple("devolucoes", "Devoluções", "undo-2"),
+            Triple("diversos", "Diversos", "layers"),
+            Triple("outros", "Outros", "tag"),
+        )
+    }
 }
 
 object DeterministicIds {

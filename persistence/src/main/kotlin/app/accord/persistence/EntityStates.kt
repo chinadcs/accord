@@ -82,7 +82,7 @@ internal object EntityStates {
             }
         } ?: return null
         val tombstone = (root["voided"] as? JsonPrimitive)?.booleanOrNull ?: false
-        return EntityState(json.encodeToString(JsonObject.serializer(), root), tombstone, referencesIn(root).toList())
+        return EntityState(json.encodeToString(JsonObject.serializer(), root), tombstone, referencesIn(root, if (type == EntityType.IncomeCategory) incomeCategoryReferences else emptyMap()).toList())
     }
 
     /** Revisão local atual (zero se a entidade ainda não existe), para a próxima ser maior. */
@@ -199,14 +199,17 @@ internal object EntityStates {
         "BOLETO" to EntityType.Boleto,
     )
 
-    private fun referencesIn(element: JsonElement): Set<EntityKey> = buildSet {
+    /** O pai de uma subcategoria de renda é outra categoria de renda, não uma categoria de despesa (ADR 0082). */
+    private val incomeCategoryReferences = mapOf("parentId" to EntityType.IncomeCategory)
+
+    private fun referencesIn(element: JsonElement, overrides: Map<String, EntityType> = emptyMap()): Set<EntityKey> = buildSet {
         when (element) {
             is JsonObject -> {
                 for ((key, value) in element) {
                     val text = (value as? JsonPrimitive)?.contentOrNull
-                    val target = referenceTypes[key]
+                    val target = overrides[key] ?: referenceTypes[key]
                     if (target != null && text != null && value !is kotlinx.serialization.json.JsonNull) add(EntityKey(target.name, text))
-                    else addAll(referencesIn(value))
+                    else addAll(referencesIn(value, overrides))
                 }
                 val origin = (element["originType"] as? JsonPrimitive)?.contentOrNull?.let(originTypes::get)
                 val originId = (element["originId"] as? JsonPrimitive)?.contentOrNull
@@ -216,7 +219,7 @@ internal object EntityStates {
                 val targetId = (element["targetId"] as? JsonPrimitive)?.contentOrNull
                 if (target != null && targetId != null) add(EntityKey(target.name, targetId))
             }
-            is JsonArray -> element.forEach { addAll(referencesIn(it)) }
+            is JsonArray -> element.forEach { addAll(referencesIn(it, overrides)) }
             else -> Unit
         }
     }

@@ -51,6 +51,8 @@ data class IncomeCategoryRow(
     val revision: Long,
     /** Cor escolhida (índice da paleta, ADR 0038); nulo vale a cor derivada. Estados antigos sem o campo leem nulo. */
     val colorIndex: Int? = null,
+    /** Principal que contém esta subcategoria; nulo nas principais (um nível só, ADR 0082). Estados antigos sem o campo leem nulo. */
+    val parentId: String? = null,
 )
 
 /**
@@ -820,7 +822,7 @@ interface SpaceDao {
         AlertEventRow::class, AlertDisplayRow::class, AlertPreferenceRow::class, IconAssociationRow::class, IntentionRow::class,
         AccountMoveRow::class, ClueEvaluationRow::class, SavingsPocketRow::class, SavingsMoveRow::class,
     ],
-    version = 23,
+    version = 24,
     exportSchema = true,
     autoMigrations = [
         AutoMigration(from = 1, to = 2, spec = Migration1To2::class),
@@ -860,6 +862,8 @@ interface SpaceDao {
         AutoMigration(from = 21, to = 22),
         // ADR 0038 (emenda de 09/11/2026): cor escolhida na categoria de renda.
         AutoMigration(from = 22, to = 23),
+        // ADR 0082: subcategoria de renda (parentId anulável na categoria de renda).
+        AutoMigration(from = 23, to = 24),
     ],
 )
 abstract class AccordDatabase : RoomDatabase() {

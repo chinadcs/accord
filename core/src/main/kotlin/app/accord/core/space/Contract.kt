@@ -334,7 +334,7 @@ data class CreateCategory(val name: String, val parentId: String? = null) : Comm
 data class RecordAlertEvent(val event: AlertEvent) : Command
 
 /** Categoria de renda (receitas), separada das categorias de despesa; lista plana, nome único sem diferenciar caixa e acentos. */
-data class CreateIncomeCategory(val name: String) : Command
+data class CreateIncomeCategory(val name: String, val parentId: String? = null) : Command
 
 data class RenameIncomeCategory(val categoryId: String, val name: String, val expectedRevision: Long? = null) : Command
 
@@ -1053,6 +1053,8 @@ data class IncomeCategoryNode(
     val revision: Long = 0,
     /** Cor escolhida (índice da paleta, ADR 0038); nulo vale a cor derivada da semente ou da identidade. */
     val colorIndex: Int? = null,
+    /** Principal que contém esta subcategoria; nulo nas principais (um nível só, ADR 0082). */
+    val parentId: String? = null,
 )
 
 data class MovementRow(

@@ -21,7 +21,7 @@ não há limite de renda.
 1. **Agregado próprio e sincronizado.** `IncomeCategory` é um novo tipo de entidade da fachada e do protocolo (ADR 0024), com Room (`income_category`, esquema 5), estado em JSON
    para sincronização e tipo aceito pelo serviço (migração `20261102120000_categoria_de_renda.sql`). Não reaproveita a árvore de categorias de despesa, para que uma
    categoria de renda nunca receba despesa nem apareça no orçamento (a fachada recusa nos dois sentidos).
-2. **Lista plana.** Sem subcategorias, limites ou vigência. Nome único por espaço pela mesma normalização das categorias (`NameKey`, sem acento/caixa/espaços repetidos).
+2. **Lista plana.** Sem subcategorias, limites ou vigência. *(Proposta de 10/11/2026: [ADR 0082](0082-subcategorias-de-renda.md) acrescenta um nível de subcategoria e torna o nome único por irmãos.)* Nome único por espaço pela mesma normalização das categorias (`NameKey`, sem acento/caixa/espaços repetidos).
 3. **Três sementes** com identidade determinística e revisão 0, como as categorias iniciais: Investimento (`investimento`), Salário (`salario`) e Renda Extra (`renda-extra`).
    Todo aparelho do espaço chega às mesmas linhas sem operação de rede.
 4. **Criar e renomear** por comandos (`CreateIncomeCategory`, `RenameIncomeCategory` com versão esperada). Sem excluir nem reordenar neste momento.

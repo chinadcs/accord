@@ -773,7 +773,7 @@ class RoomFinanceSpace private constructor(
     }
 
     override suspend fun incomeCategories(): QueryResult<List<IncomeCategoryNode>> = query {
-        dao.incomeCategories().map { IncomeCategoryNode(it.id, it.name, it.sortOrder, it.iconKey, it.seedKey, it.revision, it.colorIndex) }
+        dao.incomeCategories().map { IncomeCategoryNode(it.id, it.name, it.sortOrder, it.iconKey, it.seedKey, it.revision, it.colorIndex, it.parentId) }
     }
 
     override suspend fun accounts(): QueryResult<AccountsView> = query {
@@ -981,6 +981,40 @@ class RoomFinanceSpace private constructor(
         }
     }
 
+    /**
+     * Linhas de semente das categorias de renda que ainda faltam (ADR 0082). Nada existente é sobrescrito: a inserção ignora o id já presente, e
+     * uma principal criada pela pessoa com o mesmo nome (ex.: "Outros") é reaproveitada como pai em vez de semear outra igual.
+     */
+    private fun incomeSeedRows(spaceId: String, existing: List<IncomeCategoryRow>): List<IncomeCategoryRow> {
+        val mains = existing.filter { it.parentId == null }
+        val parentIds = mutableMapOf<String, String>()
+        val orders = mutableMapOf<String?, Int>()
+        val rows = mutableListOf<IncomeCategoryRow>()
+        for (item in IncomeCategorySeed.items) {
+            val id = DeterministicIds.seedIncomeCategory(spaceId, item.key)
+            val order = orders.merge(item.parentKey, 1, Int::plus)!! - 1
+            if (item.parentKey == null) {
+                val reuse = mains.firstOrNull { it.id != id && it.nameKey == NameKey.of(item.name) }
+                parentIds[item.key] = reuse?.id ?: id
+                if (reuse != null) continue
+            }
+            val parentId = item.parentKey?.let { parentIds.getValue(it) }
+            // Já existe uma subcategoria com o mesmo nome sob o mesmo pai (criada pela pessoa): não duplica.
+            if (parentId != null && existing.any { it.parentId == parentId && it.id != id && it.nameKey == NameKey.of(item.name) }) continue
+            rows += IncomeCategoryRow(
+                id = id,
+                name = item.name,
+                nameKey = NameKey.of(item.name),
+                sortOrder = order,
+                iconKey = item.icon,
+                seedKey = item.key,
+                revision = 0,
+                parentId = parentId,
+            )
+        }
+        return rows
+    }
+
     private suspend fun seed(spaceId: String) {
         val orders = mutableMapOf<String?, Int>()
         val rows = CategorySeed.items.map { item ->
@@ -997,19 +1031,7 @@ class RoomFinanceSpace private constructor(
             )
         }
         dao.insertSeedCategories(rows)
-        dao.insertSeedIncomeCategories(
-            IncomeCategorySeed.items.mapIndexed { index, item ->
-                IncomeCategoryRow(
-                    id = DeterministicIds.seedIncomeCategory(spaceId, item.key),
-                    name = item.name,
-                    nameKey = NameKey.of(item.name),
-                    sortOrder = index,
-                    iconKey = item.icon,
-                    seedKey = item.key,
-                    revision = 0,
-                )
-            },
-        )
+        dao.insertSeedIncomeCategories(incomeSeedRows(spaceId, dao.incomeCategories()))
         // A Carteira (dinheiro) de cada espaço, sem saldo até a pessoa informar o inicial (ADR 0051).
         dao.insertSeedAccount(AccountRow(DeterministicIds.wallet(spaceId), null, "Carteira", "Dinheiro", 0, isWallet = true))
         // Um cartão por espaço, com os dias padrão 8 e 15 até a pessoa configurar.
