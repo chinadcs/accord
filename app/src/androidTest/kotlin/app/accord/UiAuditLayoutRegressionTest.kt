@@ -5,6 +5,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import android.view.WindowInsets
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -114,16 +115,19 @@ class UiAuditLayoutRegressionTest {
         compose.onNodeWithTag("register-choice-card").assertIsDisplayed()
     }
 
-    @Test fun categoriasMostraAcoesMesmoComTextoAmpliado() {
+    @Test fun categoriasMostraMenuDeAcoesDaLinha() {
         compose.onAllNodes(hasText("Mais") and hasClickAction()).onFirst().performClick()
         compose.onAllNodes(hasScrollAction()).onFirst()
             .performScrollToNode(hasText("Categorias e subcategorias"))
         compose.onAllNodes(hasText("Categorias e subcategorias") and hasClickAction()).onFirst().performClick()
         compose.waitUntil(12_000) {
-            compose.onAllNodesWithText("Mostrar subcategorias", substring = true).fetchSemanticsNodes().isNotEmpty()
+            compose.onAllNodesWithText("Reordenar", substring = true).fetchSemanticsNodes().isNotEmpty()
         }
-        compose.onAllNodesWithText("Renomear").onFirst().assertIsDisplayed()
-        val edit = compose.onAllNodesWithText("Editar").onFirst()
+        compose.onAllNodesWithText("subcategoria", substring = true).onFirst().assertIsDisplayed()
+        val menu = compose.onAllNodes(hasContentDescription("Mais ações de", substring = true)).onFirst()
+        menu.assertIsDisplayed()
+        menu.performClick()
+        val edit = compose.onAllNodes(hasText("Editar") and hasClickAction()).onFirst()
         edit.assertIsDisplayed()
         edit.performClick()
         compose.onNodeWithText("Editar categoria").assertIsDisplayed()

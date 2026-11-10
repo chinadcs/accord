@@ -82,9 +82,11 @@ class CategoryEditFlowTest {
         waitForText("Categorias e subcategorias")
         compose.onNode(hasScrollAction()).performScrollToNode(hasText("Categorias e subcategorias"))
         compose.onAllNodes(hasText("Categorias e subcategorias") and hasClickAction()).onLast().performSemanticsAction(SemanticsActions.OnClick)
-        waitForText("Reorganizar ordem")
-        // Só o ícone de caneta: o nome da ação e da categoria vai no rótulo de acessibilidade. O painel sobe de baixo.
-        compose.onNodeWithContentDescription("Editar $nameB").performSemanticsAction(SemanticsActions.OnClick)
+        waitForText("Reordenar")
+        // A lista é preguiçosa: rolar até a linha. A ação fica no ⋮ ("Mais ações de <nome>") e o painel sobe de baixo.
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText(nameB))
+        compose.onNodeWithContentDescription("Mais ações de $nameB").performSemanticsAction(SemanticsActions.OnClick)
+        click("Editar")
         waitForText("Editar categoria")
     }
 

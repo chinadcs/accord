@@ -356,7 +356,7 @@ class VisualReviewS1eTest {
         fun screen(dialog: app.accord.ui.categories.CategoryDialog?, expanded: Set<String>, reordering: Boolean, tab: app.accord.ui.categories.CategoryTab) =
             @androidx.compose.runtime.Composable {
                 app.accord.ui.categories.CategoriesScreen(
-                    content, dialog, expanded, reordering, tab, PaddingValues(), onBack = {}, onRetry = {}, onTab = {},
+                    content, app.accord.ui.categories.buildRows(content, tab, expanded), dialog, reordering, tab, PaddingValues(), onBack = {}, onRetry = {}, onTab = {},
                     onToggle = {}, onToggleReorder = {}, onMove = { _, _ -> }, onCreate = {}, onEdit = {}, onEditIncome = {},
                     onMoveSub = {}, onName = {}, onIcon = {}, onColor = {}, onDestination = {}, onAnswer = { _, _, _ -> },
                     onSubmit = {}, onClose = {}, onMoveEntries = {}, onRemove = {},

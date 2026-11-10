@@ -21,9 +21,9 @@ import app.accord.R
 import app.accord.ui.theme.AccordSpacing
 import com.composables.icons.lucide.R as Lucide
 
-/** Cabeçalho comum dos fluxos: retorno reconhecível, título que cresce e contexto opcional. */
+/** Cabeçalho comum dos fluxos: retorno reconhecível, título que cresce, contexto opcional e um [action] opcional à direita. */
 @Composable
-fun DetailHeader(title: String, onBack: () -> Unit, subtitle: String? = null) {
+fun DetailHeader(title: String, onBack: () -> Unit, subtitle: String? = null, action: (@Composable () -> Unit)? = null) {
     Row(
         Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
@@ -38,5 +38,6 @@ fun DetailHeader(title: String, onBack: () -> Unit, subtitle: String? = null) {
             Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
             subtitle?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
+        action?.invoke()
     }
 }

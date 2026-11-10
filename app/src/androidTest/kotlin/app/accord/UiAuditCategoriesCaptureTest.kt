@@ -9,6 +9,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
@@ -32,7 +33,7 @@ import org.junit.runner.RunWith
 import java.io.File
 import java.util.UUID
 
-/** Tela 23: categoria e subcategoria no fim da lista; diálogos Renomear/Mover e editor de cor/ícone. */
+/** Tela 23: categoria e subcategoria no fim da lista; menu ⋮, editor de cor/ícone e passar subcategoria para outra categoria. */
 @RunWith(AndroidJUnit4::class)
 class UiAuditCategoriesCaptureTest {
     @get:Rule val compose = createEmptyComposeRule()
@@ -105,48 +106,40 @@ class UiAuditCategoriesCaptureTest {
         compose.onNodeWithText("Mais").performClick()
         compose.onNode(hasScrollAction()).performScrollToNode(hasText("Categorias e subcategorias"))
         compose.onNodeWithText("Categorias e subcategorias").performClick()
-        waitFor("Reorganizar ordem")
+        waitFor("Reordenar")
         scrollCategoriesToEnd()
         waitFor(groupName)
     }
 
+    /** A lista é preguiçosa e não informa o fim com exatidão: rola até a nota que fecha a lista. */
     private fun scrollCategoriesToEnd() {
-        val scroll = compose.onNode(hasScrollAction())
-        val range = scroll.fetchSemanticsNode().config
-            .getOrNull(SemanticsProperties.VerticalScrollAxisRange) ?: error("Lista de categorias sem rolagem")
-        scroll.performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, range.maxValue()) }
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Categorias valem para todo o espaço", substring = true))
         compose.waitForIdle()
-        check(range.value() >= range.maxValue() - 1f) { "Grupo final da lista ainda fora da tela" }
     }
 
-    @Test fun grupoExpandidoRenomearEditarEMoverFilha() {
+    @Test fun grupoExpandidoEditarEPassarFilhaParaOutraCategoria() {
         openCategories()
         capture("23_grupo_recolhido")
-        compose.onAllNodesWithText("Mostrar subcategorias (1)").onLast().performClick()
+        // O toque na linha da principal expande o grupo (ADR 0084).
+        compose.onAllNodesWithText(groupName).onLast().performClick()
         waitFor(childName)
         scrollCategoriesToEnd()
         capture("23_grupo_expandido")
 
-        // Os dois últimos “Renomear” pertencem ao grupo e à filha criados neste teste.
-        val renames = compose.onAllNodes(hasText("Renomear") and hasClickAction())
-        val n = renames.fetchSemanticsNodes().size
-        check(n >= 2)
-        renames[n - 2].performClick()
-        waitFor("O nome muda em todos os lançamentos")
-        capture("23_renomear_grupo_dialogo")
-        compose.onNodeWithText("Cancelar").performClick()
-
-        val edits = compose.onAllNodes(hasText("Editar") and hasClickAction())
-        val editCount = edits.fetchSemanticsNodes().size
-        check(editCount >= 2)
-        edits[editCount - 2].performClick()
+        compose.onNodeWithContentDescription("Mais ações de $groupName").performClick()
+        capture("23_menu_grupo")
+        compose.onNode(hasText("Editar") and hasClickAction()).performClick()
         waitFor("Editar categoria")
         pages("23_editar_grupo")
 
-        scenario!!.onActivity { it.onBackPressedDispatcher.onBackPressed() }
-        waitFor(childName)
-        compose.onAllNodes(hasText("Mover") and hasClickAction()).onLast().performClick()
+        // O painel é uma janela própria: o Voltar global vai para ela, não para a Activity.
+        instrumentation.uiAutomation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_BACK)
+        compose.waitUntil(15_000) { compose.onAllNodesWithText("Editar categoria").fetchSemanticsNodes().isEmpty() }
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText(childName))
+        compose.onNodeWithContentDescription("Mais ações de $childName").performClick()
+        capture("23_menu_subcategoria")
+        compose.onNode(hasText("Passar para outra categoria…") and hasClickAction()).performClick()
         waitFor("Destino (categoria principal)")
-        pages("23_mover_subcategoria_dialogo")
+        pages("23_passar_subcategoria_dialogo")
     }
 }

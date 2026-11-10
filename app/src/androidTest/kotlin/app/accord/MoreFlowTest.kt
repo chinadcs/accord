@@ -290,7 +290,8 @@ class MoreFlowTest {
     fun categoriaNovaRejeitaNomeRepetidoNoMesmoNivelERenomeiaSemPerderIdentidade() {
         openMore("Categorias e subcategorias")
         waitForText("Categorias")
-        tap("Nova")
+        // "Nova" fica no cabeçalho fixo (ADR 0084), fora da lista rolável.
+        compose.onAllNodes(hasText("Nova") and hasClickAction()).onFirst().performSemanticsAction(SemanticsActions.OnClick)
         waitForText("Nova categoria")
         compose.onNodeWithText("Nome").performTextInput(mainName)
         dialogButton("Salvar")
@@ -307,10 +308,12 @@ class MoreFlowTest {
         openMore("Categorias e subcategorias")
         waitForText("Categorias")
         scrollTo(mainName)
-        compose.onAllNodes(hasText("Mostrar subcategorias (1)") and hasClickAction()).onLast().performSemanticsAction(SemanticsActions.OnClick)
+        // o toque na linha da principal expande o grupo (ADR 0084)
+        compose.onAllNodes(hasText(mainName) and hasClickAction()).onLast().performSemanticsAction(SemanticsActions.OnClick)
         scrollTo(subName)
-        // o botão de mover é um ícone com descrição de conteúdo "Mover <nome>" (painel de Categorias refeito em 167d2af)
-        compose.onNodeWithContentDescription("Mover $subName").performSemanticsAction(SemanticsActions.OnClick)
+        // a ação fica no ⋮ da subcategoria, com descrição de conteúdo "Mais ações de <nome>"
+        compose.onNodeWithContentDescription("Mais ações de $subName").performSemanticsAction(SemanticsActions.OnClick)
+        compose.onNode(hasText("Passar para outra categoria…") and hasClickAction()).performSemanticsAction(SemanticsActions.OnClick)
         waitForText("Destino (categoria principal)")
         compose.onAllNodes(hasText(destName)).onLast().performSemanticsAction(SemanticsActions.OnClick)
         dialogButton("Confirmar")

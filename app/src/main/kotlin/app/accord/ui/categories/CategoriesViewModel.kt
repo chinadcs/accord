@@ -27,8 +27,11 @@ import app.accord.core.space.ReorderCategories
 import app.accord.ui.categoryColorIndex
 import app.accord.ui.ownColorKey
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.YearMonth
@@ -139,6 +142,10 @@ class CategoriesViewModel(
 
     private val _reordering = MutableStateFlow(false)
     val reordering: StateFlow<Boolean> = _reordering.asStateFlow()
+
+    /** Lista achatada da aba atual, na ordem de exibição (ADR 0084): a tela só desenha. */
+    val rows: StateFlow<List<CategoryRow>> = combine(_content, _tab, _expanded, ::buildRows)
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     /** Um ID por abertura do painel: tocar duas vezes em Salvar não cria duas categorias. */
     private var commandId = CommandId(UUID.randomUUID().toString())

@@ -3,19 +3,34 @@
     <!-- Categorias e subcategorias (tela 23) -->
     <string name="categories_screen_title">Categorias</string>
     <string name="categories_new">Nova</string>
+    <string name="categories_new_label">Nova categoria</string>
+    <string name="categories_new_income_label">Nova categoria de renda</string>
     <string name="categories_new_sub">Nova subcategoria</string>
-    <string name="categories_expand">Mostrar subcategorias (%1$d)</string>
-    <string name="categories_collapse">Ocultar subcategorias (%1$d)</string>
+    <string name="categories_subs_none">Sem subcategorias</string>
+    <plurals name="categories_subs_count">
+        <item quantity="one">%1$d subcategoria</item>
+        <item quantity="other">%1$d subcategorias</item>
+    </plurals>
+    <plurals name="categories_count">
+        <item quantity="one">%1$d categoria</item>
+        <item quantity="other">%1$d categorias</item>
+    </plurals>
+    <string name="categories_state_expanded">Expandida</string>
+    <string name="categories_state_collapsed">Recolhida</string>
+    <string name="categories_action_expand">Expandir</string>
+    <string name="categories_action_collapse">Recolher</string>
+    <string name="categories_action_edit">Editar</string>
+    <string name="categories_menu_more">Mais ações de %1$s</string>
+    <string name="categories_menu_edit">Editar</string>
+    <string name="categories_menu_pass">Passar para outra categoria…</string>
     <string name="categories_tab_expense">Despesa</string>
     <string name="categories_tab_income">Renda</string>
-    <string name="categories_edit_named">Editar %1$s</string>
-    <string name="categories_move_named">Mover %1$s</string>
-    <string name="categories_reorder">Reorganizar ordem</string>
-    <string name="categories_reorder_done">Concluir reorganização</string>
+    <string name="categories_reorder">Reordenar</string>
+    <string name="categories_reorder_done">Concluir</string>
     <string name="categories_move_up">Subir %1$s</string>
     <string name="categories_move_down">Descer %1$s</string>
     <string name="categories_income_note">Categorias de renda classificam o que entra e têm subcategorias. Mudanças valem para o espaço compartilhado; uma renda pode ficar sem categoria.</string>
-    <string name="categories_note">Mudanças valem para o orçamento compartilhado. Para tirar uma categoria, mova os lançamentos dela para outra e remova: o histórico continua nos lançamentos movidos.</string>
+    <string name="categories_note">Categorias valem para todo o espaço.</string>
     <string name="categories_name">Nome</string>
     <string name="categories_name_required">Informe um nome.</string>
     <string name="categories_save">Salvar</string>
@@ -23,7 +38,7 @@
     <string name="categories_create_sub_note">Nomes iguais no mesmo nível não são aceitos; em níveis diferentes podem repetir.</string>
     <string name="categories_create_income_title">Nova categoria de renda</string>
     <string name="categories_create_income_note">Nomes iguais não são aceitos, mesmo com letras maiúsculas ou acentos diferentes.</string>
-    <string name="categories_move_title">Mover “%1$s”</string>
+    <string name="categories_move_title">Passar “%1$s” para outra categoria</string>
     <string name="categories_move_from">Origem: %1$s</string>
     <string name="categories_move_to">Destino (categoria principal)</string>
     <string name="categories_move_pick">Escolha o destino.</string>
