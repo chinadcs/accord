@@ -2,7 +2,6 @@ package app.accord.security
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.selection.toggleable
@@ -36,7 +35,6 @@ import kotlinx.coroutines.flow.first
 import app.accord.R
 import app.accord.ui.components.AccordButton
 import app.accord.ui.components.AccordOutlinedButton
-import app.accord.ui.components.DetailHeader
 import app.accord.ui.theme.AccordSpacing
 
 @Composable
@@ -94,15 +92,15 @@ internal fun AppLockScreen(
 }
 
 @Composable
-fun SecurityScreen(padding: PaddingValues, lock: AppLockStore, authenticator: AndroidAppAuthenticator, onBack: () -> Unit) {
+/**
+ * Corpo da seção Segurança (bloqueio local e capturas de tela), sem cabeçalho e sem rolagem própria: quem o hospeda rola uma
+ * vez só. Hoje só a tela Privacidade e segurança o usa (ADR 0077).
+ */
+fun SecurityContent(lock: AppLockStore, authenticator: AndroidAppAuthenticator, modifier: Modifier = Modifier) {
     val state by lock.state.collectAsStateWithLifecycle()
     val configured by authenticator.configuration.collectAsStateWithLifecycle()
     var failed by remember { mutableStateOf(false) }
-    Column(
-        Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
-        verticalArrangement = Arrangement.spacedBy(AccordSpacing.s4),
-    ) {
-        DetailHeader(stringResource(R.string.security_title), onBack)
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(AccordSpacing.s4)) {
         Text(stringResource(R.string.security_intro))
         Text(stringResource(if (state.enabled) R.string.security_enabled else R.string.security_disabled),
             style = MaterialTheme.typography.titleMedium)

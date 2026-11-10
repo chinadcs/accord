@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="privacy_title">Privacidade e dados</string>
+    <string name="privacy_security_title">Privacidade e segurança</string>
+    <string name="more_privacy_security_hint">Bloqueio do app e dados</string>
     <string name="privacy_cancel">Cancelar</string>
     <string name="privacy_export_intro">Baixe seus dados pessoais ou os dados financeiros compartilhados. O arquivo identifica o que está neste aparelho, no serviço e ainda pendente de envio.</string>
     <string name="privacy_usage_intro">Veja, só neste aparelho, como foram os últimos sete dias do Chat: quantos lançamentos entenderam, votos e correções. O relatório não traz frases, valores nem nomes.</string>

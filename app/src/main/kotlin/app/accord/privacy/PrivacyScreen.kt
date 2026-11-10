@@ -27,19 +27,34 @@ import app.accord.ui.components.AccordOutlinedButton
 import app.accord.ui.components.DetailHeader
 import app.accord.ui.theme.AccordSpacing
 
+/**
+ * Tela de Privacidade e dados fora do grafo de navegação (gates sem espaço e sem bloqueio do app): só o conteúdo de dados, sem a
+ * seção Segurança. Dentro do app, a aba Mais abre [app.accord.ui.more.PrivacySecurityScreen], que compõe as duas seções.
+ */
 @Composable
 fun PrivacyScreen(padding: PaddingValues, viewModel: PrivacyViewModel, onBack: () -> Unit) {
+    Column(
+        Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
+        verticalArrangement = Arrangement.spacedBy(AccordSpacing.s4),
+    ) {
+        DetailHeader(stringResource(R.string.privacy_title), onBack)
+        PrivacyContent(viewModel)
+    }
+}
+
+/**
+ * Corpo de Privacidade e dados, sem cabeçalho e sem rolagem própria (quem o hospeda rola uma vez só). Os diálogos de relatório
+ * e de exportação pertencem a este conteúdo.
+ */
+@Composable
+fun PrivacyContent(viewModel: PrivacyViewModel, modifier: Modifier = Modifier) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val usage by viewModel.usage.collectAsStateWithLifecycle()
     val resolver = LocalContext.current.contentResolver
     val save = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         if (uri == null) viewModel.cancel() else viewModel.save { resolver.openOutputStream(uri, "wt") }
     }
-    Column(
-        Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
-        verticalArrangement = Arrangement.spacedBy(AccordSpacing.s4),
-    ) {
-        DetailHeader(stringResource(R.string.privacy_title), onBack)
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(AccordSpacing.s4)) {
         Text(stringResource(R.string.privacy_export_intro))
         AccordOutlinedButton(onClick = { viewModel.prepare(DataExportScope.Personal) }, enabled = !state.busy,
             modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.privacy_export_personal)) }

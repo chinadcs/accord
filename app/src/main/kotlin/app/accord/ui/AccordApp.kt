@@ -182,6 +182,7 @@ import app.accord.ui.nav.ARG_REGISTER_CHAT
 import app.accord.ui.nav.ARG_REGISTER_FORM
 import app.accord.ui.nav.ARG_REGISTER_KIND
 import app.accord.ui.nav.ROUTE_MODEL
+import app.accord.ui.nav.ROUTE_PRIVACY_SECURITY
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import app.accord.FeedbackEvent
@@ -1104,15 +1105,12 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     if (!navController.popBackStack(ROUTE_CATEGORIES, inclusive = false)) navController.popBackStack()
                 })
             }
-            composable("security") {
+            composable(ROUTE_PRIVACY_SECURITY) {
                 val activity = LocalActivity.current as app.accord.MainActivity
-                app.accord.security.SecurityScreen(padding, container.appLock, activity.appAuthenticator) { navController.popBackStack() }
-            }
-            composable("privacy") {
                 val viewModel: app.accord.privacy.PrivacyViewModel = viewModel(factory = viewModelFactory {
                     initializer { app.accord.privacy.PrivacyViewModel(container) }
                 })
-                app.accord.privacy.PrivacyScreen(padding, viewModel) { navController.popBackStack() }
+                app.accord.ui.more.PrivacySecurityScreen(padding, container.appLock, activity.appAuthenticator, viewModel) { navController.popBackStack() }
             }
             composable("archived_chats") {
                 app.accord.privacy.ArchivedChatsScreen(padding, container) { navController.popBackStack() }

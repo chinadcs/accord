@@ -110,8 +110,7 @@ data class MoreActions(
     val onChatClear: () -> Unit = {},
     // Neste aparelho.
     val onAppearance: () -> Unit = {},
-    val onSecurity: () -> Unit = {},
-    val onPrivacy: () -> Unit = {},
+    val onPrivacySecurity: () -> Unit = {},
 )
 
 /**
@@ -236,8 +235,10 @@ fun MoreScreen(
                     stringResource(state.themePreference.shortLabelRes()), stringResource(state.themePalette.labelRes),
                 ),
             )
-            MoreRow(R.string.security_title, Lucide.drawable.lucide_ic_lock, actions.onSecurity)
-            MoreRow(R.string.privacy_title, Lucide.drawable.lucide_ic_shield_check, actions.onPrivacy)
+            MoreRow(
+                R.string.privacy_security_title, Lucide.drawable.lucide_ic_shield_check, actions.onPrivacySecurity,
+                supporting = stringResource(R.string.more_privacy_security_hint),
+            )
             MoreRow(R.string.bank_notifications_title, Lucide.drawable.lucide_ic_bell, actions.onBankNotifications)
         }
 

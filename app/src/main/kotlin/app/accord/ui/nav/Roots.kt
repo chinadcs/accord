@@ -48,6 +48,9 @@ const val ARG_REGISTER_KIND = "kind"
 const val ARG_REGISTER_FORM = "form"
 const val ARG_REGISTER_CHAT = "chatMessage"
 
+/** Privacidade e segurança (ADR 0077): bloqueio local e Privacidade e dados numa só tela, aberta pela aba Mais. */
+const val ROUTE_PRIVACY_SECURITY = "privacy_security"
+
 /** Modelo no aparelho (tela 25), aberto pelo indicador do Chat e pelos Primeiros passos. */
 const val ROUTE_MODEL = "model"
 

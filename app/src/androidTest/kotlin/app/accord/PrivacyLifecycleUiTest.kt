@@ -66,7 +66,7 @@ class PrivacyLifecycleUiTest {
         val otherDrafts = SharedPreferencesIntentionDrafts(app, "outro-titular-teste", "outro-espaco")
         otherDrafts.save("new", IntentionDraft("Outro rascunho fictício", "30", null, ""))
         compose.onNodeWithText("Mais").performClick()
-        compose.onNodeWithText("Privacidade e dados").performScrollTo().performClick()
+        compose.onNodeWithText("Privacidade e segurança").performScrollTo().performClick()
         compose.waitUntil(15_000) { runCatching { compose.onNodeWithText("Excluir minha conta").assertIsEnabled() }.isSuccess }
         compose.onNodeWithText("Excluir minha conta").performScrollTo().performClick()
         compose.onNodeWithText("Sua senha do Accord").performScrollTo().performTextInput("senha-ficticia-1")

@@ -51,6 +51,7 @@ import app.accord.ui.nav.ROUTE_INCOMES
 import app.accord.ui.nav.ROUTE_INTENTIONS
 import app.accord.ui.nav.ROUTE_LIMITS
 import app.accord.ui.nav.ROUTE_MODEL
+import app.accord.ui.nav.ROUTE_PRIVACY_SECURITY
 import app.accord.ui.nav.ROUTE_RECEIVABLES
 import app.accord.ui.nav.ROUTE_REVIEW
 import app.accord.ui.nav.ROUTE_SIMULATOR
@@ -163,8 +164,7 @@ internal fun MoreRoute(
             onChatImport = { importLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) },
             onChatClear = { chatDialog = ChatHistoryDialog.Clear },
             onAppearance = { navController.navigate("appearance") },
-            onSecurity = { navController.navigate("security") },
-            onPrivacy = { navController.navigate("privacy") },
+            onPrivacySecurity = { navController.navigate(ROUTE_PRIVACY_SECURITY) },
         ),
         state = MoreUiState(
             header = access.moreHeader(),

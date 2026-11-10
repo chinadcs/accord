@@ -1,7 +1,9 @@
 @file:Suppress("DEPRECATION")
 package app.accord
 
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.junit4.createEmptyComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
@@ -19,7 +21,7 @@ class PrivacyUiTest {
     @Test fun ofereceDownloadsSeparadosEAvisoAntesDeSalvar() {
         ActivityScenario.launch(MainActivity::class.java).use {
             compose.onNodeWithText("Mais").performClick()
-            compose.onNodeWithText("Privacidade e dados").performScrollTo().performClick()
+            compose.onNodeWithText("Privacidade e segurança").performScrollTo().performClick()
             compose.onNodeWithText("Baixar meus dados pessoais").assertIsDisplayed()
             compose.onNodeWithText("Baixar dados financeiros do espaço").assertIsDisplayed()
             compose.onNodeWithText("Baixar meus dados pessoais").performClick()
@@ -37,7 +39,7 @@ class PrivacyUiTest {
     @Test fun relatorioDeUsoDoChatAbreSoComContagensEAdmiteOsLimites() {
         ActivityScenario.launch(MainActivity::class.java).use {
             compose.onNodeWithText("Mais").performClick()
-            compose.onNodeWithText("Privacidade e dados").performScrollTo().performClick()
+            compose.onNodeWithText("Privacidade e segurança").performScrollTo().performClick()
             compose.onNodeWithText("Ver relatório de uso do Chat").performScrollTo().assertIsDisplayed().performClick()
             compose.waitUntil(15_000) {
                 compose.onAllNodes(androidx.compose.ui.test.hasText("Uso do Chat nos últimos 7 dias")).fetchSemanticsNodes().isNotEmpty()
@@ -48,6 +50,21 @@ class PrivacyUiTest {
             compose.onNodeWithText("Compartilhar").assertIsDisplayed()
             compose.onNodeWithText("Fechar").performClick()
             compose.onNodeWithText("Ver relatório de uso do Chat").assertIsDisplayed()
+        }
+    }
+
+    @Test fun umaLinhaEmMaisAbreTelaComAsSecoesSegurancaEPrivacidadeEDados() {
+        ActivityScenario.launch(MainActivity::class.java).use {
+            compose.onNodeWithText("Mais").performClick()
+            // As duas linhas antigas saíram de Mais: só resta a linha única.
+            compose.onAllNodesWithText("Segurança").assertCountEquals(0)
+            compose.onAllNodesWithText("Privacidade e dados").assertCountEquals(0)
+            compose.onNodeWithText("Bloqueio do app e dados").performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("Privacidade e segurança").performScrollTo().performClick()
+            compose.onNodeWithText("Segurança").assertIsDisplayed()
+            compose.onNodeWithText("Permitir prints de tela").performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("Privacidade e dados").performScrollTo().assertIsDisplayed()
+            compose.onNodeWithText("Baixar meus dados pessoais").performScrollTo().assertIsDisplayed()
         }
     }
 }
