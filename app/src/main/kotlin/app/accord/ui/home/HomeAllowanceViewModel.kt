@@ -26,7 +26,8 @@ class HomeAllowanceViewModel(private val provider: SpaceProvider) : ViewModel() 
 
     fun refresh() {
         job?.cancel()
-        mutable.value = HomeAllowanceState.Loading
+        // Mantém o último resultado pronto durante a releitura local; só falha de leitura o troca.
+        if (mutable.value !is HomeAllowanceState.Ready) mutable.value = HomeAllowanceState.Loading
         job = viewModelScope.launch {
             try {
                 val today = provider.clock.today()

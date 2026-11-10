@@ -67,4 +67,47 @@ class SpendingAllowanceTest {
             spendingAllowance(budget("2026-11-09", row("a", Long.MAX_VALUE, 0), row("b", 1, 0)), LocalDate.parse("2026-11-09"))
         }
     }
+
+    @Test fun `expoe limite total e gasto liquido sem mudar a margem`() {
+        // Limites 1000 + 500 = 1500; liquidos (600 - 40) + 100 = 660; a linha sem limite fica de fora.
+        val date = LocalDate.parse("2026-11-09")
+        val b = budget(date.toString(), row("a", 100_000, 60_000, 4_000), row("b", 50_000, 10_000), row("c", null, 900_000))
+        val result = spendingAllowance(b, date)
+        assertEquals(150_000L, result.limitTotalCents)
+        assertEquals(66_000L, result.netSpentCents)
+        assertEquals(84_000L, result.remainingCents)
+        assertEquals(result.limitTotalCents!! - result.netSpentCents!!, result.remainingCents)
+    }
+
+    @Test fun `sem limites os dois valores ficam ausentes e nao zero`() {
+        val date = LocalDate.parse("2026-11-09")
+        val result = spendingAllowance(budget(date.toString(), row("a", null, 100)), date)
+        assertNull(result.limitTotalCents)
+        assertNull(result.netSpentCents)
+        assertNull(result.remainingCents)
+        val none = spendingAllowance(budget(date.toString()), date)
+        assertNull(none.limitTotalCents)
+        assertNull(none.netSpentCents)
+    }
+
+    @Test fun `excesso e limite zero preservam os valores reais`() {
+        val date = LocalDate.parse("2026-11-09")
+        val exceeded = spendingAllowance(budget(date.toString(), row("a", 10_000, 12_345)), date)
+        assertEquals(10_000L, exceeded.limitTotalCents)
+        assertEquals(12_345L, exceeded.netSpentCents)
+        assertEquals(2_345L, exceeded.excessCents)
+        val zero = spendingAllowance(budget(date.toString(), row("a", 0, 0)), date)
+        assertEquals(0L, zero.limitTotalCents)
+        assertEquals(0L, zero.netSpentCents)
+        val zeroSpent = spendingAllowance(budget(date.toString(), row("a", 0, 123)), date)
+        assertEquals(0L, zeroSpent.limitTotalCents)
+        assertEquals(123L, zeroSpent.netSpentCents)
+    }
+
+    @Test fun `estorno reduz o liquido considerado`() {
+        val date = LocalDate.parse("2026-11-09")
+        val result = spendingAllowance(budget(date.toString(), row("a", 50_000, 20_000, 5_000)), date)
+        assertEquals(15_000L, result.netSpentCents)
+        assertEquals(35_000L, result.remainingCents)
+    }
 }

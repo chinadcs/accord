@@ -54,6 +54,9 @@ object AccordSpacing {
 
     /** Linha de lista com título e apoio, como alternar "mais opções" no registro. */
     val rowTall = 64.dp
+
+    /** Reserva no fim de uma raiz rolável para o botão flutuante (56 dp + margem) não cobrir o último bloco. */
+    val fabClearance = 80.dp
 }
 
 /** Estilos próprios sobre a escala do Material 3 (tokens §4). */

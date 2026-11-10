@@ -141,7 +141,7 @@ fun HomeScreen(
             }
         }
         // O botão flutuante de registro fica sobre o canto inferior; este espaço deixa o último cartão acessível.
-        Spacer(Modifier.height(72.dp))
+        Spacer(Modifier.height(AccordSpacing.fabClearance))
     }
 }
 

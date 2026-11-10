@@ -26,7 +26,8 @@ class HomeBalanceViewModel(private val provider: SpaceProvider, private val crit
 
     fun refresh() {
         job?.cancel()
-        mutable.value = HomeBalanceState.Loading
+        // Mantém o último resultado pronto durante a releitura local; só falha de leitura o troca.
+        if (mutable.value !is HomeBalanceState.Ready) mutable.value = HomeBalanceState.Loading
         job = viewModelScope.launch {
             try {
                 val result = provider.space().totalBalance(criterion(), provider.clock.currentMonth())

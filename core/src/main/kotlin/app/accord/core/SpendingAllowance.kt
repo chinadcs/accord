@@ -20,6 +20,10 @@ data class SpendingAllowance(
     val weekCents: Long?,
     val excessCents: Long?,
     val provisional: Boolean,
+    /** Soma dos limites das categorias com limite (a base de "remaining"); nulo sem limites. Só leitura para a barra de uso. */
+    val limitTotalCents: Long? = null,
+    /** Gasto líquido das mesmas categorias, já com compromissos conhecidos, estornos e sem somar pago; nulo sem limites. */
+    val netSpentCents: Long? = null,
 )
 
 /** Só limites principais definidos. O líquido mensal já inclui os compromissos conhecidos. */
@@ -31,6 +35,9 @@ fun spendingAllowance(budget: MonthBudget, today: LocalDate): SpendingAllowance 
     val remaining = if (included.isEmpty()) null else included.fold(Money.ZERO) { sum, row ->
         sum + (row.limit.total!! - row.net)
     }.cents
+    // Só apresentação: não entra em "remaining". Estouro aritmético vira "indisponível", nunca altera a margem.
+    val limitTotal = if (included.isEmpty()) null else runCatching { included.map { it.limit.total!! }.sum().cents }.getOrNull()
+    val netSpent = if (included.isEmpty()) null else runCatching { included.map { it.net }.sum().cents }.getOrNull()
     val available = remaining?.coerceAtLeast(0)
     // Quotient + remainder avoids overflow without rounding above the available amount.
     val week = available?.let { (it / days) * weekDays + (it % days) * weekDays / days }
@@ -39,5 +46,6 @@ fun spendingAllowance(budget: MonthBudget, today: LocalDate): SpendingAllowance 
         included.size, budget.categories.size - included.size, budget.toClassify.count,
         remaining, available?.div(days), week,
         remaining?.takeIf { it < 0 }?.let(Math::negateExact), budget.invoiceLinksToConfirm > 0,
+        limitTotal, netSpent,
     )
 }

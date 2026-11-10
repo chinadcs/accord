@@ -27,7 +27,8 @@ class HomeCashFlowViewModel(private val provider: SpaceProvider) : ViewModel() {
 
     fun refresh() {
         job?.cancel()
-        mutable.value = HomeCashFlowState.Loading
+        // Mantém o último resultado pronto durante a releitura local; só falha de leitura o troca.
+        if (mutable.value !is HomeCashFlowState.Ready) mutable.value = HomeCashFlowState.Loading
         job = viewModelScope.launch {
             try {
                 val month = YearMonth.from(provider.clock.today())

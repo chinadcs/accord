@@ -8,7 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.verticalScroll
 import app.accord.ui.components.AccordButton as Button
 import androidx.compose.material3.MaterialTheme
@@ -18,6 +18,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.painterResource
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
@@ -25,14 +26,18 @@ import androidx.compose.ui.semantics.semantics
 import app.accord.R
 import app.accord.ui.theme.AccordSpacing
 
-/** Esqueleto de uma tela raiz: margem de 16 dp, título como cabeçalho para o TalkBack e rolagem. */
+/**
+ * Esqueleto de uma tela raiz: margem de 16 dp, título como cabeçalho para o TalkBack e rolagem. A posição da rolagem é
+ * salva com o estado da tela, para sobreviver à troca de aba e à recriação da atividade.
+ */
 @Composable
 fun RootScaffold(title: String, padding: PaddingValues, onBack: (() -> Unit)? = null, content: @Composable () -> Unit) {
+    val scroll = rememberSaveable(saver = ScrollState.Saver) { ScrollState(0) }
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(padding)
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(scroll)
             .padding(AccordSpacing.s4),
         verticalArrangement = Arrangement.spacedBy(AccordSpacing.s4),
     ) {
