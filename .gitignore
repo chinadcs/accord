@@ -25,6 +25,7 @@ scripts/poc/__pycache__/
 # Documentação local; só ADRs e modelos de arquivos são versionados.
 /docs/*
 !/docs/adr/
+!/docs/design/
 !/docs/modelos/
 poc
 pocpc
