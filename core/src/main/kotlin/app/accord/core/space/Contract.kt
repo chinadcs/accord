@@ -474,6 +474,11 @@ data class RegisterCardPurchase(
     /** Intenção de origem (S7, ADR 0048): vínculo imutável definido na criação; no máximo um compromisso por intenção no espaço. */
     val originIntentionId: String? = null,
     val cardId: String? = null,
+    /**
+     * Cronograma explícito, um valor por parcela, na ordem (ADR 0081): quando o documento mostra o valor exato de cada parcela, o aplicativo o guarda em vez de repartir o total
+     * (a sobra de centavos fica onde o banco a pôs). Exige [amountMeaning] total, [amount] igual à soma e uma entrada por parcela, cada uma com ao menos um centavo.
+     */
+    val installmentAmounts: List<Money>? = null,
 ) : Command
 
 /**

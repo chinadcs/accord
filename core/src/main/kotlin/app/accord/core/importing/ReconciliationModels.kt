@@ -211,6 +211,8 @@ sealed interface ProposedEffect {
         val count: Int,
         val firstInvoice: YearMonth,
         val months: List<YearMonth>,
+        /** Valor exato de cada parcela, na ordem, quando as linhas do arquivo mostram as parcelas (ADR 0081); nulo: o total é repartido. */
+        val amountsCents: List<Long>? = null,
     ) : ProposedEffect
 
     /** Another line of the same purchase [CreateInstallmentPurchase] creates in this confirmation (the movement [leaderOrdinal]): it links to installment [number]. */

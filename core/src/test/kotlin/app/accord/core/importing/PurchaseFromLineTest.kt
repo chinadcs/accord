@@ -52,7 +52,7 @@ class PurchaseFromLineTest {
         val m = line(3)
         val item = preview(m, billing(), decided(m, 150000)).items.single()
         assertEquals(Classification.New, item.classification)
-        assertEquals(ProposedEffect.CreateInstallmentPurchase("casa", 150000, 3, 10, oct, (0L..9L).map { oct.plusMonths(it) }), item.effect)
+        assertEquals(ProposedEffect.CreateInstallmentPurchase("casa", 150000, 3, 10, oct, (0L..9L).map { oct.plusMonths(it) }, List(10) { 15000L }), item.effect)
         assertTrue(item.doubts.isEmpty())
     }
 

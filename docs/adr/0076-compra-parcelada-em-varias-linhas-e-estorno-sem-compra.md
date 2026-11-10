@@ -27,7 +27,7 @@ do cartão, "se não tiver compra pra estornar, crie uma compra e estorne ela me
    sugerido"). A escolha fica na linha líder, seja qual linha a pessoa abra; as parcelas anteriores à primeira do arquivo seguem o 0073 (todas as N, nos meses antigos).
 3. **Fatura.** A data da linha é a da compra: a 1ª parcela cai na fatura atribuída pela data (ADR 0043) e a parcela n, n − 1 meses depois. Com fatura declarada pelo documento
    vale o 0073 (a fatura declarada é a da linha líder).
-4. **Arredondamento.** O banco põe os centavos que sobram em geral na 1ª parcela; o aplicativo, na última (23/10/2026). Uma linha cabe na parcela do cronograma se diferir por
+4. **Arredondamento** (a cada parcela que o arquivo mostra, vale o valor da linha: [ADR 0081](0081-valor-exato-de-cada-parcela-da-compra-parcelada-importada.md)). O banco põe os centavos que sobram em geral na 1ª parcela; o aplicativo, na última (23/10/2026). Uma linha cabe na parcela do cronograma se diferir por
    **até N centavos** (N = parcelas). Vale ao vincular a uma compra registrada e ao validar o total. Diferença maior segue sendo "valor diferente" (dúvida).
 5. **Refinanciamento da fatura** ("Parcela de refinanciamento"): continua dúvida, como decidido em 03/11/2026. Agrupa em série (uma decisão por compra, as demais linhas
    acompanham), mas **nunca** é aceito sozinho nem pelo botão em lote, mesmo com todas as parcelas no arquivo.

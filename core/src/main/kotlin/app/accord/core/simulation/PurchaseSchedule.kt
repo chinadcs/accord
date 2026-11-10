@@ -18,6 +18,7 @@ object PurchaseSchedule {
      * @param amount valor informado; é o total, ou o valor de cada parcela se [meaning] for [AmountMeaning.PerInstallment].
      * @param firstMonth mês de vencimento da fatura da 1ª parcela; as seguintes seguem mês a mês.
      * @param firstState situação da atribuição da 1ª parcela; as demais são sempre [AssignmentState.Estimated].
+     * @param explicit valor exato de cada parcela, quando o documento o mostra; substitui a repartição do total.
      * @throws IllegalArgumentException se [count] < 1 ou se alguma parcela ficaria com menos de 1 centavo.
      */
     fun build(
@@ -26,8 +27,10 @@ object PurchaseSchedule {
         count: Int,
         firstMonth: YearMonth,
         firstState: AssignmentState,
+        explicit: List<Money>? = null,
     ): List<InstallmentView> {
-        val amounts = if (meaning == AmountMeaning.PerInstallment) Installments.fromEach(amount, count) else Installments.splitTotal(amount, count)
+        require(explicit == null || (explicit.size == count && explicit.all { it.cents >= 1 })) { "Cronograma explícito inválido" }
+        val amounts = explicit ?: if (meaning == AmountMeaning.PerInstallment) Installments.fromEach(amount, count) else Installments.splitTotal(amount, count)
         val months = Installments.schedule(firstMonth, count)
         return amounts.mapIndexed { i, each ->
             InstallmentView(i + 1, each, months[i], if (i == 0) firstState else AssignmentState.Estimated)

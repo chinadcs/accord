@@ -161,7 +161,7 @@ object ImportSteps {
                             RegisterCardPurchase(
                                 description = m.description, classification = ChosenCategory.Category(effect.categoryId), date = date,
                                 amount = Money(effect.totalCents), amountMeaning = AmountMeaning.Total, installments = effect.count,
-                                cardId = originId, invoice = effect.firstInvoice,
+                                cardId = originId, invoice = effect.firstInvoice, installmentAmounts = effect.amountsCents?.map(::Money),
                             ),
                         ),
                         createsType = EntityType.CardPurchase, createsNumber = effect.number,

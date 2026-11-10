@@ -190,6 +190,19 @@ class CardPurchaseTest : SpaceTestBase() {
     }
 
     @Test
+    fun `cronograma explícito guarda o valor exato de cada parcela e recusa o que não soma o total`() = runBlocking<Unit> {
+        val h = open()
+        val id = h.register(purchase(d(2026, 10, 20), brl(77), installments = 3, meaning = AmountMeaning.Total).copy(amount = Money(7798), installmentAmounts = listOf(Money(2600), Money(2599), Money(2599))))
+        assertEquals(listOf(2600L, 2599L, 2599L), h.detail(id).installments.map { it.amount.cents })
+        assertEquals(7798L, h.detail(id).total.cents)
+
+        suspend fun bad(vararg cents: Long) = h.space.execute(h.env(), purchase(d(2026, 10, 20), brl(77), installments = 3, meaning = AmountMeaning.Total).copy(amount = Money(7798), installmentAmounts = cents.map { Money(it) }))
+        assertEquals(ErrorCode.OutOfRange, assertIs<CommandResult.Rejected>(bad(2600, 2599, 2598)).errors.single().code, "soma diferente do total")
+        assertEquals(ErrorCode.OutOfRange, assertIs<CommandResult.Rejected>(bad(3900, 3898)).errors.single().code, "uma parcela por vez")
+        assertEquals(ErrorCode.OutOfRange, assertIs<CommandResult.Rejected>(bad(7797, 1, 0)).errors.single().code, "cada parcela ao menos um centavo")
+    }
+
+    @Test
     fun `corrigir a fatura da 1ª parcela de outubro para novembro desloca as seis e a prévia mostra antes e depois`() = runBlocking<Unit> {
         val h = open()
         val id = h.register(

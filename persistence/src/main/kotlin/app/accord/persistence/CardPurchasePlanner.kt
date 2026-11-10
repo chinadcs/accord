@@ -5,6 +5,7 @@ import app.accord.core.Installments
 import app.accord.core.Money
 import app.accord.core.ShiftResult
 import app.accord.core.simulation.PurchaseSchedule
+import app.accord.core.space.AmountMeaning
 import app.accord.core.space.AssignmentState
 import app.accord.core.space.CancelState
 import app.accord.core.space.CategorySeed
@@ -43,6 +44,10 @@ internal class CardPurchasePlanner(
         if (c.installments > 1 && c.amountMeaning == null) {
             return Planned.Stop(CommandResult.DecisionNeeded(Decision.AmountMeaningRequired(c.installments, c.amount)))
         }
+        c.installmentAmounts?.let { each ->
+            val ok = c.amountMeaning == AmountMeaning.Total && each.size == c.installments && each.all { it.cents >= 1 } && each.sumOf { it.cents } == c.amount.cents
+            if (!ok) return stop("installmentAmounts", ErrorCode.OutOfRange, "O cronograma das parcelas precisa ter uma parcela por vez e somar o total.")
+        }
         // Encargo confirmado sem classificação usa Serviços > Tarifas e juros, pela identidade da semente.
         val classificationId = chosenId
             ?: if (c.isCharge) DeterministicIds.seedCategory(session.spaceId, CategorySeed.FEES_AND_INTEREST) else null
@@ -56,7 +61,7 @@ internal class CardPurchasePlanner(
         }
         // Cronograma único com o simulador do S7 (PurchaseSchedule): parcelas, centavos e meses de fatura.
         val views = try {
-            PurchaseSchedule.build(c.amount, c.amountMeaning, c.installments, firstMonth, firstState)
+            PurchaseSchedule.build(c.amount, c.amountMeaning, c.installments, firstMonth, firstState, c.installmentAmounts)
         } catch (_: IllegalArgumentException) {
             return stop("amount", ErrorCode.MustBePositive, "Cada parcela precisa ter ao menos um centavo.")
         }

@@ -86,7 +86,8 @@ class InstallmentSeriesTest {
         val items = preview(zee).items
         val leader = items.first { it.movement.ordinal == 1 }
         // 26/10 fecha depois do dia 8: a 1ª parcela é a de novembro; as outras caem em dezembro e janeiro.
-        assertEquals(ProposedEffect.CreateInstallmentPurchase("mercado", 7798, 1, 3, nov, listOf(nov, nov.plusMonths(1), nov.plusMonths(2))), leader.effect)
+        // Os valores são os das três linhas do arquivo (a sobra de centavos fica na 1ª, como o banco), não o total repartido (ADR 0081).
+        assertEquals(ProposedEffect.CreateInstallmentPurchase("mercado", 7798, 1, 3, nov, listOf(nov, nov.plusMonths(1), nov.plusMonths(2)), listOf(2600L, 2599L, 2599L)), leader.effect)
         assertEquals(Classification.New, leader.classification)
         assertEquals(ProposedEffect.JoinInstallmentPurchase(1, 2), items.first { it.movement.ordinal == 2 }.effect)
         assertEquals(ProposedEffect.JoinInstallmentPurchase(1, 3), items.first { it.movement.ordinal == 3 }.effect)
@@ -211,5 +212,23 @@ class InstallmentSeriesTest {
     @Test fun `choosing the purchase to refund beats the new purchase`() {
         val d = Decisions(defaultCategoryId = "tarifas", refundByKey = mapOf(keyOf(credit, 1) to "orig"), newPurchaseRefunds = setOf(keyOf(credit, 1)))
         assertEquals(ProposedEffect.CreateRefund("orig", null), preview(credit, d).items.first().effect)
+    }
+
+    // ---- valor exato de cada parcela (ADR 0081) ----
+
+    private fun series(total: Int, vararg lines: Pair<Int, Long>) =
+        InstallmentSeries(total, lines.mapIndexed { k, (n, cents) -> InstallmentSeries.Member(k + 1, n, cents) })
+
+    @Test fun `a whole series keeps each line's own value, the cents where the bank put them`() {
+        val whole = series(6, 1 to 5835L, 2 to 5833L, 3 to 5833L, 4 to 5833L, 5 to 5833L, 6 to 5833L)
+        assertEquals(listOf(5835L, 5833L, 5833L, 5833L, 5833L, 5833L), BillingRules.exactSchedule(whole, 6, 35000))
+        assertNull(BillingRules.exactSchedule(whole, 6, 34998), "a total that is not the sum of a whole series is not forced onto it")
+    }
+
+    @Test fun `a partial series shares what is left of the total among the installments the file does not show, the spare cents on the last of them`() {
+        val partial = series(6, 2 to 5833L, 3 to 5833L)
+        assertEquals(listOf(5833L, 5833L, 5833L, 5833L, 5833L, 5835L), BillingRules.exactSchedule(partial, 6, 35000))
+        assertEquals(listOf(5833L, 5833L, 5833L, 5833L, 5833L, 5833L), BillingRules.exactSchedule(partial, 6, 34998))
+        assertNull(BillingRules.exactSchedule(partial, 6, 11668), "nothing left for the missing installments")
     }
 }

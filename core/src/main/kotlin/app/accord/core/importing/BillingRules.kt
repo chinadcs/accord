@@ -86,7 +86,23 @@ internal object BillingRules {
         val months = Installments.schedule(first, hint.total)
         val paid = b.invoices.filter { it.paid }.map { it.dueMonth }.toSet()
         if (months.any { it in paid }) return Outcome(reasons = setOf(DoubtReason.InstallmentScheduleHitsPaidInvoice))
-        return Outcome(ProposedEffect.CreateInstallmentPurchase(categoryId, plan.totalCents, hint.number, hint.total, first, months))
+        return Outcome(ProposedEffect.CreateInstallmentPurchase(categoryId, plan.totalCents, hint.number, hint.total, first, months, series?.let { exactSchedule(it, hint.total, plan.totalCents) }))
+    }
+
+    /**
+     * O valor de cada parcela como o arquivo mostra (ADR 0081): a parcela com linha leva o valor da linha e as que o arquivo não mostra repartem o que sobra do total,
+     * com a sobra de centavos na última delas. Nulo quando isso não fecha (total diferente da soma de uma série completa, ou parcela faltante com menos de 1 centavo):
+     * aí o total é repartido como sempre.
+     */
+    internal fun exactSchedule(series: InstallmentSeries, count: Int, totalCents: Long): List<Long>? {
+        val known = series.members.associate { it.number to it.cents }
+        val missing = (1..count).filter { it !in known }
+        val rest = totalCents - known.values.sum()
+        if (missing.isEmpty()) return if (rest == 0L) (1..count).map { known.getValue(it) } else null
+        if (rest < missing.size) return null
+        val each = rest / missing.size
+        val extra = rest - each * missing.size
+        return (1..count).map { n -> known[n] ?: (each + if (n == missing.last()) extra else 0L) }
     }
 
     // ---- rule 10: invoice payment (full only) ----

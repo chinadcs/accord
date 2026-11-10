@@ -120,6 +120,7 @@ class InstallmentSeriesImportTest : SpaceTestBase() {
 
         val zee = checkNotNull(h.space.purchase(target(1).targetId!!).value())
         assertEquals(2600L + 2599 + 2599, zee.total.cents)
+        assertEquals(listOf(2600L, 2599L, 2599L), zee.installments.map { it.amount.cents }, "cada parcela leva o valor da sua linha do arquivo (ADR 0081)")
         assertEquals(listOf(ym(2026, 11), ym(2026, 12), ym(2027, 1)), zee.installments.map { it.invoiceMonth }, "26/10 fecha em novembro: 1/3, 2/3 e 3/3")
 
         val spg = checkNotNull(h.space.purchase(target(3).targetId!!).value())
