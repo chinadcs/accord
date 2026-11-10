@@ -29,6 +29,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
@@ -38,6 +41,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -50,6 +54,7 @@ import app.accord.ui.components.BudgetBar
 import app.accord.ui.components.DecorativeIcon
 import app.accord.ui.components.HomeSectionCard
 import app.accord.ui.components.SectionStatus
+import app.accord.ui.home.AllowanceMethodText
 import app.accord.ui.home.CashFlowBody
 import app.accord.ui.components.MonthSelector
 import app.accord.ui.components.MoneyChart
@@ -218,6 +223,8 @@ private fun LazyListScope.budgetContent(
             onClick = { onOpenCategory(category.categoryId, data.month) },
         )
     }
+    // Texto fixo de "Como é calculado" da margem para gastar (ADR 0078): a margem é a de hoje, então não lê dados do mês escolhido.
+    item(key = "allowance-method") { AllowanceMethodSection() }
     item { MonthLinks({ onOpenCommitments(data.month) }, { onOpenIncomes(data.month) }, onOpenCard, { onOpenForecasts(data.month) }) }
 }
 
@@ -247,6 +254,44 @@ private fun BudgetFlowSection(flow: BudgetFlowState, onRetry: () -> Unit) {
         },
     ) {
         if (flow is BudgetFlowState.Ready) CashFlowBody(flow.value, showTitle = false, detailed = true)
+    }
+}
+
+/**
+ * Subseção recolhível com o texto de "Como é calculada a margem para gastar". Sem números: a margem é a de hoje e não
+ * depende do mês escolhido. Recolhida por padrão; o estado de aberto/fechado é lido pelo leitor de tela.
+ */
+@Composable
+private fun AllowanceMethodSection() {
+    var open by rememberSaveable { mutableStateOf(false) }
+    val state = stringResource(if (open) R.string.budget_allowance_method_open else R.string.budget_allowance_method_closed)
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+        Column {
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = AccordSpacing.rowMedium)
+                    .clickable(role = Role.Button) { open = !open }
+                    .semantics { stateDescription = state }
+                    .padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
+            ) {
+                DecorativeIcon(Lucide.drawable.lucide_ic_info)
+                Text(stringResource(R.string.budget_allowance_method_title), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                DecorativeIcon(if (open) Lucide.drawable.lucide_ic_chevron_up else Lucide.drawable.lucide_ic_chevron_down)
+            }
+            if (open) {
+                Column(
+                    Modifier.fillMaxWidth().padding(start = AccordSpacing.s4, end = AccordSpacing.s4, bottom = AccordSpacing.s4),
+                    verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
+                ) {
+                    AllowanceMethodText(value = null)
+                    Text(
+                        stringResource(R.string.budget_allowance_method_note),
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
     }
 }
 

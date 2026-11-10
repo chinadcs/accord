@@ -116,3 +116,7 @@ Mais ou na barra inferior.
 - Aceite: o usuário aceitou o ADR em 10/11/2026 ("Aceito o ADR, prossiga"). Aceite não prova implementação nem validação:
   no momento do aceite nenhuma linha de código havia sido alterada; a implementação segue em beads próprios e nada foi
   validado em Galaxy, TalkBack ou movimento reduzido.
+
+## Evidência de implementação
+
+- Fatia C (`accord-xj7j`, 10/11/2026): Saldo total e Margem para gastar na Início, rename no Chat e texto estático "Como é calculada a margem para gastar" no Orçamento. O subtítulo do Saldo saiu como **"acumulado até o fim do mês"**, e não "até hoje" como na Decisão 1: o cálculo (`TotalBalance.total`, ADR 0071) acumula do primeiro lançamento até o fim do mês atual, então "até hoje" seria impreciso. Validado só no emulador; Galaxy S20 FE/S23 FE e TalkBack manual seguem pendentes.

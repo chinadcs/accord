@@ -1,6 +1,25 @@
 package app.accord
 
 import androidx.compose.foundation.layout.PaddingValues
+import android.graphics.Bitmap
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.captureToImage
+import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isHeading
+import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.unit.Density
+import androidx.test.core.app.ApplicationProvider
+import app.accord.ui.entries.BALANCE_ICON_TAG_PREFIX
+import app.accord.ui.theme.ThemePreference
+import com.composables.icons.lucide.R as Lucide
+import java.io.File
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -26,9 +45,16 @@ class HomeBalanceUiTest {
     @get:Rule val compose = createComposeRule()
 
     private fun brl(reais: Long) = Money(reais * 100)
-    private fun home(balance: HomeBalanceState, onBalanceRetry: () -> Unit = {}) = compose.setContent {
-        AccordTheme { HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {}, balance = balance, onBalanceRetry = onBalanceRetry) }
+    private fun home(balance: HomeBalanceState, onBalanceRetry: () -> Unit = {}, fontScale: Float = 1f, theme: ThemePreference = ThemePreference.System) = compose.setContent {
+        val density = LocalDensity.current
+        CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
+            AccordTheme(theme) { HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {}, balance = balance, onBalanceRetry = onBalanceRetry) }
+        }
     }
+
+    private fun iconTag(res: Int) = BALANCE_ICON_TAG_PREFIX + res
+    private val month = EntrySummary(brl(120), brl(400), brl(20), Money.ZERO, receivedIncomes = brl(400))
+    private val total = EntrySummary(brl(300), brl(1500), brl(50), Money.ZERO, receivedIncomes = brl(1000))
 
     @Test fun saldoTotalAcumuladoComReceitaEDespesaSoDoMes() {
         val total = EntrySummary(brl(300), brl(1500), brl(50), Money.ZERO, receivedIncomes = brl(1000))
@@ -40,6 +66,65 @@ class HomeBalanceUiTest {
         compose.onNodeWithText(brl(400).format()).assertIsDisplayed()
         compose.onNodeWithText("Despesa do mês").assertIsDisplayed()
         compose.onNodeWithText(brl(100).format()).assertIsDisplayed() // do mês: 120 − 20
+    }
+
+    @Test fun subtituloDizAcumuladoAteOFimDoMesETituloEhCabecalho() {
+        home(HomeBalanceState.Ready(TotalBalance(total, month)))
+        // O acumulado vai até o fim do mês atual (ADR 0071), por isso o subtítulo não diz "até hoje".
+        compose.onNodeWithText("acumulado até o fim do mês").assertIsDisplayed()
+        compose.onAllNodesWithText("acumulado até hoje").assertCountEquals(0)
+        compose.onNode(hasText("Saldo total") and isHeading()).assertIsDisplayed()
+    }
+
+    @Test fun receitaEDespesaTemIconeDecorativoEOTextoEEquivalente() {
+        home(HomeBalanceState.Ready(TotalBalance(total, month)))
+        compose.onNodeWithTag(iconTag(Lucide.drawable.lucide_ic_arrow_down_left), useUnmergedTree = true).assertIsDisplayed()
+        compose.onNodeWithTag(iconTag(Lucide.drawable.lucide_ic_arrow_up_right), useUnmergedTree = true).assertIsDisplayed()
+        // Os ícones não têm descrição própria: o rótulo "Receita do mês"/"Despesa do mês" é que é lido.
+        compose.onNodeWithTag(iconTag(Lucide.drawable.lucide_ic_arrow_down_left), useUnmergedTree = true)
+            .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
+        compose.onNodeWithText("Receita do mês").assertIsDisplayed()
+        compose.onNodeWithText("Despesa do mês").assertIsDisplayed()
+    }
+
+    @Test fun cartaoEUmNoSoComTodosOsValoresNaDescricao() {
+        home(HomeBalanceState.Ready(TotalBalance(total, month)))
+        compose.onNodeWithContentDescription(
+            "Saldo total, acumulado até o fim do mês: saldo de ${brl(750).format()}. " +
+                "Receita do mês: ${brl(400).format()}. Despesa do mês: ${brl(100).format()}.",
+        ).assertIsDisplayed()
+    }
+
+    @Test fun saldoNegativoELidoPorExtenso() {
+        val negative = TotalBalance(EntrySummary(brl(400), Money.ZERO, Money.ZERO, Money.ZERO, receivedIncomes = brl(100)),
+            EntrySummary(Money.ZERO, Money.ZERO, Money.ZERO, Money.ZERO))
+        home(HomeBalanceState.Ready(negative))
+        compose.onNodeWithContentDescription("saldo negativo de ${brl(300).format()}", substring = true).assertIsDisplayed()
+        compose.onNodeWithText(Money(-30_000).format()).assertIsDisplayed()
+    }
+
+    @Test fun textoAmpliadoEmpilhaReceitaEDespesaComOsIcones() {
+        home(HomeBalanceState.Ready(TotalBalance(total, month)), fontScale = 2f)
+        compose.onNodeWithText("Receita do mês").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Despesa do mês").assertIsDisplayed()
+        compose.onNodeWithText(brl(750).format()).assertIsDisplayed()
+        compose.onNodeWithTag(iconTag(Lucide.drawable.lucide_ic_arrow_up_right), useUnmergedTree = true).assertIsDisplayed()
+    }
+
+    @Test fun saldoNosDoisTemasComCapturas() {
+        val app = ApplicationProvider.getApplicationContext<AccordApplication>()
+        val theme = mutableStateOf(ThemePreference.Light)
+        compose.setContent { AccordTheme(theme.value) { androidx.compose.material3.Surface(color = androidx.compose.material3.MaterialTheme.colorScheme.background) {
+            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {}, balance = HomeBalanceState.Ready(TotalBalance(total, month)))
+        } } }
+        for (choice in listOf(ThemePreference.Light, ThemePreference.Dark)) {
+            compose.runOnIdle { theme.value = choice }
+            compose.onNodeWithText("acumulado até o fim do mês").assertIsDisplayed()
+            val folder = File(app.getExternalFilesDir(null), "screens/xj7j").apply { mkdirs() }
+            File(folder, "saldo-${choice.name}.png").outputStream().use {
+                compose.onRoot().captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it)
+            }
+        }
     }
 
     @Test fun rendaPrevistaNaoEntraEOSaldoNegativoMostraOSinal() {

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Margem para gastar na Início e "Como é calculado" (accord-xj7j, ADR 0078 fatia C). Fórmula do ADR 0068 inalterada. -->
+<resources>
+    <string name="allowance_subtitle">Pelo orçamento de %1$s, não do banco</string>
+    <string name="allowance_today_label">Hoje</string>
+    <string name="allowance_week_label">Esta semana</string>
+    <string name="allowance_week_until_sunday">até dom., %1$s</string>
+    <string name="allowance_week_until_month_end">até o fim do mês</string>
+    <string name="allowance_usage">%1$s de %2$s usados (%3$d%%)</string>
+    <plurals name="allowance_days_left">
+        <item quantity="one">%1$d dia restante, contando hoje</item>
+        <item quantity="other">%1$d dias restantes, contando hoje</item>
+    </plurals>
+    <plurals name="allowance_covers">
+        <item quantity="one">Inclui %1$d categoria com limite.</item>
+        <item quantity="other">Inclui %1$d categorias com limite.</item>
+    </plurals>
+    <plurals name="allowance_unclassified_notice">
+        <item quantity="one">%1$d lançamento a classificar fica fora do cálculo</item>
+        <item quantity="other">%1$d lançamentos a classificar ficam fora do cálculo</item>
+    </plurals>
+    <string name="allowance_provisional_notice">Provisório: parte do valor ainda está a conferir</string>
+    <string name="allowance_over_notice">Passou %1$s do orçamento considerado</string>
+    <string name="allowance_see_limits">Ver limites</string>
+
+    <string name="allowance_info_description">Como é calculado</string>
+    <string name="allowance_method_title">Como é calculado</string>
+    <string name="allowance_method_close">Fechar</string>
+    <string name="allowance_method_coverage_rule">Entram só as categorias principais com limite cadastrado; limite zero também conta. Categorias sem limite ficam fora.</string>
+    <string name="allowance_method_unclassified">Lançamentos a classificar ficam fora do cálculo até receberem categoria.</string>
+    <string name="allowance_method_provisional">A margem aparece como provisória quando parte do valor ainda está a conferir, como fatura a conferir ou boleto sem data de compra.</string>
+
+    <string name="budget_allowance_method_title">Como é calculada a margem para gastar</string>
+    <string name="budget_allowance_method_note">Texto fixo: a margem para gastar é a de hoje e não muda com o mês escolhido acima.</string>
+    <string name="budget_allowance_method_open">Aberto</string>
+    <string name="budget_allowance_method_closed">Fechado</string>
+</resources>
