@@ -181,6 +181,7 @@ import app.accord.ui.nav.ROUTE_LIMITS
 import app.accord.ui.nav.ARG_REGISTER_CHAT
 import app.accord.ui.nav.ARG_REGISTER_FORM
 import app.accord.ui.nav.ARG_REGISTER_KIND
+import app.accord.ui.nav.ROUTE_CHAT_SETTINGS
 import app.accord.ui.nav.ROUTE_MODEL
 import app.accord.ui.nav.ROUTE_PRIVACY_SECURITY
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -1111,6 +1112,13 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     initializer { app.accord.privacy.PrivacyViewModel(container) }
                 })
                 app.accord.ui.more.PrivacySecurityScreen(padding, container.appLock, activity.appAuthenticator, viewModel) { navController.popBackStack() }
+            }
+            composable(ROUTE_CHAT_SETTINGS) {
+                app.accord.ui.more.ChatSettingsRoute(
+                    container, padding, onBack = { navController.popBackStack() },
+                    onModel = { navController.navigate(ROUTE_MODEL) },
+                    onArchivedChats = { navController.navigate("archived_chats") },
+                )
             }
             composable("archived_chats") {
                 app.accord.privacy.ArchivedChatsScreen(padding, container) { navController.popBackStack() }

@@ -215,7 +215,7 @@ class UiAuditCaptureTest {
     @Test fun preferenciasDeAlertas() = destination("Preferências de alertas", "27_preferencias_alertas")
 
     @Test fun configuracoesDoChatEModelo() {
-        openMore("Configurações do Chat")
+        openMore("Ajustes do Chat")
         capturePages("extra_configuracoes_chat")
         compose.onAllNodes(hasScrollAction()).onFirst()
             .performScrollToNode(hasText("Modelo no aparelho"))

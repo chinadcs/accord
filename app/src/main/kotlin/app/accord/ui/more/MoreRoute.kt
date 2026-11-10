@@ -1,7 +1,5 @@
 package app.accord.ui.more
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -17,7 +15,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -26,11 +23,9 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.navigation.NavHostController
 import app.accord.AppContainer
-import app.accord.FeedbackEvent
 import app.accord.R
 import app.accord.core.alerts.NotificationAccess
 import app.accord.core.analysis.ProductPhase
-import app.accord.core.chat.ChatImportResult
 import app.accord.core.sync.AccessState
 import app.accord.ui.alerts.AlertPreferencesViewModel
 import app.accord.ui.alerts.rememberAllowNotifications
@@ -42,6 +37,7 @@ import app.accord.ui.nav.ROUTE_ALERT_PREFS
 import app.accord.ui.nav.ROUTE_BANK_NOTIFICATIONS
 import app.accord.ui.nav.ROUTE_CARD
 import app.accord.ui.nav.ROUTE_CATEGORIES
+import app.accord.ui.nav.ROUTE_CHAT_SETTINGS
 import app.accord.ui.nav.ROUTE_CLUES
 import app.accord.ui.nav.ROUTE_COMMITMENTS
 import app.accord.ui.nav.ROUTE_COMPARISON
@@ -50,7 +46,6 @@ import app.accord.ui.nav.ROUTE_IMPORT_HUB
 import app.accord.ui.nav.ROUTE_INCOMES
 import app.accord.ui.nav.ROUTE_INTENTIONS
 import app.accord.ui.nav.ROUTE_LIMITS
-import app.accord.ui.nav.ROUTE_MODEL
 import app.accord.ui.nav.ROUTE_PRIVACY_SECURITY
 import app.accord.ui.nav.ROUTE_RECEIVABLES
 import app.accord.ui.nav.ROUTE_REVIEW
@@ -61,9 +56,7 @@ import app.accord.ui.nav.ROUTE_SYNC
 import app.accord.ui.nav.ROUTE_WEEKLY_REVIEW
 import app.accord.ui.pending.PendingQueueUiState
 import app.accord.ui.theme.AccordSpacing
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
  * Raiz da aba Mais: liga a tela às rotas, ao estado de acesso e aos seletores/diálogos do sistema. Sem chamada de rede ao abrir:
@@ -83,31 +76,6 @@ internal fun MoreRoute(
     val themePreference by container.theme.preference.collectAsStateWithLifecycle()
     val themePalette by container.theme.palette.collectAsStateWithLifecycle()
     var signOutPending by remember { mutableStateOf<Int?>(null) }
-    var chatDialog by remember { mutableStateOf<ChatHistoryDialog?>(null) }
-    val resolver = LocalContext.current.contentResolver
-    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
-        if (uri != null) scope.launch {
-            val text = container.exportChat()
-            val saved = text != null && runCatching {
-                withContext(Dispatchers.IO) { resolver.openOutputStream(uri, "wt")?.use { it.write(text.toByteArray(Charsets.UTF_8)) } ?: error("sem saída") }
-            }.isSuccess
-            container.feedback.post(FeedbackEvent(if (saved) R.string.chat_exported else R.string.chat_export_failed))
-        }
-    }
-    val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) scope.launch {
-            val text = runCatching { withContext(Dispatchers.IO) { resolver.openInputStream(uri)?.use { String(it.readBytes(), Charsets.UTF_8) } } }.getOrNull()
-            val result = text?.let { container.importChat(it) } ?: ChatImportResult.Unreadable
-            container.feedback.post(
-                when (result) {
-                    is ChatImportResult.Imported ->
-                        if (result.messages == 0) FeedbackEvent(R.string.chat_imported_none) else FeedbackEvent(R.string.chat_imported_count, listOf(result.messages))
-                    ChatImportResult.OtherOwner -> FeedbackEvent(R.string.chat_import_other_owner)
-                    ChatImportResult.Unreadable -> FeedbackEvent(R.string.chat_import_unreadable)
-                },
-            )
-        }
-    }
     val alertsViewModel: AlertPreferencesViewModel = viewModel(
         factory = viewModelFactory { initializer { AlertPreferencesViewModel(container, container.notifications) } },
     )
@@ -158,11 +126,7 @@ internal fun MoreRoute(
             onAlertsAllow = allowNotifications,
             onAlertPreferences = { navController.navigate(ROUTE_ALERT_PREFS) },
             onBankNotifications = { navController.navigate(ROUTE_BANK_NOTIFICATIONS) },
-            onArchivedChats = if (access.archivedSpaces.isNotEmpty()) ({ navController.navigate("archived_chats") }) else null,
-            onChatModel = { navController.navigate(ROUTE_MODEL) },
-            onChatExport = { chatDialog = ChatHistoryDialog.Export },
-            onChatImport = { importLauncher.launch(arrayOf("application/json", "text/plain", "*/*")) },
-            onChatClear = { chatDialog = ChatHistoryDialog.Clear },
+            onChatSettings = { navController.navigate(ROUTE_CHAT_SETTINGS) },
             onAppearance = { navController.navigate("appearance") },
             onPrivacySecurity = { navController.navigate(ROUTE_PRIVACY_SECURITY) },
         ),
@@ -184,22 +148,6 @@ internal fun MoreRoute(
         installState = apkState.install,
         updateActions = container.updateActions,
     )
-    chatDialog?.let { dialog ->
-        ChatHistoryDialogView(
-            dialog,
-            onConfirm = {
-                chatDialog = null
-                when (dialog) {
-                    ChatHistoryDialog.Export -> exportLauncher.launch("historico-do-chat.json")
-                    ChatHistoryDialog.Clear -> scope.launch {
-                        container.clearChat()
-                        container.feedback.post(FeedbackEvent(R.string.chat_cleared))
-                    }
-                }
-            },
-            onDismiss = { chatDialog = null },
-        )
-    }
     signOutPending?.let { pending ->
         SignOutDialog(
             pending,
@@ -215,24 +163,6 @@ internal fun MoreRoute(
  */
 internal fun AccessState.moreHeader(): MoreHeaderState? = account?.let {
     MoreHeaderState(email = it.email, spaceName = space?.name, participants = participants?.items?.size)
-}
-
-private enum class ChatHistoryDialog { Export, Clear }
-
-@Composable
-private fun ChatHistoryDialogView(dialog: ChatHistoryDialog, onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    val export = dialog == ChatHistoryDialog.Export
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(if (export) R.string.chat_export_title else R.string.chat_clear_title)) },
-        text = { Text(stringResource(if (export) R.string.chat_export_body else R.string.chat_clear_body)) },
-        confirmButton = {
-            TextButton(onClick = onConfirm, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                Text(stringResource(if (export) R.string.chat_export_confirm else R.string.chat_clear_confirm))
-            }
-        },
-        dismissButton = { TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.chat_dialog_cancel)) } },
-    )
 }
 
 @Composable

@@ -102,13 +102,9 @@ data class MoreActions(
     val onAlertsAllow: () -> Unit = {},
     val onAlertPreferences: () -> Unit = {},
     val onBankNotifications: () -> Unit = {},
-    // Chat.
-    val onArchivedChats: (() -> Unit)? = null,
-    val onChatModel: () -> Unit = {},
-    val onChatExport: () -> Unit = {},
-    val onChatImport: () -> Unit = {},
-    val onChatClear: () -> Unit = {},
     // Neste aparelho.
+    /** Hub Ajustes do Chat (rota própria): modelo, histórico e chats de espaços encerrados. */
+    val onChatSettings: () -> Unit = {},
     val onAppearance: () -> Unit = {},
     val onPrivacySecurity: () -> Unit = {},
 )
@@ -148,13 +144,8 @@ fun MoreScreen(
     installState: app.accord.updates.InstallState = app.accord.updates.InstallState.Idle,
     updateActions: app.accord.updates.UpdateActions = app.accord.updates.UpdateActions({}, {}, {}, { false }),
 ) {
-    var showChatSettings by rememberSaveable { mutableStateOf(false) }
     var showEntriesDate by rememberSaveable { mutableStateOf(false) }
     var showUpdates by rememberSaveable { mutableStateOf(false) }
-    if (showChatSettings) {
-        ChatSettingsScreen(padding, actions, onBack = { showChatSettings = false })
-        return
-    }
     Column(
         Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
         verticalArrangement = Arrangement.spacedBy(AccordSpacing.s4),
@@ -213,14 +204,9 @@ fun MoreScreen(
             actions.onClues?.let { MoreRow(R.string.clues_title, Lucide.drawable.lucide_ic_search, it) }
         }
 
-        // Notificações e Chat seguem nas seções atuais até os beads D e E do ADR 0077.
+        // Notificações segue na seção atual até o bead E do ADR 0077.
         state.alerts?.takeIf { !it.loading && !it.failed }?.let { alerts ->
             Section(R.string.more_group_notifications) { NotificationsMenu(alerts, actions) }
-        }
-
-        Section(R.string.more_group_chat) {
-            actions.onArchivedChats?.let { MoreRow(R.string.privacy_archived_chats, Lucide.drawable.lucide_ic_history, it) }
-            MoreRow(R.string.more_chat_settings, Lucide.drawable.lucide_ic_message_circle, { showChatSettings = true })
         }
 
         Section(R.string.more_group_device) {
@@ -234,6 +220,10 @@ fun MoreScreen(
                     R.string.more_appearance_summary,
                     stringResource(state.themePreference.shortLabelRes()), stringResource(state.themePalette.labelRes),
                 ),
+            )
+            MoreRow(
+                R.string.chat_settings_title, Lucide.drawable.lucide_ic_message_circle, actions.onChatSettings,
+                supporting = stringResource(R.string.more_chat_settings_hint),
             )
             MoreRow(
                 R.string.privacy_security_title, Lucide.drawable.lucide_ic_shield_check, actions.onPrivacySecurity,
@@ -363,28 +353,6 @@ private fun MoreHeader(header: MoreHeaderState, onOpen: () -> Unit) {
 }
 
 @Composable
-private fun ChatSettingsScreen(padding: PaddingValues, actions: MoreActions, onBack: () -> Unit) {
-    Column(
-        Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
-        verticalArrangement = Arrangement.spacedBy(AccordSpacing.s4),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-            androidx.compose.material3.IconButton(onClick = onBack, modifier = Modifier.size(AccordSpacing.touchMin)) {
-                androidx.compose.material3.Icon(androidx.compose.ui.res.painterResource(Lucide.drawable.lucide_ic_arrow_left), contentDescription = stringResource(R.string.action_back))
-            }
-            Text(stringResource(R.string.chat_settings_title), style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.semantics { heading() })
-        }
-        Section(R.string.more_group_chat) {
-            MoreRow(R.string.more_chat_model, Lucide.drawable.lucide_ic_cpu, actions.onChatModel)
-            MoreRow(R.string.more_chat_export, Lucide.drawable.lucide_ic_download, actions.onChatExport)
-            MoreRow(R.string.more_chat_import, Lucide.drawable.lucide_ic_upload, actions.onChatImport)
-            MoreRow(R.string.more_chat_clear, Lucide.drawable.lucide_ic_trash_2, actions.onChatClear)
-        }
-    }
-}
-
-@Composable
 private fun CriterionOption(label: Int, hint: Int, selected: Boolean, onClick: () -> Unit) {
     // A linha inteira é o rádio (selecionado anunciado pelo TalkBack); o botão interno só desenha o estado.
     Row(
@@ -457,7 +425,7 @@ private fun NotificationsMenu(state: AlertPreferencesUiState, actions: MoreActio
 }
 
 @Composable
-private fun MoreRow(
+internal fun MoreRow(
     label: Int, icon: Int, onClick: () -> Unit, supporting: String? = null,
     /** Linha de ação (como Sair): sem seta de navegação. */
     chevron: Boolean = true,

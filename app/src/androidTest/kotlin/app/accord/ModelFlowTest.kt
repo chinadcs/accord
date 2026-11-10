@@ -55,10 +55,10 @@ class ModelFlowTest {
         }
     }
 
-    /** Modelo, exportar e limpar o histórico ficam em "Configurações do Chat", dentro de Mais. */
+    /** Modelo, exportar e limpar o histórico ficam em "Ajustes do Chat", dentro de Mais. */
     private fun openChatSettings(item: String) {
         compose.onNodeWithText("Mais").performClick()
-        compose.onNodeWithText("Configurações do Chat").performScrollTo().performClick()
+        compose.onNodeWithText("Ajustes do Chat").performScrollTo().performClick()
         compose.onNodeWithText(item).performScrollTo().performClick()
     }
 

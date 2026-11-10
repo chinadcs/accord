@@ -127,6 +127,37 @@ class MoreFlowTest {
         tap(item)
     }
 
+    /** Ajustes do Chat tem rota própria (ADR 0077): o Voltar do sistema volta a Mais, sem sair do app, também depois do Modelo. */
+    @Test
+    fun ajustesDoChatAbreComAsQuatroAcoesEVoltarDoSistemaRetornaAMais() {
+        compose.onNodeWithText("Mais").performClick()
+        waitForText("Categorias e subcategorias")
+        // A seção separada "Chat neste aparelho" deixou de existir: só a linha única do grupo Neste aparelho.
+        assert(compose.onAllNodesWithText("Chat neste aparelho", substring = true).fetchSemanticsNodes().isEmpty())
+        assert(compose.onAllNodesWithText("Histórico e conversas").fetchSemanticsNodes().size == 1)
+        tap("Ajustes do Chat")
+        waitForText("Exportar histórico do Chat")
+        for (action in listOf("Modelo no aparelho", "Exportar histórico do Chat", "Importar histórico do Chat", "Limpar histórico do Chat")) {
+            assert(compose.onAllNodesWithText(action).fetchSemanticsNodes().size == 1) { "faltou: $action" }
+        }
+        // O Modelo é empilhado sobre o hub: Voltar leva ao hub, não a Mais.
+        compose.onNodeWithText("Modelo no aparelho").performClick()
+        waitGone("Exportar histórico do Chat")
+        pressSystemBack()
+        waitForText("Exportar histórico do Chat")
+        pressSystemBack()
+        waitForText("Categorias e subcategorias")
+        assert(compose.onAllNodesWithText("Exportar histórico do Chat").fetchSemanticsNodes().isEmpty())
+        assert(scenario!!.state != androidx.lifecycle.Lifecycle.State.DESTROYED)
+    }
+
+    private fun pressSystemBack() {
+        androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().runOnMainSync {
+            scenario!!.onActivity { it.onBackPressedDispatcher.onBackPressed() }
+        }
+        compose.waitForIdle()
+    }
+
     @Test
     fun maisListaSoORecursoDisponivelETemaEscolhidoFicaGuardadoNoAparelho() {
         compose.onNodeWithText("Mais").performClick()
@@ -134,8 +165,8 @@ class MoreFlowTest {
         // recursos de fases seguintes não aparecem como botão vazio; a Sincronização já existe (S2) e tem uma só entrada, a linha do topo
         assert(compose.onAllNodesWithTag("more-sync").fetchSemanticsNodes().size == 1)
         assert(compose.onAllNodesWithText("Sincronização", substring = true).fetchSemanticsNodes().isEmpty())
-        // O Chat (modelo, exportar e limpar o histórico) existe desde o S3 e fica em "Configurações do Chat".
-        assert(compose.onAllNodesWithText("Configurações do Chat", substring = true).fetchSemanticsNodes().isNotEmpty())
+        // O Chat (modelo, exportar e limpar o histórico) existe desde o S3 e fica em "Ajustes do Chat".
+        assert(compose.onAllNodesWithText("Ajustes do Chat", substring = true).fetchSemanticsNodes().isNotEmpty())
         tap("Aparência")
         waitForText("Estilo dos cantos")
         tap("Escuro")
