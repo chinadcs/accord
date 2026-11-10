@@ -126,6 +126,28 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
+    fun `data da compra mostra a parcela e o valor dela na linha da compra parcelada, sem mudar o total das somas`() = runBlocking<Unit> {
+        val h = open()
+        h.card("Equipamento", 1200, 6)
+        h.card("Fone", 300, 1)
+        val page = h.space.entries(filter(sep, sep, DateCriterion.PurchaseDate)).value()
+        val purchase = page.rows.single { it.description == "Equipamento" }
+        // Compra de 25/09, 1ª fatura em 15/10: nenhuma parcela vence em setembro, então a linha mostra a primeira que vence depois.
+        assertEquals(1, purchase.installmentNumber)
+        assertEquals(6, purchase.installmentCount)
+        assertEquals(brl(200), purchase.installmentAmount)
+        assertEquals(brl(1200), purchase.amount)
+        assertEquals(brl(1500), page.summary.expenses) // as somas seguem pelo total das compras
+        // Num período que cobre várias faturas, a linha mostra a primeira parcela que vence no período.
+        val wide = h.space.entries(filter(sep, ym(2026, 12), DateCriterion.PurchaseDate)).value().rows.single { it.description == "Equipamento" }
+        assertEquals(1, wide.installmentNumber)
+        // Compra em uma parcela segue sem parcela exibida.
+        val single = page.rows.single { it.description == "Fone" }
+        assertNull(single.installmentAmount)
+        assertNull(single.installmentNumber)
+    }
+
+    @Test
     fun `filtro Eletrônicos não mostra o Mercado e ao limpar os dois aparecem`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()

@@ -447,7 +447,9 @@ private fun EntryItem(
         row.date.shortLabel(), installment, invoiceMonth, row.method?.label(),
         row.kind.label().takeIf { row.kind in setOf(EntryKind.Refund, EntryKind.InvoicePayment, EntryKind.Income) },
     ).joinToString(" · ")
-    val description = (listOfNotNull(row.description, row.amount.format(), categoryName, subtitle.takeIf(String::isNotBlank)) + situationLabels).joinToString(". ")
+    // Compra parcelada: o valor da linha é o da parcela exibida ("Parcela 3/10"), nunca o total da compra.
+    val shownAmount = (row.installmentAmount ?: row.amount).format()
+    val description = (listOfNotNull(row.description, shownAmount, categoryName, subtitle.takeIf(String::isNotBlank)) + situationLabels).joinToString(". ")
 
     Surface(
         color = MaterialTheme.colorScheme.surface,
@@ -468,7 +470,7 @@ private fun EntryItem(
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
                     AdaptiveRow(
                         start = { Text(row.description, style = MaterialTheme.typography.titleMedium) },
-                        end = { Text(row.amount.format(), style = Accord.typography.amountRow, textAlign = TextAlign.End) },
+                        end = { Text(shownAmount, style = Accord.typography.amountRow, textAlign = TextAlign.End) },
                     )
                     Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     if (expenseCategory != null || incomeCategory != null) {

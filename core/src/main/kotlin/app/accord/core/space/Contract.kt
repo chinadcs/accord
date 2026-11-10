@@ -1267,6 +1267,11 @@ data class EntryRow(
     val cardId: String? = null,
     /** Categoria de renda (lista própria, distinta da de despesa); só preenchida em [EntryKind.Income]. */
     val incomeCategoryId: String? = null,
+    /**
+     * Só na compra parcelada ([EntryKind.CardPurchase] com mais de uma parcela): valor da parcela [installmentNumber] (a do mês filtrado), para a lista
+     * não exibir o total. [amount] segue sendo o total da compra, e é ele que as somas usam.
+     */
+    val installmentAmount: Money? = null,
 )
 
 /**

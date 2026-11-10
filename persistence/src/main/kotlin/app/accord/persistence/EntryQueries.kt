@@ -62,6 +62,18 @@ internal class EntryQueries(
         DirectPaymentKind.Cash -> PaymentMethod.Cash
     }
 
+    /**
+     * Parcela que a linha da compra exibe: a que vence (fatura) no período filtrado; sem nenhuma nele, a primeira que vence depois; por fim a última.
+     * Parcelas canceladas e confirmadas só entram se não houver outra.
+     */
+    private fun shownInstallment(rows: List<InstallmentRow>, f: EntryFilter): InstallmentRow? {
+        val live = rows.filter { it.cancelState != CancellationPlanner.CANCEL_DONE }.ifEmpty { rows }.sortedBy { it.number }
+        fun month(r: InstallmentRow) = YearMonth.parse(r.invoiceMonth)
+        return live.firstOrNull { month(it) in f.from..f.to }
+            ?: live.firstOrNull { month(it) > f.to }
+            ?: live.lastOrNull()
+    }
+
     private fun months(from: YearMonth, to: YearMonth): List<YearMonth> =
         generateSequence(from) { it.plusMonths(1) }.takeWhile { it <= to }.toList()
 
@@ -128,11 +140,13 @@ internal class EntryQueries(
                 // Parcela cancelada e confirmada deixa de contar, como no critério do orçamento; a compra segue na lista, marcada.
                 val cancelled = rows.filter { it.cancelState == CancellationPlanner.CANCEL_DONE }
                 val counted = if (cancelled.isEmpty()) p.totalCents else rows.sumOf { it.amountCents } - cancelled.sumOf { it.amountCents }
+                // Compra parcelada: a linha mostra a parcela do mês filtrado (ou a mais próxima), não o total; as somas continuam pelo total.
+                val shown = if (rows.size > 1) shownInstallment(rows, f) else null
                 built += Built(
                     EntryRow(
                         id = p.id, kind = EntryKind.CardPurchase, description = p.description, categoryId = p.classificationId,
                         amount = Money(counted), date = date, dueDate = null, method = PaymentMethod.Card,
-                        installmentNumber = null, installmentCount = rows.size,
+                        installmentNumber = shown?.number, installmentCount = rows.size, installmentAmount = shown?.let { Money(it.amountCents) },
                         situations = setOfNotNull(
                             EntrySituation.ToClassify.takeIf { p.classificationId == null },
                             EntrySituation.InvoiceLinkToConfirm.takeIf { rows.any { it.assignment == AssignmentState.ToConfirm.name } },
