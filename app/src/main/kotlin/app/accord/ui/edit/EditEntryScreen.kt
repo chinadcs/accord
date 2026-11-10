@@ -71,7 +71,7 @@ fun EditEntryRoute(viewModel: EditEntryViewModel, padding: PaddingValues, onExit
         state, padding,
         onChange = viewModel::update, onSave = { viewModel.save() }, onBack = viewModel::requestBack,
         onConfirmPrompt = viewModel::confirmPrompt, onDismissPrompt = viewModel::dismissPrompt,
-        onAskDelete = viewModel::askDelete, onDelete = { viewModel.deleteOccurrence(it) }, onRetry = viewModel::load,
+        onRetry = viewModel::load,
         onCreateIncomeCategory = viewModel::createIncomeCategory,
     )
 }
@@ -86,8 +86,6 @@ fun EditEntryScreen(
     onBack: () -> Unit,
     onConfirmPrompt: () -> Unit,
     onDismissPrompt: () -> Unit,
-    onAskDelete: () -> Unit,
-    onDelete: (RecurrenceScope) -> Unit,
     onRetry: () -> Unit,
     onCreateIncomeCategory: (String, String?, (String?) -> Unit) -> Unit = { _, _, _ -> },
 ) {
@@ -125,11 +123,6 @@ fun EditEntryScreen(
                     state.generalError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                     Fields(state, original, form, onChange, focus, bring) { picking = it }
                     Notes(state, original, form)
-                    if (original.needsScope) {
-                        OutlinedButton(onClick = onAskDelete, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
-                            Text(stringResource(R.string.edit_delete_occurrence), color = MaterialTheme.colorScheme.error)
-                        }
-                    }
                 }
             }
         }
@@ -172,7 +165,7 @@ fun EditEntryScreen(
         }
     }
 
-    PromptDialogs(state, onConfirmPrompt, onDismissPrompt, onDelete)
+    PromptDialogs(state, onConfirmPrompt, onDismissPrompt)
 }
 
 private enum class Picker { Date, Category, IncomeCategory, Account }
@@ -303,7 +296,7 @@ private fun Notes(state: EditUiState, original: EditOriginal, form: EditForm) {
 }
 
 @Composable
-private fun PromptDialogs(state: EditUiState, onConfirm: () -> Unit, onDismiss: () -> Unit, onDelete: (RecurrenceScope) -> Unit) {
+private fun PromptDialogs(state: EditUiState, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     when (val p = state.prompt) {
         null -> Unit
         is EditPrompt.Extra -> ConfirmDialog(
@@ -319,7 +312,7 @@ private fun PromptDialogs(state: EditUiState, onConfirm: () -> Unit, onDismiss: 
         is EditPrompt.Realized -> ConfirmDialog(
             title = R.string.edit_realized_title,
             body = { Text(stringResource(R.string.edit_realized_body, p.numbers.joinToString(", "))) },
-            confirm = if (p.delete) R.string.edit_delete_confirm else R.string.edit_realized_confirm, onConfirm = onConfirm, onDismiss = onDismiss,
+            confirm = R.string.edit_realized_confirm, onConfirm = onConfirm, onDismiss = onDismiss,
         )
         EditPrompt.Stale -> ConfirmDialog(
             title = R.string.edit_stale_title, body = { Text(stringResource(R.string.edit_stale_body)) },
@@ -329,7 +322,6 @@ private fun PromptDialogs(state: EditUiState, onConfirm: () -> Unit, onDismiss: 
             title = R.string.edit_discard_title, body = { Text(stringResource(R.string.edit_discard_body)) },
             confirm = R.string.edit_discard_confirm, dismiss = R.string.edit_discard_keep, onConfirm = onConfirm, onDismiss = onDismiss,
         )
-        EditPrompt.DeleteScope -> DeleteScopeDialog(onDelete, onDismiss)
     }
 }
 
@@ -351,37 +343,6 @@ private fun ConfirmDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(dismiss)) }
-        },
-    )
-}
-
-/** Exclusão de ocorrência: o alcance é obrigatório e o botão só vale depois de escolhê-lo. */
-@Composable
-private fun DeleteScopeDialog(onDelete: (RecurrenceScope) -> Unit, onDismiss: () -> Unit) {
-    var chosen by remember { mutableStateOf<RecurrenceScope?>(null) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.edit_delete_title)) },
-        text = {
-            Column {
-                ScopeRow(stringResource(R.string.edit_scope_only_this), chosen == RecurrenceScope.OnlyThis) { chosen = RecurrenceScope.OnlyThis }
-                ScopeRow(stringResource(R.string.edit_scope_this_and_next), chosen == RecurrenceScope.ThisAndNext) { chosen = RecurrenceScope.ThisAndNext }
-                chosen?.let {
-                    Text(
-                        stringResource(if (it == RecurrenceScope.OnlyThis) R.string.edit_delete_note_only_this else R.string.edit_delete_note_next),
-                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = { chosen?.let(onDelete) }, enabled = chosen != null,
-                modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
-            ) { Text(stringResource(R.string.edit_delete_confirm), color = MaterialTheme.colorScheme.error) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.edit_cancel)) }
         },
     )
 }

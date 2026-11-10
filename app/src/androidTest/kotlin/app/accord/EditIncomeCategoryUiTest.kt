@@ -37,7 +37,7 @@ class EditIncomeCategoryUiTest {
         AccordTheme {
             EditEntryScreen(
                 EditUiState(content = EditContent.Ready(original), form = EditForm.of(original), incomeCategories = categories),
-                PaddingValues(), onChange, {}, {}, {}, {}, {}, {}, {},
+                PaddingValues(), onChange, {}, {}, {}, {}, {},
             )
         }
     }

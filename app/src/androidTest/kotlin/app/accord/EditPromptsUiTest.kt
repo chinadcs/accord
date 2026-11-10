@@ -35,7 +35,7 @@ class EditPromptsUiTest {
         AccordTheme {
             EditEntryScreen(
                 EditUiState(content = EditContent.Ready(original), form = EditForm.of(original), prompt = prompt),
-                PaddingValues(), {}, {}, {}, { confirmed++ }, { dismissed++ }, {}, {}, {},
+                PaddingValues(), {}, {}, {}, { confirmed++ }, { dismissed++ }, {},
             )
         }
     }

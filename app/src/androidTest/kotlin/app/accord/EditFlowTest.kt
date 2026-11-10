@@ -125,13 +125,17 @@ class EditFlowTest {
     }
 
     /** Abre o lançamento pelo nome, na lista isolada pela etiqueta do teste, e entra na edição. */
-    private fun openEdit(description: String) {
+    private fun openDetail(description: String) {
         compose.onNodeWithText("Lançamentos").performClick()
         compose.onNodeWithText("Buscar descrição ou estabelecimento").performTextInput(tag)
         waitForText(grocery) // a lista carregou; os outros itens podem estar abaixo e precisam de rolagem
         tap(description)
         waitForText("Detalhe do lançamento")
         waitForText("Editar") // o detalhe mostra o título antes de carregar o conteúdo e as ações
+    }
+
+    private fun openEdit(description: String) {
+        openDetail(description)
         tap("Editar")
         waitForText("Editar lançamento")
         waitForText("Descrição") // o título aparece antes do formulário carregar; sem isso a rolagem corre contra o carregamento
@@ -218,8 +222,8 @@ class EditFlowTest {
     }
 
     @Test
-    fun excluirOcorrenciaExigeAlcanceEMostraAvisoComDesfazer() {
-        openEdit(gym)
+    fun excluirOcorrenciaFicaNoDetalheExigeAlcanceEMostraAvisoComDesfazer() {
+        openDetail(gym)
         tap("Excluir ocorrência")
         waitForText("Excluir quais ocorrências?")
         // o botão só vale depois de escolher o alcance

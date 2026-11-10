@@ -35,8 +35,7 @@ import java.util.UUID
 /** Confirmações que a fachada pediu antes de gravar; nada muda até a pessoa responder. */
 sealed interface EditPrompt {
     data class Extra(val reasons: List<ExtraReason>) : EditPrompt
-    data class Realized(val numbers: List<Int>, val delete: Boolean) : EditPrompt
-    data object DeleteScope : EditPrompt
+    data class Realized(val numbers: List<Int>) : EditPrompt
     data object Discard : EditPrompt
 
     /** O lançamento mudou depois de aberto; a edição não foi gravada. */
@@ -205,7 +204,7 @@ class EditEntryViewModel(
                 }
                 _state.update { it.copy(saving = true, errors = emptyMap(), generalError = null, prompt = null) }
                 viewModelScope.launch {
-                    handle(provider.space().execute(Envelope(commandId, Origin.Manual), built.command), delete = false)
+                    handle(provider.space().execute(Envelope(commandId, Origin.Manual), built.command))
                 }
             }
         }
@@ -215,10 +214,10 @@ class EditEntryViewModel(
         it.copy(errors = errors, saving = false, focusField = errors.keys.firstOrNull(), focusTick = it.focusTick + 1)
     }
 
-    private suspend fun handle(result: CommandResult, delete: Boolean) {
+    private suspend fun handle(result: CommandResult) {
         when (result) {
-            is CommandResult.Applied -> finish(result.receipt.operationId, result.receipt.undoable, delete)
-            is CommandResult.AlreadyApplied -> finish(result.receipt.operationId, result.receipt.undoable, delete)
+            is CommandResult.Applied -> finish(result.receipt.operationId, result.receipt.undoable)
+            is CommandResult.AlreadyApplied -> finish(result.receipt.operationId, result.receipt.undoable)
             is CommandResult.Rejected -> {
                 val matched = result.errors.mapNotNull { e ->
                     EditForm.fieldOf(e.field)?.let { it to (if (e.field == "scope") FormError.ScopeRequired else FormError.FromFacade(e.message)) }
@@ -234,7 +233,7 @@ class EditEntryViewModel(
             is CommandResult.DecisionNeeded -> _state.update {
                 when (val d = result.decision) {
                     is Decision.ExtraConfirmationRequired -> it.copy(saving = false, prompt = EditPrompt.Extra(d.reasons))
-                    is Decision.RealizedOccurrences -> it.copy(saving = false, prompt = EditPrompt.Realized(d.numbers, delete))
+                    is Decision.RealizedOccurrences -> it.copy(saving = false, prompt = EditPrompt.Realized(d.numbers))
                     Decision.ScopeRequired -> it.copy(saving = false, errors = mapOf(EditField.Scope to FormError.ScopeRequired))
                     else -> it.copy(saving = false, generalError = "Falta uma decisão para concluir.")
                 }
@@ -243,11 +242,11 @@ class EditEntryViewModel(
         }
     }
 
-    private suspend fun finish(operationId: String, undoable: Boolean, delete: Boolean) {
+    private suspend fun finish(operationId: String, undoable: Boolean) {
         // O card do Chat acompanha a edição antes de a tela fechar (o escopo da tela é cancelado ao sair).
-        if (!delete) provider.onEntryEdited(entryId, operationId)
+        provider.onEntryEdited(entryId, operationId)
         provider.feedback.post(
-            FeedbackEvent(if (delete) R.string.feedback_deleted else R.string.feedback_saved_corrected, undoOperationId = operationId.takeIf { undoable }),
+            FeedbackEvent(R.string.feedback_saved_corrected, undoOperationId = operationId.takeIf { undoable }),
         )
         _state.update { it.copy(saving = false) }
         _exit.value = true
@@ -256,32 +255,14 @@ class EditEntryViewModel(
     fun confirmPrompt() {
         when (val p = _state.value.prompt) {
             is EditPrompt.Extra -> save(confirmExtra = true)
-            is EditPrompt.Realized -> if (p.delete) deleteOccurrence(deleteScope ?: return, confirmRealized = true) else save(confirmRealized = true)
+            is EditPrompt.Realized -> save(confirmRealized = true)
             EditPrompt.Discard -> _exit.value = true
             EditPrompt.Stale -> load()
-            EditPrompt.DeleteScope, null -> Unit
+            null -> Unit
         }
     }
 
     fun dismissPrompt() = _state.update { it.copy(prompt = null) }
-
-    // ---- excluir ocorrência ----
-
-    private var deleteScope: RecurrenceScope? = null
-
-    fun askDelete() = _state.update { it.copy(prompt = EditPrompt.DeleteScope) }
-
-    fun deleteOccurrence(scope: RecurrenceScope, confirmRealized: Boolean = false) {
-        val original = _state.value.original ?: return
-        val recurrenceId = original.recurrenceId ?: return
-        val number = original.occurrence ?: return
-        deleteScope = scope
-        _state.update { it.copy(saving = true, prompt = null) }
-        viewModelScope.launch {
-            val command = DeleteRecurrence(recurrenceId, number, scope, confirmRealized = confirmRealized)
-            handle(provider.space().execute(Envelope(CommandId(UUID.randomUUID().toString()), Origin.Manual), command), delete = true)
-        }
-    }
 
     // ---- sair ----
 

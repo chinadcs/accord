@@ -269,12 +269,12 @@ class VisualReviewS1eTest {
             content = EditContent.Ready(original), form = EditForm.of(original).copy(amountText = "44,90"), categories = categories,
             accounts = listOf(AccountInfo("a", BankRef.Other("Banco"), "Conta")), replacedOccurrences = listOf(5, 6),
         )
-        both("s1e_edicao_recorrencia") { EditEntryScreen(state, PaddingValues(), {}, {}, {}, {}, {}, {}, {}, {}) }
+        both("s1e_edicao_recorrencia") { EditEntryScreen(state, PaddingValues(), {}, {}, {}, {}, {}, {}) }
         val parcelada = EditOriginal("p", EditTarget.CardPurchase, "Equipamento", "equip", LocalDate.of(2026, 9, 25), brl(1200), null, 1, installments = 6)
         capture("s1e_edicao_parcelada", ThemePreference.Light) {
             EditEntryScreen(
                 EditUiState(content = EditContent.Ready(parcelada), form = EditForm.of(parcelada).copy(date = LocalDate.of(2026, 10, 2)), categories = categories, suggestedInvoice = YearMonth.of(2026, 11)),
-                PaddingValues(), {}, {}, {}, {}, {}, {}, {}, {},
+                PaddingValues(), {}, {}, {}, {}, {}, {},
             )
         }
     }
