@@ -128,7 +128,7 @@ class CharcoalVisualReviewTest {
     @Test
     fun inicioAbreECincoRaizesCompartilhamTemaEscuroETextoAmpliado() {
         showApp(seed = true)
-        compose.onNodeWithText("Conversar no Chat").assertIsDisplayed()
+        compose.onNodeWithText("Pede atenção").assertIsDisplayed()
         tab("Chat")
         compose.onNodeWithTag("root-navigation", useUnmergedTree = true).assertIsDisplayed()
         capture("chat-escuro")

@@ -79,7 +79,7 @@ class HomeAllowanceUiTest {
             val density = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
                 AccordTheme(theme) { Surface(color = MaterialTheme.colorScheme.background) {
-                    HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {},
+                    HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {},
                         allowance = state, onAllowanceRetry = onRetry, onBudget = onBudget)
                 } }
             }
@@ -141,7 +141,7 @@ class HomeAllowanceUiTest {
         val theme = mutableStateOf(ThemePreference.Light)
         var opens = 0
         compose.setContent { AccordTheme(theme.value) { Surface(color = MaterialTheme.colorScheme.background) {
-            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {},
+            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {},
                 allowance = HomeAllowanceState.Ready(value), onBudget = { opens++ })
         } } }
         for (choice in listOf(ThemePreference.Light, ThemePreference.Dark)) {

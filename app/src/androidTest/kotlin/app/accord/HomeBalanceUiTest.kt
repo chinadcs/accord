@@ -48,7 +48,7 @@ class HomeBalanceUiTest {
     private fun home(balance: HomeBalanceState, onBalanceRetry: () -> Unit = {}, fontScale: Float = 1f, theme: ThemePreference = ThemePreference.System) = compose.setContent {
         val density = LocalDensity.current
         CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
-            AccordTheme(theme) { HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {}, balance = balance, onBalanceRetry = onBalanceRetry) }
+            AccordTheme(theme) { HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, balance = balance, onBalanceRetry = onBalanceRetry) }
         }
     }
 
@@ -115,7 +115,7 @@ class HomeBalanceUiTest {
         val app = ApplicationProvider.getApplicationContext<AccordApplication>()
         val theme = mutableStateOf(ThemePreference.Light)
         compose.setContent { AccordTheme(theme.value) { androidx.compose.material3.Surface(color = androidx.compose.material3.MaterialTheme.colorScheme.background) {
-            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, {}, balance = HomeBalanceState.Ready(TotalBalance(total, month)))
+            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, balance = HomeBalanceState.Ready(TotalBalance(total, month)))
         } } }
         for (choice in listOf(ThemePreference.Light, ThemePreference.Dark)) {
             compose.runOnIdle { theme.value = choice }

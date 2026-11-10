@@ -581,7 +581,6 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     }
                     PullToRefresh({ reviewSummary.refresh(); refreshHome() }) {
                         app.accord.ui.home.HomeScreen(padding, reviewState, reviewSummary::refresh,
-                            onChat = { openRoot(Root.Chat) },
                             onReview = { navController.navigate(ROUTE_REVIEW) }, allowance = allowance,
                             onAllowanceRetry = home::refresh, onBudget = { openRoot(Root.Budget) },
                             upcoming = upcoming, onUpcomingRetry = upcomingModel::refresh,

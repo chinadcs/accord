@@ -25,27 +25,27 @@ class HomeUiTest {
 
     @Test fun cargaNaoDizQueNaoHaPendencias() {
         show(PendingQueueUiState())
-        compose.onNodeWithContentDescription("Consultando pendências…").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Nenhuma pendência neste aparelho").assertDoesNotExist()
+        compose.onNodeWithContentDescription("Consultando o que pede atenção…").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Revisar: nenhuma pendência neste aparelho").assertDoesNotExist()
     }
 
     @Test fun falhaOfereceRepetirERevisar() {
         var retries = 0
         var reviews = 0
         compose.setContent { AccordTheme {
-            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false, failed = true), { retries++ }, {}, { reviews++ })
+            HomeScreen(PaddingValues(), PendingQueueUiState(loading = false, failed = true), { retries++ }, { reviews++ })
         } }
-        compose.onNodeWithText("Não foi possível consultar as pendências").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Não foi possível consultar as pendências", substring = true).performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Tentar de novo").performScrollTo().performClick()
-        compose.onNodeWithText("Abrir Revisar").performScrollTo().performClick()
+        compose.onNodeWithText("Não foi possível consultar as pendências", substring = true).performClick()
         assertEquals(1, retries)
         assertEquals(1, reviews)
-        compose.onNodeWithText("Nenhuma pendência neste aparelho").assertDoesNotExist()
+        compose.onNodeWithText("Revisar: nenhuma pendência neste aparelho").assertDoesNotExist()
     }
 
     @Test fun filaVaziaTemTextoLocal() {
         show(PendingQueueUiState(loading = false))
-        compose.onNodeWithText("Nenhuma pendência neste aparelho").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Revisar: nenhuma pendência neste aparelho").performScrollTo().assertIsDisplayed()
     }
 
     @Test fun indicadoresDeInicioEMaisTemDescricaoAcessivel() {
@@ -64,7 +64,7 @@ class HomeUiTest {
         for (choice in listOf(ThemePreference.Light, ThemePreference.Dark)) {
             theme.value = choice
             compose.onNodeWithTag("tab-Home").performClick()
-            compose.onNodeWithText("Conversar no Chat").assertIsDisplayed()
+            compose.onNodeWithText("Pede atenção").assertIsDisplayed()
             capture("inicio-${choice.name}")
             compose.onNodeWithTag("tab-More").performClick()
             compose.onNode(hasText("Revisar") and hasClickAction()).assertIsDisplayed()
@@ -86,6 +86,6 @@ class HomeUiTest {
     }
 
     private fun show(state: PendingQueueUiState) {
-        compose.setContent { AccordTheme { HomeScreen(PaddingValues(), state, {}, {}, {}) } }
+        compose.setContent { AccordTheme { HomeScreen(PaddingValues(), state, {}, {}) } }
     }
 }

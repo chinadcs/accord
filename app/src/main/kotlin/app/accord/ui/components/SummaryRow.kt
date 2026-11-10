@@ -16,7 +16,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -27,7 +29,8 @@ import com.composables.icons.lucide.R as Lucide
  * Linha de resumo de um cartão: ícone decorativo, [text], [supporting] opcional, [value] à direita (desce para a linha
  * de baixo em texto ampliado, como [AdaptiveRow]) e seta quando há [onClick]. Com ação, a linha inteira é um botão com
  * [onClickLabel]; a seta e o ícone não são lidos. [minHeight] é 60 dp para a faixa "Pede atenção" (ADR 0078) e
- * 48 dp onde a linha for densa; nunca fica abaixo do alvo mínimo de toque.
+ * 48 dp onde a linha for densa; nunca fica abaixo do alvo mínimo de toque. [iconTint] e [emphasized] (título em semibold)
+ * servem à faixa de atenção; o padrão é o da linha comum.
  */
 @Composable
 fun SummaryRow(
@@ -39,17 +42,19 @@ fun SummaryRow(
     onClick: (() -> Unit)? = null,
     onClickLabel: String? = null,
     minHeight: Dp = AccordSpacing.rowMedium,
+    iconTint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    emphasized: Boolean = false,
 ) {
     val rowModifier = modifier.fillMaxWidth().heightIn(min = maxOf(minHeight, AccordSpacing.touchMin))
         .let { if (onClick != null) it.clickable(onClickLabel = onClickLabel, role = Role.Button, onClick = onClick) else it }
         .padding(vertical = AccordSpacing.s2)
     Row(rowModifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
         icon?.let {
-            Icon(painterResource(it), contentDescription = null, modifier = Modifier.size(24.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(painterResource(it), contentDescription = null, modifier = Modifier.size(24.dp), tint = iconTint)
         }
         val label: @Composable () -> Unit = {
             Column {
-                Text(text, style = MaterialTheme.typography.bodyLarge)
+                Text(text, style = MaterialTheme.typography.bodyLarge, fontWeight = if (emphasized) FontWeight.SemiBold else null)
                 supporting?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             }
         }

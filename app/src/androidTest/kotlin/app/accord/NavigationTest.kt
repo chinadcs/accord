@@ -11,6 +11,8 @@ import org.junit.Assert.assertEquals
 import androidx.test.core.app.ApplicationProvider
 import app.accord.core.Money
 import app.accord.core.space.*
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.getOrNull
 import kotlinx.coroutines.runBlocking
 
 /** Abertura, pilhas e continuidade do Início (accord-b6og, ADR 0067). */
@@ -19,18 +21,19 @@ class NavigationTest {
     @get:Rule val compose = createAndroidComposeRule<MainActivity>()
 
     @Test fun inicioAbreEAsCincoAbasTemAOrdemDecidida() {
-        compose.onNodeWithText("Conversar no Chat").assertIsDisplayed()
+        compose.onNodeWithText("Pede atenção").assertIsDisplayed()
         compose.onNodeWithTag("tab-Home").assertIsSelected()
         val tabs = listOf("Home", "Entries", "Chat", "Budget", "More")
         val positions = tabs.map { compose.onNodeWithTag("tab-$it").assertIsDisplayed().fetchSemanticsNode().boundsInRoot.center.x }
         assertTrue(positions.zipWithNext().all { (a, b) -> a < b })
         compose.onNodeWithTag("tab-Review").assertDoesNotExist()
-        compose.onNodeWithText("Conversar no Chat").performClick()
+        compose.onNodeWithText("Conversar no Chat").assertDoesNotExist()
+        compose.onNodeWithTag("tab-Chat").performClick()
         compose.onNodeWithText("Mensagem do Chat").assertIsDisplayed()
     }
 
     @Test fun revisarAbreDeMaisEDoInicioEVoltaParaAOrigem() {
-        compose.onNodeWithText("Abrir Revisar").performScrollTo().performClick()
+        reviewRow().performScrollTo().performClick()
         compose.onNodeWithTag("root-navigation").assertDoesNotExist()
         back()
         compose.onNodeWithTag("tab-Home").assertIsSelected()
@@ -109,7 +112,7 @@ class NavigationTest {
             assertTrue(space.execute(Envelope(CommandId("home-classify-$key")), CorrectEntry(id, category = Classification.Category(category))) is CommandResult.Applied)
             compose.onNodeWithTag("tab-Home").performClick()
             if (initial == 0) {
-                compose.waitUntil(8_000) { compose.onAllNodesWithText("Nenhuma pendência neste aparelho").fetchSemanticsNodes().isNotEmpty() }
+                compose.waitUntil(8_000) { compose.onAllNodesWithText("Revisar: nenhuma pendência neste aparelho").fetchSemanticsNodes().isNotEmpty() }
                 compose.onNodeWithTag("tab-Home").assert(SemanticsMatcher.keyNotDefined(androidx.compose.ui.semantics.SemanticsProperties.StateDescription))
                 compose.onNodeWithTag("tab-More").assert(SemanticsMatcher.keyNotDefined(androidx.compose.ui.semantics.SemanticsProperties.StateDescription))
             }
@@ -118,6 +121,11 @@ class NavigationTest {
             space.execute(Envelope(CommandId("home-delete-$key")), DeleteEntry(id, confirmExtra = true))
         }
     }
+
+    /** A linha Revisar da faixa "Pede atenção": o título varia com a contagem, o rótulo de clique não. */
+    private fun reviewRow() = compose.onNode(SemanticsMatcher("clickLabel=Abrir Revisar") {
+        it.config.getOrNull(SemanticsActions.OnClick)?.label == "Abrir Revisar"
+    })
 
     private fun back() {
         compose.activityRule.scenario.onActivity { it.onBackPressedDispatcher.onBackPressed() }

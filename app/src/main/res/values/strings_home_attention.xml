@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Faixa "Pede atenção" da Início (accord-b557, ADR 0078, fatia D). Carga e falha nunca são lidas como vazio ou "tudo em dia". -->
+<resources>
+    <string name="home_attention_title">Pede atenção</string>
+    <string name="home_attention_loading">Consultando o que pede atenção…</string>
+    <string name="home_attention_all_clear">Nada nos próximos 7 dias e nenhuma categoria deve passar do limite.</string>
+
+    <plurals name="home_attention_review_count">
+        <item quantity="one">%d pendência para revisar</item>
+        <item quantity="other">%d pendências para revisar</item>
+    </plurals>
+    <string name="home_attention_review_support">neste aparelho</string>
+    <string name="home_attention_review_none">Revisar: nenhuma pendência neste aparelho</string>
+    <string name="home_attention_review_failed">Não foi possível consultar as pendências. Isso não significa que não há pendências.</string>
+    <string name="home_attention_review_open">Abrir Revisar</string>
+
+    <plurals name="home_attention_dates_count">
+        <item quantity="one">%d data nos próximos 7 dias</item>
+        <item quantity="other">%d datas nos próximos 7 dias</item>
+    </plurals>
+    <string name="home_attention_dates_first">Primeira: %1$s</string>
+    <string name="home_attention_dates_failed">Não foi possível consultar as datas dos próximos 7 dias. Isso não significa que não há datas.</string>
+    <string name="home_attention_dates_open">Abrir compromissos</string>
+
+    <string name="home_attention_exceed_today">%1$s deve passar do limite hoje</string>
+    <plurals name="home_attention_exceed_days">
+        <item quantity="one">%1$s deve passar do limite em %2$d dia</item>
+        <item quantity="other">%1$s deve passar do limite em %2$d dias</item>
+    </plurals>
+    <plurals name="home_attention_exceed_many">
+        <item quantity="one">%d categoria deve passar do limite</item>
+        <item quantity="other">%d categorias devem passar do limite</item>
+    </plurals>
+    <string name="home_attention_exceed_first">Primeira: %1$s, %2$s</string>
+    <string name="home_attention_exceed_caveat">%1$s · Estimativa com ressalvas.</string>
+    <string name="home_attention_exceed_failed">Não foi possível calcular a projeção de estouro. Isso não significa que nenhuma categoria vai passar do limite.</string>
+    <string name="home_attention_exceed_open">Abrir previsões</string>
+</resources>

@@ -2,8 +2,6 @@
 <resources>
     <string name="tab_home">Início</string>
     <string name="more_group_review">Revisão e importação</string>
-    <string name="home_intro">Registre e acompanhe o que precisa de atenção.</string>
-    <string name="home_open_chat">Conversar no Chat</string>
     <string name="home_open_review">Abrir Revisar</string>
     <string name="home_pending_loading">Consultando pendências…</string>
     <string name="home_pending_failed">Não foi possível consultar as pendências</string>
@@ -121,8 +119,6 @@
     <string name="upcoming_card_due">%1$s · Vencimento da fatura de %2$s</string>
     <string name="upcoming_note">Fechamento e vencimento seguem os dias configurados no cartão; o emissor pode atribuir de outro modo. Parcelas ficam na fatura. Estimativas variáveis e intenções não entram.</string>
     <string name="upcoming_loading">Consultando os próximos 7 dias…</string>
-    <string name="upcoming_failed">Não foi possível consultar os próximos 7 dias.</string>
-    <string name="upcoming_open">Ver compromissos</string>
     <string name="projection_title">Projeção de estouro</string>
     <string name="projection_none">Nenhuma categoria deve passar do limite no ritmo atual.</string>
     <string name="projection_today">%1$s deve passar do limite hoje, no ritmo atual.</string>
@@ -134,8 +130,6 @@
     <string name="projection_more">E mais %1$d categorias na previsão.</string>
     <string name="projection_note">Usa o ritmo dos gastos variáveis dos períodos anteriores e os compromissos conhecidos. Categorias sem limite ou sem histórico suficiente ficam de fora; excesso já ocorrido aparece na previsão. Não envia aviso.</string>
     <string name="projection_loading">Calculando a projeção de estouro…</string>
-    <string name="projection_failed">Não foi possível calcular a projeção de estouro.</string>
-    <string name="projection_open">Ver previsões</string>
     <string name="cashflow_title">Fluxo do mês até o fim</string>
     <string name="cashflow_received">Renda já recebida: %1$s</string>
     <string name="cashflow_to_receive">Renda prevista a receber: %1$s</string>

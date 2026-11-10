@@ -215,7 +215,7 @@ class VisualReviewTest {
     )
 
     private fun homeScreen(balance: app.accord.ui.home.HomeBalanceState) = @Composable {
-        app.accord.ui.home.HomeScreen(PaddingValues(), app.accord.ui.pending.PendingQueueUiState(loading = false), {}, {}, {}, balance = balance)
+        app.accord.ui.home.HomeScreen(PaddingValues(), app.accord.ui.pending.PendingQueueUiState(loading = false), {}, {}, balance = balance)
     }
 
     @Test

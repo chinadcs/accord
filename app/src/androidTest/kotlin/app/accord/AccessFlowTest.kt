@@ -201,7 +201,7 @@ class AccessFlowTest {
         // O aviso "Limite atualizado" volta com a tela e cobre os botões do rodapé até ser dispensado.
         dismissReceipt("Limite atualizado")
         tap("Começar a registrar")
-        waitForText("Conversar no Chat")
+        waitForText("Pede atenção")
         waitForText("Orçamento")
         compose.onNodeWithText("Mais").performClick()
         waitForText("Categorias e subcategorias")
@@ -238,7 +238,7 @@ class AccessFlowTest {
         waitForText("Sem ele, cada registro pede o pagamento.")
         tap("Começar a registrar")
         // Início abre após concluir os Primeiros passos (ADR 0067).
-        waitForText("Conversar no Chat")
+        waitForText("Pede atenção")
         waitForText("Orçamento")
     }
 
@@ -257,7 +257,7 @@ class AccessFlowTest {
         scenario!!.onActivity { it.onBackPressedDispatcher.onBackPressed() }
         compose.waitForIdle()
 
-        waitForText("Conversar no Chat")
+        waitForText("Pede atenção")
         compose.onNodeWithText("Lançamentos").performClick()
         waitForText("Buscar descrição ou estabelecimento")
         compose.onNodeWithText("Orçamento").performClick()
@@ -322,7 +322,7 @@ class AccessFlowTest {
             container.access.createSpace("Casa")
             container.access.dismissFirstSteps()
         }
-        waitForText("Conversar no Chat")
+        waitForText("Pede atenção")
         compose.onNodeWithText("Mais").performClick()
         waitForText("Conectado como $email")
         tap("Sair")
