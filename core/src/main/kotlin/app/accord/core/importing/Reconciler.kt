@@ -45,6 +45,7 @@ object Reconciler {
         val investmentCredit = BooleanArray(movements.size)
         val chosenIncome = BooleanArray(movements.size)
         val chosenRefund = BooleanArray(movements.size)
+        val chosenSelfRefund = BooleanArray(movements.size)
 
         movements.forEachIndexed { i, m ->
             val r = reasons[i]
@@ -69,15 +70,23 @@ object Reconciler {
                 if (investment) investmentCredit[i] = true
                 else if (!isCard && keys[i] in decisions.incomeByKey) chosenIncome[i] = true
                 else if (keys[i] in decisions.refundByKey) chosenRefund[i] = true
+                // Card credit with no purchase to refund (or none the person recognises): the purchase is registered and refunded in the same step (accord-qid0).
+                else if (isCard && keys[i] in decisions.newPurchaseRefunds) chosenSelfRefund[i] = true
                 else r += DoubtReason.CreditToClassify
             }
             decisions.forcedLinks[keys[i]]?.takeIf { id -> entries.any { it.id == id } }?.let { forced[i] = it }
         }
 
-        // Billing rules (8 to 11, 13): clean debits that are not known and not decided by the person.
+        // Billing rules (8 to 11, 13): clean debits that are not known and not decided by the person. A refused step (CannotApply) is still read, so its
+        // installment series keeps its leader.
         val outcomes = arrayOfNulls<BillingRules.Outcome>(movements.size)
+        val seriesInfo = arrayOfNulls<InstallmentSeriesInfo>(movements.size)
         if (billing != null && !blockedByCurrency) {
-            movements.forEachIndexed { i, m -> if (reasons[i].isEmpty() && !knownMatch[i] && forced[i] == null) outcomes[i] = BillingRules.decide(m, isCard, billing, keys[i] in decisions.firstInstallmentShifts, newPurchaseOf(keys[i], decisions)) }
+            movements.forEachIndexed { i, m ->
+                val readable = reasons[i].isEmpty() || reasons[i] == setOf(DoubtReason.CannotApply)
+                if (readable && !knownMatch[i] && forced[i] == null) outcomes[i] = BillingRules.decide(m, isCard, billing, keys[i] in decisions.firstInstallmentShifts)
+            }
+            if (isCard) settleSeries(movements, keys, billing, decisions, outcomes, seriesInfo)
         }
 
         // Matching with manual or Chat entries (rule 5): only for clean debits that billing did not decide.
@@ -140,6 +149,10 @@ object Reconciler {
             if (investmentCredit[i] && r.isEmpty()) effect = ProposedEffect.CreateIncome(IncomeBasis.InvestmentCredit, app.accord.core.space.IncomeCategorySeed.INVESTMENT)
             if (chosenIncome[i] && r.isEmpty()) effect = ProposedEffect.CreateIncome(IncomeBasis.ChosenByPerson, null, decisions.incomeByKey[keys[i]])
             if (chosenRefund[i] && r.isEmpty()) effect = ProposedEffect.CreateRefund(decisions.refundByKey.getValue(keys[i]), if (isCard) billing?.documentInvoice else null)
+            if (chosenSelfRefund[i] && r.isEmpty()) {
+                if (category == null) r += DoubtReason.CategoryUnknown
+                else if (billing != null) effect = ProposedEffect.CreateRefundWithPurchase(category, billing.documentInvoice)
+            }
             val needsCategory = r.isEmpty() && !knownMatch[i] && linked == null && effect == null
             if (needsCategory && category == null) r += DoubtReason.CategoryUnknown
             if (!blockedByCurrency && keys[i] in decisions.dismissed) {
@@ -165,6 +178,7 @@ object Reconciler {
                 categoryId = category.takeIf { classification == Classification.New && !investmentCredit[i] && !chosenIncome[i] && !chosenRefund[i] },
                 effect = effect.takeIf { classification == Classification.New || classification == Classification.SafeLink },
                 suggestedFirstInstallment = outcome?.suggestedFirst,
+                installmentSeries = seriesInfo[i],
                 suggestedCategoryId = suggestion.takeIf { r.contains(DoubtReason.CategoryUnknown) },
                 suggestionSource = when {
                     !r.contains(DoubtReason.CategoryUnknown) -> null
@@ -177,8 +191,48 @@ object Reconciler {
         return Preview(batchId, if (blockedByCurrency) BatchState.DiagnosticOnly else BatchState.InReview, items)
     }
 
-    private fun newPurchaseOf(key: String, decisions: Decisions): BillingRules.NewPurchase? =
-        decisions.installmentPurchaseTotals[key]?.let { BillingRules.NewPurchase(it, decisions.categoryByKey[key] ?: decisions.defaultCategoryId) }
+    /**
+     * Installment lines the document shows with no registered purchase become series (accord-qid0, ADR 0076): the lowest line of each creates the purchase
+     * once and the others enter it. A series the file shows whole declares its own total; a partial one waits for the total the person confirms (a refinancing
+     * of the invoice always does, ADR 0073). The outcome of each member is replaced: the leader's, or "joins the purchase the leader creates".
+     */
+    private fun settleSeries(
+        movements: List<ExtractedMovement>,
+        keys: List<String>,
+        billing: BillingContext,
+        decisions: Decisions,
+        outcomes: Array<BillingRules.Outcome?>,
+        info: Array<InstallmentSeriesInfo?>,
+    ) {
+        val unregistered = movements.indices.filter { i ->
+            val o = outcomes[i]
+            o != null && o.effect == null && o.reasons == setOf(DoubtReason.InstallmentPurchaseNotRegistered) && movements[i].installment != null && movements[i].date != null && (movements[i].amountCents ?: 0) < 0
+        }
+        val lines = unregistered.map { i -> val m = movements[i]; InstallmentSeries.Line(m.ordinal, m.description, m.date!!, m.installment!!.number, m.installment.total, -m.amountCents!!) }
+        val indexOf = movements.indices.associateBy { movements[it].ordinal }
+        InstallmentSeries.detect(lines).forEach { series ->
+            val leaderIndex = indexOf.getValue(series.leader.ordinal)
+            val leader = movements[leaderIndex]
+            val refinancing = BillingRules.isInvoiceRefinancing(leader.description)
+            val total = decisions.installmentPurchaseTotals[keys[leaderIndex]] ?: series.declaredTotalCents.takeIf { !refinancing }
+            val category = decisions.categoryByKey[keys[leaderIndex]] ?: decisions.defaultCategoryId
+            val leaderOutcome = when {
+                keys[leaderIndex] in decisions.refused -> BillingRules.Outcome(reasons = setOf(DoubtReason.CannotApply))
+                total != null -> BillingRules.createPurchase(leader, leader.installment!!, billing, series.leader.cents, BillingRules.NewPurchase(total, category), series)
+                else -> BillingRules.Outcome(reasons = setOf(DoubtReason.InstallmentPurchaseNotRegistered))
+            }
+            val seriesInfo = InstallmentSeriesInfo(series.leader.ordinal, series.members.size, series.total, series.complete, series.suggestedTotalCents, acceptable = !refinancing)
+            series.members.forEach { member ->
+                val i = indexOf.getValue(member.ordinal)
+                outcomes[i] = when {
+                    member.ordinal == series.leader.ordinal -> leaderOutcome
+                    leaderOutcome.effect is ProposedEffect.CreateInstallmentPurchase -> BillingRules.Outcome(ProposedEffect.JoinInstallmentPurchase(series.leader.ordinal, member.number))
+                    else -> BillingRules.Outcome(reasons = leaderOutcome.reasons)
+                }
+                info[i] = seriesInfo
+            }
+        }
+    }
 
     /** Origin records a confirmation would persist: new movements and safe links. Doubts, blocked and already known ones are not effected now. */
     fun originRecords(preview: Preview, originId: String): List<KnownOrigin> = preview.items

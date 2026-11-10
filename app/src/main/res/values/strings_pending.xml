@@ -49,6 +49,8 @@
     <string name="pending_credit_title_card">No cartão, todo valor positivo é estorno</string>
     <string name="pending_credit_refund_hint_card">Escolha a compra estornada: o estorno abate a categoria dela na fatura em que o crédito entrou e não vira renda. Se for o pagamento da fatura, ele já vem do extrato da conta: use \"Já está registrado\".</string>
     <string name="pending_credit_refund_hint">O estorno abate a categoria da compra no mês em que o crédito entrou e não vira renda.</string>
+    <string name="pending_refund_new_purchase">Não achei a compra: registrar e estornar</string>
+    <string name="pending_refund_new_purchase_hint">O aplicativo registra uma compra com o valor e a data deste crédito e estorna ela mesma. O total da fatura e da categoria não muda por causa dele.</string>
     <string name="pending_refund_pick">Compra ou pagamento estornado</string>
     <string name="pending_purchase_title">Parcela %1$d/%2$d de uma compra que você ainda não registrou</string>
     <string name="pending_purchase_body">O aplicativo cadastra a compra com todas as parcelas, a primeira nesta fatura. Você confirma o total antes.</string>

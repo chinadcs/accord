@@ -16,6 +16,7 @@ import app.accord.core.space.RefundStatus
 import app.accord.core.space.RegisterIncome
 import app.accord.core.space.RegisterRefund
 import app.accord.core.space.Settlement
+import java.time.LocalDate
 import java.time.YearMonth
 import kotlin.math.abs
 
@@ -33,9 +34,16 @@ data class ConfirmStep(
     val commands: List<Command> = emptyList(),
     val target: StepTarget? = null,
     val createsType: EntityType? = null,
-    /** Installment number the movement ends up tied to when [createsType] is a purchase created with all its installments. */
+    /** Installment number the movement ends up tied to when [createsType] is a purchase created with all its installments (or, for a joining line, its own number). */
     val createsNumber: Int? = null,
+    /** The movement (ordinal) whose step creates the purchase this line is an installment of: it runs no command and is tied to that purchase's installment [createsNumber]. */
+    val joinsCreatedBy: Int? = null,
+    /** A refund of the purchase the first command creates, applied right after it (the purchase id is only known once it exists). */
+    val afterCreate: RefundOfCreated? = null,
 )
+
+/** Confirmed refund (S1 `RegisterRefund`) of the card purchase the step has just registered. */
+data class RefundOfCreated(val amount: Money, val date: LocalDate, val invoice: YearMonth?)
 
 data class StepsPlan(val steps: List<ConfirmStep>, val summary: ConfirmationSummary)
 
@@ -86,6 +94,11 @@ object ImportSteps {
         }
         steps.forEach { s -> (s.item.effect as? ProposedEffect.LinkInstallment)?.shift?.let { addAll(it.before); addAll(it.after) } }
         steps.forEach { s -> (s.item.effect as? ProposedEffect.CreateInstallmentPurchase)?.takeIf { s.commands.isNotEmpty() }?.let { addAll(it.months) } }
+        // A credit with no purchase to refund registers one: it lands on the document's invoice, or on the one its date falls in.
+        if (card && billing.documentInvoice == null) {
+            steps.filter { it.item.effect is ProposedEffect.CreateRefundWithPurchase && it.commands.isNotEmpty() }
+                .forEach { s -> s.item.movement.date?.let { add(billing.cycle.assign(it).dueMonth) } }
+        }
     }
 
     private val LINKS = setOf(Resolution.Linked, Resolution.InstallmentLinked, Resolution.InvoicePaid, Resolution.BoletoPaid)
@@ -150,6 +163,20 @@ object ImportSteps {
                             ),
                         ),
                         createsType = EntityType.CardPurchase, createsNumber = effect.number,
+                    )
+                    is ProposedEffect.JoinInstallmentPurchase -> ConfirmStep(
+                        item, Resolution.InstallmentLinked, joinsCreatedBy = effect.leaderOrdinal, createsNumber = effect.number,
+                    )
+                    is ProposedEffect.CreateRefundWithPurchase -> ConfirmStep(
+                        item, Resolution.RefundCreated,
+                        listOf(
+                            RegisterCardPurchase(
+                                description = m.description, classification = ChosenCategory.Category(effect.categoryId), date = date, amount = amount,
+                                cardId = originId, installments = 1, isCharge = effect.categoryId == billing.chargesCategoryId, invoice = effect.invoiceDueMonth,
+                            ),
+                        ),
+                        createsType = EntityType.Refund,
+                        afterCreate = RefundOfCreated(amount, date, effect.invoiceDueMonth),
                     )
                     is ProposedEffect.CreateRefund -> ConfirmStep(
                         item, Resolution.RefundCreated,

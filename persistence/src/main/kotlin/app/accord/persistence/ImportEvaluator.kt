@@ -103,6 +103,7 @@ internal class ImportEvaluator(
         val keyOf = movements.associate { it.ordinal to Reconciler.key(originId, it, movements) }
 
         val facts = loadFacts(batch, movements.mapNotNull { it.date }, kind, originId, spaceId, chosen.documentInvoice)
+        val autoSelfRefunds = autoSelfRefunds(kind, originId, movements, keyOf)
         val rows = dao.importDecisions(batch.id)
         fun byOrdinal(type: String) = rows.filter { it.type == type && it.ordinal != ImportDecisionType.BATCH_WIDE }
         val decisions = Decisions(
@@ -119,6 +120,7 @@ internal class ImportEvaluator(
             firstInstallmentShifts = byOrdinal(ImportDecisionType.SHIFT_FIRST).mapNotNull { keyOf[it.ordinal] }.toSet(),
             installmentPurchaseTotals = byOrdinal(ImportDecisionType.INSTALLMENT_PURCHASE).mapNotNull { r -> keyOf[r.ordinal]?.let { k -> r.value.toLongOrNull()?.let { k to it } } }.toMap(),
             refundByKey = byOrdinal(ImportDecisionType.REFUND).mapNotNull { r -> keyOf[r.ordinal]?.let { it to r.value } }.toMap(),
+            newPurchaseRefunds = byOrdinal(ImportDecisionType.NEW_PURCHASE_REFUND).mapNotNull { keyOf[it.ordinal] }.toSet() + autoSelfRefunds,
             refused = refused,
         )
         val separate = byOrdinal(ImportDecisionType.SEPARATE).mapNotNull { r -> keyOf[r.ordinal]?.let { DistinctPair(it, r.value) } }
@@ -133,6 +135,26 @@ internal class ImportEvaluator(
         }
         val fact = facts.copy(known = known)
         return Evaluation(batch, extraction, kind, originId, fact, preview, blockers, plan, tokenOf(batch, fact, preview, originId))
+    }
+
+    /**
+     * Card credits with no purchase that could be their original: no purchase of the card in the 180 days before it with something left to refund, and no
+     * earlier debit of the same file at least as large. For those the purchase is registered and refunded in the same step (accord-qid0); the person can still
+     * choose another origin or dismiss it. A credit with some candidate stays a question for the person (ADR 0074).
+     */
+    private suspend fun autoSelfRefunds(kind: DocumentKind?, originId: String, movements: List<app.accord.core.importing.ExtractedMovement>, keyOf: Map<Int, String>): Set<String> {
+        if (kind != DocumentKind.Card || originId.isBlank()) return emptySet()
+        val credits = movements.filter { (it.amountCents ?: 0) > 0 && it.date != null && (it.currency == null || it.currency == Reconciler.SUPPORTED_CURRENCY) }
+        if (credits.isEmpty()) return emptySet()
+        val debits = movements.filter { (it.amountCents ?: 0) < 0 && it.date != null }
+        return credits.filter { credit ->
+            val date = credit.date!!
+            val from = date.minusDays(REFUND_WINDOW_DAYS)
+            val inFile = debits.any { it.date!! in from..date && -it.amountCents!! >= credit.amountCents!! }
+            val registered = !inFile && dao.purchasesBetween(from.toEpochDay(), date.toEpochDay()).filter { it.cardId == null || it.cardId == originId }
+                .any { it.totalCents - dao.refundsOf(it.id).filterNot { r -> r.voided }.sumOf { r -> r.amountCents } > 0 }
+            !inFile && !registered
+        }.mapNotNull { keyOf[it.ordinal] }.toSet()
     }
 
     /** The bank's labels mapped to the initial categories that still exist in this space (a renamed or removed one is simply not suggested). */
@@ -255,5 +277,8 @@ internal class ImportEvaluator(
     private companion object {
         /** Entries this far from the file's dates are still read, so the reconciliation can show a near date as a possible match. */
         const val WINDOW_DAYS = 7L
+
+        /** Same window the refund picker uses to look for the original purchase of a credit. */
+        const val REFUND_WINDOW_DAYS = 180L
     }
 }

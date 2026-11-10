@@ -30,7 +30,7 @@ cancelamento ou ajuste de uma compra. Em 09/11/2026 o usuário decidiu: "todo po
 
 - O fluxo do cartão deixa de oferecer escolha de renda, reduzindo o risco de um estorno ser contado como receita.
 - Quem tem de fato um crédito que não é estorno no cartão (bônus, cashback) precisa usar "já registrado" ou registrar à parte; o app não o trata como renda.
-- Estorno exige uma compra registrada do mesmo cartão: sem ela, a lista vem vazia e a dúvida continua até a compra existir (por importação, Chat ou registro manual).
+- Estorno exige uma compra registrada do mesmo cartão: sem ela, a lista vem vazia e a dúvida continua até a compra existir (por importação, Chat ou registro manual). *(Proposta de 10/11/2026, [ADR 0076](0076-compra-parcelada-em-varias-linhas-e-estorno-sem-compra.md): registrar a compra e estornar ela mesma.)*
 - Lotes de cartão confirmados antes com uma escolha de renda guardada passam a reler essa linha como dúvida de estorno; nada já efetivado é alterado.
 
 ## Fontes e evidências

@@ -163,6 +163,15 @@ class ImportReviewViewModel(
 
     fun acceptAllSuggestions() = decide(ImportDecision.AcceptSuggestions())
 
+    /** Cadastra, de uma vez, cada compra parcelada que o arquivo mostra por várias linhas, pelo total que o próprio arquivo sugere. */
+    fun acceptInstallmentTotals() = decide(ImportDecision.AcceptInstallmentTotals())
+
+    /** O total desta compra parcelada (a escolha vale para todas as linhas dela no arquivo). */
+    fun installmentTotal(ordinal: Int, totalCents: Long) {
+        _state.update { it.copy(editing = null) }
+        decide(ImportDecision.AsInstallmentPurchase(ordinal, totalCents))
+    }
+
     fun link(ordinal: Int, entryId: String) = decide(ImportDecision.LinkTo(ordinal, entryId))
 
     fun keepSeparate(ordinal: Int, entryId: String) = decide(ImportDecision.KeepSeparate(ordinal, entryId))

@@ -191,6 +191,31 @@ class ImportUiTest {
         }
     }
 
+    /** accord-qid0: as parcelas de uma mesma compra num só arquivo pedem uma decisão por compra, e há um botão para todas de uma vez. */
+    @Test fun comprasParceladasDoArquivoSaoCadastradasDeUmaVezPeloTotalSugerido() {
+        val series = app.accord.core.importing.InstallmentSeriesInfo(leaderOrdinal = 1, size = 2, total = 12, complete = false, suggestedTotalCents = 21792, acceptable = true)
+        fun line(ordinal: Int, number: Int) = item(ordinal, -1816, "SPG SERVICO FEDERAL", Classification.Doubt, setOf(DoubtReason.InstallmentPurchaseNotRegistered))
+            .copy(installmentSeries = series)
+        var accepted = 0
+        var total: Pair<Int, Long>? = null
+        compose.setContent {
+            AccordTheme {
+                ImportReviewScreen(
+                    ImportReviewUiState(content = ReviewContent.Ready(review(items = listOf(line(1, 11), line(2, 12)))), editing = 2), padding, onBack = {}, onRetry = {}, onFilter = {},
+                    onOpen = {}, onCloseMovement = {}, onPickCategory = { _: CategoryTarget -> }, onCategory = {}, onDismissCategory = {}, onClearDefault = {}, onAcceptSuggestion = {},
+                    onAcceptAll = {}, onLink = { _, _ -> }, onSeparate = { _, _ -> }, onReset = {}, onOpenSummary = {}, onCloseSummary = {}, onConfirm = {}, onAskDiscard = {},
+                    onCancelDiscard = {}, onDiscard = {}, onAcceptInstallments = { accepted++ }, onInstallmentTotal = { ordinal, cents -> total = ordinal to cents },
+                )
+            }
+        }
+        // Duas linhas, uma compra: o botão conta compras, não linhas.
+        compose.onNodeWithText("Cadastrar 1 compra parcelada pelo total sugerido").assertIsDisplayed().performClick()
+        compose.runOnIdle { assertEquals(1, accepted) }
+        compose.onNodeWithText("Compra parcelada em 12 vezes: o arquivo mostra 2 parcelas; as outras são sugeridas pelo mesmo valor.").assertIsDisplayed()
+        compose.onNodeWithText("Cadastrar a compra parcelada (total", substring = true).performScrollTo().performClick()
+        compose.runOnIdle { assertEquals(2 to 21792L, total) }
+    }
+
     @Test fun movimentoPodeSerDeixadoParaDepoisSemCriarNada() {
         var postponed: Int? = null
         setReview(ImportReviewUiState(content = ReviewContent.Ready(review(items = threeItems)), editing = 1), onPostpone = { postponed = it })

@@ -56,7 +56,9 @@ class CardCreditFlowTest {
             ExtractedMovement(ordinal, listOf("LINE" to "$name $cents"), day, cents, "BRL", name, hint, emptySet())
         val extraction = ExtractionResult(
             "sha-cr-$tag", DeclaredMetadata(SourceFormat.Pdf, "layout", "BRL", null, null, DocumentKind.Card, null, null, null),
-            listOf(line(1, 5000, credit, null), line(2, -1000, "PADARIA $tag", null)), 0, emptyList(),
+            // A compra de R$ 50,00 do mesmo arquivo é uma possível origem do crédito: sem nenhuma compra que pudesse ser a original, o aplicativo registra uma e estorna ela
+            // mesma (accord-qid0), e a pergunta "qual compra foi estornada?" nem apareceria.
+            listOf(line(1, 5000, credit, null), line(2, -1000, "PADARIA $tag", null), line(3, -5000, "LOJA $tag", null)), 0, emptyList(),
         )
         val imports = container.imports()
         val started = (imports.start(StartImport("cr-$tag", "fatura-$tag.pdf", 10, extraction, BatchSource(DocumentKind.Card, card, invoice))) as QueryResult.Data).value

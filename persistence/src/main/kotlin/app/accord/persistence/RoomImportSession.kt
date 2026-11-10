@@ -208,6 +208,7 @@ internal class RoomImportSession(
                         return@write DecideOutcome.Rejected(listOf(FieldError("originId", ErrorCode.UnknownReference, "Compra ou pagamento não encontrado para estornar.")))
                     }
                     dao.deleteImportDecision(batchId, decision.ordinal, ImportDecisionType.REFUND)
+                    dao.deleteImportDecision(batchId, decision.ordinal, ImportDecisionType.NEW_PURCHASE_REFUND)
                     dao.upsertImportDecisions(listOf(ImportDecisionRow(batchId, decision.ordinal, ImportDecisionType.REFUND, decision.originId)))
                     // "É estorno", "é renda" e "é repetição" se contradizem: a última escolha vale.
                     dao.deleteImportDecision(batchId, decision.ordinal, ImportDecisionType.INCOME)
@@ -217,21 +218,55 @@ internal class RoomImportSession(
                 is ImportDecision.AsInstallmentPurchase -> {
                     if (decision.ordinal !in movements) return@write unknownMovement(decision.ordinal)
                     val current = evaluation()
-                    val line = current.extraction.movements.firstOrNull { it.ordinal == decision.ordinal }
+                    val item = current.preview.items.firstOrNull { it.movement.ordinal == decision.ordinal }
+                    val line = item?.movement
                     val hint = line?.installment
                     val lineCents = line?.amountCents
-                    val splits = hint != null && lineCents != null && lineCents < 0 && hint.number in 1..hint.total && decision.totalCents >= hint.total &&
-                        Installments.splitTotal(Money(decision.totalCents), hint.total)[hint.number - 1].cents == -lineCents
-                    when {
-                        current.kind != DocumentKind.Card || hint == null -> return@write DecideOutcome.Rejected(
-                            listOf(FieldError("ordinal", ErrorCode.NotAllowed, "Só uma parcela n/N de um documento de cartão vira compra parcelada.")),
-                        )
-                        !splits -> return@write DecideOutcome.Rejected(
+                    if (current.kind != DocumentKind.Card || hint == null || lineCents == null || lineCents >= 0) {
+                        return@write DecideOutcome.Rejected(listOf(FieldError("ordinal", ErrorCode.NotAllowed, "Só uma parcela n/N de um documento de cartão vira compra parcelada.")))
+                    }
+                    // The total belongs to the whole purchase: it is kept on the first line of the series and must fit every line the file shows of it.
+                    val series = item.installmentSeries?.let { info -> seriesOf(current, info.leaderOrdinal, info.total) }
+                    val fits = series?.fits(decision.totalCents) ?: (decision.totalCents >= hint.total && Installments.lineFits(decision.totalCents, hint.total, hint.number, -lineCents))
+                    if (!fits) {
+                        return@write DecideOutcome.Rejected(
                             listOf(FieldError("totalCents", ErrorCode.OutOfRange, "O total precisa dividir em ${hint.total} parcelas com a parcela ${hint.number} igual ao valor desta linha.")),
                         )
                     }
-                    dao.deleteImportDecision(batchId, decision.ordinal, ImportDecisionType.INSTALLMENT_PURCHASE)
-                    dao.upsertImportDecisions(listOf(ImportDecisionRow(batchId, decision.ordinal, ImportDecisionType.INSTALLMENT_PURCHASE, decision.totalCents.toString())))
+                    val holder = series?.leader?.ordinal ?: decision.ordinal
+                    if (holder !in movements) return@write unknownMovement(holder)
+                    dao.deleteImportDecision(batchId, holder, ImportDecisionType.INSTALLMENT_PURCHASE)
+                    dao.upsertImportDecisions(listOf(ImportDecisionRow(batchId, holder, ImportDecisionType.INSTALLMENT_PURCHASE, decision.totalCents.toString())))
+                    dao.deleteImportDecision(batchId, holder, ImportDecisionType.DISMISS)
+                    listOf(holder)
+                }
+                is ImportDecision.AcceptInstallmentTotals -> {
+                    val wanted = decision.ordinals?.toSet()
+                    if (wanted != null) (wanted - movements).firstOrNull()?.let { return@write unknownMovement(it) }
+                    val current = evaluation()
+                    val accepted = current.preview.items
+                        .filter { it.installmentSeries != null && DoubtReason.InstallmentPurchaseNotRegistered in it.doubts && it.installmentSeries!!.acceptable }
+                        .filter { wanted == null || it.movement.ordinal in wanted }
+                        .map { it.installmentSeries!! }.distinctBy { it.leaderOrdinal }
+                        .filter { it.leaderOrdinal in movements && seriesOf(current, it.leaderOrdinal, it.total)?.fits(it.suggestedTotalCents) == true }
+                    accepted.forEach {
+                        dao.deleteImportDecision(batchId, it.leaderOrdinal, ImportDecisionType.INSTALLMENT_PURCHASE)
+                        dao.upsertImportDecisions(listOf(ImportDecisionRow(batchId, it.leaderOrdinal, ImportDecisionType.INSTALLMENT_PURCHASE, it.suggestedTotalCents.toString())))
+                    }
+                    accepted.map { it.leaderOrdinal }
+                }
+                is ImportDecision.AsNewPurchaseRefund -> {
+                    if (decision.ordinal !in movements) return@write unknownMovement(decision.ordinal)
+                    val current = evaluation()
+                    val credit = current.extraction.movements.firstOrNull { it.ordinal == decision.ordinal }
+                    if (current.kind != DocumentKind.Card || (credit?.amountCents ?: 0) <= 0) {
+                        return@write DecideOutcome.Rejected(listOf(FieldError("ordinal", ErrorCode.NotAllowed, "Só um crédito de um documento de cartão pode registrar a compra e estornar.")))
+                    }
+                    dao.deleteImportDecision(batchId, decision.ordinal, ImportDecisionType.NEW_PURCHASE_REFUND)
+                    dao.upsertImportDecisions(listOf(ImportDecisionRow(batchId, decision.ordinal, ImportDecisionType.NEW_PURCHASE_REFUND, "1")))
+                    // "É de uma compra que o app não tem", "é estorno dessa compra" e "é repetição" se contradizem: a última escolha vale.
+                    dao.deleteImportDecision(batchId, decision.ordinal, ImportDecisionType.REFUND)
+                    dao.deleteImportDecision(batchId, decision.ordinal, ImportDecisionType.INCOME)
                     dao.deleteImportDecision(batchId, decision.ordinal, ImportDecisionType.DISMISS)
                     listOf(decision.ordinal)
                 }
@@ -261,6 +296,7 @@ internal class RoomImportSession(
                     dao.upsertImportDecisions(listOf(ImportDecisionRow(batchId, decision.ordinal, ImportDecisionType.DISMISS, "1")))
                     dao.deleteImportDecision(batchId, decision.ordinal, ImportDecisionType.CONFIRM_NEW)
                     dao.deleteImportDecision(batchId, decision.ordinal, ImportDecisionType.REFUND)
+                    dao.deleteImportDecision(batchId, decision.ordinal, ImportDecisionType.NEW_PURCHASE_REFUND)
                     listOf(decision.ordinal)
                 }
                 is ImportDecision.AsIncome -> {
@@ -465,6 +501,16 @@ internal class RoomImportSession(
         /** Proposal: how far back a credit may point for the purchase it refunds, and how many are listed. */
         const val REFUND_WINDOW_DAYS = 180L
         const val REFUND_CANDIDATES_SHOWN = 40
+    }
+
+    /** The lines of the file that show the purchase led by [leaderOrdinal], as the series the reconciliation grouped. */
+    private fun seriesOf(e: Evaluation, leaderOrdinal: Int, total: Int): app.accord.core.importing.InstallmentSeries? {
+        val members = e.preview.items.filter { it.installmentSeries?.leaderOrdinal == leaderOrdinal }.mapNotNull { item ->
+            val hint = item.movement.installment ?: return@mapNotNull null
+            val cents = item.movement.amountCents ?: return@mapNotNull null
+            app.accord.core.importing.InstallmentSeries.Member(item.movement.ordinal, hint.number, -cents)
+        }.sortedWith(compareBy({ it.number }, { it.ordinal }))
+        return members.takeIf { it.isNotEmpty() }?.let { app.accord.core.importing.InstallmentSeries(total, it) }
     }
 
     private fun notInReview() = FieldError("batchId", ErrorCode.NotAllowed, "Este lote já foi confirmado e não pode mais ser alterado.")

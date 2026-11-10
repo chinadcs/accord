@@ -40,7 +40,13 @@ object CategoryAutofill {
         )
 
         val chosen = buildList {
+            val onCard = (review.info.source.kind ?: review.info.declaredKind) == DocumentKind.Card
             for (item in review.preview.items) {
+                // Um crédito do cartão só ganha a categoria que a pessoa escreveu no CSV: ela vale se o crédito virar "compra registrada e estornada" (accord-qid0).
+                if (onCard && (item.movement.amountCents ?: 0) > 0 && DoubtReason.CreditToClassify in item.doubts) {
+                    CsvMapping.fileCategory(item.movement)?.let { CsvMapping.resolveCategory(it, categories) }?.takeIf { it in known }?.let { add(item.movement.ordinal to it) }
+                    continue
+                }
                 if (!needsCategory(item)) continue
                 // A categoria que a pessoa escreveu no CSV vale mais; depois o histórico do casal; por último o modelo, quando há.
                 val id = CsvMapping.fileCategory(item.movement)?.let { CsvMapping.resolveCategory(it, categories) }

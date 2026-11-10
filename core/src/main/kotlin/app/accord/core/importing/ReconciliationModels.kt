@@ -86,6 +86,11 @@ data class Decisions(
     val refundByKey: Map<String, String> = emptyMap(),
     /** The installment line has no registered purchase and the person confirmed its total (cents): the purchase is created with every installment (accord-z724). */
     val installmentPurchaseTotals: Map<String, Long> = emptyMap(),
+    /**
+     * A card credit whose original purchase is not known: the purchase is registered (credit's date, value and category) and refunded in full in the same step
+     * (accord-qid0). Chosen by the person, or by the facade when no purchase of the card could be the original.
+     */
+    val newPurchaseRefunds: Set<String> = emptySet(),
     /** "Review later": the movement becomes a doubt, whatever else is known about it. */
     val postponed: Set<String> = emptySet(),
     /** Steps the validator refuses now; computed by the facade, never chosen by the person. */
@@ -107,7 +112,15 @@ data class ReconciledMovement(
     val dismissed: Boolean = false,
     /** Where [suggestedCategoryId] came from, so the person can weigh it. */
     val suggestionSource: SuggestionSource? = null,
+    /** The installment purchase this line belongs to, when the document shows it through several lines without a registered purchase. */
+    val installmentSeries: InstallmentSeriesInfo? = null,
 )
+
+/**
+ * A purchase shown by [size] of its [total] installment lines. The lowest line ([leaderOrdinal]) creates it; [suggestedTotalCents] is the total the file implies
+ * (for a partial series an estimate the person confirms) and [acceptable] says whether one tap may accept it for the whole file (a refinancing never is).
+ */
+data class InstallmentSeriesInfo(val leaderOrdinal: Int, val size: Int, val total: Int, val complete: Boolean, val suggestedTotalCents: Long, val acceptable: Boolean)
 
 enum class SuggestionSource { History, BankLabel }
 
@@ -199,5 +212,11 @@ sealed interface ProposedEffect {
         val firstInvoice: YearMonth,
         val months: List<YearMonth>,
     ) : ProposedEffect
+
+    /** Another line of the same purchase [CreateInstallmentPurchase] creates in this confirmation (the movement [leaderOrdinal]): it links to installment [number]. */
+    data class JoinInstallmentPurchase(val leaderOrdinal: Int, val number: Int) : ProposedEffect
+
+    /** A card credit with no purchase to refund: registers a purchase of the credit's value and date and refunds all of it (S1 `RegisterCardPurchase` + `RegisterRefund`). */
+    data class CreateRefundWithPurchase(val categoryId: String, val invoiceDueMonth: YearMonth?) : ProposedEffect
 }
 enum class IncomeBasis { InvestmentCredit, ChosenByPerson }

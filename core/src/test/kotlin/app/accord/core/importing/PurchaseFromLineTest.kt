@@ -90,11 +90,11 @@ class PurchaseFromLineTest {
         assertNull(item.effect)
     }
 
-    @Test fun `without an invoice declared by the document the invoice comes from the line's date`() {
-        // 20/12 fecha depois do dia 8: a fatura é a de janeiro de 2027, e a 1ª parcela é duas antes.
+    @Test fun `without an invoice declared by the document the 1st installment is the invoice the purchase date falls in`() {
+        // A data da linha é a da compra: 20/12 fecha depois do dia 8, então a 1ª parcela é a de janeiro de 2027 e a 3ª, a de março (ADR 0076).
         val m = line(3, date = LocalDate.of(2026, 12, 20))
         val effect = assertIs<ProposedEffect.CreateInstallmentPurchase>(preview(m, billing(docInvoice = null), decided(m, 150000)).items.single().effect)
-        assertEquals(nov, effect.firstInvoice)
+        assertEquals(YearMonth.of(2027, 1), effect.firstInvoice)
     }
 
     @Test fun `confirming registers one installment purchase with the confirmed total and ties the line to its installment`() {

@@ -122,6 +122,12 @@ class PendingResolveViewModel(
         decide(ImportDecision.AsInstallmentPurchase(ordinal, totalCents))
     }
 
+    /** "Não achei a compra": o aplicativo registra uma compra do mesmo valor e data do crédito e estorna ela mesma. */
+    fun newPurchaseRefund() {
+        _state.update { it.copy(picking = null) }
+        decide(ImportDecision.AsNewPurchaseRefund(ordinal))
+    }
+
     fun acceptSuggestion() = decide(ImportDecision.AcceptSuggestions(listOf(ordinal)))
 
     fun confirmNew() = decide(ImportDecision.ConfirmNew(ordinal))

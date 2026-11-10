@@ -111,7 +111,9 @@ class BillingReconcilerTest {
         fun line(n: Int, cents: Long) = run(card, doc(DocumentKind.Card, mv(1, LocalDate.of(2026, 10, 7), -cents, "TV", installment = InstallmentHint(n, 3))), billing(nov.plusMonths((n - 1).toLong()), purchases = listOf(p)))
         assertEquals(Classification.SafeLink, line(1, 33333).of(1).classification)
         assertEquals(Classification.SafeLink, line(3, 33334).of(1).classification)
-        val wrong = line(1, 33334).of(1)
+        // O banco põe os centavos que sobram na 1ª parcela e o app na última: um centavo de diferença é arredondamento, não divergência (ADR 0076).
+        assertEquals(Classification.SafeLink, line(1, 33334).of(1).classification)
+        val wrong = line(1, 33400).of(1)
         assertEquals(setOf(DoubtReason.InstallmentValueDiverges), wrong.doubts)
         assertNull(wrong.effect)
     }

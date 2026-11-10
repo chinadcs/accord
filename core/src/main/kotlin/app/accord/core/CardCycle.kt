@@ -91,6 +91,16 @@ object Installments {
         return List(count) { i -> Money(if (i == count - 1) base + remainder else base) }
     }
 
+    /**
+     * Se uma linha de [line] centavos pode ser a parcela [number] de um total de [total] em [count] parcelas. O banco põe os centavos que sobram numa
+     * parcela (em geral a primeira) e o app na última (R$ 100 em 3× = 33,33 + 33,33 + 33,34), então a linha do documento pode diferir do cronograma
+     * por centavos de arredondamento: até [count] centavos, nunca mais que isso (accord-qid0, ADR 0076).
+     */
+    fun lineFits(total: Long, count: Int, number: Int, line: Long): Boolean {
+        if (count < 1 || number !in 1..count || total / count < 1) return false
+        return kotlin.math.abs(splitTotal(Money(total), count)[number - 1].cents - line) <= count
+    }
+
     /** Valor da parcela informado: o total é parcela × quantidade. */
     fun fromEach(each: Money, count: Int): List<Money> {
         require(count >= 1) { "Quantidade de parcelas deve ser ao menos 1" }

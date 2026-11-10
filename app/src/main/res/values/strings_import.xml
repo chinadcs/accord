@@ -104,6 +104,14 @@
         <item quantity="one">Aceitar %1$d sugestão de categoria</item>
         <item quantity="other">Aceitar %1$d sugestões de categoria</item>
     </plurals>
+    <plurals name="import_accept_installments">
+        <item quantity="one">Cadastrar %1$d compra parcelada pelo total sugerido</item>
+        <item quantity="other">Cadastrar %1$d compras parceladas pelo total sugerido</item>
+    </plurals>
+    <string name="import_accept_installments_hint">O arquivo mostra só parte de cada compra. O total sugerido é o que aparece mais as parcelas que faltam, pelo mesmo valor; as parcelas anteriores entram nas faturas dos meses passados. Você pode abrir uma linha para conferir.</string>
+    <string name="import_series_complete">Compra parcelada em %2$d vezes: o arquivo mostra as %1$d parcelas e o total vem delas.</string>
+    <string name="import_series_partial">Compra parcelada em %2$d vezes: o arquivo mostra %1$d parcelas; as outras são sugeridas pelo mesmo valor.</string>
+    <string name="import_series_register">Cadastrar a compra parcelada (total %1$s)</string>
     <string name="import_default_category">Escolher uma categoria para os que estão sem categoria</string>
     <string name="import_amount_unknown">valor não lido</string>
     <string name="import_no_description">Sem descrição</string>
@@ -222,6 +230,8 @@
     <string name="import_effect_link_correct">Vincula e corrige a fatura da compra para a do documento.</string>
     <string name="import_effect_installment">Vincula à parcela %1$d de uma compra registrada.</string>
     <string name="import_effect_installment_purchase">Cadastra a compra em %1$d parcelas e vincula esta linha à parcela %2$d.</string>
+    <string name="import_effect_installment_join">Vincula à parcela %1$d da compra parcelada que este arquivo cadastra.</string>
+    <string name="import_effect_refund_new_purchase">Registra uma compra do mesmo valor e data do crédito e estorna ela mesma, sem virar renda.</string>
     <string name="import_effect_installment_shift">Vincula à parcela %1$d e move as parcelas para a fatura do documento.</string>
     <string name="import_effect_invoice">Quitação integral da fatura de %1$02d/%2$d, sem despesa nova.</string>
     <string name="import_effect_boleto">Pagamento de um boleto registrado.</string>

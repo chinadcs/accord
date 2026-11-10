@@ -21,6 +21,8 @@ import app.accord.core.space.ErrorCode
 import app.accord.core.space.FieldError
 import app.accord.core.space.Origin
 import app.accord.core.space.Receipt
+import app.accord.core.space.RefundStatus
+import app.accord.core.space.RegisterRefund
 import app.accord.core.space.Session
 
 /** Aborts the surrounding local transaction when a step of the confirmation is refused; carries what to answer. */
@@ -58,28 +60,36 @@ internal class ImportPlanner(
     suspend fun planResolve(session: Session, c: ResolveImportItem): Planned {
         val batch = dao.importBatch(c.batchId) ?: return stop("batchId", ErrorCode.UnknownReference, "Lote de importação não encontrado.")
         if (batch.status != BatchStatus.Confirmed.name) return stop("batchId", ErrorCode.NotAllowed, "Este lote ainda está em revisão.")
-        val row = dao.importMovements(batch.id).firstOrNull { it.ordinal == c.ordinal && it.resolution == Resolution.Pending.name }
-            ?: return stop("ordinal", ErrorCode.UnknownReference, "Esta pendência já foi resolvida.")
+        val rows = dao.importMovements(batch.id)
+        if (rows.none { it.ordinal == c.ordinal && it.resolution == Resolution.Pending.name }) return stop("ordinal", ErrorCode.UnknownReference, "Esta pendência já foi resolvida.")
         val evaluation = evaluator.evaluate(batch)
-        val step = evaluation.plan.steps.firstOrNull { it.item.movement.ordinal == c.ordinal }
+        val asked = evaluation.plan.steps.firstOrNull { it.item.movement.ordinal == c.ordinal }
             ?: return stop("ordinal", ErrorCode.UnknownReference, "Esta pendência já foi resolvida.")
-        if (step.resolution == Resolution.Pending || step.resolution == Resolution.AlreadyKnown) {
+        if (asked.resolution == Resolution.Pending || asked.resolution == Resolution.AlreadyKnown) {
             return stop("decision", ErrorCode.Required, "Ainda falta uma escolha ou há uma dúvida neste movimento.")
         }
+        // A line that joins the purchase another line creates is resolved with that line: the whole purchase is one decision.
+        val step = asked.joinsCreatedBy?.let { leader -> evaluation.plan.steps.firstOrNull { it.item.movement.ordinal == leader } } ?: asked
+        val row = rows.firstOrNull { it.ordinal == step.item.movement.ordinal && it.resolution == Resolution.Pending.name }
+            ?: return stop("ordinal", ErrorCode.UnknownReference, "Esta pendência já foi resolvida.")
+        val joiners = evaluation.plan.steps.filter { it.joinsCreatedBy == step.item.movement.ordinal }
+            .mapNotNull { s -> rows.firstOrNull { it.ordinal == s.item.movement.ordinal && it.resolution == Resolution.Pending.name }?.let { s to it } }
         if (evaluation.token != c.summaryToken) return Planned.Stop(CommandResult.StaleVersion(batch.id, batch.revision))
         // The moved invoices count too: the document's invoice for a corrected purchase or refund, every month of a shifted schedule.
         val months = ImportSteps.affectedMonths(listOf(step), evaluation.kind == DocumentKind.Card, evaluation.facts.billing)
         return Planned.Go(months = months, undoable = false) {
-            val repeat = dao.importDecisions(batch.id).firstOrNull { it.ordinal == c.ordinal && it.type == ImportDecisionType.REPEAT }?.value?.toInt()
-            val resolved = resolve(session, batch, step, row, repeat)
+            val ordinal = step.item.movement.ordinal
+            val repeat = dao.importDecisions(batch.id).firstOrNull { it.ordinal == ordinal && it.type == ImportDecisionType.REPEAT }?.value?.toInt()
+            val created = mutableMapOf<Int, String>()
+            val resolved = listOf(resolve(session, batch, step, row, repeat, created)) + joiners.map { (s, r) -> resolve(session, batch, s, r, null, created) }
             val pairs = dao.importDecisions(batch.id)
-                .filter { it.ordinal == c.ordinal && it.type == ImportDecisionType.SEPARATE }
+                .filter { it.ordinal == ordinal && it.type == ImportDecisionType.SEPARATE }
                 .map { ImportPairRow(batch.id, step.item.key, it.value) }
             val next = batch.copy(revision = batch.revision + 1)
             dao.upsertImportBatch(next)
-            dao.upsertImportMovements(listOf(resolved))
+            dao.upsertImportMovements(resolved)
             dao.upsertImportPairs(pairs)
-            dao.deleteImportDecisionsOf(batch.id, c.ordinal)
+            resolved.forEach { dao.deleteImportDecisionsOf(batch.id, it.ordinal) }
             listOf(EntityChange(EntityType.ImportBatch, batch.id, null, next.revision))
         }
     }
@@ -87,7 +97,10 @@ internal class ImportPlanner(
     private suspend fun commit(session: Session, batch: ImportBatchRow, e: Evaluation): List<EntityChange> {
         val stored = dao.importMovements(batch.id).associateBy { it.ordinal }
         val repeats = dao.importDecisions(batch.id).filter { it.type == ImportDecisionType.REPEAT }.associate { it.ordinal to it.value.toInt() }
-        val resolved = e.plan.steps.map { step -> resolve(session, batch, step, stored.getValue(step.item.movement.ordinal), repeats[step.item.movement.ordinal]) }
+        // The lines that join a purchase another line creates come after it: they are tied to the purchase it registered.
+        val created = mutableMapOf<Int, String>()
+        val resolved = e.plan.steps.sortedBy { it.joinsCreatedBy != null }
+            .map { step -> resolve(session, batch, step, stored.getValue(step.item.movement.ordinal), repeats[step.item.movement.ordinal], created) }
         val keyOf = e.plan.steps.associate { it.item.movement.ordinal to it.item.key }
         val pairs = dao.importDecisions(batch.id)
             .filter { it.type == ImportDecisionType.SEPARATE }
@@ -118,19 +131,26 @@ internal class ImportPlanner(
         return listOf(EntityChange(EntityType.ImportBatch, batch.id, null, next.revision))
     }
 
-    private suspend fun resolve(session: Session, batch: ImportBatchRow, step: ConfirmStep, row: ImportMovementRow, repeatOf: Int? = null): ImportMovementRow {
-        var created: Receipt? = null
-        step.commands.forEachIndexed { index, command ->
+    private suspend fun resolve(session: Session, batch: ImportBatchRow, step: ConfirmStep, row: ImportMovementRow, repeatOf: Int? = null, created: MutableMap<Int, String>): ImportMovementRow {
+        val receipts = mutableListOf<Receipt>()
+        suspend fun run(index: Int, command: Command) {
             val id = DeterministicIds.of(session.spaceId, "import-op", "${batch.id}|${step.item.key}|$index")
-            val receipt = when (val result = apply(session, Envelope(CommandId(id), Origin.Import), command)) {
+            receipts += when (val result = apply(session, Envelope(CommandId(id), Origin.Import), command)) {
                 is CommandResult.Applied -> result.receipt
                 is CommandResult.AlreadyApplied -> result.receipt
                 else -> throw ImportAbort(refusal(step, result))
             }
-            if (index == 0) created = receipt
+        }
+        step.commands.forEachIndexed { index, command -> run(index, command) }
+        // The refund of a purchase registered by this very step: the purchase id exists only now.
+        step.afterCreate?.let { refund ->
+            val purchase = receipts.flatMap { it.changes }.firstOrNull { it.type == EntityType.CardPurchase }?.id ?: throw ImportAbort(refusal(step, CommandResult.Rejected(emptyList())))
+            run(step.commands.size, RegisterRefund(originId = purchase, amount = refund.amount, status = RefundStatus.Confirmed, date = refund.date, invoice = refund.invoice))
         }
         val target: StepTarget? = step.target
-            ?: step.createsType?.let { type -> created?.changes?.firstOrNull { it.type == type }?.let { StepTarget(type, it.id, step.createsNumber) } }
+            ?: step.joinsCreatedBy?.let { leader -> StepTarget(EntityType.CardPurchase, created[leader] ?: throw ImportAbort(refusal(step, CommandResult.Rejected(emptyList()))), step.createsNumber) }
+            ?: step.createsType?.let { type -> receipts.flatMap { it.changes }.firstOrNull { it.type == type }?.let { StepTarget(type, it.id, step.createsNumber) } }
+        if (step.createsType == EntityType.CardPurchase && step.createsNumber != null && target != null) created[step.item.movement.ordinal] = target.id
         return row.copy(
             key = step.item.key,
             resolution = step.resolution.name,

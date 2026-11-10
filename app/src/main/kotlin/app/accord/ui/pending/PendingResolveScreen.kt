@@ -76,6 +76,7 @@ fun PendingResolveRoute(viewModel: PendingResolveViewModel, padding: PaddingValu
         onReset = viewModel::reset, onApply = viewModel::apply, onOpenCard = onOpenCard,
         onCorrectInvoice = viewModel::correctInvoice, onShiftFirst = viewModel::shiftFirstInstallment, onRefund = viewModel::chooseRefundOrigin,
         onInstallmentPurchase = viewModel::chooseInstallmentPurchase,
+        onNewPurchaseRefund = viewModel::newPurchaseRefund,
     )
 }
 
@@ -102,6 +103,7 @@ fun PendingResolveScreen(
     onShiftFirst: () -> Unit = {},
     onRefund: (String) -> Unit = {},
     onInstallmentPurchase: (Long) -> Unit = {},
+    onNewPurchaseRefund: () -> Unit = {},
 ) {
     Column(Modifier.fillMaxSize().padding(padding)) {
         when (val content = state.content) {
@@ -152,11 +154,11 @@ fun PendingResolveScreen(
                 when (state.picking) {
                     Picking.ExpenseCategory -> CategoryDialog(state.categories, selected = null, onPick = onCategory, onDismiss = onDismissPicker)
                     Picking.IncomeCategory -> IncomeChoiceDialog(state.incomeCategories, onIncome, onDismissPicker)
-                    Picking.Refund -> RefundChoiceDialog(detail.refundCandidates, onRefund, onDismissPicker)
+                    Picking.Refund -> RefundChoiceDialog(detail.refundCandidates, onRefund, onNewPurchaseRefund.takeIf { detail.pending.kind == DocumentKind.Card }, onDismissPicker)
                     Picking.InstallmentPurchase -> detail.reconciled.movement.let { m ->
                         val hint = m.installment
                         val cents = m.amountCents
-                        if (hint != null && cents != null) InstallmentPurchaseDialog(hint.number, hint.total, -cents, onInstallmentPurchase, onDismissPicker)
+                        if (hint != null && cents != null) InstallmentPurchaseDialog(hint.number, hint.total, -cents, detail.reconciled.installmentSeries?.suggestedTotalCents, onInstallmentPurchase, onDismissPicker)
                     }
                     null -> Unit
                 }
@@ -324,12 +326,13 @@ private fun Consequence(detail: PendingDetail, categories: Map<String, CategoryN
 
 /** Total da compra que o documento mostra só em parte: a pessoa confirma; a parcela n do total tem de valer o da linha. Nada é gravado antes de aplicar. */
 @Composable
-private fun InstallmentPurchaseDialog(number: Int, count: Int, lineCents: Long, onConfirm: (Long) -> Unit, onDismiss: () -> Unit) {
+private fun InstallmentPurchaseDialog(number: Int, count: Int, lineCents: Long, suggestedTotal: Long?, onConfirm: (Long) -> Unit, onDismiss: () -> Unit) {
     fun plain(cents: Long) = "%d,%02d".format(cents / 100, cents % 100)
-    var text by rememberSaveable { mutableStateOf(plain(lineCents * count)) }
+    var text by rememberSaveable { mutableStateOf(plain(suggestedTotal ?: (lineCents * count))) }
     val parsed = (Money.parse(text) as? MoneyParse.Ok)?.money?.cents
+    // O banco põe os centavos que sobram na 1ª parcela e o aplicativo na última: a linha pode diferir do cronograma por centavos de arredondamento.
     val installment = parsed?.takeIf { it >= count }?.let { Installments.splitTotal(Money(it), count)[number - 1].cents }
-    val valid = installment == lineCents
+    val valid = parsed != null && Installments.lineFits(parsed, count, number, lineCents)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.pending_purchase_dialog_title, number, count)) },
@@ -361,13 +364,17 @@ private fun refundLine(candidate: RefundCandidate): String = stringResource(
 )
 
 @Composable
-private fun RefundChoiceDialog(candidates: List<RefundCandidate>, onPick: (String) -> Unit, onDismiss: () -> Unit) {
+private fun RefundChoiceDialog(candidates: List<RefundCandidate>, onPick: (String) -> Unit, onNewPurchase: (() -> Unit)?, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.pending_refund_pick)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 if (candidates.isEmpty()) Text(stringResource(R.string.pending_refund_none), style = MaterialTheme.typography.bodyLarge)
+                onNewPurchase?.let { newPurchase ->
+                    OutlinedButton(onClick = newPurchase, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.pending_refund_new_purchase)) }
+                    Text(stringResource(R.string.pending_refund_new_purchase_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 candidates.forEach { c ->
                     Column(
                         Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).clickable(role = Role.Button) { onPick(c.id) }.padding(vertical = AccordSpacing.s3),

@@ -103,7 +103,7 @@ data class ImportMovementRow(
 data class ImportDecisionRow(
     val batchId: String,
     val ordinal: Int,
-    /** CATEGORY, LINK, SEPARATE, DEFAULT, CONFIRM_NEW, INCOME, DISMISS, POSTPONE, REPEAT (valor: ordinal do original), CORRECT_INVOICE, SHIFT_FIRST, REFUND ou INSTALLMENT_PURCHASE. */
+    /** CATEGORY, LINK, SEPARATE, DEFAULT, CONFIRM_NEW, INCOME, DISMISS, POSTPONE, REPEAT (valor: ordinal do original), CORRECT_INVOICE, SHIFT_FIRST, REFUND, INSTALLMENT_PURCHASE ou NEW_PURCHASE_REFUND. */
     val type: String,
     /** Categoria ou lançamento da decisão. */
     val value: String,
@@ -134,8 +134,11 @@ internal object ImportDecisionType {
     /** Valor: a compra ou o pagamento que o crédito estorna. */
     const val REFUND = "REFUND"
 
-    /** Total (em centavos) confirmado de uma compra parcelada que o documento mostra só em parte. */
+    /** Total (em centavos) confirmado de uma compra parcelada que o documento mostra só em parte. Fica na 1ª linha da compra no arquivo. */
     const val INSTALLMENT_PURCHASE = "INSTALLMENT_PURCHASE"
+
+    /** O crédito do cartão é de uma compra que o app não tem: registra a compra e estorna ela mesma. */
+    const val NEW_PURCHASE_REFUND = "NEW_PURCHASE_REFUND"
     const val BATCH_WIDE = -1
 }
 

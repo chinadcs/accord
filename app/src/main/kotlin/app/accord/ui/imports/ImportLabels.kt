@@ -116,6 +116,8 @@ fun ProposedEffect.label(): String = when (this) {
     is ProposedEffect.CreateIncome -> stringResource(R.string.import_effect_income)
     is ProposedEffect.CreateRefund -> stringResource(R.string.import_effect_refund)
     is ProposedEffect.CreateInstallmentPurchase -> stringResource(R.string.import_effect_installment_purchase, count, number)
+    is ProposedEffect.JoinInstallmentPurchase -> stringResource(R.string.import_effect_installment_join, number)
+    is ProposedEffect.CreateRefundWithPurchase -> stringResource(R.string.import_effect_refund_new_purchase)
 }
 
 /** `11/2026`, o mês de vencimento de uma fatura. */

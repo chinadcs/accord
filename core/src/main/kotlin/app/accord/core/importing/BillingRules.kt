@@ -23,12 +23,12 @@ internal object BillingRules {
     data class NewPurchase(val totalCents: Long, val categoryId: String?)
 
     /** Null when no billing rule applies and the generic matching must decide. Only called for clean debits that are not already known. */
-    fun decide(m: ExtractedMovement, isCard: Boolean, b: BillingContext, shiftFirst: Boolean = false, newPurchase: NewPurchase? = null): Outcome? {
+    fun decide(m: ExtractedMovement, isCard: Boolean, b: BillingContext, shiftFirst: Boolean = false, newPurchase: NewPurchase? = null, series: InstallmentSeries? = null): Outcome? {
         val cents = m.amountCents ?: return null
         if (cents >= 0) return null
         val amount = -cents
         if (isCharge(m)) return Outcome(charge = true)
-        if (isCard) return m.installment?.let { installment(m, it, b, amount, shiftFirst, newPurchase) }
+        if (isCard) return m.installment?.let { installment(m, it, b, amount, shiftFirst, newPurchase, series) }
         return invoicePayment(m, b, amount) ?: boleto(m, b, amount)
     }
 
@@ -39,18 +39,22 @@ internal object BillingRules {
 
     // ---- rule 9: installments ----
 
-    private fun installment(m: ExtractedMovement, hint: InstallmentHint, b: BillingContext, amount: Long, shiftFirst: Boolean, newPurchase: NewPurchase?): Outcome {
+    private fun installment(m: ExtractedMovement, hint: InstallmentHint, b: BillingContext, amount: Long, shiftFirst: Boolean, newPurchase: NewPurchase?, series: InstallmentSeries?): Outcome {
         val rows = b.purchases.flatMap { p -> p.installments.map { p to it } }
             .filter { (_, r) -> r.number == hint.number && r.total == hint.total && !r.cancelled }
-        val exact = rows.filter { (_, r) -> r.cents == amount && !r.hasOrigin }
+        // O banco põe os centavos que sobram na 1ª parcela e o app na última: a linha pode diferir do cronograma por centavos de arredondamento (ADR 0076).
+        val open = rows.filter { (_, r) -> !r.hasOrigin }
+        val exact = open.filter { (_, r) -> r.cents == amount }.ifEmpty { open.filter { (_, r) -> abs(r.cents - amount) <= hint.total } }
         if (exact.size > 1) return Outcome(reasons = setOf(DoubtReason.PossibleMatch))
         if (exact.isEmpty()) {
             val related = rows.any { (p, _) -> sharesAWord(p.description, m.description, 2) }
             if (related) return Outcome(reasons = setOf(DoubtReason.InstallmentValueDiverges))
-            return newPurchase?.let { createPurchase(m, hint, b, amount, it) } ?: Outcome(reasons = setOf(DoubtReason.InstallmentPurchaseNotRegistered))
+            return newPurchase?.let { createPurchase(m, hint, b, amount, it, series) } ?: Outcome(reasons = setOf(DoubtReason.InstallmentPurchaseNotRegistered))
         }
         val (purchase, row) = exact.single()
-        val doc = b.documentInvoice ?: return Outcome(reasons = setOf(DoubtReason.InstallmentInvoiceDiverges))
+        // A data da linha é a da compra: sem fatura declarada, a parcela n cai n - 1 meses depois da fatura atribuída pela data (ADR 0043, 0076).
+        val doc = b.documentInvoice ?: m.date?.let { b.cycle.assign(it).dueMonth.plusMonths((hint.number - 1).toLong()) }
+            ?: return Outcome(reasons = setOf(DoubtReason.InstallmentInvoiceDiverges))
         if (row.dueMonth == doc) return Outcome(ProposedEffect.LinkInstallment(purchase.purchaseId, row.number, row.entryId))
         // Only the first installment changes invoice: a later line suggests the first one it implies, applied only when the person accepts it.
         val newFirst = doc.minusMonths((row.number - 1).toLong())
@@ -65,16 +69,20 @@ internal object BillingRules {
     }
 
     /**
-     * The person confirmed the total of a purchase the document shows only in part (line n of N): every installment is created, the 1st on the document's
-     * invoice minus n - 1 months. Nothing is guessed: a total that does not split into this line's value, or a schedule that reaches a paid invoice, stays a doubt.
+     * The total of a purchase the document shows by lines n of N is settled (by the person, or by the file when it shows all N): every installment is
+     * created, the 1st on the document's invoice minus n - 1 months, or on the invoice the purchase date falls in when the document declares none (the
+     * line's date is the purchase's). Nothing is guessed: a total that does not split into this series' values, or a schedule that reaches a paid
+     * invoice, stays a doubt. [series] is the group the line belongs to; its leader is the line that creates the purchase.
      */
-    private fun createPurchase(m: ExtractedMovement, hint: InstallmentHint, b: BillingContext, amount: Long, plan: NewPurchase): Outcome {
+    fun createPurchase(m: ExtractedMovement, hint: InstallmentHint, b: BillingContext, amount: Long, plan: NewPurchase, series: InstallmentSeries? = null): Outcome {
         val notRegistered = Outcome(reasons = setOf(DoubtReason.InstallmentPurchaseNotRegistered))
-        val lineInvoice = b.documentInvoice ?: m.date?.let { b.cycle.assign(it).dueMonth } ?: return notRegistered
+        val leaderNumber = series?.leader?.number ?: hint.number
+        val leaderInvoice = b.documentInvoice ?: m.date?.let { b.cycle.assign(it).dueMonth.plusMonths((leaderNumber - 1).toLong()) } ?: return notRegistered
         if (hint.number !in 1..hint.total || plan.totalCents < hint.total) return notRegistered
-        if (Installments.splitTotal(app.accord.core.Money(plan.totalCents), hint.total)[hint.number - 1].cents != amount) return notRegistered
+        val fits = series?.fits(plan.totalCents) ?: Installments.lineFits(plan.totalCents, hint.total, hint.number, amount)
+        if (!fits) return notRegistered
         val categoryId = plan.categoryId ?: return Outcome(reasons = setOf(DoubtReason.CategoryUnknown))
-        val first = lineInvoice.minusMonths((hint.number - 1).toLong())
+        val first = leaderInvoice.minusMonths((leaderNumber - 1).toLong())
         val months = Installments.schedule(first, hint.total)
         val paid = b.invoices.filter { it.paid }.map { it.dueMonth }.toSet()
         if (months.any { it in paid }) return Outcome(reasons = setOf(DoubtReason.InstallmentScheduleHitsPaidInvoice))
@@ -113,6 +121,9 @@ internal object BillingRules {
             else -> null
         }
     }
+
+    /** The bank financing the unpaid invoice ("Parcela de refinanciamento"): a loan, not a purchase. It stays a doubt the person decides one by one (03/11/2026). */
+    fun isInvoiceRefinancing(description: String): Boolean = Regex("\\bREFINANCIAMENTO\\b").containsMatchIn(upper(description))
 
     /** Investment lines by their words (aplicação, resgate, rendimento, CDB, Tesouro…), as whole tokens so "aplicativo" does not match. */
     fun isInvestment(description: String): Boolean =

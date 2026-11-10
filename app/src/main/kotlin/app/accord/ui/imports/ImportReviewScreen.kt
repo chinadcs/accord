@@ -42,6 +42,7 @@ import app.accord.core.importing.BatchReview
 import app.accord.core.importing.BatchStatus
 import app.accord.core.importing.Classification
 import app.accord.core.importing.ConfirmationSummary
+import app.accord.core.Money
 import app.accord.core.importing.DocumentKind
 import app.accord.core.importing.LinkableEntry
 import app.accord.core.importing.ReconciledMovement
@@ -92,6 +93,8 @@ fun ImportReviewRoute(
         onClearDefault = viewModel::clearDefaultCategory,
         onAcceptSuggestion = viewModel::acceptSuggestion,
         onAcceptAll = viewModel::acceptAllSuggestions,
+        onAcceptInstallments = viewModel::acceptInstallmentTotals,
+        onInstallmentTotal = viewModel::installmentTotal,
         onLink = viewModel::link,
         onSeparate = viewModel::keepSeparate,
         onReset = viewModel::reset,
@@ -152,6 +155,8 @@ fun ImportReviewScreen(
     onSourceNext: () -> Unit = {},
     onSourceInvoiceByDate: (Boolean) -> Unit = {},
     onApplySource: () -> Unit = {},
+    onAcceptInstallments: () -> Unit = {},
+    onInstallmentTotal: (Int, Long) -> Unit = { _, _ -> },
 ) {
     Column(Modifier.fillMaxSize().padding(padding)) {
         when (val content = state.content) {
@@ -172,7 +177,7 @@ fun ImportReviewScreen(
                     if (review.info.source.kind == DocumentKind.Card) item { Text(state.cards.firstOrNull { it.id == review.info.source.originId }?.nickname.orEmpty(), style = MaterialTheme.typography.titleMedium) }
                     state.message?.let { message -> item { MessageBanner(message) } }
                     item { Filters(state.filter, onFilter) }
-                    item { BulkActions(review, state, onAcceptAll, onPickCategory, onClearDefault) }
+                    item { BulkActions(review, state, onAcceptAll, onAcceptInstallments, onPickCategory, onClearDefault) }
                     val shown = review.preview.items.filter { it.matches(state.filter) }
                     if (shown.isEmpty()) {
                         item {
@@ -197,6 +202,7 @@ fun ImportReviewScreen(
                         onPostpone = { onPostpone(editing.movement.ordinal) },
                         onPickRepeat = { onPickRepeat(editing.movement.ordinal) },
                         hasRepeatCandidates = repeatCandidates(review, editing).isNotEmpty(),
+                        onInstallmentTotal = { onInstallmentTotal(editing.movement.ordinal, it) },
                     )
                 }
                 state.pickingRepeat?.let { ordinal ->
@@ -300,13 +306,24 @@ private fun BulkActions(
     review: BatchReview,
     state: ImportReviewUiState,
     onAcceptAll: () -> Unit,
+    onAcceptInstallments: () -> Unit,
     onPickCategory: (CategoryTarget) -> Unit,
     onClearDefault: () -> Unit,
 ) {
     val suggestions = review.preview.items.count { it.suggestedCategoryId != null }
     val needCategory = review.preview.items.any { Classification.Doubt == it.classification && it.doubts.contains(app.accord.core.importing.DoubtReason.CategoryUnknown) }
-    if (suggestions == 0 && !needCategory) return
+    // Cada compra parcelada que o arquivo mostra por várias linhas, sem total declarado, conta uma vez.
+    val purchases = review.preview.items
+        .filter { it.installmentSeries?.acceptable == true && app.accord.core.importing.DoubtReason.InstallmentPurchaseNotRegistered in it.doubts }
+        .distinctBy { it.installmentSeries!!.leaderOrdinal }.size
+    if (suggestions == 0 && !needCategory && purchases == 0) return
     Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+        if (purchases > 0) {
+            OutlinedButton(onClick = onAcceptInstallments, enabled = !state.working, modifier = Modifier.fillMaxWidth()) {
+                Text(pluralStringResource(R.plurals.import_accept_installments, purchases, purchases))
+            }
+            Text(stringResource(R.string.import_accept_installments_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         if (suggestions > 0) {
             OutlinedButton(onClick = onAcceptAll, enabled = !state.working, modifier = Modifier.fillMaxWidth()) {
                 Text(pluralStringResource(R.plurals.import_accept_suggestions, suggestions, suggestions))
@@ -423,6 +440,7 @@ private fun MovementDialog(
     onPostpone: () -> Unit,
     onPickRepeat: () -> Unit,
     hasRepeatCandidates: Boolean,
+    onInstallmentTotal: (Long) -> Unit = {},
 ) {
     val m = item.movement
     var showOriginal by remember { mutableStateOf(false) }
@@ -438,6 +456,17 @@ private fun MovementDialog(
                 item.doubts.forEach { Text(it.label(review.info.source.kind == DocumentKind.Card), style = MaterialTheme.typography.bodyMedium) }
                 item.effect?.let { Text(it.label(), style = MaterialTheme.typography.bodyMedium) }
                 CategoryTag(categories, item.categoryId)
+                item.installmentSeries?.let { series ->
+                    Text(
+                        stringResource(if (series.complete) R.string.import_series_complete else R.string.import_series_partial, series.size, series.total),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    if (app.accord.core.importing.DoubtReason.InstallmentPurchaseNotRegistered in item.doubts) {
+                        Button(onClick = { onInstallmentTotal(series.suggestedTotalCents) }, enabled = !working, modifier = Modifier.fillMaxWidth()) {
+                            Text(stringResource(R.string.import_series_register, Money(series.suggestedTotalCents).format()))
+                        }
+                    }
+                }
 
                 if (editable) {
                     OutlinedButton(onClick = onPickCategory, enabled = !working, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.import_choose_category)) }

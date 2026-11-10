@@ -135,6 +135,15 @@ sealed interface ImportDecision {
      * the ones before n on past invoices. The total must split into this line's value; the category comes from the usual choice or suggestion.
      */
     data class AsInstallmentPurchase(val ordinal: Int, val totalCents: Long) : ImportDecision
+
+    /**
+     * Accepts the total each installment purchase of the file suggests (what the lines show plus the missing ones at the same value): one tap for every series of
+     * [ordinals] (null: all that may be accepted in bulk; a refinancing of the invoice never is). The decision is kept on the first line of each series.
+     */
+    data class AcceptInstallmentTotals(val ordinals: List<Int>? = null) : ImportDecision
+
+    /** A card credit whose purchase is not in the app: registers a purchase of the same value and date, in the chosen category, and refunds all of it. */
+    data class AsNewPurchaseRefund(val ordinal: Int) : ImportDecision
 }
 
 sealed interface DecideOutcome {
