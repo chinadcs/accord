@@ -105,6 +105,13 @@ fun IncomesScreen(
                             end = { Text(summary.expected.format(), style = Accord.typography.amountHero, textAlign = TextAlign.End) },
                         )
                         Text(stringResource(R.string.incomes_not_balance), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        // Recebimentos de "Quem me deve" ficam fora do total do mês (ADR 0083); aparecem aqui, separados.
+                        if (summary.fromDebtors.received.cents != 0L || summary.fromDebtors.toReceive.cents != 0L) {
+                            Text(
+                                stringResource(R.string.incomes_from_debtors, summary.fromDebtors.received.format(), summary.fromDebtors.toReceive.format()),
+                                style = MaterialTheme.typography.bodyMedium,
+                            )
+                        }
                     }
                 }
                 if (summary.items.isEmpty()) {

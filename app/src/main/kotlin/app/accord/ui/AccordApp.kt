@@ -1413,7 +1413,12 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 val fromExpense = backStackEntry.arguments?.getBoolean("fromExpense") == true
                 app.accord.ui.receivables.ReceivableFormRoute(
                     viewModel, padding, onBack = { navController.popBackStack() },
-                    onDone = { navController.navigate(ROUTE_RECEIVABLES) { popUpTo(ROUTE_RECEIVABLE_NEW) { inclusive = true } } },
+                    onDone = {
+                        // Salvo: sai do formulário (e do registro de despesa que o abriu) e mostra "Quem me deve".
+                        navController.popBackStack()
+                        if (fromExpense) navController.popBackStack()
+                        navController.navigate(ROUTE_RECEIVABLES)
+                    },
                     onBackToExpense = if (fromExpense) ({ navController.popBackStack() }) else null,
                 )
             }
@@ -1455,7 +1460,12 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 val viewModel: RegisterViewModel = viewModel(
                     factory = viewModelFactory { initializer { RegisterViewModel(container, createSavedStateHandle()) } },
                 )
-                RegisterRoute(viewModel, padding, onExit = { navController.popBackStack() })
+                RegisterRoute(
+                    viewModel, padding, onExit = { navController.popBackStack() },
+                    onSomeoneOwesMe = { amount, account, date ->
+                        navController.navigate("$ROUTE_RECEIVABLE_NEW?amount=${Uri.encode(amount)}&account=${Uri.encode(account.orEmpty())}&date=$date&fromExpense=true")
+                    },
+                )
             }
         }
         }

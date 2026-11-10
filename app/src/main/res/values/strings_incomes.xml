@@ -5,6 +5,7 @@
     <string name="incomes_add">Adicionar renda</string>
     <string name="incomes_received_and_pending">Recebido %1$s · A receber %2$s</string>
     <string name="incomes_expected">Total esperado</string>
+    <string name="incomes_from_debtors">Recebimentos de devedores (fora do total): recebido %1$s · a receber %2$s</string>
     <string name="incomes_not_balance">Renda prevista não é saldo disponível confirmado.</string>
     <string name="incomes_empty_title">Nenhuma renda neste mês</string>
     <string name="incomes_empty_body">Isso mostra só o que foi registrado. Não significa que o espaço não tenha renda.</string>

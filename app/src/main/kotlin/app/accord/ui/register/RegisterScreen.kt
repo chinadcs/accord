@@ -48,6 +48,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
@@ -97,7 +98,13 @@ import java.time.YearMonth
 import java.time.ZoneOffset
 
 @Composable
-fun RegisterRoute(viewModel: RegisterViewModel, padding: PaddingValues, onExit: () -> Unit) {
+fun RegisterRoute(
+    viewModel: RegisterViewModel,
+    padding: PaddingValues,
+    onExit: () -> Unit,
+    /** "Alguém me deve isso" (ADR 0083): leva valor, conta e data ao registro de valor a receber; nulo esconde o switch. */
+    onSomeoneOwesMe: ((amount: String, accountId: String?, date: LocalDate) -> Unit)? = null,
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val exit by viewModel.exit.collectAsStateWithLifecycle()
     LaunchedEffect(exit) { if (exit) onExit() }
@@ -108,6 +115,7 @@ fun RegisterRoute(viewModel: RegisterViewModel, padding: PaddingValues, onExit: 
         onKeepEditing = viewModel::keepEditing, onSaveDraft = viewModel::saveDraftAndExit, onDiscard = viewModel::discardAndExit,
         onDismissRecovered = viewModel::dismissRecoveredDraft,
         onCreateIncomeCategory = viewModel::createIncomeCategory,
+        onSomeoneOwesMe = onSomeoneOwesMe,
     )
 }
 
@@ -124,6 +132,7 @@ fun RegisterScreen(
     onDiscard: () -> Unit,
     onDismissRecovered: () -> Unit,
     onCreateIncomeCategory: (String, String?, (String?) -> Unit) -> Unit = { _, _, done -> done(null) },
+    onSomeoneOwesMe: ((amount: String, accountId: String?, date: LocalDate) -> Unit)? = null,
 ) {
     val form = state.form
     val focus = remember { FormField.entries.associateWith { FocusRequester() } }
@@ -251,7 +260,7 @@ fun RegisterScreen(
             }
 
             MoreOptionsToggle(expanded = form.moreOptions) { onChange { it.copy(moreOptions = !it.moreOptions) } }
-            if (form.moreOptions) MoreOptions(state, onChange, focus, bring) { picking = it }
+            if (form.moreOptions) MoreOptions(state, onChange, focus, bring, onSomeoneOwesMe) { picking = it }
 
             InvoiceAndSchedule(state, onCorrectInvoice = { picking = Picker.Invoice }, onUseEstimate = { onChange { it.copy(invoice = null) } })
             MonthChange(form)
@@ -566,11 +575,26 @@ private fun MoreOptions(
     onChange: ((RegisterForm) -> RegisterForm) -> Unit,
     focus: Map<FormField, FocusRequester>,
     bring: Map<FormField, BringIntoViewRequester>,
+    onSomeoneOwesMe: ((String, String?, LocalDate) -> Unit)?,
     onPick: (Picker) -> Unit,
 ) {
     val form = state.form
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
+            // "Alguém me deve isso": só em Pix e débito (o cartão e o dinheiro não têm conta que receba); ligar leva ao valor a receber.
+            if (onSomeoneOwesMe != null && form.kind == FormKind.Expense && (form.form == ExpenseForm.Pix || form.form == ExpenseForm.Debit)) {
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)
+                        .toggleable(value = false, role = Role.Switch) { on -> if (on) onSomeoneOwesMe(form.amountText, form.accountId, form.date) },
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
+                ) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+                        Text(stringResource(R.string.receivable_form_someone_owes), style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.receivable_form_someone_owes_body), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Switch(checked = false, onCheckedChange = null)
+                }
+            }
             if (form.allowsInstallments) {
                 OptionHeading(stringResource(R.string.register_installments), Lucide.drawable.lucide_ic_layers)
                 val installmentCount = form.installmentsText.toIntOrNull() ?: 1

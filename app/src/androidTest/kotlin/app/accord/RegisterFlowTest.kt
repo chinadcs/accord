@@ -31,6 +31,7 @@ import app.accord.core.space.SetMyDefaultAccount
 import app.accord.ui.theme.ThemePreference
 import kotlinx.coroutines.runBlocking
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -244,6 +245,28 @@ class RegisterFlowTest {
         compose.onNodeWithText("Descartar rascunho").performClick()
         waitGone("Rascunho recuperado")
         assert(compose.onAllNodesWithText("Rascunho $tag").fetchSemanticsNodes().isEmpty())
+    }
+
+    @Test
+    fun alguemMeDeveIssoLevaOValorAoRegistroDeValorAReceberECriaODevedor() {
+        openForm()
+        fill("Valor (R$)", "120,00")
+        tap("Mais opções")
+        waitForText("Alguém me deve isso")
+        tap("Alguém me deve isso")
+        waitForText("Novo valor a receber")
+        // O valor veio da despesa; falta só dizer quem vai pagar.
+        compose.onNodeWithText("120,00").assertIsDisplayed()
+        val person = "Carlos $tag"
+        compose.onNode(hasText("Pra quem") and androidx.compose.ui.test.hasSetTextAction()).performTextInput(person)
+        tap("O dinheiro não saiu da minha conta")
+        tap("Registrar")
+        waitForText(person)
+        val overview = runBlocking {
+            (ApplicationProvider.getApplicationContext<AccordApplication>().container.space().receivables() as app.accord.core.space.QueryResult.Data).value
+        }
+        val debtor = overview.debtors.first { it.debtor.name == person }
+        assertEquals(12_000L, debtor.open.cents)
     }
 
     @Test

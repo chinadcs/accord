@@ -58,6 +58,13 @@ Os dois tipos entram no protocolo 3, exportação e exclusão financeira. Postgr
 relações e saldos na transação do espaço. Divergência monetária também abre comparação explícita;
 escolher o serviço descarta movimentos locais ainda não reconhecidos e não os reenvia isolados.
 Sem alteração de orçamento, comandos Chat, rendimentos ou pagamento direto pela reserva.
+
+"Quem me deve" ([ADR 0083](docs/adr/0083-quem-me-deve.md)): Room 25 adiciona `debtor` e `receivable` e o vínculo
+`receivableId` em renda e movimento. O cronograma e os recebimentos são rendas ligadas; em aberto, resolvido e sem
+data combinada são derivados (`ReceivablePlanner.view`). Por padrão a saída só reduz o saldo (`BalanceReader`) e os
+recebimentos ficam fora da renda do mês; com "contar como despesa e renda" a saída é um movimento comum. Os dois
+tipos entram no protocolo 3 (migração `20261110010000`), e escolher o serviço num conflito descarta o valor a receber,
+as rendas e a despesa que ele nunca reconheceu. Telas: `ui/receivables`.
 Migração/serviço exercitados localmente; implantação hospedada e Galaxy pendentes.
 
 Proteção local ([ADR 0057](docs/adr/0057-bloqueio-local-com-credencial-do-android.md),
