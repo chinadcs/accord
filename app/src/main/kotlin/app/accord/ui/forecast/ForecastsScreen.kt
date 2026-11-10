@@ -57,7 +57,7 @@ data class ForecastsActions(
 fun ForecastsRoute(viewModel: ForecastsViewModel, padding: PaddingValues, actions: ForecastsActions) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     RefreshOnResume(viewModel::refresh)
-    ForecastsScreen(state, padding, actions, viewModel::previousMonth, viewModel::nextMonth, viewModel::retry)
+    ForecastsScreen(state, padding, actions, viewModel::previousMonth, viewModel::nextMonth, viewModel::retry, viewModel::retryPace)
 }
 
 @Composable
@@ -68,6 +68,7 @@ fun ForecastsScreen(
     onPrevious: () -> Unit = {},
     onNext: () -> Unit = {},
     onRetry: () -> Unit = {},
+    onRetryPace: () -> Unit = {},
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -80,6 +81,9 @@ fun ForecastsScreen(
     ) {
         item { DetailHeader(stringResource(R.string.forecast_title), actions.onBack) }
         item { MonthSelector(state.month, onPrevious, onNext) }
+        // "Ritmo atual" abre a tela: responde primeiro quando cada categoria deve passar do limite. Estado e leitura próprios, independentes
+        // do resto (a falha de um não derruba o outro).
+        item(key = "pace") { ForecastPaceSection(state.pace, onRetryPace, actions.onOpenDetail) }
         when (val content = state.content) {
             ForecastsContent.Loading -> item { Text(stringResource(R.string.forecast_detail_loading), style = MaterialTheme.typography.bodyLarge) }
             is ForecastsContent.Failed -> {

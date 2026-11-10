@@ -11,6 +11,8 @@ import app.accord.core.forecast.MonthForecast
 import app.accord.core.space.AlertStatus
 import app.accord.core.space.CategoryNode
 import app.accord.core.space.QueryResult
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -46,7 +48,12 @@ sealed interface ForecastsContent {
     data class Failed(val last: ForecastsData?) : ForecastsContent
 }
 
-data class ForecastsUiState(val month: YearMonth, val content: ForecastsContent = ForecastsContent.Loading)
+data class ForecastsUiState(
+    val month: YearMonth,
+    val content: ForecastsContent = ForecastsContent.Loading,
+    /** "Ritmo atual": lido à parte do resto da tela (ADR 0078, accord-6nmc); a falha de um lado não derruba o outro. */
+    val pace: ForecastPaceState = ForecastPaceState.Loading,
+)
 
 /**
  * Previsões e alertas (tela 20). O mês sobrevive à volta do detalhe e à recriação do processo; recalcular atualiza a tela e nunca dispara aviso (só mudança nos
@@ -61,6 +68,8 @@ class ForecastsViewModel(private val provider: SpaceProvider, private val saved:
     val state: StateFlow<ForecastsUiState> = _state.asStateFlow()
 
     val month: YearMonth get() = _state.value.month
+
+    private var paceJob: Job? = null
 
     init {
         load()
@@ -80,10 +89,14 @@ class ForecastsViewModel(private val provider: SpaceProvider, private val saved:
 
     fun retry() = load()
 
+    /** Tentar de novo só do Ritmo atual: não recarrega nem esconde o resto da tela. */
+    fun retryPace() = loadPace(month, keepReady = false)
+
     fun refresh() = load(keepContent = true)
 
     private fun load(keepContent: Boolean = false) {
         val request = _state.value
+        loadPace(request.month, keepReady = keepContent)
         val last = (request.content as? ForecastsContent.Ready)?.data ?: (request.content as? ForecastsContent.Failed)?.last
         if (!keepContent) _state.update { it.copy(content = last?.let(ForecastsContent::Ready) ?: ForecastsContent.Loading) }
         viewModelScope.launch {
@@ -102,6 +115,32 @@ class ForecastsViewModel(private val provider: SpaceProvider, private val saved:
                     },
                 )
             }
+        }
+    }
+
+    /**
+     * O ritmo é do mês em andamento: a data de estouro parte de hoje, então outro mês não tem projeção (sem leitura, sem zero).
+     * Só relê sem voltar ao esqueleto ([keepReady]) quando já há resultado pronto do mesmo mês; troca de mês ou falha anterior
+     * mostram a carga. Resultado de outro mês nunca é gravado.
+     */
+    private fun loadPace(month: YearMonth, keepReady: Boolean) {
+        paceJob?.cancel()
+        if (month != provider.clock.currentMonth()) {
+            _state.update { if (it.month == month) it.copy(pace = ForecastPaceState.OtherMonth) else it }
+            return
+        }
+        _state.update {
+            if (keepReady && it.month == month && it.pace is ForecastPaceState.Ready) it else it.copy(pace = ForecastPaceState.Loading)
+        }
+        paceJob = viewModelScope.launch {
+            val result = try {
+                loadForecastPace(provider, month)?.let(ForecastPaceState::Ready) ?: ForecastPaceState.Failed
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                ForecastPaceState.Failed
+            }
+            _state.update { if (it.month == month) it.copy(pace = result) else it }
         }
     }
 

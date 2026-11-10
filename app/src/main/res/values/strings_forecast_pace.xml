@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Seção "Ritmo atual" de Previsões (accord-6nmc, ADR 0078). As frases de projeção e a nota são as de strings.xml (projection_*), compartilhadas com a Início. -->
+<resources>
+    <string name="pace_title">Ritmo atual</string>
+    <string name="pace_retry_description">Tentar de novo: ritmo atual</string>
+    <string name="pace_failed">Não foi possível calcular o ritmo atual. Isso não quer dizer que as categorias estão dentro do limite.</string>
+    <string name="pace_other_month">O ritmo atual vale só para o mês em andamento. Volte a ele para ver as datas projetadas.</string>
+</resources>

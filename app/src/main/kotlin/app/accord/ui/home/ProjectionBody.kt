@@ -28,12 +28,9 @@ fun ProjectionBody(rows: List<ProjectionRow>) {
         if (rows.isEmpty()) {
             Text(stringResource(R.string.projection_none))
         } else {
-            val format = DateTimeFormatter.ofPattern("dd/MM")
             rows.take(MAX_ROWS).forEach { row ->
-                val p = row.projection
-                val line = if (p.daysFromToday == 0) stringResource(R.string.projection_today, row.categoryName)
-                else pluralStringResource(R.plurals.projection_days, p.daysFromToday, row.categoryName, p.daysFromToday, p.date.format(format))
-                val text = if (p.lowConfidence) line + " " + stringResource(R.string.projection_low_confidence) else line
+                val line = projectionPhrase(row)
+                val text = if (row.projection.lowConfidence) line + " " + stringResource(R.string.projection_low_confidence) else line
                 Row(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalAlignment = Alignment.CenterVertically) {
                     row.iconKey?.let { key -> DecorativeIcon(lucideRes(key), tint = row.colorKey?.let { categoryColor(it) } ?: MaterialTheme.colorScheme.onSurfaceVariant) }
                     Text(text, modifier = Modifier.weight(1f))
@@ -46,3 +43,16 @@ fun ProjectionBody(rows: List<ProjectionRow>) {
 }
 
 private const val MAX_ROWS = 3
+
+private val DayMonth: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM")
+
+/**
+ * A frase da projeção de uma categoria ("deve passar do limite hoje" ou "em N dias (dd/MM)"), sem a ressalva de confiança.
+ * Compartilhada pelo cartão da Início e pela seção Ritmo atual de Previsões, para as duas dizerem a mesma coisa.
+ */
+@Composable
+fun projectionPhrase(row: ProjectionRow): String {
+    val p = row.projection
+    return if (p.daysFromToday == 0) stringResource(R.string.projection_today, row.categoryName)
+    else pluralStringResource(R.plurals.projection_days, p.daysFromToday, row.categoryName, p.daysFromToday, p.date.format(DayMonth))
+}
