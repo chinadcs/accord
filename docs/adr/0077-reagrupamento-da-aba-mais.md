@@ -12,7 +12,7 @@ A aba Mais cresceu por acréscimo e hoje reúne cerca de 35 linhas em 9 seções
 (`MoreScreen.kt`): a seção Orçamento tem 13 linhas e mistura cadastros com análises P1/P2; Espaço mistura
 Contas, Cofrinhos e Sincronização; Notificações aparecem em duas seções; Segurança e Privacidade são linhas
 separadas; o Chat está dividido entre "Chats de espaços encerrados" e uma subtela sem rota; o critério de data de
-Lançamentos é um par de rádios solto. A [spec 22](../specs/design/22-mais-e-configuracoes.md) §3 (wireframe) e
+Lançamentos é um par de rádios solto. A [spec 22](../design/22-mais-e-configuracoes.md) §3 (wireframe) e
 §4 (grupos) divergem entre si e do código. Em 10/11/2026 o usuário pediu a remodelagem para um padrão de mercado
 e um agrupamento coeso, liberando fundir itens. A análise de UI/UX e a de impacto no código (agentes da sessão,
 `accord-65v8`) são análises atuais, não decisões aceitas.
@@ -71,7 +71,7 @@ linhas. Linhas P2 só aparecem na fase que as libera. "Sobre", "Ajuda" e "Termos
 
 - `accord-65v8`: pedido do usuário de 10/11/2026 e respostas às perguntas de clarificação da sessão (papel de hub, grupos de análise,
   fusões liberadas, topo mantido, nomes, linha de Notificações só de navegação, participantes só se conhecidos).
-- [Spec 22](../specs/design/22-mais-e-configuracoes.md), [ADR 0067](0067-inicio-como-abertura-e-revisar-em-mais.md),
+- [Spec 22](../design/22-mais-e-configuracoes.md), [ADR 0067](0067-inicio-como-abertura-e-revisar-em-mais.md),
   [ADR 0071](0071-ordem-das-abas-saldo-e-botao-de-registro-no-inicio.md).
 - Comparações com padrões de mercado (Nubank, Mobills, Organizze, Monarch, YNAB, Material 3/Android Settings) vêm de
   conhecimento geral do agente de UI/UX, **não** de fonte primária consultada.

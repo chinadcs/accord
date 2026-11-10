@@ -43,7 +43,7 @@ restante. Testes locais não provam validação nos Galaxy nem TalkBack manual.
 ## Fontes
 
 - `accord-jpj7`, pedido e resposta explícita do usuário nesta sessão.
-- [Spec Início](../specs/design/inicio.md), seção 11, escrita antes do código.
+- [Spec Início](../design/inicio.md), seção 11, escrita antes do código.
 - [0025](0025-projecoes-financeiras-derivadas.md) e [0067](0067-inicio-como-abertura-e-revisar-em-mais.md).
 
 ## Evidência de implementação (09/11/2026)

@@ -8,7 +8,7 @@ decision_date: 2026-11-07
 
 ## Contexto
 
-Até o S5 o Chat reconhecia uma pergunta, mas só devolvia `StandardReply.Query` com atalhos (decisão do usuário, 24/10/2026: sem número no P0). O S6 ([spec](../specs/S6-p1-analise-revisao.md), "Consulta pelo
+Até o S5 o Chat reconhecia uma pergunta, mas só devolvia `StandardReply.Query` com atalhos (decisão do usuário, 24/10/2026: sem número no P0). O S6 ([spec](../specs/plans/S6-p1-analise-revisao.md), "Consulta pelo
 Chat"; `accord-vn2.6`) quer responder "quanto gastei com alimentação em outubro?" com o mesmo número das telas. O ADR [0036](0036-interpretador-por-regras-no-p0-e-slm-opcional.md) fixa o
 interpretador por regras no P0, e o [0027](0027-contrato-estrito-da-proposta-e-historico-local-do-chat.md) fixa o contrato estrito da proposta e o histórico local. A ação nova mexe no contrato
 interpretador → validador, por isso é registrada aqui.
@@ -59,7 +59,7 @@ orçamento e mostra o critério; uma ação por mensagem; explicação do modelo
 
 ## Fontes e evidências
 
-- [Spec S6, "Consulta pelo Chat"](../specs/S6-p1-analise-revisao.md) e decisões do usuário de 07/11/2026; [ADR 0025](0025-projecoes-financeiras-derivadas.md), [0027](0027-contrato-estrito-da-proposta-e-historico-local-do-chat.md),
+- [Spec S6, "Consulta pelo Chat"](../specs/plans/S6-p1-analise-revisao.md) e decisões do usuário de 07/11/2026; [ADR 0025](0025-projecoes-financeiras-derivadas.md), [0027](0027-contrato-estrito-da-proposta-e-historico-local-do-chat.md),
   [0036](0036-interpretador-por-regras-no-p0-e-slm-opcional.md).
 - Beads `accord-vn2.6` (esta entrega), `accord-vn2.7` (validação nos aparelhos), `accord-vks2` (estabelecimento adiado); memória `decisao-24-10-consulta-chat`.
 - Implementação local: testes JVM (`ConsultTest`, `ConsultFlowTest`) e teste de Compose (`ConsultUiTest`, executado só no emulador), sem execução nos Galaxy. Não comprova qualidade do mapeamento frase → consulta nem latência.

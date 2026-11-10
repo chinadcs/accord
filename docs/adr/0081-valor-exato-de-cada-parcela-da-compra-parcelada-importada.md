@@ -31,5 +31,5 @@ usuário pediu (10/11/2026) que a importação use o valor exato de cada parcela
 ## Fontes e evidências
 
 - Pedido do usuário em 10/11/2026 (Bead `accord-n9cp`, conferência do CSV `deepseek_csv_20261110_38fc98.csv`, fora do repositório).
-- [ADR 0076](0076-compra-parcelada-em-varias-linhas-e-estorno-sem-compra.md), [ADR 0080](0080-coluna-fatura-no-csv.md), [plano §14](../plano-desenvolvimento.md).
+- [ADR 0076](0076-compra-parcelada-em-varias-linhas-e-estorno-sem-compra.md), [ADR 0080](0080-coluna-fatura-no-csv.md), [plano §14](../specs/plans/plano-desenvolvimento.md).
 - Testes JVM: `InstallmentSeriesTest` (`exactSchedule`), `CardPurchaseTest` (comando), `InstallmentSeriesImportTest` (valores 2600/2599/2599). **Não validado nos celulares.**

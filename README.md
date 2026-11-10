@@ -29,7 +29,7 @@ O Accord pode ser usado, modificado e redistribuído, inclusive comercialmente, 
 
 A barra inferior tem cinco destinos: **Lançamentos**, **Orçamento**, **Chat** (ícone Astroid, sem
 rótulo), **Revisar** e **Mais**. São 38 telas, descritas em
-`docs/specs/design` (documentação local): 28 de prioridade P0, cinco P1 e cinco P2.
+`docs/design` (documentação local): 28 de prioridade P0, cinco P1 e cinco P2.
 
 ### Núcleo (P0)
 
@@ -71,7 +71,7 @@ contraste mínimo de 4,5:1. Ícones Lucide, logos de bancos e marcas empacotados
 
 ## Regras de negócio
 
-O resumo abaixo vem do [AGENTS.md](AGENTS.md) e do plano local (`docs/plano-desenvolvimento.md`); em
+O resumo abaixo vem do [AGENTS.md](AGENTS.md) e do plano local (`docs/specs/plans/plano-desenvolvimento.md`); em
 caso de divergência, vale o plano e os [ADRs](docs/adr/README.md).
 
 **Acesso**
@@ -431,7 +431,14 @@ supabase stop
 | `persistence/` | Room, fachada local e fila de sincronização. |
 | `remote/` | Serviço fake e adaptador HTTP do Supabase. |
 | `supabase/` | Configuração local, migrações e testes pgTAP. |
-| `docs/` | ADRs e modelos de arquivos versionados; os demais documentos ficam apenas locais. |
+| `docs/design/` | Comportamento e critérios de aceite por tela. |
+| `docs/specs/plans/` | Plano geral, planos de melhorias e planos de desenvolvimento S1–S8. |
+| `docs/specs/` | Specs independentes por funcionalidade; veja o [índice e modelo](docs/specs/README.md). |
+| `docs/adr/` | Decisões estruturais, motivos e histórico. |
+
+Regra de documentação: `docs/design/` descreve o comportamento de cada tela; `docs/specs/plans/`
+guarda planos; `docs/specs/` guarda uma spec por mudança de funcionalidade. Se a mesma
+funcionalidade receber trabalho posterior, crie outra spec e preserve a anterior como histórico.
 
 - [Arquitetura e estado de implementação](ARCHITECTURE.md)
 - [Decisões de arquitetura (ADRs)](docs/adr/README.md)
@@ -439,9 +446,8 @@ supabase stop
 - [Exemplos fictícios de frases para testes](docs/modelos/frases-chat-exemplo.tsv)
 - [Instruções para trabalhar no repositório](AGENTS.md)
 
-O plano (`docs/plano-desenvolvimento.md`), as specs (`docs/specs/`) e o restante da documentação
-de trabalho são mantidos no disco, fora do versionamento. Referências a esse acervo nos ADRs e
-nas instruções locais preservam suas fontes, mas não estarão disponíveis em um clone público.
+Os documentos de trabalho são mantidos localmente, fora do versionamento. As referências nos
+ADRs e nas instruções locais preservam suas fontes, mas não estarão disponíveis em um clone público.
 
 Build e testes locais não substituem a validação em aparelhos físicos, incluindo TalkBack,
 texto ampliado, retomada e sincronização entre membros. Os modelos usados no piloto são

@@ -31,7 +31,7 @@ adiado ([ADR 0036](0036-interpretador-por-regras-no-p0-e-slm-opcional.md)).
 
 ## Fontes e evidências
 
-- [Plano §§13.1–13.2/14](../plano-desenvolvimento.md), [S1](../specs/S1-base-motor-financeiro.md)
-  e [S3](../specs/S3-chat-slm-modelo.md).
+- [Plano §§13.1–13.2/14](../specs/plans/plano-desenvolvimento.md), [S1](../specs/plans/S1-base-motor-financeiro.md)
+  e [S3](../specs/plans/S3-chat-slm-modelo.md).
 - [Motor de dinheiro](../../core/src/main/kotlin/app/accord/core/Money.kt) existente; SLM segue
   no épico aberto `accord-5kq`. A data original desta decisão não foi recuperada.

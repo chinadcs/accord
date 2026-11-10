@@ -41,5 +41,5 @@ resolve fora do app. Os testes pgTAP de permissões e de convite mudam.
 
 ## Fontes e evidências
 
-- [Plano](../plano-melhorias-2026-11.md), etapa 2; Beads `accord-0vdp`, `accord-algp`.
+- [Plano](../specs/plans/plano-melhorias-2026-11.md), etapa 2; Beads `accord-0vdp`, `accord-algp`.
 - Decisão do usuário em 08/11/2026; aceito em 08/11/2026 ("Aceito todos os ADRs"). Nada implementado.

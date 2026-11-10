@@ -51,7 +51,7 @@ o obtiver; o aviso é obrigatório.
 
 ## Fontes e evidências
 
-- [S3](../specs/S3-chat-slm-modelo.md) §§3–9 e 12; [tela 04](../specs/design/04-chat.md); decisões do usuário
+- [S3](../specs/plans/S3-chat-slm-modelo.md) §§3–9 e 12; [tela 04](../design/04-chat.md); decisões do usuário
   de 23–24/10/2026 em memórias Beads (`decisao-23-10-chat-datas`, `decisao-24-10-desfazer-chat`,
   `decisao-24-10-historico-chat`, `pendencia-chat-hibrida`).
 - Implementação em `core.chat`, `persistence` (`RoomChatStore`) e `app/ui/chat`, com testes JVM e instrumentados

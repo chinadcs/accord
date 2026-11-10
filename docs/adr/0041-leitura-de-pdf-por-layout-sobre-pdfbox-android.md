@@ -8,7 +8,7 @@ decision_date: 2026-11-03
 
 ## Contexto
 
-O [ADR 0019](0019-importacao-local-com-rastreabilidade.md) manda ler PDF bancário com texto selecionável localmente, e a [spec S4](../specs/S4-importacao-retomada-pendencias.md)
+O [ADR 0019](0019-importacao-local-com-rastreabilidade.md) manda ler PDF bancário com texto selecionável localmente, e a [spec S4](../specs/plans/S4-importacao-retomada-pendencias.md)
 (seam de leitores) deixava em aberto a **biblioteca de extração de texto** e mandava habilitar cada layout só depois de validado com amostra real. Em 03/11/2026 o usuário entregou
 uma fatura real do cartão Itaú em PDF, a primeira amostra desse tipo. O arquivo tem texto, duas colunas e totais declarados em cada seção
 ([nota técnica](../poc/leitor-pdf-fatura-itau-2026-11-03.md)).
@@ -39,7 +39,7 @@ Escolha técnica implementada e testada; aceita pelo usuário em 03/11/2026 ("Ac
 
 ## Fontes e evidências
 
-- [S4](../specs/S4-importacao-retomada-pendencias.md), [ADR 0019](0019-importacao-local-com-rastreabilidade.md), [ADR 0040](0040-lote-de-importacao-confirmado-e-confirmacao-atomica.md),
+- [S4](../specs/plans/S4-importacao-retomada-pendencias.md), [ADR 0019](0019-importacao-local-com-rastreabilidade.md), [ADR 0040](0040-lote-de-importacao-confirmado-e-confirmacao-atomica.md),
   [nota técnica](../poc/leitor-pdf-fatura-itau-2026-11-03.md). Beads `accord-c9m.6`.
 - Versões conferidas no Maven Central em 03/11/2026: `com.tom-roush:pdfbox-android` 2.0.27.0 (última, de 02/01/2023); `org.apache.pdfbox:pdfbox` 2.0.37 e 3.0.8 (a linha 3 depende de
   `java.awt`, que o Android não tem: conhecimento geral, não testado aqui; por isso a linha 2.0 é a que se usa nos dois lados).

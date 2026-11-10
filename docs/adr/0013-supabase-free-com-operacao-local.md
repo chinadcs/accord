@@ -31,6 +31,6 @@ do projeto hospedado. RPC/SDK e desenho concreto de permissões estão propostos
 
 ## Fontes e evidências
 
-- [Plano §§14/15](../plano-desenvolvimento.md), [S2](../specs/S2-acesso-espaco-sincronizacao.md).
+- [Plano §§14/15](../specs/plans/plano-desenvolvimento.md), [S2](../specs/plans/S2-acesso-espaco-sincronizacao.md).
 - Beads `accord-rsw`; [ambiente local](../../supabase/README.md) existente. Este ADR não cria
   projeto hospedado nem reverifica preços; preserva a decisão histórica, de data não recuperada.

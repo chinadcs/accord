@@ -65,8 +65,8 @@ reais de notificação do Itaú (compra aprovada no cartão, “Você enviou …
 
 - `accord-bced`: decisão do usuário de 09/11/2026 e pedido de desenvolvimento nesta sessão; depende de
   `accord-b6og` ([ADR 0067](0067-inicio-como-abertura-e-revisar-em-mais.md)) e `accord-jcd9`.
-- [Plano](../plano-desenvolvimento.md) (exclusões do escopo inicial), [18 — Pendências](../specs/design/18-pendencias.md)
-  e [22 — Mais e configurações](../specs/design/22-mais-e-configuracoes.md).
+- [Plano](../specs/plans/plano-desenvolvimento.md) (exclusões do escopo inicial), [18 — Pendências](../design/18-pendencias.md)
+  e [22 — Mais e configurações](../design/22-mais-e-configuracoes.md).
 - Implementação local em 09/11/2026: analisador em `:core` (11 testes JVM), captura e tela no app, serviço
   `BankNotificationListener`. Validada no AVD API 33: seis testes de interface e um teste com o serviço real
   recebendo notificação postada pelo shell (app escolhido gera proposta sem o texto; app não escolhido não gera nada).

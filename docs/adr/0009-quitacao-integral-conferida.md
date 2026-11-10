@@ -28,7 +28,7 @@ de derivar continuamente a condição “conferida”, reabrindo-a ao mudar comp
 
 ## Fontes e evidências
 
-- [Plano §14](../plano-desenvolvimento.md), [S1](../specs/S1-base-motor-financeiro.md).
+- [Plano §14](../specs/plans/plano-desenvolvimento.md), [S1](../specs/plans/S1-base-motor-financeiro.md).
 - Beads `accord-m5l`, `accord-8yn`; conferência manual confirmada em 23/10/2026. Data da
   decisão inicial de quitação integral não recuperada.
 - [InvoicePlanner](../../persistence/src/main/kotlin/app/accord/persistence/InvoicePlanner.kt)

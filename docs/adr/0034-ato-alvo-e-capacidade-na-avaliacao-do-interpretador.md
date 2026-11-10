@@ -62,5 +62,5 @@ congelada, extração/validação completas e posterior evidência física.
   recomendação de modelar ato/alvo/temporalidade e comparar um SLM estruturado.
 - [Desenho e protocolo](../poc/ato-alvo-v1-protocolo-2026-10-30.md), com contrato,
   contraste de desenvolvimento e critérios de avanço.
-- [Plano §13](../plano-desenvolvimento.md), [S3](../specs/S3-chat-slm-modelo.md)
-  e [Chat](../specs/design/04-chat.md). Esta proposta não muda esses contratos.
+- [Plano §13](../specs/plans/plano-desenvolvimento.md), [S3](../specs/plans/S3-chat-slm-modelo.md)
+  e [Chat](../design/04-chat.md). Esta proposta não muda esses contratos.

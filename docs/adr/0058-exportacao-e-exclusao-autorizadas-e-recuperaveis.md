@@ -49,7 +49,7 @@ jurídico segue responsabilidade do usuário, como no ADR 0054. Sem deploy hospe
 
 ## Fontes e evidências
 
-- Plano aprovado e [S8](../specs/S8-protecao-dados-conversas-cofrinhos.md), Beads `accord-0grs.3`.
+- Plano aprovado e [S8](../specs/plans/S8-protecao-dados-conversas-cofrinhos.md), Beads `accord-0grs.3`.
 - [Supabase: usuários](https://supabase.com/docs/guides/auth/managing-user-data).
 - [ANPD: direitos](https://www.gov.br/anpd/pt-br/assuntos/titular-de-dados/direito-dos-titulares).
 - Exportação (`accord-0grs.3.1`) implementada: whitelist Room, ZIP/CSVs e Mais > Privacidade,

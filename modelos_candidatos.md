@@ -1,7 +1,7 @@
 # Modelos candidatos para o SLM no aparelho
 
 Levantamento inicial de 24/10/2026, com seleção ativa refinada em 26/10/2026. São **hipóteses para a prova de conceito** (plano §13.3 e
-`docs/specs/S3-chat-slm-modelo.md`), não decisão. Modelo, motor, quantização e hospedagem
+`docs/specs/plans/S3-chat-slm-modelo.md`), não decisão. Modelo, motor, quantização e hospedagem
 continuam abertos; escolher exige ADR e aprovação do usuário. As tabelas do levantamento original
 preservam a pesquisa da época; medições posteriores têm suas condições e limites nos relatórios da PoC.
 

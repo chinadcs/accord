@@ -27,7 +27,7 @@ não garante por si só que todas as origens respeitem a entrada comum.
 
 ## Fontes e evidências
 
-- [S1 §§1–2](../specs/S1-base-motor-financeiro.md), Beads `accord-9tl.1`, `.6`, `.7`;
+- [S1 §§1–2](../specs/plans/S1-base-motor-financeiro.md), Beads `accord-9tl.1`, `.6`, `.7`;
   memória `s1-fachada-decisoes-de-implementacao`.
 - [Módulos reais](../../settings.gradle.kts) e
   [contrato](../../core/src/main/kotlin/app/accord/core/space/Contract.kt).

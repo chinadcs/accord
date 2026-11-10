@@ -47,5 +47,5 @@ esquema Room nem do protocolo: o formato é gravado como texto e o serviço não
 ## Fontes e evidências
 
 - Pedido e resposta do usuário em 03/11/2026 (acima); tarefa Beads `accord-3m7k`.
-- [Spec S4](../specs/S4-importacao-retomada-pendencias.md), seção do leitor de CSV; [guia do formato](../importacao-csv.md).
+- [Spec S4](../specs/plans/S4-importacao-retomada-pendencias.md), seção do leitor de CSV; [guia do formato](../importacao-csv.md).
 - Implementado e testado só com dados fictícios: `CsvReaderTest` (16), `ImportFileLoaderTest`, `CsvImportTest`. Nada foi exercitado em aparelho nem com CSV real de banco.

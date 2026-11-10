@@ -9,7 +9,7 @@ decision_date: 2026-11-03
 ## Contexto
 
 O [ADR 0019](0019-importacao-local-com-rastreabilidade.md) manda importar localmente, com prévia, guardar extraídos, campos originais, metadados e decisões, e não duplicar ao reimportar,
-mas não diz **onde** esse trabalho mora, **o que sincroniza** nem **como** a confirmação aplica vários efeitos sem deixar o espaço pela metade. A [spec S4](../specs/S4-importacao-retomada-pendencias.md)
+mas não diz **onde** esse trabalho mora, **o que sincroniza** nem **como** a confirmação aplica vários efeitos sem deixar o espaço pela metade. A [spec S4](../specs/plans/S4-importacao-retomada-pendencias.md)
 (seções "Extensão da fachada", "Confirmação, atomicidade e idempotência", "Sincronização") deixava essas escolhas como proposta. A tarefa `accord-c9m.3` precisou fixá-las para implementar.
 
 ## Decisão
@@ -53,7 +53,7 @@ Desenho implementado e testado localmente; aceito pelo usuário em 03/11/2026 ("
 
 ## Fontes e evidências
 
-- [S4](../specs/S4-importacao-retomada-pendencias.md), [ADR 0019](0019-importacao-local-com-rastreabilidade.md), [ADR 0022](0022-fachada-financeira-e-modulos.md), [ADR 0024](0024-protocolo-por-agregados-e-cursor.md),
+- [S4](../specs/plans/S4-importacao-retomada-pendencias.md), [ADR 0019](0019-importacao-local-com-rastreabilidade.md), [ADR 0022](0022-fachada-financeira-e-modulos.md), [ADR 0024](0024-protocolo-por-agregados-e-cursor.md),
   [ADR 0037](0037-credito-de-investimento-e-renda-na-importacao.md), [ADR 0038](0038-categorias-de-renda.md). Beads `accord-c9m.3`.
 - Aceite: usuário, 03/11/2026. O aceite não prova serviço hospedado nem validação nos dois celulares.
 - Implementação: `core.importing.ImportSession`/`ImportSteps`, `persistence.RoomImportSession`/`ImportEvaluator`/`ImportPlanner`, esquema Room 6, migração Supabase local. Testes JVM do núcleo e da

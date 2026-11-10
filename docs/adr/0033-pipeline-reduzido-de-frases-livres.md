@@ -61,7 +61,7 @@ de qualidade do produto nem medição no segundo aparelho.
 
 - Autorização do usuário em 26/10/2026: desenhar pipeline e critérios antes de escolher modelo;
   manter fake até autorização de integração. Beads `accord-q12.2`.
-- [S3](../specs/S3-chat-slm-modelo.md), [Chat](../specs/design/04-chat.md),
+- [S3](../specs/plans/S3-chat-slm-modelo.md), [Chat](../design/04-chat.md),
   [piloto](../poc/piloto-classificacao-assistida.md) e [Etapa 0](../poc/etapa-0.md).
 - Portas existentes em `core.chat`/`core.model`, coordenador e adaptador debug do fake inspecionados
   nesta entrega. Nenhum código de motor alterado e nenhuma nova rodada em aparelho executada.

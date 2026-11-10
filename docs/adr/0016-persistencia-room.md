@@ -26,7 +26,7 @@ durabilidade em aparelho ou correção do protocolo remoto por si só.
 
 ## Fontes e evidências
 
-- [S1](../specs/S1-base-motor-financeiro.md); Beads `accord-9tl.6` e memória
+- [S1](../specs/plans/S1-base-motor-financeiro.md); Beads `accord-9tl.6` e memória
   `decisao-24-10-persistencia-room`, que registra a confirmação do usuário.
 - [Build da persistência](../../persistence/build.gradle.kts) e
   [AccordDatabase](../../persistence/src/main/kotlin/app/accord/persistence/AccordDatabase.kt).

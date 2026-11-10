@@ -37,7 +37,7 @@ no aparelho; pesos e cortes não mudam automaticamente com votos.
 
 ## Fontes e evidências
 
-- Beads `accord-8q5`; [tela 04](../specs/design/04-chat.md), [S3 §14](../specs/S3-chat-slm-modelo.md).
+- Beads `accord-8q5`; [tela 04](../design/04-chat.md), [S3 §14](../specs/plans/S3-chat-slm-modelo.md).
 - Implementado em 08/11/2026 (`ChatFeedbackRow`, `RoomChatStore`, `ChatCoordinator.rate`, joinha em
   `ChatScreen`): `ChatFeedbackTest` (6, JVM) e `ChatFeedbackUiTest` (2, emulador). Não validado nos
   dois celulares nem com TalkBack.

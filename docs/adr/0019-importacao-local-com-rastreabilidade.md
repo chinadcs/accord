@@ -28,6 +28,6 @@ EUR e FITID repetido é evidência de cautela, não amostra de compatibilidade I
 
 ## Fontes e evidências
 
-- [Plano §14](../plano-desenvolvimento.md), [S4](../specs/S4-importacao-retomada-pendencias.md).
+- [Plano §14](../specs/plans/plano-desenvolvimento.md), [S4](../specs/plans/S4-importacao-retomada-pendencias.md).
 - Beads `accord-c9m` continua aberto. Não há parser/compatibilidade comprovado nesta entrega;
   a data original do conjunto de decisões não foi recuperada.

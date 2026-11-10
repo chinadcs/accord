@@ -45,6 +45,6 @@ em Mais, indicadores de pendência) continua valendo.
 - Em 10/11/2026 o [ADR 0077](0077-reagrupamento-da-aba-mais.md) substituiu apenas a composição de Mais (a linha de
   sincronização passa a ter uma única entrada); o botão "Registrar manualmente" e a linha de sincronização em Mais continuam.
 - `accord-wecg`: decisão do usuário de 09/11/2026. [ADR 0067](0067-inicio-como-abertura-e-revisar-em-mais.md),
-  [Início](../specs/design/inicio.md), [07 — Lançamentos](../specs/design/07-lancamentos.md).
+  [Início](../design/inicio.md), [07 — Lançamentos](../design/07-lancamentos.md).
 - Em 10/11/2026 o [ADR 0078](0078-remodelagem-da-tela-inicio.md) (aceito, `accord-4d5m`) substitui apenas a composição do corpo
   da Início (faixa de atenção, margem e previsão resumidas); abertura, ordem da barra, Saldo total, botão flutuante e sincronização só em Mais continuam.

@@ -55,7 +55,7 @@ no servidor com push já estava fora do escopo por decisão de 23/10/2026.
 
 ## Fontes e evidências
 
-- [S5 — Política de avisos e Coordenação entre aparelhos](../specs/S5-previsoes-alertas.md), [ADR 0020](0020-alertas-semanais-offline-primeiro.md), [ADR 0017](0017-banco-fila-atomicos-e-idempotencia.md),
+- [S5 — Política de avisos e Coordenação entre aparelhos](../specs/plans/S5-previsoes-alertas.md), [ADR 0020](0020-alertas-semanais-offline-primeiro.md), [ADR 0017](0017-banco-fila-atomicos-e-idempotencia.md),
   [ADR 0018](0018-conflitos-com-escolha-explicita.md), [ADR 0024](0024-protocolo-por-agregados-e-cursor.md), [ADR 0025](0025-projecoes-financeiras-derivadas.md), [ADR 0040](0040-lote-de-importacao-confirmado-e-confirmacao-atomica.md)
   (precedente de um agregado novo em `space_entities`). Beads `accord-j0s.4`; memória `s5-decisoes-03-11`.
 - Mecânica atual verificada em `supabase/migrations/20261024120000_espaco_e_sincronizacao.sql` (`apply_operation`: criação com base nula sobre entidade existente devolve conflito) e em

@@ -29,7 +29,7 @@ rastreável. Desfazer não é ampliado além do que as fontes e a implementaçã
 
 ## Fontes e evidências
 
-- [Plano §14](../plano-desenvolvimento.md), [S1](../specs/S1-base-motor-financeiro.md).
+- [Plano §14](../specs/plans/plano-desenvolvimento.md), [S1](../specs/plans/S1-base-motor-financeiro.md).
 - Beads `accord-i7h`, `accord-ea5`, `accord-4ia`, `accord-fpz`, `accord-7p3`, `accord-8iq`, `accord-7y3`.
 - [CorrectionPlanner](../../persistence/src/main/kotlin/app/accord/persistence/CorrectionPlanner.kt)
   e [DeletePlanner](../../persistence/src/main/kotlin/app/accord/persistence/DeletePlanner.kt)

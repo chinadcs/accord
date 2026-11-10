@@ -105,7 +105,7 @@ para o sugestor; o fake do Chat continua exclusivo do build debug (`-Paccord.cat
 - [Plano e operação do piloto](../poc/piloto-classificacao-assistida.md), tarefas `accord-f5z` e `accord-6ec`.
 - [Validação física da UI no S20 FE](../poc/ui-classificacao-assistida-s20fe.md), `accord-6ak.2`:
   testes e capturas em instalação isolada; TalkBack manual permanece pendente. Não mede o SLM.
-- [S3](../specs/S3-chat-slm-modelo.md), [Chat](../specs/design/04-chat.md) e [Revisar](../specs/design/18-pendencias.md).
+- [S3](../specs/plans/S3-chat-slm-modelo.md), [Chat](../design/04-chat.md) e [Revisar](../design/18-pendencias.md).
 - `accord-q12` continua aberto para o motor real; `accord-8q5` mantém o feedback completo.
 - Este aceite se limita ao piloto com fake. O [ADR 0030](0030-interpretacao-local-em-etapas-na-poc.md)
   permanece proposto para o pipeline em etapas e não foi aceito integralmente por esta decisão.

@@ -37,7 +37,7 @@ do estado precisa cobrir. Verificar se o protocolo recusa versão antiga de clie
 
 ## Fontes e evidências
 
-- [Plano](../plano-melhorias-2026-11.md), etapa 5; Beads `accord-k9zy` (depende de `accord-ihok`).
+- [Plano](../specs/plans/plano-melhorias-2026-11.md), etapa 5; Beads `accord-k9zy` (depende de `accord-ihok`).
 - Decisão do usuário em 08/11/2026; aceito em 08/11/2026 ("Aceito todos os ADRs").
 
 ## Implementação local — 08/11/2026

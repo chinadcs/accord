@@ -8,7 +8,7 @@ decision_date: 2026-11-09
 
 ## Contexto
 
-Na importação, todo crédito sem chave conhecida virava a dúvida "crédito a classificar: estorno ou recebimento?" ([spec S4](../specs/S4-importacao-retomada-pendencias.md),
+Na importação, todo crédito sem chave conhecida virava a dúvida "crédito a classificar: estorno ou recebimento?" ([spec S4](../specs/plans/S4-importacao-retomada-pendencias.md),
 regra 12): a pessoa escolhia a categoria de renda ou a compra estornada, e o [ADR 0037](0037-credito-de-investimento-e-renda-na-importacao.md) fazia o crédito com
 palavra de investimento (resgate, rendimento) virar renda recebida. Isso faz sentido numa conta, mas num documento de cartão não há renda: o que entra é devolução,
 cancelamento ou ajuste de uma compra. Em 09/11/2026 o usuário decidiu: "todo positivo na importação de cartão é estorno".
@@ -35,7 +35,7 @@ cancelamento ou ajuste de uma compra. Em 09/11/2026 o usuário decidiu: "todo po
 
 ## Fontes e evidências
 
-- [Spec S4](../specs/S4-importacao-retomada-pendencias.md) regra 12; [ADR 0037](0037-credito-de-investimento-e-renda-na-importacao.md); [ADR 0073](0073-parcela-sem-compra-vira-a-compra-parcelada-inteira.md).
+- [Spec S4](../specs/plans/S4-importacao-retomada-pendencias.md) regra 12; [ADR 0037](0037-credito-de-investimento-e-renda-na-importacao.md); [ADR 0073](0073-parcela-sem-compra-vira-a-compra-parcelada-inteira.md).
 - Beads `accord-96km`. Decisão do usuário em 09/11/2026.
 - Implementado e testado no JVM (`CardCreditIsRefundTest`, `ImportPendingsTest`) e num teste instrumentado no emulador (`CardCreditFlowTest`); **não validado nos celulares**
   nem com fatura real (o único PDF real de cartão não traz créditos de estorno conhecidos).

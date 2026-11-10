@@ -8,7 +8,7 @@ decision_date: null
 
 ## Contexto
 
-A [spec S4](../specs/S4-importacao-retomada-pendencias.md) tratava um documento de cartão como **uma fatura só**: a pessoa precisava informar o mês de vencimento
+A [spec S4](../specs/plans/S4-importacao-retomada-pendencias.md) tratava um documento de cartão como **uma fatura só**: a pessoa precisava informar o mês de vencimento
 (a tela sugeria um) e todo lançamento novo recebia essa fatura; sem ela, a confirmação era bloqueada (`InvoiceUndefined`). Isso serve a um PDF ou OFX que é a
 fatura do banco, mas erra quando o arquivo reúne compras de mais de uma fatura, como o [CSV do Accord](0042-csv-no-formato-proprio-do-accord.md), e a sugestão
 "mês seguinte ao fim do período" era um palpite. Em 03/11/2026 o usuário pediu: "Na importação adequar corretamente a fatura baseada na data" e "Selecionar
@@ -36,5 +36,5 @@ lançamento já tem. O resumo de confirmação lista os meses das faturas de cad
 ## Fontes e evidências
 
 - Pedido do usuário em 03/11/2026 (acima); tarefa Beads `accord-lzg1`.
-- [S4 §8](../specs/S4-importacao-retomada-pendencias.md) (fatura estimada, janela "a conferir", confirmado em 23/10/2026) e `core/CardCycle.kt`.
+- [S4 §8](../specs/plans/S4-importacao-retomada-pendencias.md) (fatura estimada, janela "a conferir", confirmado em 23/10/2026) e `core/CardCycle.kt`.
 - Testado em JVM (`ImportSessionTest`: por data, fatura única que prevalece) e na UI no emulador. Nenhum arquivo real de cartão foi usado e nada foi medido nos dois celulares.

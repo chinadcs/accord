@@ -26,6 +26,6 @@ os casos; classificar não cria uma segunda despesa e rascunho não pode aparece
 
 ## Fontes e evidências
 
-- [Plano §14](../plano-desenvolvimento.md), [S1](../specs/S1-base-motor-financeiro.md),
-  [S3](../specs/S3-chat-slm-modelo.md); memória Beads `pendencia-chat-hibrida`.
+- [Plano §14](../specs/plans/plano-desenvolvimento.md), [S1](../specs/plans/S1-base-motor-financeiro.md),
+  [S3](../specs/plans/S3-chat-slm-modelo.md); memória Beads `pendencia-chat-hibrida`.
 - Contratos financeiros existem em S1; fluxo completo do Chat continua em `accord-5kq`.

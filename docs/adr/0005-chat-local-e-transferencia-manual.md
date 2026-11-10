@@ -29,7 +29,7 @@ Retenção automática de 90 dias permanece evolução, não configuração apro
 
 ## Fontes e evidências
 
-- [Plano §14](../plano-desenvolvimento.md), [S3](../specs/S3-chat-slm-modelo.md).
+- [Plano §14](../specs/plans/plano-desenvolvimento.md), [S3](../specs/plans/S3-chat-slm-modelo.md).
 - Beads `accord-8ur`, `accord-yzr`, `accord-h7t`, `accord-or4`; memória
   `decisao-24-10-historico-chat`. A decisão inicial de Chat local antecede esses complementos.
 - Histórico/exportação ainda pertencem a S3; `accord-pzv` guarda a evolução de retenção.

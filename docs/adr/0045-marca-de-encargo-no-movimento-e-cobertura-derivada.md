@@ -33,5 +33,5 @@ Proposta de implementação (análise atual, ainda não aceita pelo usuário):
 
 ## Fontes e evidências
 
-- `accord-j0s.7`; [spec S5](../specs/S5-previsoes-alertas.md) e [spec S4, "Cobertura e período conferido"](../specs/S4-importacao-retomada-pendencias.md).
+- `accord-j0s.7`; [spec S5](../specs/plans/S5-previsoes-alertas.md) e [spec S4, "Cobertura e período conferido"](../specs/plans/S4-importacao-retomada-pendencias.md).
 - Implementado e testado só na JVM (`ForecastTest`, `SyncStoreTest`); sem validação nos aparelhos.

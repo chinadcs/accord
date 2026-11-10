@@ -27,7 +27,7 @@ de assinaturas continua P1, sem virar pré-requisito oculto.
 
 ## Fontes e evidências
 
-- [Plano §14](../plano-desenvolvimento.md), [S1 §7.6](../specs/S1-base-motor-financeiro.md).
+- [Plano §14](../specs/plans/plano-desenvolvimento.md), [S1 §7.6](../specs/plans/S1-base-motor-financeiro.md).
 - Beads `accord-hcp`, `accord-c9f`, `accord-q1i`; memória `decisao-23-10-excecoes-recorrencia`.
 - [RecurrenceSeries](../../core/src/main/kotlin/app/accord/core/RecurrenceSeries.kt) existente;
   este registro não amplia o desfazer de edições de série.

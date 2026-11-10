@@ -35,7 +35,7 @@ entre a compra anulada e o lançamento que a substituiu.
 
 ## Fontes e evidências
 
-- [S3](../specs/S3-chat-slm-modelo.md) §8 e cenário 13; memória `decisao-23-10-debito-dinheiro`.
+- [S3](../specs/plans/S3-chat-slm-modelo.md) §8 e cenário 13; memória `decisao-23-10-debito-dinheiro`.
 - Implementação em `PaymentMethodPlanner` com testes JVM da fachada. Aceito em 24/10/2026 (ver "Aceite").
 
 ## Aceite

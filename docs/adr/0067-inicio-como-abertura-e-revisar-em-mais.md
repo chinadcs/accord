@@ -59,8 +59,8 @@ Galaxy e TalkBack continuam em `accord-4uu2`. Painéis financeiros não integram
 ## Fontes
 
 - `accord-b6og`: decisão do usuário de 09/11/2026 e pedido de desenvolvimento nesta sessão.
-- Acervo local: [índice](../specs/design/README.md), [Início](../specs/design/inicio.md),
-  [Espaço](../specs/design/02-espaco-do-casal.md), [Chat](../specs/design/04-chat.md),
-  [Lançamentos](../specs/design/07-lancamentos.md), [Revisar](../specs/design/14-retomar-controle.md)
-  e [Mais](../specs/design/22-mais-e-configuracoes.md).
+- Acervo local: [índice](../design/README.md), [Início](../design/inicio.md),
+  [Espaço](../design/02-espaco-do-casal.md), [Chat](../design/04-chat.md),
+  [Lançamentos](../design/07-lancamentos.md), [Revisar](../design/14-retomar-controle.md)
+  e [Mais](../design/22-mais-e-configuracoes.md).
 - Em 10/11/2026 o [ADR 0078](0078-remodelagem-da-tela-inicio.md) (aceito, `accord-4d5m`) reorganiza só o corpo da Início; Início como abertura e Revisar em Mais continuam.

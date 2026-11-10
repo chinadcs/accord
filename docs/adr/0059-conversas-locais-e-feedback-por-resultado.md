@@ -40,7 +40,7 @@ não usada como contexto de outra conversa. O SLM opcional segue adiado (ADR 003
 
 ## Fontes e evidências
 
-- [S8](../specs/S8-protecao-dados-conversas-cofrinhos.md), Beads `accord-0grs.4`.
+- [S8](../specs/plans/S8-protecao-dados-conversas-cofrinhos.md), Beads `accord-0grs.4`.
 - Decisões na conversa do plano, antes da autorização de implementação.
 - Implementado em 09/11/2026: Room 21, seleção/nome/rascunho/posição por conversa, contexto
   isolado, exclusão serializada com a fila e votos de múltiplos motivos vinculados ao resultado.

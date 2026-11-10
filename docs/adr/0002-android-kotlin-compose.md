@@ -26,7 +26,7 @@ Uma futura mudança de plataforma exige nova decisão.
 
 ## Fontes e evidências
 
-- [Plano §§11/14](../plano-desenvolvimento.md) e [S1](../specs/S1-base-motor-financeiro.md).
+- [Plano §§11/14](../specs/plans/plano-desenvolvimento.md) e [S1](../specs/plans/S1-base-motor-financeiro.md).
 - Há [módulo Android](../../app/build.gradle.kts); S1 está fechado em `accord-9tl`, com validações
   restantes em `accord-abv`. Não foram executados testes de produto nesta documentação.
 - Registro retrospectivo; a data exata da aprovação original não foi recuperada.

@@ -36,7 +36,7 @@ sem conta não entra em nenhum saldo. Estado novo entra como campo no JSON opaco
 
 ## Fontes e evidências
 
-- [Plano das onze melhorias](../plano-melhorias-2026-11.md), etapa 4; Beads `accord-ihok`.
+- [Plano das onze melhorias](../specs/plans/plano-melhorias-2026-11.md), etapa 4; Beads `accord-ihok`.
 - Decisão do usuário em conversa em 08/11/2026; Aceito pelo usuário em 08/11/2026 ("Aceito todos os ADRs").
 - Relacionados: [0025](0025-projecoes-financeiras-derivadas.md), [0026](0026-configuracao-inicial-e-conta-unica.md),
   [0029](0029-troca-de-forma-de-pagamento-como-comando.md).

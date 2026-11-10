@@ -31,7 +31,7 @@ Compatibilidade API 29 usa setDeviceCredentialAllowed; API 30+ usa allowedAuthen
 
 ## Fontes e evidências
 
-- [S8](../specs/S8-protecao-dados-conversas-cofrinhos.md), Beads `accord-0grs.1`.
+- [S8](../specs/plans/S8-protecao-dados-conversas-cofrinhos.md), Beads `accord-0grs.1`.
 - Plano aprovado pelo usuário e pedido de implementação nesta sessão.
 - [Android: biometria](https://developer.android.com/identity/sign-in/biometric-auth).
 - Implementado em `app.accord.security` e na entrada `MainActivity`, com configuração em Mais.

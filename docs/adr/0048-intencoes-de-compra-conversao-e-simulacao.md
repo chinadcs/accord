@@ -8,7 +8,7 @@ decision_date: 2026-11-07
 
 ## Contexto
 
-O [S7](../specs/S7-p2-intencoes-simulacao-pistas.md) (telas 34–36) pede uma lista compartilhada de intenções de compra, um simulador que não altera o orçamento e uma conversão explícita da intenção
+O [S7](../specs/plans/S7-p2-intencoes-simulacao-pistas.md) (telas 34–36) pede uma lista compartilhada de intenções de compra, um simulador que não altera o orçamento e uma conversão explícita da intenção
 em compromisso que não pode virar dois compromissos, nem quando cada celular converte offline. O spec deixa perguntas em aberto que moldam o esquema (excluir ou arquivar intenção, desfazer o
 compromisso convertido, histórico de revisões, convivência de versões do aplicativo). Nada disso existe no código: não há entidade de intenção, vínculo, origem de conversão, fase P2 nem
 função pura de cronograma em `:core` (o cálculo de parcelas está embutido em `RoomFinanceSpace.planCardPurchase`).
@@ -64,8 +64,8 @@ O usuário aceitou esta decisão em 07/11/2026, sem alterações, incluindo o pa
 
 ## Fontes e evidências
 
-- [Spec S7](../specs/S7-p2-intencoes-simulacao-pistas.md) (modelo, contrato de sincronização, perguntas abertas 1–7), telas [34](../specs/design/34-intencoes-de-compra.md),
-  [35](../specs/design/35-detalhe-intencao.md), [36](../specs/design/36-simulador-de-compra.md); plano §§6 (P2), 13.6 e 14.
+- [Spec S7](../specs/plans/S7-p2-intencoes-simulacao-pistas.md) (modelo, contrato de sincronização, perguntas abertas 1–7), telas [34](../design/34-intencoes-de-compra.md),
+  [35](../design/35-detalhe-intencao.md), [36](../design/36-simulador-de-compra.md); plano §§6 (P2), 13.6 e 14.
 - [ADR 0024](0024-protocolo-por-agregados-e-cursor.md), [0038](0038-categorias-de-renda.md), [0044](0044-evento-de-aviso-imutavel-e-criacao-por-chave.md), [0047](0047-associacao-de-icone-de-marca-ao-lancamento.md).
 - Beads: epic accord-9y6; este ADR é accord-9y6.1. Padrão de agregado conferido em `ed70bd5` (IconAssociation).
 - **Aceito pelo usuário em 07/11/2026.** Implementado até aqui: simulador e fase P2 (accord-9y6.2 a .5). Intenções, vínculo e conversão (accord-9y6.6 a .9) ainda não existem.

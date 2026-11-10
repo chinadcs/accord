@@ -9,7 +9,7 @@ decision_date: 2026-11-03
 ## Contexto
 
 Hoje a tela de categorias só cria, renomeia, reordena e move subcategoria; o texto da tela diz
-"não há exclusão" e a [spec 23](../specs/design/23-categorias-e-subcategorias.md) manda não
+"não há exclusão" e a [spec 23](../design/23-categorias-e-subcategorias.md) manda não
 adicionar exclusão destrutiva nem migração financeira automática **como funcionalidade
 presumida**. Em 02/11/2026 o usuário pediu: tela de edição de categoria com ícone e cor (a
 subcategoria herda a cor do pai, sem escolher), remover categoria e **mover os lançamentos** de
@@ -83,7 +83,7 @@ exclusão" da spec 23 e do texto da tela, que devem ser atualizados com a implem
 ## Fontes e evidências
 
 - Pedido e escolha do ponto 5 pelo usuário em 02/11/2026. Aceite do ADR pelo usuário em 03/11/2026 ("Aceito os ADRS 39 e 40"); o ponto 8 foi superado pelo ADR 0038 (nota acima).
-- [Spec 23](../specs/design/23-categorias-e-subcategorias.md), [S1](../specs/S1-base-motor-financeiro.md)
+- [Spec 23](../design/23-categorias-e-subcategorias.md), [S1](../specs/plans/S1-base-motor-financeiro.md)
   ("sem exclusão destrutiva"), [ADR 0010](0010-identidade-da-compra-parcelada.md),
   [0012](0012-limites-com-divisao-e-vigencia.md), [0017](0017-banco-fila-atomicos-e-idempotencia.md),
   [0018](0018-conflitos-com-escolha-explicita.md), [0024](0024-protocolo-por-agregados-e-cursor.md).
@@ -93,3 +93,5 @@ exclusão" da spec 23 e do texto da tela, que devem ser atualizados com a implem
   Decisões de implementação não previstas acima: a cor é um índice de uma paleta fixa de 12 (não cor livre); a remoção exige mover todos os lançamentos; limites nunca são transferidos, e remover categoria com limite definido exige confirmação para descartá-lo (a escolha mês a mês do `MoveSubcategory` não foi replicada); um lançamento excluído que aponta para a categoria removida volta a "a classificar" se for restaurado; o desfazer de uma correção cuja categoria anterior foi removida também deixa o lançamento "a classificar".
   Atualização de 09/11/2026 (só apresentação, sem mudar regra): "Renomear" e "Editar" viraram um painel único que sobe de baixo (`CategoryEditSheet`, nome, cor, ícone e Salvar fixo), aberto pelo ícone de caneta; a antiga tela `CategoryEditScreen` e sua rota deixaram de existir. A tela 23 ganhou as abas Despesa e Renda (a aba Renda edita categorias de renda, [ADR 0038](0038-categorias-de-renda.md) ponto 8). Mover lançamentos e remover continuam em tela própria, abertos pelo painel (só na aba Despesa).
   Testes: `CategoryEditMoveRemoveTest` (16), `SyncEngineTest` (3 novos: lançamento tardio, remoção recusada e reenviada com os lançamentos novos, conflito único), contrato `SpaceServiceContract` (4 novos, no fake e no Supabase local), pgTAP `03_categoria_removida` (9), `CategoryEditFlowTest` (2, emulador). Não verificado: Galaxy S20 FE e S23 FE, conflito real entre os dois celulares, tamanho de envio de uma movimentação muito grande.
+
+  Atualização de 10/11/2026 (só apresentação e vocabulário, sem mudar regra): o [ADR 0084](0084-remodelagem-da-tela-categorias.md) (aceito, não implementado) renomeia "Mover lançamentos" para "Reclassificar lançamentos" e move essa ação e "Remover categoria" do painel de edição para o menu ⋮ da linha. A operação, os alcances, a exigência de reclassificar antes de remover e a regra de limites permanecem as deste ADR.

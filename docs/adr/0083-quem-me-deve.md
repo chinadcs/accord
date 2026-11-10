@@ -8,7 +8,7 @@ decision_date: 2026-11-10
 
 ## Contexto
 
-O escopo inicial deixou de fora "reembolsos com terceiros" ([plano §2 e §10](../plano-desenvolvimento.md), `AGENTS.md`). Em 10/11/2026 o usuário pediu a feature **Quem me deve** (devedores): valores que ele já planejou receber de uma pessoa,
+O escopo inicial deixou de fora "reembolsos com terceiros" ([plano §2 e §10](../specs/plans/plano-desenvolvimento.md), `AGENTS.md`). Em 10/11/2026 o usuário pediu a feature **Quem me deve** (devedores): valores que ele já planejou receber de uma pessoa,
 com valor, conta que recebe, categoria de renda, nome de quem paga e cronograma de recebimentos parcelável com recebimento manual, mais um switch "O dinheiro não saiu da minha conta" (venda, racha de conta ou saída anterior ao app).
 Na criação de despesa, um switch "Alguém me deve isso" leva ao registro de valor a receber, e a tela de valor a receber mostra o mesmo switch. Na prática, cria-se a saída e planejam-se as rendas previstas.
 A tela principal mostra o total a receber e uma lista de devedores; o detalhe mostra o que está em aberto, os lançamentos e o histórico, com os botões **Recebi** e **Remarcar**. Em 10/11/2026 o usuário também pediu uma opção, por valor a receber,
@@ -43,5 +43,5 @@ para **contar como despesa e renda**; o padrão é não contar. Este ADR revisa 
 ## Fontes e evidências
 
 - Pedido e imagens de referência do usuário em 10/11/2026; decisões: não conta como gasto por padrão, opção para contar, entidade Devedor, recebimentos fora da renda do mês por padrão. Beads `accord-oldt` (B1–B5).
-- Plano de implementação em `C:\Users\Danpz\.claude\plans\planeje-adicionar-sub-categorias-de-melodic-valiant.md`. Spec local `docs/specs/design/39-quem-me-deve.md`.
+- Plano de implementação em `C:\Users\Danpz\.claude\plans\planeje-adicionar-sub-categorias-de-melodic-valiant.md`. Spec local `docs/design/39-quem-me-deve.md`.
 - Aceite: **usuário, em 10/11/2026** ("Aceito o ADR, e vamos para o próximo passo"). Implementado até aqui (B2): `ReceivablePlanner`, tabelas `debtor`/`receivable` e colunas `receivableId` (Room 25), `BalanceReader`, `BudgetQueries`, `UndoPlanner`, `EntityStates`/`SyncStore`, migração Supabase e pgTAP `16_quem_me_deve` (só no Supabase **local**); testes `ReceivableTest` (19), `ReceivableSyncTest` (4) e dois casos no contrato do serviço (fake e local). Telas (B3): lista, detalhe, formulário e Recebi/Remarcar/editar cronograma/remover recebimento; switch "Alguém me deve isso" no Registrar (Pix e débito) e linha "Recebimentos de devedores" em Rendas (B4); testes `ReceivablesFlowTest` (4) e um caso novo no `RegisterFlowTest`, só no emulador. Não implementado: a saída que só reduz o saldo como linha em Lançamentos e os previstos de devedores na previsão do Início (ficam fora da renda do mês e o fluxo de caixa ainda não os soma). Nenhuma medição ou validação nos aparelhos; migração **não aplicada** no serviço hospedado.

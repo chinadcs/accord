@@ -29,7 +29,7 @@ indicador negativo e a regra derivada de conferência antes de tratá-los como c
 
 ## Fontes e evidências
 
-- [S1 §§7.3–7.4](../specs/S1-base-motor-financeiro.md); memória Beads
+- [S1 §§7.3–7.4](../specs/plans/S1-base-motor-financeiro.md); memória Beads
   `s1-fachada-decisoes-de-implementacao` e `decisao-23-10-pago-liquido`.
 - [RoomFinanceSpace](../../persistence/src/main/kotlin/app/accord/persistence/RoomFinanceSpace.kt)
   e [EntryQueries](../../persistence/src/main/kotlin/app/accord/persistence/EntryQueries.kt) existem.

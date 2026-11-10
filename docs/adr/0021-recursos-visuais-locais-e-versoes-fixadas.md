@@ -28,7 +28,7 @@ conteúdo distribuído; revisão visual nos dois celulares continua necessária.
 
 ## Fontes e evidências
 
-- [Plano §16](../plano-desenvolvimento.md), [tokens](../design-tokens.md),
+- [Plano §16](../specs/plans/plano-desenvolvimento.md), [tokens](../design-tokens.md),
   [ícones](../icones-categorias.md); Beads `accord-k94`, `accord-67e`, `accord-oky`.
 - [Catálogo local](../../app/src/main/assets/banks/catalog.tsv) e
   [versões do build](../../gradle/libs.versions.toml) existem; pendências visuais em `accord-abv`.

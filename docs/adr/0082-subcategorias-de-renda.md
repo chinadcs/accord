@@ -46,7 +46,7 @@ Substitui, no [ADR 0038](0038-categorias-de-renda.md), só a frase "Sem subcateg
 ## Fontes e evidências
 
 - Pedido do usuário em 10/11/2026; decisões da sessão: só adicionar o que falta, sem renomear. Plano em Beads `accord-mekm` (A1–A3).
-- [ADR 0038](0038-categorias-de-renda.md), [ADR 0039](0039-edicao-movimentacao-e-remocao-de-categorias.md), specs [23](../specs/design/23-categorias-e-subcategorias.md) e [28](../specs/design/28-rendas.md).
+- [ADR 0038](0038-categorias-de-renda.md), [ADR 0039](0039-edicao-movimentacao-e-remocao-de-categorias.md), specs [23](../design/23-categorias-e-subcategorias.md) e [28](../design/28-rendas.md).
 - Implementado até aqui (A1): `IncomeCategorySeed`, `IncomeCategoryNode.parentId`, `CreateIncomeCategory`, `IncomePlanner`, semeadura em `RoomFinanceSpace`, `EntityStates`, `AutoMigration(23, 24)`;
   `IncomeCategoryTest` (14 testes JVM).
 - Implementado na A3: aba Renda de Categorias com principais expansíveis, "Nova subcategoria" e edição (subcategoria na cor da principal); seletor de dois níveis (Registrar, Editar lançamento, Pendências da importação) com escolha do pai ao criar;

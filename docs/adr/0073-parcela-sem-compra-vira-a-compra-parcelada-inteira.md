@@ -9,7 +9,7 @@ decision_date: 2026-11-09
 ## Contexto
 
 Na importação de um documento de cartão, a linha `n/N` que não casa com nenhuma compra parcelada registrada virava a dúvida "parcela de compra não
-registrada" ([spec S4](../specs/S4-importacao-retomada-pendencias.md), regra 9), sem ação na tela 19: o texto mandava abrir "Cartão e faturas", onde a compra
+registrada" ([spec S4](../specs/plans/S4-importacao-retomada-pendencias.md), regra 9), sem ação na tela 19: o texto mandava abrir "Cartão e faturas", onde a compra
 não se cadastra. A spec previa o registro manual pré-preenchido e deixava aberta (pergunta 3) a possibilidade de a linha virar compra parcelada, com total e
 quantidade confirmados pela pessoa. O modelo guarda uma compra parcelada com as parcelas numeradas de 1 a N (`installment`, chave `purchaseId + number`), e o
 deslocamento, o cancelamento e o total da compra supõem essa numeração. Em 09/11/2026 o usuário pediu para tratar esse caso (compra feita antes do app, já no
@@ -41,7 +41,7 @@ meio do parcelamento) e, perguntado sobre as parcelas anteriores à da linha, es
 
 ## Fontes e evidências
 
-- [Spec S4](../specs/S4-importacao-retomada-pendencias.md) regra 9 e pergunta aberta 3; [ADR 0043](0043-fatura-do-cartao-importado-pela-data-da-compra.md).
+- [Spec S4](../specs/plans/S4-importacao-retomada-pendencias.md) regra 9 e pergunta aberta 3; [ADR 0043](0043-fatura-do-cartao-importado-pela-data-da-compra.md).
 - Beads `accord-z724` (esta decisão) e `accord-c9m`. Aceite do usuário em 09/11/2026 (escolha da opção "lançar todas as N, nos meses antigos").
 - Implementado e testado no JVM (`PurchaseFromLineTest`, `ImportPendingsTest`) e num teste instrumentado no emulador (`InstallmentPurchaseFlowTest`); **não validado
   nos celulares** nem com fatura real do Itaú.

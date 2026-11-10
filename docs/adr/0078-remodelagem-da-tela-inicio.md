@@ -21,7 +21,7 @@ Revisar) e um espaçador fixo de 72 dp. Problemas observados no código:
 - Margem e Fluxo escrevem valores dentro de frases, sem `amountRow` nem alinhamento; só o saldo tem hierarquia numérica.
 - Só a projeção usa ícones; não há nenhuma visualização gráfica.
 - Até seis "Tentar de novo" podem aparecer juntos; cada refresh regrava `Loading` em quatro painéis e causa salto de altura.
-- A [spec da Início](../specs/design/inicio.md) §§2–3 ainda descreve a ordem antiga da barra e o botão "Registrar manualmente",
+- A [spec da Início](../design/inicio.md) §§2–3 ainda descreve a ordem antiga da barra e o botão "Registrar manualmente",
   e não tem seção para Saldo, Fluxo, Projeção nem Próximos 7 dias.
 
 O detalhe de Fluxo, Projeção e Próximos 7 dias existe **somente** na Início: `monthCashFlow`, `exceedProjections` e
@@ -107,7 +107,7 @@ Mais ou na barra inferior.
 - `accord-4d5m`: pedido e respostas do usuário em 10/11/2026 (papel resumo do mês + atenção; painéis resumidos; faixa
   única com Revisar, datas e estouro; cortar o botão do Chat; renomear Margem e Fluxo; visualizações leves e ícones sem
   biblioteca; detalhe aditivo nos destinos; entrega só de proposta, sem código).
-- [Spec da Início](../specs/design/inicio.md), [ADR 0067](0067-inicio-como-abertura-e-revisar-em-mais.md),
+- [Spec da Início](../design/inicio.md), [ADR 0067](0067-inicio-como-abertura-e-revisar-em-mais.md),
   [ADR 0068](0068-margem-diaria-e-semanal-do-orcamento.md), [ADR 0071](0071-ordem-das-abas-saldo-e-botao-de-registro-no-inicio.md),
   [ADR 0077](0077-reagrupamento-da-aba-mais.md) (modelo de remodelagem).
 - Comparação com apps de mercado (Nubank, Mobills, Organizze, Monarch) vem de conhecimento geral do agente de UI/UX,

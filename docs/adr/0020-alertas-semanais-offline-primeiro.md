@@ -27,6 +27,6 @@ este ADR. Evento imutável de alerta não é uma edição financeira a mesclar a
 
 ## Fontes e evidências
 
-- [Plano §14](../plano-desenvolvimento.md), [S5 — coordenação entre aparelhos](../specs/S5-previsoes-alertas.md).
+- [Plano §14](../specs/plans/plano-desenvolvimento.md), [S5 — coordenação entre aparelhos](../specs/plans/S5-previsoes-alertas.md).
 - Memória Beads `decisoes-23-10-fatura-chat-convite`; decisão offline confirmada em 23/10/2026.
 - S5 permanece planejado; não há demonstração de entrega coordenada ou medição nos aparelhos.

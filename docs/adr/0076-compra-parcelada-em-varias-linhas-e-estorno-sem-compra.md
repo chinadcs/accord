@@ -48,7 +48,7 @@ do cartão, "se não tiver compra pra estornar, crie uma compra e estorne ela me
 
 ## Fontes e evidências
 
-- [Spec S4](../specs/S4-importacao-retomada-pendencias.md) regras 9 e 12; [ADR 0043](0043-fatura-do-cartao-importado-pela-data-da-compra.md); ADRs 0073 e 0074.
+- [Spec S4](../specs/plans/S4-importacao-retomada-pendencias.md) regras 9 e 12; [ADR 0043](0043-fatura-do-cartao-importado-pela-data-da-compra.md); ADRs 0073 e 0074.
 - Beads `accord-qid0`. Pedido do usuário em 09/11/2026; desenho e propostas (itens 1 a 6) **aguardam o aceite dele**.
 - Testes JVM: `InstallmentSeriesTest` (14, core), `InstallmentSeriesImportTest` (5, persistência, arquivo sintético no formato do CSV); instrumentados no emulador:
   `InstallmentSeriesFlowTest` (2) e `ImportUiTest`. O CSV real foi lido só localmente, sem entrar no repositório. **Não validado nos celulares.**

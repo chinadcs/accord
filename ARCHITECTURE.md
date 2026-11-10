@@ -16,10 +16,10 @@ celulares; os ADRs 0022–0025 e 0027–0029 foram aceitos em 24/10/2026, mas is
 ## Fontes e autoridade
 
 - [AGENTS.md](AGENTS.md): regras de trabalho dos assistentes.
-- [Plano de desenvolvimento](docs/plano-desenvolvimento.md): requisitos, etapas e aceite.
+- [Plano de desenvolvimento](docs/specs/plans/plano-desenvolvimento.md): requisitos, etapas e aceite.
   Decisões posteriores das seções 14 e 16 prevalecem sobre propostas anteriores.
-- [Índice das telas](docs/specs/design/README.md): navegação, prioridades e regras comuns de UX.
-- [Especificações 01–38](docs/specs/design/README.md#4-índice-dos-arquivos): estados, recuperação,
+- [Índice das telas](docs/design/README.md): navegação, prioridades e regras comuns de UX.
+- [Especificações 01–38](docs/design/README.md#4-índice-dos-arquivos): estados, recuperação,
   acessibilidade, aceite e dependências de cada tela. IDs identificam telas, não versões de API.
 - [ADRs](docs/adr/README.md): decisões, motivos e histórico; status de decisão é separado da
   situação de implementação. ADRs propostos não alteram requisitos aprovados.
@@ -68,7 +68,7 @@ as rendas e a despesa que ele nunca reconheceu. Telas: `ui/receivables`.
 Migração/serviço exercitados localmente; implantação hospedada e Galaxy pendentes.
 
 Proteção local ([ADR 0057](docs/adr/0057-bloqueio-local-com-credencial-do-android.md),
-[S8](docs/specs/S8-protecao-dados-conversas-cofrinhos.md)): `MainActivity` protege a entrada com
+[S8](docs/specs/plans/S8-protecao-dados-conversas-cofrinhos.md)): `MainActivity` protege a entrada com
 biometria/credencial do Android, memória efêmera de desbloqueio e tolerância de um minuto fora
 do app. A árvore financeira permanece montada, invisível e sem semântica acessível atrás do
 bloqueio, preservando navegação e rascunhos. Preferência só no aparelho em Mais > Segurança;
@@ -304,8 +304,8 @@ Vocabulário do plano §§3–5 e do índice das telas; não é descrição exau
 
 ## Autenticação, autorização e sincronização
 
-Fontes: telas [01](docs/specs/design/01-acesso.md), [02](docs/specs/design/02-espaco-do-casal.md) e
-[26](docs/specs/design/26-sincronizacao.md). Supabase Auth usa e-mail/senha. Piloto sem envio de
+Fontes: telas [01](docs/design/01-acesso.md), [02](docs/design/02-espaco-do-casal.md) e
+[26](docs/design/26-sincronizacao.md). Supabase Auth usa e-mail/senha. Piloto sem envio de
 confirmação, recuperação, OTP, magic link ou convite por e-mail. Planejar Confirm Email
 desativado, sem SMTP. E-mail identifica login sem comprovar posse; ajuda orienta atendimento
 manual fora do app, em ambiente confiável.
@@ -335,8 +335,8 @@ reverificadas quando uma decisão depender delas; este texto registra a escolha 
 
 ## Importação e rastreabilidade
 
-Fluxo: [selecionar](docs/specs/design/15-importar-arquivo.md) →
-[revisar](docs/specs/design/16-revisar-importacao.md) → [resultado](docs/specs/design/17-resultado-importacao.md).
+Fluxo: [selecionar](docs/design/15-importar-arquivo.md) →
+[revisar](docs/design/16-revisar-importacao.md) → [resultado](docs/design/17-resultado-importacao.md).
 OFX usa parser estruturado local; PDF usa extração local de texto dos movimentos. SLM pode ajudar
 classificação sem substituir extração/conferência. OCR e PDF digitalizado/imagem ficam fora do P0.
 

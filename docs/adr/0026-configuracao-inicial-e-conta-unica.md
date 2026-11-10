@@ -33,6 +33,6 @@ offline do outro aparelho. A vigência inicial usa o mesmo comando financeiro j�
 ## Fontes e evidências
 
 - Pedido explícito do usuário em 24/10/2026, tarefa Beads `accord-bte`.
-- [Plano §14](../plano-desenvolvimento.md), telas [03](../specs/design/03-primeiros-passos.md),
-  [22](../specs/design/22-mais-e-configuracoes.md) e [24](../specs/design/24-limites-do-orcamento.md).
+- [Plano §14](../specs/plans/plano-desenvolvimento.md), telas [03](../design/03-primeiros-passos.md),
+  [22](../design/22-mais-e-configuracoes.md) e [24](../design/24-limites-do-orcamento.md).
 - Implementação em `LimitsViewModel` e `RoomFinanceSpace`; evidências de execução ficam no Beads.

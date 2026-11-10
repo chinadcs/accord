@@ -27,7 +27,7 @@ de cartão no indicador pago continua proposto no [ADR 0025](0025-projecoes-fina
 
 ## Fontes e evidências
 
-- [Plano §14](../plano-desenvolvimento.md), [S1](../specs/S1-base-motor-financeiro.md).
+- [Plano §14](../specs/plans/plano-desenvolvimento.md), [S1](../specs/plans/S1-base-motor-financeiro.md).
 - Beads `accord-8dp`, `accord-xof`, `accord-2gh`; complementos de 23/10/2026, sem data única
   recuperada para a decisão-base.
 - [RefundPlanner](../../persistence/src/main/kotlin/app/accord/persistence/RefundPlanner.kt) e

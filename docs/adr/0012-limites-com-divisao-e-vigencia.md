@@ -33,7 +33,7 @@ oferecer divisão, preservada nas fontes históricas.
 
 ## Fontes e evidências
 
-- [Plano §14](../plano-desenvolvimento.md), [S1](../specs/S1-base-motor-financeiro.md).
+- [Plano §14](../specs/plans/plano-desenvolvimento.md), [S1](../specs/plans/S1-base-motor-financeiro.md).
 - Beads `accord-mc4`; memória `decisao-23-10-categorias`. Data original do conjunto não recuperada.
 - [LimitsPlanner](../../persistence/src/main/kotlin/app/accord/persistence/LimitsPlanner.kt) existente;
   representação atual não transforma as propostas acima em decisões aprovadas.

@@ -8,7 +8,7 @@ decision_date: 2026-11-02
 
 ## Contexto
 
-A [spec S4](../specs/S4-importacao-retomada-pendencias.md) deixava em aberto o que fazer com movimentos de extrato que não são despesa, renda nem quitação:
+A [spec S4](../specs/plans/S4-importacao-retomada-pendencias.md) deixava em aberto o que fazer com movimentos de extrato que não são despesa, renda nem quitação:
 transferências entre contas próprias, aplicações e resgates (pergunta aberta 1), e o [ADR 0019](0019-importacao-local-com-rastreabilidade.md) não escolhia a regra.
 O exemplo de extrato do Bradesco do usuário mistura despesas com “Apl.invest Fac”, “Aplic.autom.investfacil*”, “Resgate Inv Fac” e “Rent.inv.facil”.
 Antes desta decisão todo crédito sem chave conhecida virava dúvida “crédito a classificar” (regra 12 da spec), e investimentos estavam fora do escopo do produto.

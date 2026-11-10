@@ -26,7 +26,7 @@ de senha provisória ainda precisam ser verificadas no serviço. E-mails futuros
 
 ## Fontes e evidências
 
-- [Plano §§14/15](../plano-desenvolvimento.md), [S2](../specs/S2-acesso-espaco-sincronizacao.md).
+- [Plano §§14/15](../specs/plans/plano-desenvolvimento.md), [S2](../specs/plans/S2-acesso-espaco-sincronizacao.md).
 - [Configuração local](../../supabase/config.toml) e [roteiro manual](../../supabase/README.md)
   existem. `accord-rsw.9` acompanha documentação/fechamento; não é encerrado por este ADR.
 - Data original não recuperada; configuração local não comprova a hospedada.

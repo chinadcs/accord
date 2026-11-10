@@ -84,8 +84,8 @@ não há tabela pública de conversas nem efeito em valores, meses ou avisos. A 
 
 - Aceites explícitos do usuário na conversa de `accord-9y6.12`, em 08/11/2026; aceite final:
   “Vamos seguir nessa regra conservadora inicialmente”.
-- [S7](../specs/S7-p2-intencoes-simulacao-pistas.md), telas
-  [37](../specs/design/37-pistas-de-revisao.md) e [38](../specs/design/38-detalhe-pista.md).
+- [S7](../specs/plans/S7-p2-intencoes-simulacao-pistas.md), telas
+  [37](../design/37-pistas-de-revisao.md) e [38](../design/38-detalhe-pista.md).
 - [ADR 0048](0048-intencoes-de-compra-conversao-e-simulacao.md): intenções e simulador;
   pistas ficaram fora daquele ADR. [ADR 0024](0024-protocolo-por-agregados-e-cursor.md):
   protocolo existente de sincronização, sem novo contrato concreto aprovado aqui.

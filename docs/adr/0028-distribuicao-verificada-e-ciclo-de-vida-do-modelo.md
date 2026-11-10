@@ -42,7 +42,7 @@ disponível desde o Android 8, porque `Stream.toList` e `Files.readString` quebr
 
 ## Fontes e evidências
 
-- [S3](../specs/S3-chat-slm-modelo.md) §§2, 10 e 11; [tela 25](../specs/design/25-modelo-no-aparelho.md);
+- [S3](../specs/plans/S3-chat-slm-modelo.md) §§2, 10 e 11; [tela 25](../design/25-modelo-no-aparelho.md);
   memória `decisao-23-10-download-modelo`; plano §13.
 - Implementação em `core.model` e `app/ui/model`; testes JVM e instrumentados com fonte e motor fake. Não há
   download real, motor real nem medição nos aparelhos. Aceito em 24/10/2026 (ver "Aceite").

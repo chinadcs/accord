@@ -29,7 +29,7 @@ local também permanece aberta. Credenciais administrativas ficam fora do aplica
 
 ## Fontes e evidências
 
-- [Plano §§2/14](../plano-desenvolvimento.md), [S2](../specs/S2-acesso-espaco-sincronizacao.md).
+- [Plano §§2/14](../specs/plans/plano-desenvolvimento.md), [S2](../specs/plans/S2-acesso-espaco-sincronizacao.md).
 - Memória Beads `decisoes-23-10-fatura-chat-convite` (complemento de 23/10/2026);
   `accord-rsw.1`/`.2` documentam implementação. Data única da decisão-base não recuperada.
 - [Testes de permissão locais](../../supabase/tests/database/01_permissoes.test.sql) existem;

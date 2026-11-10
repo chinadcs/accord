@@ -47,7 +47,7 @@ próprio da conta além do disponível pelas regras comuns; isso nunca consome c
 
 ## Fontes e evidências
 
-- [S8](../specs/S8-protecao-dados-conversas-cofrinhos.md), `accord-0grs.5`.
+- [S8](../specs/plans/S8-protecao-dados-conversas-cofrinhos.md), `accord-0grs.5`.
 - Definição explícita do usuário sobre subconta e saldos e plano autorizado nesta conversa.
 - Entregue localmente: `SavingsPlanner`, tabelas Room 22, `BalanceReader`, `EntityStates`,
   `SavingsServiceRules`, função SQL de validação/transação e formulários em Mais/conta.

@@ -143,7 +143,7 @@ Em 26/10/2026, o usuário autorizou o piloto de categorias com interpretador fak
 implementação e privacidade. Essa autorização substitui o pré-requisito de motor real apenas
 para o piloto debug; este ADR continua proposto para a interpretação em etapas com SLM.
 
-- [S3 §2–5](../specs/S3-chat-slm-modelo.md), [plano §13–14](../plano-desenvolvimento.md).
+- [S3 §2–5](../specs/plans/S3-chat-slm-modelo.md), [plano §13–14](../specs/plans/plano-desenvolvimento.md).
 - Pedido do usuário de 25/10/2026: executar/pesquisar/iterar os 11 candidatos até dois ou três
   atenderem os critérios; autoriza o experimento, não sua adoção definitiva. Beads `accord-jhk`.
 - [Pesquisa EN/PT](../poc/tecnicas-extracao-slm.md), incluindo classificação antes da extração,

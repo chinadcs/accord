@@ -27,7 +27,7 @@ Retenção remota de idempotência para longo tempo offline continua questão ab
 
 ## Fontes e evidências
 
-- [AGENTS.md](../../AGENTS.md), [S1](../specs/S1-base-motor-financeiro.md),
-  [S2](../specs/S2-acesso-espaco-sincronizacao.md); Beads `accord-9tl.6`, `accord-rsw.4`/`.5`.
+- [AGENTS.md](../../AGENTS.md), [S1](../specs/plans/S1-base-motor-financeiro.md),
+  [S2](../specs/plans/S2-acesso-espaco-sincronizacao.md); Beads `accord-9tl.6`, `accord-rsw.4`/`.5`.
 - [SyncStore](../../persistence/src/main/kotlin/app/accord/persistence/SyncStore.kt) existe.
   Data da decisão-base não recuperada; testes de falha não foram reexecutados nesta entrega.

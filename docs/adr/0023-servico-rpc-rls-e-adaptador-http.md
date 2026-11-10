@@ -28,7 +28,7 @@ referências e versão pode aceitar estado incoerente de um cliente defeituoso.
 
 ## Fontes e evidências
 
-- [S2](../specs/S2-acesso-espaco-sincronizacao.md); Beads `accord-rsw.1`–`.3`;
+- [S2](../specs/plans/S2-acesso-espaco-sincronizacao.md); Beads `accord-rsw.1`–`.3`;
   memória `s2-decisoes-de-implementacao`, explicitamente a validar.
 - [Adaptador](../../remote/src/main/kotlin/app/accord/remote/SupabaseSpaceService.kt),
   [migração](../../supabase/migrations/20261024120000_espaco_e_sincronizacao.sql) e testes locais existem.

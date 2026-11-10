@@ -8,7 +8,7 @@ decision_date: 2026-11-10
 
 ## Contexto
 
-A regra de 23/10/2026 ([plano §14](../plano-desenvolvimento.md), [spec S1 §7.2](../specs/S1-base-motor-financeiro.md), [ADR 0043](0043-fatura-do-cartao-importado-pela-data-da-compra.md)) mandava a compra feita **no próprio dia do
+A regra de 23/10/2026 ([plano §14](../specs/plans/plano-desenvolvimento.md), [spec S1 §7.2](../specs/plans/S1-base-motor-financeiro.md), [ADR 0043](0043-fatura-do-cartao-importado-pela-data-da-compra.md)) mandava a compra feita **no próprio dia do
 fechamento** para a **próxima** fatura. Ao conferir o CSV real de cartão (Black, fechamento 8, vencimento 15), o usuário explicou que quem decide é a **hora**: a compra feita
 no dia do fechamento pode ou não entrar, conforme o horário. O cartão só informa o dia, então o app não tem como saber.
 
@@ -32,5 +32,5 @@ no dia do fechamento pode ou não entrar, conforme o horário. O cartão só inf
 ## Fontes e evidências
 
 - Pedido do usuário em 10/11/2026 (sessão do Bead `accord-n9cp`, conferência das faturas do CSV `deepseek_csv_20261109_f8f8f6.csv`, que não entra no repositório).
-- [Plano §14](../plano-desenvolvimento.md), [spec S1 §7.2](../specs/S1-base-motor-financeiro.md), [ADR 0043](0043-fatura-do-cartao-importado-pela-data-da-compra.md), [ADR 0076](0076-compra-parcelada-em-varias-linhas-e-estorno-sem-compra.md).
+- [Plano §14](../specs/plans/plano-desenvolvimento.md), [spec S1 §7.2](../specs/plans/S1-base-motor-financeiro.md), [ADR 0043](0043-fatura-do-cartao-importado-pela-data-da-compra.md), [ADR 0076](0076-compra-parcelada-em-varias-linhas-e-estorno-sem-compra.md).
 - Implementado em `CardCycle.assign`/`phase` e `Forecast`; validado só por testes JVM. **Não validado nos celulares.**

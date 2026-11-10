@@ -8,7 +8,7 @@ decision_date: 2026-11-09
 
 ## Contexto
 
-O orçamento só tinha limite por categoria principal, com divisão opcional entre subcategorias ([plano §10](../plano-desenvolvimento.md), [spec 24](../specs/design/24-limites-do-orcamento.md)).
+O orçamento só tinha limite por categoria principal, com divisão opcional entre subcategorias ([plano §10](../specs/plans/plano-desenvolvimento.md), [spec 24](../design/24-limites-do-orcamento.md)).
 Quem quer apenas "R$ 5.000 para gastar no mês, em qualquer categoria" precisava inventar limites por categoria, que na prática não restringem nada.
 Em 09/11/2026 o usuário decidiu: um orçamento geral que conta para todas as categorias, "uma maneira menos restritiva", em que as categorias não precisam ter limite.
 
@@ -32,5 +32,5 @@ Em 09/11/2026 o usuário decidiu: um orçamento geral que conta para todas as ca
 
 ## Fontes e evidências
 
-- Plano §10 (limites); [spec 05](../specs/design/05-orcamento-mensal.md), [spec 24](../specs/design/24-limites-do-orcamento.md). Beads `accord-z5dc`. Decisão do usuário em 09/11/2026.
+- Plano §10 (limites); [spec 05](../design/05-orcamento-mensal.md), [spec 24](../design/24-limites-do-orcamento.md). Beads `accord-z5dc`. Decisão do usuário em 09/11/2026.
 - Testado no JVM (`CategoriesLimitsTest`); compilação do app e dos testes instrumentados. **Não validado em emulador nem nos celulares.**

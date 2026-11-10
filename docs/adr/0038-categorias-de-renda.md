@@ -8,7 +8,7 @@ decision_date: 2026-11-02
 
 ## Contexto
 
-Até aqui a renda ([spec 28](../specs/design/28-rendas.md), S1) tinha só descrição, valor, datas e conta; o comando de correção recusava categoria em renda
+Até aqui a renda ([spec 28](../design/28-rendas.md), S1) tinha só descrição, valor, datas e conta; o comando de correção recusava categoria em renda
 ("Renda não tem categoria"). O [ADR 0037](0037-credito-de-investimento-e-renda-na-importacao.md) fez o crédito vindo de investimento virar renda na importação, e o usuário pediu
 (02/11/2026) tratar isso **como uma categoria de renda**, com algumas já criadas — Investimento, Salário e Renda Extra — e a opção de criar outras.
 Esclareceu a seguir que "Categoria de Renda é uma categoria de receitas": ela classifica entradas, não saídas.
@@ -32,7 +32,7 @@ não há limite de renda.
 8. **Emenda de 09/11/2026 — ícone e cor editáveis (decisão do usuário, "paridade completa").** A categoria de renda passa a ter cor escolhida (`colorIndex`, a mesma paleta de 12 das despesas) e ícone editável, além do nome,
    pelo comando `EditIncomeCategory` (só o que vem preenchido muda; versão esperada; nome único; cor fora da paleta recusada). As sementes têm cor derivada (Investimento verde, Salário verde-água, Renda Extra azul-petróleo) até haver escolha.
    O campo viaja no estado JSON do agregado (`IncomeCategoryRow.colorIndex`, nulo nos estados antigos), então o serviço não precisa de migração; o Room sobe para o esquema 23 (migração automática, coluna anulável). Continua sem excluir nem reordenar.
-   Ícone e cor aparecem onde a categoria de renda é citada: Categorias (aba Renda), registro, edição de lançamento, escolha da categoria e lista de rendas. Edição única na tela 23, no mesmo painel das despesas ([spec 23](../specs/design/23-categorias-e-subcategorias.md)).
+   Ícone e cor aparecem onde a categoria de renda é citada: Categorias (aba Renda), registro, edição de lançamento, escolha da categoria e lista de rendas. Edição única na tela 23, no mesmo painel das despesas ([spec 23](../design/23-categorias-e-subcategorias.md)).
 
 ## Consequências
 

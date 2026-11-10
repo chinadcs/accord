@@ -27,8 +27,8 @@ Bases por agregado, snapshots e comando de resolução pertencem à proposta do
 
 ## Fontes e evidências
 
-- [Plano §§11/14](../plano-desenvolvimento.md), [S2](../specs/S2-acesso-espaco-sincronizacao.md),
-  tela [26](../specs/design/26-sincronizacao.md).
+- [Plano §§11/14](../specs/plans/plano-desenvolvimento.md), [S2](../specs/plans/S2-acesso-espaco-sincronizacao.md),
+  tela [26](../design/26-sincronizacao.md).
 - Beads `accord-rsw.5`; integração de UI continua em `accord-rsw.8` no momento desta carga.
 - [SyncEngine](../../persistence/src/main/kotlin/app/accord/persistence/SyncEngine.kt) existe;
   data do aceite original não recuperada, sem nova validação em dois aparelhos aqui.

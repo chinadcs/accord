@@ -26,7 +26,7 @@ compra é outra visão, não outra despesa. Fechamento/vencimento iniciais não 
 
 ## Fontes e evidências
 
-- [Plano §§4/14](../plano-desenvolvimento.md), [S1](../specs/S1-base-motor-financeiro.md).
+- [Plano §§4/14](../specs/plans/plano-desenvolvimento.md), [S1](../specs/plans/S1-base-motor-financeiro.md).
 - Beads `accord-hcp`, `accord-l0h`, `accord-l59`; complementos confirmados em 23/10/2026.
 - [Datas](../../core/src/main/kotlin/app/accord/core/Dates.kt) e
   [calendário](../../core/src/main/kotlin/app/accord/core/CardCycle.kt) existentes em S1.

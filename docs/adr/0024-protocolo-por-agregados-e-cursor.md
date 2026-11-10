@@ -31,7 +31,7 @@ ilimitada para aparelhos offline por muito tempo.
 
 ## Fontes e evidências
 
-- [S2 — identidade, envelope, recebimento e atomicidade](../specs/S2-acesso-espaco-sincronizacao.md);
+- [S2 — identidade, envelope, recebimento e atomicidade](../specs/plans/S2-acesso-espaco-sincronizacao.md);
   Beads `accord-rsw.1`, `.4`, `.5`; memória `s2-decisoes-de-implementacao`.
 - [Protocolo](../../core/src/main/kotlin/app/accord/core/sync/Protocol.kt),
   [SyncStore](../../persistence/src/main/kotlin/app/accord/persistence/SyncStore.kt) e

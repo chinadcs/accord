@@ -43,9 +43,9 @@ os 9,57 s observados deixam de ser um bloqueio eliminatório adicional.
 
 - Aceito diretamente pelo usuário em 31/10/2026: “Pode considerar a meta de 5s como desejada e
   não de carater eliminatorio”. Beads `accord-nsu.21.4`.
-- [Plano §14](../plano-desenvolvimento.md#14-decisões-posteriores-e-amostra-recebida--22102026),
-  [S3](../specs/S3-chat-slm-modelo.md), [Chat](../specs/design/04-chat.md) e
-  [Modelo no aparelho](../specs/design/25-modelo-no-aparelho.md).
+- [Plano §14](../specs/plans/plano-desenvolvimento.md#14-decisões-posteriores-e-amostra-recebida--22102026),
+  [S3](../specs/plans/S3-chat-slm-modelo.md), [Chat](../design/04-chat.md) e
+  [Modelo no aparelho](../design/25-modelo-no-aparelho.md).
 - [ADR 0004](0004-distribuicao-separada-do-modelo.md) e
   [ADR 0028](0028-distribuicao-verificada-e-ciclo-de-vida-do-modelo.md) permanecem aceitos;
   esta decisão complementa a avaliação de latência, preservando distribuição e ciclo de vida.

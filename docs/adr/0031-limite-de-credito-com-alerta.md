@@ -29,6 +29,6 @@ ADR e a especificação da tela 12.
 ## Fontes e evidências
 
 - Decisão do usuário em 25/10/2026 nesta conversa: adicionar limite do cartão e alertar ao exceder.
-- [Tela 12 — Cartão e faturas](../specs/design/12-cartao-e-faturas.md).
+- [Tela 12 — Cartão e faturas](../design/12-cartao-e-faturas.md).
 - Beads `accord-i0g` acompanha a implementação.
 - Implementado em 25/10/2026; `:app:assembleDebug` concluiu e `scripts/run-debug.ps1` instalou/abriu o app no Galaxy S20 FE conectado. Nenhum teste automatizado foi executado nesta solicitação.

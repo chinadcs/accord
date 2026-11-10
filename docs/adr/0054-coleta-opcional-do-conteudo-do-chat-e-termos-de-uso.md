@@ -38,5 +38,5 @@ plano Free do Supabase: volume de texto e tabela, a acompanhar.
 
 ## Fontes e evidências
 
-- [Plano](../plano-melhorias-2026-11.md), etapa 3; Beads `accord-g5r8`, `accord-4yfy`.
+- [Plano](../specs/plans/plano-melhorias-2026-11.md), etapa 3; Beads `accord-g5r8`, `accord-4yfy`.
 - Decisão do usuário em 08/11/2026; aceito em 08/11/2026 ("Aceito todos os ADRs"). Nada implementado.

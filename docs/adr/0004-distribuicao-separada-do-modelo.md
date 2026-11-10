@@ -30,8 +30,8 @@ trabalho. A meta carregada de até 5 s é separada de download/carga/sync e não
 
 ## Fontes e evidências
 
-- [Plano §14](../plano-desenvolvimento.md), [S3](../specs/S3-chat-slm-modelo.md), tela
-  [25](../specs/design/25-modelo-no-aparelho.md).
+- [Plano §14](../specs/plans/plano-desenvolvimento.md), [S3](../specs/plans/S3-chat-slm-modelo.md), tela
+  [25](../design/25-modelo-no-aparelho.md).
 - Beads `accord-03u`, `accord-r5y`, `accord-evv`; memória `decisao-23-10-download-modelo`, com
   complementos de 23–24/10/2026. Data única da decisão original não recuperada.
 - Distribuição/inferência ainda no épico `accord-5kq`; nenhum benchmark é comprovado aqui.
