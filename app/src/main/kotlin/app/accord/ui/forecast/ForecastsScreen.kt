@@ -71,11 +71,13 @@ fun ForecastsScreen(
     onRetryPace: () -> Unit = {},
 ) {
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        // O espaço inferior (barra do sistema ou de navegação) recorta a lista; em contentPadding só valeria no fim da rolagem e um
+        // item levado à tela por acessibilidade, foco ou teclado ficaria sob a barra (como no Orçamento, accord-tisd).
+        modifier = Modifier.fillMaxSize().padding(bottom = padding.calculateBottomPadding()),
         contentPadding = PaddingValues(
             start = AccordSpacing.s4, end = AccordSpacing.s4,
             top = padding.calculateTopPadding() + AccordSpacing.s2,
-            bottom = padding.calculateBottomPadding() + AccordSpacing.s4,
+            bottom = AccordSpacing.s4,
         ),
         verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
     ) {
