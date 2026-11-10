@@ -106,12 +106,15 @@ fun BudgetScreen(
     onOpenForecasts: (YearMonth) -> Unit = {},
     onRetryFlow: () -> Unit = {},
 ) {
+    // A barra inferior sobrepõe o conteúdo do Scaffold. O espaço dela vai no recorte da lista (não em contentPadding):
+    // assim a área visível termina onde a barra começa e um item levado à tela (rolagem por acessibilidade, foco,
+    // teclado) nunca fica escondido sob ela, o que contentPadding não impede porque só vale no fim da rolagem.
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().padding(bottom = padding.calculateBottomPadding()),
         contentPadding = PaddingValues(
             start = AccordSpacing.s4, end = AccordSpacing.s4,
             top = padding.calculateTopPadding() + AccordSpacing.s4,
-            bottom = padding.calculateBottomPadding() + AccordSpacing.s4 + if (hasFloatingAction) 80.dp else 0.dp,
+            bottom = AccordSpacing.s4 + if (hasFloatingAction) 80.dp else 0.dp,
         ),
         verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
     ) {
