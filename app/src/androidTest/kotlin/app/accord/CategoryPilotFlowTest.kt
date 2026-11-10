@@ -122,13 +122,18 @@ class CategoryPilotFlowTest {
     }
 
     @Test fun abstentionOffersAllCategoriesAndUnknownPhraseKeepsManualPath() {
+        // Limpar o histórico preserva dúvidas abertas de lançamentos (e3ac995): as de testes anteriores da classe continuam
+        // abertas no banco. Só as criadas aqui contam para "todas respondidas".
+        val earlier = runBlocking { container.access.runtime.value!!.chatStore!!.snapshot().questions.map { it.id }.toSet() }
         send("Amazon 150 no cartão")
         waitText("A classificar")
         compose.onNodeWithText("Ver todas").performScrollTo().performClick()
         // "Ver todas" abre o mesmo seletor do registro manual: grupo, depois "Usar o grupo" ou uma subcategoria.
         compose.onNodeWithText("Casa").performClick()
         compose.onNodeWithText("Usar Casa").performClick()
-        compose.waitUntil(10_000) { runBlocking { container.access.runtime.value!!.chatStore!!.snapshot().questions.all { it.state != QuestionState.Open } } }
+        compose.waitUntil(10_000) {
+            runBlocking { container.access.runtime.value!!.chatStore!!.snapshot().questions.filter { it.id !in earlier }.all { it.state != QuestionState.Open } }
+        }
         send("uma frase fora da tabela")
         waitText("Registrar manualmente")
         assertTrue(compose.onAllNodesWithText("uma frase fora da tabela").fetchSemanticsNodes().isNotEmpty())

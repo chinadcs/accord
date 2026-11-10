@@ -33,6 +33,7 @@ import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.unit.Density
 import androidx.test.platform.app.InstrumentationRegistry
 import app.accord.core.Money
+import app.accord.core.label
 import app.accord.core.space.Classification
 import app.accord.core.space.CommandId
 import app.accord.core.space.CommandResult
@@ -48,6 +49,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import java.io.File
+import java.time.YearMonth
 import java.util.UUID
 
 /** Evidências do shell real; dados e capturas são sintéticos e não substituem os dois Galaxy. */
@@ -138,7 +140,9 @@ class CharcoalVisualReviewTest {
             "Início" to "inicio", "Mais" to "mais",
         )) {
             tab(label)
-            if (label == "Orçamento" || label == "Lançamentos") waitFor(Money(5_900).format())
+            // O banco do aparelho de teste acumula lançamentos de execuções anteriores, então o total semeado não é único:
+            // espera só o título do mês, que prova a carga da tela.
+            if (label == "Orçamento" || label == "Lançamentos") waitFor(YearMonth.now().label())
             compose.onNodeWithTag("root-navigation", useUnmergedTree = true).assertIsDisplayed()
             capture("$slug-escuro")
         }
@@ -175,6 +179,9 @@ class CharcoalVisualReviewTest {
     @Test
     fun fabAbreRegistroEVoltaAoOrcamentoSemPerderRaiz() {
         showApp()
+        // ADR 0071: o botão de registro existe em Início, Orçamento e Lançamentos; o Chat tem o registro manual abaixo do campo.
+        compose.onNodeWithTag("root-register-fab", useUnmergedTree = true).assertIsDisplayed()
+        tab("Chat")
         compose.onNodeWithTag("root-register-fab", useUnmergedTree = true).assertDoesNotExist()
         tab("Orçamento")
         compose.onNodeWithTag("root-register-fab", useUnmergedTree = true).assertIsDisplayed()
@@ -194,6 +201,8 @@ class CharcoalVisualReviewTest {
     @Test
     fun lupasAbremLancamentosEBuscaFiltraELimpaDescricoes() {
         showApp(seed = true)
+        // A lupa fica no Chat e no Orçamento; a Início não a tem desde o ADR 0071.
+        tab("Chat")
         compose.onNodeWithContentDescription("Pesquisar lançamentos").performClick()
         waitFor("Buscar descrição ou estabelecimento")
         compose.onNodeWithTag("root-register-fab", useUnmergedTree = true).assertIsDisplayed()

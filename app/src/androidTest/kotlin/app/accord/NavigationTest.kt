@@ -12,6 +12,7 @@ import androidx.test.core.app.ApplicationProvider
 import app.accord.core.Money
 import app.accord.core.space.*
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import kotlinx.coroutines.runBlocking
 
@@ -44,6 +45,25 @@ class NavigationTest {
         compose.onNodeWithTag("tab-More").assertIsSelected()
     }
 
+    /**
+     * Voltar de um destino devolve a Início na mesma posição de rolagem (RootScaffold salva o estado). É o que a pessoa de TalkBack
+     * encontra ao voltar: o foco de acessibilidade recomeça no topo porque o destino é recriado, mas a lista não perde o lugar.
+     * O foco do TalkBack em si só se valida com TalkBack num aparelho (accord-4uu2).
+     */
+    @Test fun inicioPreservaARolagemAoVoltarDeRevisar() {
+        val scroll = compose.onNode(hasScrollAction())
+        fun offset() = scroll.fetchSemanticsNode().config[SemanticsProperties.VerticalScrollAxisRange].value()
+        scroll.performSemanticsAction(SemanticsActions.ScrollBy) { it(0f, 150f) }
+        compose.waitForIdle()
+        val before = offset()
+        assertTrue("a Início precisa ter rolado", before > 100f)
+        reviewRow().performClick()
+        compose.onNodeWithTag("root-navigation").assertDoesNotExist()
+        back()
+        compose.onNodeWithTag("tab-Home").assertIsSelected()
+        assertEquals(before, offset(), 1f)
+    }
+
     @Test fun situacaoDeSincronizacaoAparecaSoEmMais() {
         listOf("Home", "Entries", "Chat", "Budget").forEach { tab ->
             compose.onNodeWithTag("tab-$tab").performClick()
@@ -65,6 +85,9 @@ class NavigationTest {
         listOf("Home", "Budget", "Entries", "More").forEach { tab ->
             compose.onNodeWithTag("tab-$tab").performClick()
             if (tab == "Home" || tab == "Budget" || tab == "Entries") {
+                // O botão some enquanto o teclado ainda recolhe do formulário anterior (showAdd depende do inset do teclado,
+                // que o Compose não espera): aguarda o botão em vez de falhar na primeira leitura.
+                compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Abrir opções de registro").fetchSemanticsNodes().isNotEmpty() }
                 compose.onNodeWithContentDescription("Abrir opções de registro").performClick()
                 compose.onAllNodes(hasText("Despesa") and hasClickAction()).onFirst().performClick()
             } else compose.onNodeWithText("Registrar manualmente").performClick()

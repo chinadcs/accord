@@ -5,5 +5,8 @@ class TestAccordApplication : AccordApplication() {
     override fun createContainer(): AppContainer = DevIdentity.container(this).also {
         // As suítes de finanças não interagem com o autenticador do Android; AppLockUiTest ativa a proteção explicitamente.
         it.appLock.setEnabled(false)
+        // A janela vem protegida (FLAG_SECURE) por padrão desde a chave de Segurança: sem isto, as suítes de captura recebem
+        // `takeScreenshot() == null`. AppLockUiTest escolhe o valor que quer em cada teste.
+        it.appLock.setScreenshotsAllowed(true)
     }
 }

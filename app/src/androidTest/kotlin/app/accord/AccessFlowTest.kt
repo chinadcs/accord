@@ -170,8 +170,10 @@ class AccessFlowTest {
         waitForText("Minha conta padrão")
         runBlocking {
             val accounts = (container.space().accounts() as app.accord.core.space.QueryResult.Data).value
-            assertEquals("Banco Casa", accounts.accounts.single().nickname)
-            assertEquals(accounts.accounts.single().id, accounts.myDefaultAccountId)
+            // ADR 0052: salvar o cartão já criou a conta vinculada do banco; "Adicionar conta" cria uma segunda, sem reaproveitar.
+            // Com duas contas não há conta padrão derivada (ADR 0026 só a deriva com uma); o teste não a assume.
+            assertEquals(2, accounts.accounts.size)
+            assertTrue(accounts.accounts.all { it.nickname == "Banco Casa" })
         }
         scenario!!.onActivity { it.onBackPressedDispatcher.onBackPressed() }
         waitForText("Vamos começar")

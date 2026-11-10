@@ -1,5 +1,6 @@
 package app.accord
 
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
@@ -71,10 +72,16 @@ class BudgetFlowTest {
     private fun waitForText(text: String) =
         compose.waitUntil(8_000) { compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty() }
 
+    /**
+     * A lista do Orçamento é preguiçosa: "Categorias" fica abaixo do resumo, da renda, do fluxo e do gráfico e só existe na
+     * árvore depois da rolagem. O teste espera o título do mês, que é o topo e está sempre composto.
+     */
+    private fun waitForTop() = waitForText(YearMonth.now().label())
+
     @Test
     fun orcamentoTrocaDeMesECategoriaAbreEPreservaOMesAoVoltar() {
         compose.onNodeWithText("Orçamento").performClick()
-        waitForText("Categorias")
+        waitForTop()
 
         val current = YearMonth.now()
         compose.onNodeWithText(current.label()).assertIsDisplayed()
@@ -86,22 +93,28 @@ class BudgetFlowTest {
 
         // voltar ao mês atual, abrir uma categoria e voltar sem perder o mês
         compose.onNode(hasContentDescription("Mês anterior")).performClick()
-        waitForText("Categorias")
+        waitForTop()
         // a linha pode estar parcialmente sob a barra inferior; o toque de acessibilidade evita depender da posição
         compose.onNode(hasScrollAction()).performScrollToNode(hasText("Alimentação"))
         compose.onAllNodes(hasText("Alimentação")).onFirst().performSemanticsAction(SemanticsActions.OnClick)
         waitForText("Conferir lançamentos")
         compose.onNodeWithText(current.label()).assertIsDisplayed()
         compose.onNode(hasContentDescription("Voltar")).performClick()
-        waitForText("Categorias")
+        waitForTop()
+        // a rolagem da lista volta onde estava; o título do mês fica no topo, então rola até ele antes de conferir
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText(current.label()))
         compose.onNodeWithText(current.label()).assertIsDisplayed()
     }
 
     @Test
     fun mesAtualMostraOQueFoiRegistradoNoBancoDoAparelho() {
         compose.onNodeWithText("Orçamento").performClick()
-        waitForText("Categorias")
+        waitForText(YearMonth.now().label())
+        // O título do mês aparece antes dos valores: espera o valor semeado chegar antes de conferir que está à vista.
+        waitForText(Money(5_000).format())
+        compose.waitForIdle()
         compose.onAllNodesWithText(Money(5_000).format(), substring = true).onFirst().assertIsDisplayed()
-        compose.onNodeWithText("Salvo no aparelho").assertIsDisplayed()
+        // ADR 0071: a situação de sincronização ("Salvo no aparelho") fica só em Mais, não no Orçamento.
+        compose.onAllNodesWithText("Salvo no aparelho").assertCountEquals(0)
     }
 }

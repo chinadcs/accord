@@ -77,7 +77,8 @@ class UiAuditPaletteCaptureTest {
     private var scenario: ActivityScenario<MainActivity>? = null
 
     @Before fun seed() = runBlocking<Unit> {
-        require(UiAuditSyntheticEvidence.enabled)
+        // Captura opt-in (argumento auditRound): sem ele a classe é pulada em vez de reprovar numa passada completa.
+        org.junit.Assume.assumeTrue("Passe auditRound para capturar as paletas", UiAuditSyntheticEvidence.enabled)
         val container = app.container
         val space = container.space()
         val food = (space.categories() as QueryResult.Data).value.single { it.name == "Alimentação" && it.parentId == null }.id

@@ -137,9 +137,11 @@ class CardInvoiceIncomeFlowTest {
 
     private fun fromBudget(link: String) {
         compose.onNodeWithText("Orçamento").performClick()
-        // O gráfico antecede o cabeçalho, que pode estar fora da composição lazy.
-        compose.waitUntil(8_000) { compose.onAllNodes(hasScrollAction()).fetchSemanticsNodes().isNotEmpty() }
-        scrollTo("Categorias")
+        // A lista é preguiçosa e carrega depois da abertura: enquanto só há o título e o aviso de carga, "Categorias" não existe
+        // e a rolagem falha. Repete até a lista carregada ter o cabeçalho (o gráfico antecede o cabeçalho e pode estar fora da composição).
+        compose.waitUntil(8_000) {
+            try { scrollTo("Categorias"); true } catch (_: AssertionError) { false }
+        }
         tap(link)
     }
 

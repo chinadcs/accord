@@ -82,8 +82,10 @@ class ForecastFlowTest {
         if (text == "Categorias") {
             // O gráfico ocupa o início do orçamento; o cabeçalho é um item lazy abaixo dele.
             // Voltar das previsões também pode restaurar uma posição mais baixa da lista.
-            compose.waitUntil(15_000) { compose.onAllNodes(hasScrollAction()).fetchSemanticsNodes().isNotEmpty() }
-            compose.onNode(hasScrollAction()).performScrollToNode(hasText(text))
+            // Com a lista ainda em "Carregando" (dois itens) o cabeçalho não existe e a rolagem falha: repete até a lista carregar.
+            compose.waitUntil(15_000) {
+                runCatching { compose.onNode(hasScrollAction()).performScrollToNode(hasText(text)) }.isSuccess
+            }
         }
         if (text == "$categoryName · excesso já ocorrido") {
             compose.waitUntil(15_000) {
