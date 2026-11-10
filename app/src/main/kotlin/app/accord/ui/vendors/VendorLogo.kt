@@ -96,7 +96,9 @@ fun EntryIdentityIcon(
     val ref = remember(description, allowVendor, entryId, choices, library) {
         library?.let { lib -> (if (allowVendor) choices.forEntry(entryId, description) ?: lib.matcher.match(description) else null)?.takeIf(lib::isKnown) }
     }
-    val initials = remember(description) { entryInitials(description) }
+    val initials = remember(description, allowVendor, library) {
+        (if (allowVendor) library?.matcher?.initialsFor(description) else null) ?: entryInitials(description)
+    }
     val lib = library
     val tapLabel = stringResource(R.string.icon_action_change)
     // A etiqueta e o toque ficam num invólucro: duas etiquetas no mesmo nó se sobrepõem, e a do logo precisa continuar visível.

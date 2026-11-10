@@ -39,6 +39,8 @@ do pedido original (accord-nq8) passa a ser reconhecimento determinístico por r
 - Só o nome normalizado do lançamento (já compartilhado) e a chave do ícone sincronizam; Chat continua só no aparelho de origem.
 - Regras por nome com colisão de nomes de lançamentos diferentes aplicam o mesmo ícone: a pessoa pode usar "só este lançamento" ou remover a regra.
 - A lista inicial de palavras comuns (`assets/vendors/generic-words.txt`) foi vista e aprovada pelo usuário em 07/11/2026. A lista e o limite de 3 caracteres são ajustes de precisão; reconhecimento ruim é corrigido pela escolha manual. Revisar se o uso real mostrar acertos errados frequentes.
+- Descritores de fatura (10/11/2026, accord-v67i, pedido do usuário com lançamentos reais do cartão): o nome "Uber Rides São Paulo" chega como uma palavra só (`Uberridessao`) e o catálogo não a casa. `IconMatcher` ganhou uma lista **explícita e curta** de prefixos de palavra: `uberride` reconhece a marca Uber; `99food` (sem logo no Simple Icons) fica com as iniciais "99". O casamento por palavra inteira não mudou (`Uberlândia`, `Uberaba` e `Superuber` continuam sem marca); a lista só cresce com evidência de lançamento real.
+- Caminhos do Simple Icons passam por `SvgPathNormalizer` ao ler o catálogo (accord-a2eg): o `PathParser` do Compose lê errado flags de arco compactados nas repetições implícitas do `a` (Discord saía deformado).
 - Reabrir o SLM (ADR 0036) não muda este ADR: uma proposta de chave de modelo, se existir, passaria pela mesma lista branca do catálogo.
 
 ## Fontes e evidências

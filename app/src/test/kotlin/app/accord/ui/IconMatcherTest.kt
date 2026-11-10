@@ -42,8 +42,25 @@ class IconMatcherTest {
     }
 
     @Test
+    fun descritorDeFaturaDoUberReconheceAMarcaColadaAoRestoDoNome() {
+        // Descritores reais do cartão: "Uber Rides São Paulo" chega como uma palavra só (accord-v67i).
+        listOf("Dl *Uberridessao Paulobra", "Dl*uberridessao Paulobra", "Uberridessao", "Uber Uber *Trip Help.usao Paulobra")
+            .forEach { assertEquals(brand("uber"), matcher.match(it), it) }
+    }
+
+    @Test
+    fun noveNoveFoodNaoTemLogoMasTemIniciaisProprias() {
+        val description = "99food *42.434.021 Fiabelo Horizontbra"
+        assertNull(matcher.match(description))
+        assertEquals("99", matcher.initialsFor(description))
+        assertEquals("99", matcher.initialsFor("99food *Palabrasa Barbelo Horizontbra"))
+        assertNull(matcher.initialsFor("Uber Trip"))
+        assertNull(matcher.initialsFor("99 Taxi"))
+    }
+
+    @Test
     fun naoConfundeMarcaComParteDeOutraPalavra() {
-        listOf("Uberlândia", "uberizar", "SpotifyAB", "Superuber", "mercado", "Uberaba", "Spotfy", "Sputnik").forEach {
+        listOf("Uberlândia", "uberizar", "SpotifyAB", "Superuber", "mercado", "Uberaba", "Spotfy", "Sputnik", "Uberlandia Ride").forEach {
             assertNull(matcher.match(it), it)
         }
     }

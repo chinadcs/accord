@@ -18,6 +18,7 @@ class IconMatcher(brands: BrandCatalog, banks: BankCatalog, generic: Set<String>
 
     private val phrases: Map<String, IconRef>
     private val longest: Int
+    private val knownBrandSlugs: Set<String> = brands.brands.mapTo(HashSet()) { it.slug }
 
     init {
         val candidates = HashMap<String, MutableSet<IconRef>>()
@@ -52,14 +53,35 @@ class IconMatcher(brands: BrandCatalog, banks: BankCatalog, generic: Set<String>
             for (size in 1..minOf(longest, words.size - start)) {
                 phrases[words.subList(start, start + size).joinToString(" ")]?.let { hits += Hit(start, start + size, it) }
             }
+            // Descritor de fatura: "uberridessao" (Uber Rides São Paulo) cola a marca ao resto do nome.
+            DESCRIPTORS.firstOrNull { it.brandRef != null && words[start].startsWith(it.prefix) }?.brandRef
+                ?.takeIf { ref -> ref.key in knownBrandSlugs }?.let { hits += Hit(start, start + 1, it) }
         }
         val standing = hits.filter { h -> hits.none { o -> o !== h && o.start <= h.start && o.end >= h.end && (o.end - o.start) > (h.end - h.start) } }
         return standing.map { it.ref }.distinct().singleOrNull()
     }
 
+    /**
+     * Iniciais de um estabelecimento sem logo no catálogo mas reconhecido pelo descritor da fatura ("99food *42.434.021 …" é "99", não "94").
+     * Nulo quando nenhum descritor se aplica.
+     */
+    fun initialsFor(description: String): String? {
+        val words = IconText.fold(description).split(' ').filter(String::isNotEmpty)
+        return DESCRIPTORS.firstOrNull { it.initials != null && words.any { w -> w.startsWith(it.prefix) } }?.initials
+    }
+
     companion object {
         private const val MIN_LENGTH = 4
         private val CONNECTORS = setOf("do", "da", "de", "dos", "das", "of", "the")
+
+        /** Regra explícita de um descritor de fatura: palavra que **começa** com [prefix]; só os que o usuário trouxe de lançamentos reais (accord-v67i). */
+        private class Descriptor(val prefix: String, val brandRef: IconRef? = null, val initials: String? = null)
+
+        /** "Uberridessao" é o descritor do Uber; "99food" não tem logo no Simple Icons e fica com as iniciais "99". "Uberlândia" e "Uberaba" não casam. */
+        private val DESCRIPTORS = listOf(
+            Descriptor("uberride", brandRef = IconRef(IconSource.Brand, "uber")),
+            Descriptor("99food", initials = "99"),
+        )
 
         /** Palavras comuns de `assets/vendors/generic-words.txt`: uma por linha, comentários com `#`. */
         fun parseGeneric(lines: Sequence<String>): Set<String> =
