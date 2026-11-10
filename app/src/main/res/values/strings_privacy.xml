@@ -3,6 +3,12 @@
     <string name="privacy_title">Privacidade e dados</string>
     <string name="privacy_cancel">Cancelar</string>
     <string name="privacy_export_intro">Baixe seus dados pessoais ou os dados financeiros compartilhados. O arquivo identifica o que está neste aparelho, no serviço e ainda pendente de envio.</string>
+    <string name="privacy_usage_intro">Veja, só neste aparelho, como foram os últimos sete dias do Chat: quantos lançamentos entenderam, votos e correções. O relatório não traz frases, valores nem nomes.</string>
+    <string name="privacy_usage_open">Ver relatório de uso do Chat</string>
+    <string name="privacy_usage_title">Uso do Chat nos últimos 7 dias</string>
+    <string name="privacy_usage_share">Compartilhar</string>
+    <string name="privacy_usage_close">Fechar</string>
+    <string name="privacy_usage_failed">Não foi possível montar o relatório. Seus dados continuam preservados. Tente novamente.</string>
     <string name="privacy_export_personal">Baixar meus dados pessoais</string>
     <string name="privacy_export_financial">Baixar dados financeiros do espaço</string>
     <string name="privacy_export_failed">Não foi possível preparar ou salvar o arquivo. Seus dados continuam preservados. Tente novamente.</string>

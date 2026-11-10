@@ -31,6 +31,9 @@ data class PrivacyExportState(
     val saved: Boolean = false,
 )
 
+/** Relatório dos últimos sete dias do Chat neste aparelho: só texto com contagens (accord-8q5). */
+data class UsageReportState(val busy: Boolean = false, val text: String? = null, val error: Boolean = false)
+
 data class SpaceDeletionUi(val id: String, val status: String, val members: List<String>, val approvals: Set<String>)
 data class PrivacyLifecycleState(
     val busy: Boolean = false, val available: Boolean = false, val error: Boolean = false,
@@ -40,6 +43,8 @@ data class PrivacyLifecycleState(
 class PrivacyViewModel(private val container: AppContainer) : ViewModel() {
     private val mutableState = MutableStateFlow(PrivacyExportState())
     val state = mutableState.asStateFlow()
+    private val usageState = MutableStateFlow(UsageReportState())
+    val usage = usageState.asStateFlow()
     private val lifecycleState = MutableStateFlow(PrivacyLifecycleState())
     val lifecycle = lifecycleState.asStateFlow()
     val currentPerson get() = container.access.status.value.account?.accountId
@@ -129,6 +134,20 @@ class PrivacyViewModel(private val container: AppContainer) : ViewModel() {
             } catch (_: Exception) { mutableState.value = PrivacyExportState(error = true) }
         }
     }
+
+    fun openUsageReport(deviceLabel: String) {
+        if (usageState.value.busy) return
+        usageState.value = UsageReportState(busy = true)
+        viewModelScope.launch {
+            try {
+                val text = container.chatUsageReport(deviceLabel)
+                usageState.value = if (text == null) UsageReportState(error = true) else UsageReportState(text = text)
+            } catch (e: CancellationException) { throw e
+            } catch (_: Exception) { usageState.value = UsageReportState(error = true) }
+        }
+    }
+
+    fun closeUsageReport() { usageState.value = UsageReportState() }
 
     fun confirmLocal() { mutableState.value = mutableState.value.copy(confirmLocalOnly = false) }
     fun cancel() { if (!mutableState.value.busy) mutableState.value = PrivacyExportState() }

@@ -44,6 +44,10 @@ open class CategorySuggesterPilot(
 
     override fun record(event: CategoryPilotEvent) { diagnostics.trySend(event) }
 
+    override fun eventLines(): List<String> = try {
+        listOf(File(events.parentFile, "previous.jsonl"), events).filter { it.exists() }.flatMap { it.readLines(Charsets.UTF_8) }
+    } catch (_: Exception) { emptyList() }
+
     private var lines: Int? = null
     private fun writeEvent(event: CategoryPilotEvent) {
         try {

@@ -37,6 +37,7 @@ import app.accord.remote.UnconfiguredSpaceService
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.filterNotNull
@@ -313,6 +314,20 @@ class AppContainer(
     suspend fun importChat(text: String): ChatImportResult {
         val owner = chatOwner() ?: return ChatImportResult.Unreadable
         return chatStore?.importText(text, owner) ?: ChatImportResult.Unreadable
+    }
+
+    /**
+     * Relatório dos últimos sete dias de uso do Chat neste aparelho (accord-8q5): só contagens e tempos, sem frases, valores
+     * nem nomes. Une o histórico local com o arquivo de eventos do sugestor, que é do aparelho e pode ter perdido linhas.
+     */
+    suspend fun chatUsageReport(deviceLabel: String, nowMillis: Long = System.currentTimeMillis()): String? {
+        val store = chatStore ?: return null
+        val parsed = withContext(Dispatchers.IO) { app.accord.core.chat.ChatUsageReport.parseEvents(categoryPilot.eventLines().asSequence()) }
+        return app.accord.core.chat.ChatUsageReport.build(
+            snapshot = store.snapshot(), attempts = store.attempts(), events = parsed.events,
+            sinceMillis = nowMillis - app.accord.core.chat.ChatUsageReport.SEVEN_DAYS_MILLIS, untilMillis = nowMillis + 1,
+            deviceLabel = deviceLabel, unreadableEventLines = parsed.skipped,
+        ).render()
     }
 
     /** Apaga só o histórico deste aparelho; lançamentos e a fila de sincronização não mudam. */

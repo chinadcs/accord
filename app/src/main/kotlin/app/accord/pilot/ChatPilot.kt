@@ -12,6 +12,8 @@ interface ChatPilot {
     val replacesInterpreter: Boolean get() = enabled && interpreters != null
     fun suggester(spaceId: String): CategorySuggester?
     fun record(event: CategoryPilotEvent)
+    /** Linhas dos eventos de diagnóstico locais, da mais antiga à mais nova, para o relatório de uso (accord-8q5). */
+    fun eventLines(): List<String> = emptyList()
 }
 
 object DisabledChatPilot : ChatPilot {

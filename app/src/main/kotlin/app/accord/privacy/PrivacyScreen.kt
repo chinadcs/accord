@@ -30,6 +30,7 @@ import app.accord.ui.theme.AccordSpacing
 @Composable
 fun PrivacyScreen(padding: PaddingValues, viewModel: PrivacyViewModel, onBack: () -> Unit) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val usage by viewModel.usage.collectAsStateWithLifecycle()
     val resolver = LocalContext.current.contentResolver
     val save = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         if (uri == null) viewModel.cancel() else viewModel.save { resolver.openOutputStream(uri, "wt") }
@@ -47,7 +48,29 @@ fun PrivacyScreen(padding: PaddingValues, viewModel: PrivacyViewModel, onBack: (
         if (state.busy) CircularProgressIndicator()
         if (state.error) Text(stringResource(R.string.privacy_export_failed), color = MaterialTheme.colorScheme.error)
         if (state.saved) Text(stringResource(R.string.privacy_export_saved))
+        Text(stringResource(R.string.privacy_usage_intro))
+        AccordOutlinedButton(onClick = { viewModel.openUsageReport(android.os.Build.MODEL) }, enabled = !usage.busy,
+            modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.privacy_usage_open)) }
+        if (usage.busy) CircularProgressIndicator()
+        if (usage.error) Text(stringResource(R.string.privacy_usage_failed), color = MaterialTheme.colorScheme.error)
         DeletionControls(viewModel)
+    }
+    val report = usage.text
+    if (report != null) {
+        val context = LocalContext.current
+        AlertDialog(
+            onDismissRequest = viewModel::closeUsageReport,
+            title = { Text(stringResource(R.string.privacy_usage_title)) },
+            text = { Text(report.lines().joinToString("\n") { it.trimStart('#').trimStart() }, modifier = Modifier.verticalScroll(rememberScrollState())) },
+            confirmButton = {
+                TextButton(onClick = {
+                    val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
+                        .putExtra(android.content.Intent.EXTRA_TEXT, report)
+                    context.startActivity(android.content.Intent.createChooser(send, null))
+                }) { Text(stringResource(R.string.privacy_usage_share)) }
+            },
+            dismissButton = { TextButton(onClick = viewModel::closeUsageReport) { Text(stringResource(R.string.privacy_usage_close)) } },
+        )
     }
     val bundle = state.bundle
     if (bundle != null && !state.busy) {

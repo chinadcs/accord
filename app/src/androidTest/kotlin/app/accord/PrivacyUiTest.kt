@@ -33,4 +33,21 @@ class PrivacyUiTest {
             compose.onNodeWithText("Baixar dados financeiros do espaço").assertIsDisplayed()
         }
     }
+
+    @Test fun relatorioDeUsoDoChatAbreSoComContagensEAdmiteOsLimites() {
+        ActivityScenario.launch(MainActivity::class.java).use {
+            compose.onNodeWithText("Mais").performClick()
+            compose.onNodeWithText("Privacidade e dados").performScrollTo().performClick()
+            compose.onNodeWithText("Ver relatório de uso do Chat").performScrollTo().assertIsDisplayed().performClick()
+            compose.waitUntil(15_000) {
+                compose.onAllNodes(androidx.compose.ui.test.hasText("Uso do Chat nos últimos 7 dias")).fetchSemanticsNodes().isNotEmpty()
+            }
+            compose.onNodeWithText("Uso do Chat nos últimos 7 dias").assertIsDisplayed()
+            compose.onNodeWithText("Mensagens elegíveis", substring = true).assertExists()
+            compose.onNodeWithText("utilidade percebida", substring = true).assertExists()
+            compose.onNodeWithText("Compartilhar").assertIsDisplayed()
+            compose.onNodeWithText("Fechar").performClick()
+            compose.onNodeWithText("Ver relatório de uso do Chat").assertIsDisplayed()
+        }
+    }
 }
