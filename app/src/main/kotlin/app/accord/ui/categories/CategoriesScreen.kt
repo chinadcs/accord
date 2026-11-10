@@ -144,7 +144,10 @@ fun CategoriesScreen(
                     Text(stringResource(R.string.categories_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 CategoryTab.Income -> {
-                    content.incomes.forEach { income -> IncomeRow(income, onEditIncome) }
+                    content.incomes.filter { it.parentId == null }.sortedBy { it.order }.forEach { main ->
+                        val children = content.incomes.filter { it.parentId == main.id }.sortedBy { it.order }
+                        IncomeMainRow(main, children, main.id in expanded, onToggle, onCreate, onEditIncome)
+                    }
                     Text(stringResource(R.string.categories_income_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -162,17 +165,43 @@ private fun ActionIcon(iconKey: String, description: String, onClick: () -> Unit
     }
 }
 
+/** Categoria de renda principal; as subcategorias (ADR 0082) aparecem recuadas ao expandir, na cor da principal, com "Nova subcategoria". */
 @Composable
-private fun IncomeRow(node: IncomeCategoryNode, onEdit: (IncomeCategoryNode) -> Unit) {
+private fun IncomeMainRow(
+    main: IncomeCategoryNode,
+    children: List<IncomeCategoryNode>,
+    expanded: Boolean,
+    onToggle: (String) -> Unit,
+    onCreate: (String?) -> Unit,
+    onEdit: (IncomeCategoryNode) -> Unit,
+) {
+    val color = categoryColor(main.ownColorKey())
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
-        Row(
-            Modifier.fillMaxWidth().padding(AccordSpacing.s3),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
-        ) {
-            CategoryBadge(node.iconKey, categoryColor(node.ownColorKey()))
-            Text(node.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-            ActionIcon("pencil", stringResource(R.string.categories_edit_named, node.name)) { onEdit(node) }
+        Column(Modifier.fillMaxWidth().padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                CategoryBadge(main.iconKey, color)
+                Text(main.name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                ActionIcon("pencil", stringResource(R.string.categories_edit_named, main.name)) { onEdit(main) }
+            }
+            TextButton(onClick = { onToggle(main.id) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                Icon(painterResource(if (expanded) Lucide.drawable.lucide_ic_chevron_up else Lucide.drawable.lucide_ic_chevron_down), contentDescription = null)
+                Spacer(Modifier.width(AccordSpacing.s1))
+                Text(stringResource(if (expanded) R.string.categories_collapse else R.string.categories_expand, children.size))
+            }
+            if (expanded) {
+                children.forEach { sub ->
+                    Row(Modifier.padding(start = AccordSpacing.s4), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                        DecorativeIcon(lucideRes(sub.iconKey), tint = color)
+                        Text(sub.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        ActionIcon("pencil", stringResource(R.string.categories_edit_named, "${main.name} › ${sub.name}")) { onEdit(sub) }
+                    }
+                }
+                TextButton(onClick = { onCreate(main.id) }, modifier = Modifier.padding(start = AccordSpacing.s4).heightIn(min = AccordSpacing.touchMin)) {
+                    Icon(painterResource(Lucide.drawable.lucide_ic_plus), contentDescription = null)
+                    Spacer(Modifier.width(AccordSpacing.s1))
+                    Text(stringResource(R.string.categories_new_sub))
+                }
+            }
         }
     }
 }
@@ -262,13 +291,13 @@ private fun CategoryDialogs(
 ) {
     when (dialog) {
         is CategoryDialog.Create -> NameDialog(
-            title = if (dialog.income) R.string.categories_create_income_title else R.string.categories_create_title,
+            title = if (dialog.income && dialog.parentId == null) R.string.categories_create_income_title else R.string.categories_create_title,
             name = dialog.name, error = dialog.nameError, message = dialog.message,
             working = dialog.working, onName = onName, onSubmit = onSubmit, onClose = onClose,
             note = when {
+                dialog.parentId != null -> R.string.categories_create_sub_note
                 dialog.income -> R.string.categories_create_income_note
-                dialog.parentId == null -> null
-                else -> R.string.categories_create_sub_note
+                else -> null
             },
         )
         is CategoryDialog.Edit -> CategoryEditSheet(

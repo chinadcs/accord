@@ -42,7 +42,7 @@ sealed interface CategoriesContent {
 
 data class MainCategory(val node: CategoryNode, val children: List<CategoryNode>)
 
-/** As duas abas da tela: categorias de despesa (com subcategorias) e categorias de renda (lista plana). */
+/** As duas abas da tela: categorias de despesa e de renda, ambas com um nível de subcategoria (ADR 0082). */
 enum class CategoryTab { Expense, Income }
 
 /** O que fazer, mês a mês, com a parte do limite de uma subcategoria que muda de categoria. */
@@ -178,7 +178,7 @@ class CategoriesViewModel(
         _dialog.value = dialog
     }
 
-    fun startCreate(parentId: String?) = open(CategoryDialog.Create(parentId, income = _tab.value == CategoryTab.Income && parentId == null))
+    fun startCreate(parentId: String?) = open(CategoryDialog.Create(parentId, income = _tab.value == CategoryTab.Income))
 
     fun startEdit(node: CategoryNode) {
         val ready = _content.value as? CategoriesContent.Ready ?: return
@@ -192,13 +192,18 @@ class CategoriesViewModel(
         )
     }
 
-    fun startEditIncome(node: IncomeCategoryNode) = open(
-        CategoryDialog.Edit(
-            tab = CategoryTab.Income, id = node.id, parentName = null, revision = node.revision,
-            originalName = node.name, originalIcon = node.iconKey, name = node.name, iconKey = node.iconKey,
-            colorIndex = categoryColorIndex(node.ownColorKey()),
-        ),
-    )
+    fun startEditIncome(node: IncomeCategoryNode) {
+        val ready = _content.value as? CategoriesContent.Ready ?: return
+        // A subcategoria usa a cor da principal, como na despesa.
+        val parent = node.parentId?.let { id -> ready.incomes.firstOrNull { it.id == id } }
+        open(
+            CategoryDialog.Edit(
+                tab = CategoryTab.Income, id = node.id, parentName = parent?.name, revision = node.revision,
+                originalName = node.name, originalIcon = node.iconKey, name = node.name, iconKey = node.iconKey,
+                colorIndex = categoryColorIndex((parent ?: node).ownColorKey()),
+            ),
+        )
+    }
 
     fun startMove(sub: CategoryNode) = open(CategoryDialog.Move(sub))
 
@@ -238,7 +243,7 @@ class CategoriesViewModel(
         when (d) {
             is CategoryDialog.Create -> {
                 if (d.name.isBlank()) return _dialog.update { d.copy(nameError = true) }
-                val command = if (d.income) CreateIncomeCategory(d.name.trim()) else CreateCategory(d.name.trim(), d.parentId)
+                val command = if (d.income) CreateIncomeCategory(d.name.trim(), d.parentId) else CreateCategory(d.name.trim(), d.parentId)
                 run(d, command, if (d.parentId == null) R.string.feedback_category_created else R.string.feedback_subcategory_created)
             }
             is CategoryDialog.Edit -> {

@@ -74,11 +74,17 @@ fun categoryColor(colorKey: String): Color {
     return if (dark) DarkColors[index] else LightColors[index]
 }
 
-/** Cor da categoria de renda [id]; sem categoria, a cor neutra dos ícones. */
+/** Chave estável da cor de uma categoria de renda: a da principal, seja a categoria principal ou subcategoria (ADR 0082). */
+fun IncomeCategoryNode.colorKey(categories: List<IncomeCategoryNode>): String {
+    val root = parentId?.let { wanted -> categories.firstOrNull { it.id == wanted } } ?: this
+    return root.ownColorKey()
+}
+
+/** Cor da categoria de renda [id] (a da principal numa subcategoria); sem categoria, a cor neutra dos ícones. */
 @Composable
 fun incomeCategoryColor(categories: List<IncomeCategoryNode>, id: String?): Color {
     val node = id?.let { wanted -> categories.firstOrNull { it.id == wanted } }
-    return if (node == null) MaterialTheme.colorScheme.onSurfaceVariant else categoryColor(node.ownColorKey())
+    return if (node == null) MaterialTheme.colorScheme.onSurfaceVariant else categoryColor(node.colorKey(categories))
 }
 
 /** Cor da categoria [id] (ou do pai dela); sem categoria, a cor neutra dos ícones. */

@@ -31,6 +31,10 @@ import app.accord.core.MoneyParse
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.dp
+import app.accord.ui.incomeCategoryLabel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.accord.R
 import app.accord.core.Money
@@ -404,11 +408,19 @@ private fun IncomeChoiceDialog(categories: List<IncomeCategoryNode>, onPick: (St
         title = { Text(stringResource(R.string.pending_income_pick)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
-                categories.forEach { category ->
-                    Text(
-                        category.name, style = MaterialTheme.typography.bodyLarge,
-                        modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).clickable(role = Role.Button) { onPick(category.id) }.padding(vertical = AccordSpacing.s3),
-                    )
+                // A principal e, recuadas abaixo dela, as subcategorias (ADR 0082); o leitor de tela diz o caminho de cada subcategoria.
+                categories.filter { it.parentId == null }.forEach { main ->
+                    (listOf(main) + categories.filter { it.parentId == main.id }.sortedBy { it.order }).forEach { category ->
+                        val isSub = category.parentId != null
+                        val path = incomeCategoryLabel(category, categories)
+                        Text(
+                            category.name, style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)
+                                .semantics { contentDescription = path }
+                                .clickable(role = Role.Button) { onPick(category.id) }
+                                .padding(start = if (isSub) AccordSpacing.s4 else 0.dp, top = AccordSpacing.s3, bottom = AccordSpacing.s3),
+                        )
+                    }
                 }
             }
         },

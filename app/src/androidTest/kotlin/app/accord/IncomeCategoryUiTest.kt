@@ -35,7 +35,7 @@ class IncomeCategoryUiTest {
         var picked: String? = "nenhuma"
         compose.setContent {
             AccordTheme {
-                IncomeCategoryDialog(seeds, selected = null, onPick = { picked = it }, onCreate = { _, _ -> }, onDismiss = {})
+                IncomeCategoryDialog(seeds, selected = null, onPick = { picked = it }, onCreate = { _, _, _ -> }, onDismiss = {})
             }
         }
         compose.onNodeWithText("Sem categoria").assertIsDisplayed()
@@ -51,7 +51,7 @@ class IncomeCategoryUiTest {
         var picked: String? = "antes"
         compose.setContent {
             AccordTheme {
-                IncomeCategoryDialog(seeds, selected = "c-salario", onPick = { picked = it }, onCreate = { _, _ -> }, onDismiss = {})
+                IncomeCategoryDialog(seeds, selected = "c-salario", onPick = { picked = it }, onCreate = { _, _, _ -> }, onDismiss = {})
             }
         }
         compose.onNodeWithText("Sem categoria").performClick()
@@ -64,7 +64,7 @@ class IncomeCategoryUiTest {
         var dismissed = 0
         compose.setContent {
             AccordTheme {
-                IncomeCategoryDialog(seeds, selected = null, onPick = {}, onCreate = { name, done -> created = name; done(null) }, onDismiss = { dismissed++ })
+                IncomeCategoryDialog(seeds, selected = null, onPick = {}, onCreate = { name, _, done -> created = name; done(null) }, onDismiss = { dismissed++ })
             }
         }
         compose.onNodeWithText("Nova categoria de renda").performClick()
@@ -77,12 +77,42 @@ class IncomeCategoryUiTest {
     }
 
     @Test
+    fun subcategoriaApareceAbaixoDaPrincipalEPodeSerEscolhida() {
+        var picked: String? = "nenhuma"
+        val withSub = seeds + IncomeCategoryNode("c-clt", "CLT", 0, "briefcase-business", "salario.clt", parentId = "c-salario")
+        compose.setContent {
+            AccordTheme {
+                IncomeCategoryDialog(withSub, selected = null, onPick = { picked = it }, onCreate = { _, _, _ -> }, onDismiss = {})
+            }
+        }
+        compose.onNodeWithText("CLT").assertIsDisplayed()
+        compose.onNodeWithText("CLT").performClick()
+        compose.runOnIdle { assertEquals("c-clt", picked) }
+    }
+
+    @Test
+    fun criarSubcategoriaEnviaAPrincipalEscolhida() {
+        var parent: String? = "nenhuma"
+        compose.setContent {
+            AccordTheme {
+                IncomeCategoryDialog(seeds, selected = null, onPick = {}, onCreate = { _, parentId, done -> parent = parentId; done(null) }, onDismiss = {})
+            }
+        }
+        compose.onNodeWithText("Nova categoria de renda").performClick()
+        compose.onNodeWithText("Nome da categoria de renda").performTextInput("Comissão")
+        compose.onNodeWithText("Categoria principal").assertIsDisplayed()
+        compose.onNodeWithText("Salário").performClick()
+        compose.onNodeWithText("Criar e usar").performClick()
+        compose.runOnIdle { assertEquals("c-salario", parent) }
+    }
+
+    @Test
     fun recusaDoNomeApareceEODialogoContinuaAberto() {
         var dismissed = 0
         val message = "Já existe uma categoria de renda com esse nome. Escolha outro nome."
         compose.setContent {
             AccordTheme {
-                IncomeCategoryDialog(seeds, selected = null, onPick = {}, onCreate = { _, done -> done(message) }, onDismiss = { dismissed++ })
+                IncomeCategoryDialog(seeds, selected = null, onPick = {}, onCreate = { _, _, done -> done(message) }, onDismiss = { dismissed++ })
             }
         }
         compose.onNodeWithText("Nova categoria de renda").performClick()

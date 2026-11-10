@@ -192,7 +192,7 @@ observada em 24/10/2026. Os estados abaixo são de decisão, não de conclusão 
 | [0079](0079-compra-no-dia-do-fechamento-entra-na-fatura-que-fecha.md) | Compra no dia do fechamento entra na fatura que fecha nele | accepted (10/11/2026; só testes JVM); substitui só a regra do dia do fechamento do plano §14, da spec S1 §7.2 e do [0043](0043-fatura-do-cartao-importado-pela-data-da-compra.md) |
 | [0080](0080-coluna-fatura-no-csv.md) | Coluna `fatura` no CSV do Accord | accepted (10/11/2026; só testes JVM); estende [0042](0042-csv-no-formato-proprio-do-accord.md) e [0043](0043-fatura-do-cartao-importado-pela-data-da-compra.md) |
 | [0081](0081-valor-exato-de-cada-parcela-da-compra-parcelada-importada.md) | Valor exato de cada parcela da compra parcelada importada | accepted (10/11/2026; só testes JVM); substitui só a sobra de centavos na última do [0076](0076-compra-parcelada-em-varias-linhas-e-estorno-sem-compra.md) para parcelas que o arquivo mostra |
-| [0082](0082-subcategorias-de-renda.md) | Subcategorias de renda | proposed (10/11/2026; modelo e sementes só testes JVM); substitui só "sem subcategorias" e o nome único global do [0038](0038-categorias-de-renda.md) |
+| [0082](0082-subcategorias-de-renda.md) | Subcategorias de renda | proposed (10/11/2026; implementado e testado só no emulador); substitui só "sem subcategorias" e o nome único global do [0038](0038-categorias-de-renda.md) |
 | [0083](0083-quem-me-deve.md) | "Quem me deve": valores a receber de pessoas | proposed (10/11/2026; sem implementação); revisa a exclusão de reembolsos com terceiros do plano §2/§10 |
 
 Questões ainda sem decisão, como modelo/motor, leitores bancários, acesso local, retenção de

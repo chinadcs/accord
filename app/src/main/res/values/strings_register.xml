@@ -38,6 +38,8 @@
     <string name="register_income_category_name">Nome da categoria de renda</string>
     <string name="register_income_category_create">Criar e usar</string>
     <string name="register_income_category_cancel">Cancelar</string>
+    <string name="register_income_category_parent">Dentro de</string>
+    <string name="register_income_category_parent_none">Categoria principal</string>
     <string name="register_account">Conta</string>
     <string name="register_account_none">Nenhuma conta cadastrada</string>
     <string name="register_account_pick">Escolher conta</string>

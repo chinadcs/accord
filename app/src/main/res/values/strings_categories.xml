@@ -14,7 +14,7 @@
     <string name="categories_reorder_done">Concluir reorganização</string>
     <string name="categories_move_up">Subir %1$s</string>
     <string name="categories_move_down">Descer %1$s</string>
-    <string name="categories_income_note">Categorias de renda classificam o que entra. Mudanças valem para o espaço compartilhado; uma renda pode ficar sem categoria.</string>
+    <string name="categories_income_note">Categorias de renda classificam o que entra e têm subcategorias. Mudanças valem para o espaço compartilhado; uma renda pode ficar sem categoria.</string>
     <string name="categories_note">Mudanças valem para o orçamento compartilhado. Para tirar uma categoria, mova os lançamentos dela para outra e remova: o histórico continua nos lançamentos movidos.</string>
     <string name="categories_name">Nome</string>
     <string name="categories_name_required">Informe um nome.</string>

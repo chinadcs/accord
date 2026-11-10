@@ -41,7 +41,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.accord.ui.components.DetailHeader
 import app.accord.R
 import app.accord.ui.categoryColor
-import app.accord.ui.ownColorKey
+import app.accord.ui.colorKey
+import app.accord.ui.incomeCategoryLabel
 import app.accord.ui.components.DecorativeIcon
 import app.accord.ui.components.lucideRes
 import app.accord.core.RecurrenceScope
@@ -88,7 +89,7 @@ fun EditEntryScreen(
     onAskDelete: () -> Unit,
     onDelete: (RecurrenceScope) -> Unit,
     onRetry: () -> Unit,
-    onCreateIncomeCategory: (String, (String?) -> Unit) -> Unit = { _, _ -> },
+    onCreateIncomeCategory: (String, String?, (String?) -> Unit) -> Unit = { _, _, _ -> },
 ) {
     val focus = remember { EditField.entries.associateWith { FocusRequester() } }
     val bring = remember { EditField.entries.associateWith { BringIntoViewRequester() } }
@@ -233,9 +234,9 @@ private fun Fields(
         val chosen = state.incomeCategories.firstOrNull { it.id == form.incomeCategoryId }
         PickerField(
             label = stringResource(R.string.register_income_category),
-            value = chosen?.name ?: stringResource(R.string.register_income_category_pick),
+            value = chosen?.let { incomeCategoryLabel(it, state.incomeCategories) } ?: stringResource(R.string.register_income_category_pick),
             error = state.errors[EditField.IncomeCategory], bring = bring.getValue(EditField.IncomeCategory),
-            leadingContent = chosen?.let { node -> { DecorativeIcon(lucideRes(node.iconKey), tint = categoryColor(node.ownColorKey())) } },
+            leadingContent = chosen?.let { node -> { DecorativeIcon(lucideRes(node.iconKey), tint = categoryColor(node.colorKey(state.incomeCategories))) } },
         ) { onPick(Picker.IncomeCategory) }
     }
     if (original.accountEditable) {

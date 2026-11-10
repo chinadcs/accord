@@ -2,7 +2,7 @@ package app.accord.ui.register
 
 import app.accord.ui.colorKey
 import app.accord.ui.categoryColor
-import app.accord.ui.ownColorKey
+import app.accord.ui.incomeCategoryLabel
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.shape.CircleShape
 import androidx.activity.compose.BackHandler
@@ -123,7 +123,7 @@ fun RegisterScreen(
     onSaveDraft: () -> Unit,
     onDiscard: () -> Unit,
     onDismissRecovered: () -> Unit,
-    onCreateIncomeCategory: (String, (String?) -> Unit) -> Unit = { _, done -> done(null) },
+    onCreateIncomeCategory: (String, String?, (String?) -> Unit) -> Unit = { _, _, done -> done(null) },
 ) {
     val form = state.form
     val focus = remember { FormField.entries.associateWith { FocusRequester() } }
@@ -230,9 +230,9 @@ fun RegisterScreen(
                 val chosen = state.incomeCategories.firstOrNull { it.id == form.incomeCategoryId }
                 PickerField(
                     label = stringResource(R.string.register_income_category),
-                    value = chosen?.name ?: stringResource(R.string.register_income_category_pick),
+                    value = chosen?.let { incomeCategoryLabel(it, state.incomeCategories) } ?: stringResource(R.string.register_income_category_pick),
                     error = null, bring = remember { BringIntoViewRequester() },
-                    leadingContent = chosen?.let { node -> { DecorativeIcon(lucideRes(node.iconKey), tint = categoryColor(node.ownColorKey())) } },
+                    leadingContent = chosen?.let { node -> { DecorativeIcon(lucideRes(node.iconKey), tint = categoryColor(node.colorKey(state.incomeCategories))) } },
                 ) { keyboard?.hide(); picking = Picker.IncomeCategory }
             }
 

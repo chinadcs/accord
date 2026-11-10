@@ -73,7 +73,8 @@ import app.accord.core.space.EntryRow
 import app.accord.core.space.EntrySituation
 import app.accord.core.space.EntrySummary
 import app.accord.core.space.IncomeCategoryNode
-import app.accord.ui.ownColorKey
+import app.accord.ui.colorKey
+import app.accord.ui.incomeCategoryLabel
 import app.accord.core.space.PaymentMethod
 import app.accord.ui.categoryPath
 import app.accord.ui.components.AdaptiveRow
@@ -430,7 +431,8 @@ private fun EntryItem(
 ) {
     val expenseCategory = row.categoryId?.let(categories::get)
     val incomeCategory = row.incomeCategoryId?.let(incomeCategories::get)
-    val categoryName = expenseCategory?.name ?: incomeCategory?.name
+    val incomeCategoryList = remember(incomeCategories) { incomeCategories.values.toList() }
+    val categoryName = expenseCategory?.name ?: incomeCategory?.let { incomeCategoryLabel(it, incomeCategoryList) }
     val situations = row.visibleSituations()
     val installmentNumber = row.installmentNumber
     val installmentCount = row.installmentCount
@@ -482,7 +484,7 @@ private fun EntryItem(
                                 lucideRes(expenseCategory?.iconKey ?: incomeCategory!!.iconKey),
                                 modifier = Modifier.size(16.dp),
                                 tint = if (expenseCategory != null) categoryColor(categories, expenseCategory.id)
-                                else categoryColor(incomeCategory!!.ownColorKey()),
+                                else categoryColor(incomeCategory!!.colorKey(incomeCategoryList)),
                             )
                             Text(categoryName.orEmpty(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }

@@ -38,16 +38,29 @@ fun CategoryTag(
     }
 }
 
-/** A categoria de renda com o seu ícone na cor escolhida e o nome; o mesmo desenho de [CategoryTag] para a despesa. */
+/**
+ * Nome da categoria de renda para exibição: "Salário › CLT" numa subcategoria (o nome sozinho se repetiria, como "Outros"),
+ * e só o nome numa principal (ADR 0082).
+ */
+fun incomeCategoryLabel(node: IncomeCategoryNode, categories: List<IncomeCategoryNode>): String {
+    val parent = node.parentId?.let { wanted -> categories.firstOrNull { it.id == wanted } }
+    return if (parent == null) node.name else "${parent.name} › ${node.name}"
+}
+
+/**
+ * A categoria de renda com o seu ícone na cor da principal e o nome; o mesmo desenho de [CategoryTag] para a despesa.
+ * [categories] resolve a principal de uma subcategoria; sem ela só o nome da própria categoria aparece.
+ */
 @Composable
 fun IncomeCategoryTag(
     category: IncomeCategoryNode?,
     modifier: Modifier = Modifier,
     style: TextStyle = MaterialTheme.typography.bodyMedium,
+    categories: List<IncomeCategoryNode> = emptyList(),
 ) {
     val node = category ?: return
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalAlignment = Alignment.CenterVertically) {
-        Icon(painterResource(lucideRes(node.iconKey)), contentDescription = null, modifier = Modifier.size(18.dp), tint = categoryColor(node.ownColorKey()))
-        Text(node.name, style = style)
+        Icon(painterResource(lucideRes(node.iconKey)), contentDescription = null, modifier = Modifier.size(18.dp), tint = categoryColor(node.colorKey(categories)))
+        Text(incomeCategoryLabel(node, categories), style = style)
     }
 }

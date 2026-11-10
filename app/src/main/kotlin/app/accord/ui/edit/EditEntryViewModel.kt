@@ -153,10 +153,10 @@ class EditEntryViewModel(
         get() = _state.value.let { s -> s.original?.let { s.form != EditForm.of(it) } == true }
 
     /** Cria uma categoria de renda pelo seletor e a escolhe no formulário; [onResult] recebe a recusa em português ou nulo. */
-    fun createIncomeCategory(name: String, onResult: (String?) -> Unit) {
+    fun createIncomeCategory(name: String, parentId: String?, onResult: (String?) -> Unit) {
         viewModelScope.launch {
             val space = provider.space()
-            when (val result = space.execute(Envelope(CommandId(UUID.randomUUID().toString()), Origin.Manual), CreateIncomeCategory(name))) {
+            when (val result = space.execute(Envelope(CommandId(UUID.randomUUID().toString()), Origin.Manual), CreateIncomeCategory(name, parentId))) {
                 is CommandResult.Applied -> {
                     val created = result.receipt.changes.firstOrNull { it.type == EntityType.IncomeCategory }?.id
                     val all = (space.incomeCategories() as? QueryResult.Data)?.value.orEmpty()
