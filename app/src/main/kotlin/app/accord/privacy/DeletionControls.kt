@@ -29,7 +29,9 @@ import app.accord.ui.components.AccordOutlinedButton
 import app.accord.ui.theme.AccordSpacing
 import java.util.UUID
 
-private data class DeletionPrompt(val action: PrivacyAction, val id: String? = null)
+private data class DeletionPrompt(val action: PrivacyAction, val id: String? = null, val approvesReset: Boolean = false) {
+    val reset get() = action == PrivacyAction.RequestSpaceReset || approvesReset
+}
 
 @Composable
 fun DeletionControls(viewModel: PrivacyViewModel) {
@@ -48,17 +50,19 @@ fun DeletionControls(viewModel: PrivacyViewModel) {
         enabled = state.available && !state.busy, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.privacy_delete_account)) }
     AccordOutlinedButton(onClick = { prompt = DeletionPrompt(PrivacyAction.RequestSpaceDeletion, UUID.randomUUID().toString()) },
         enabled = state.available && !state.busy && viewModel.hasSpace && state.requests.none { it.status == "AwaitingApprovals" }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.privacy_delete_space_request)) }
+    AccordOutlinedButton(onClick = { prompt = DeletionPrompt(PrivacyAction.RequestSpaceReset, UUID.randomUUID().toString()) },
+        enabled = state.available && !state.busy && viewModel.hasSpace && state.requests.none { it.status == "AwaitingApprovals" }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.privacy_reset_space_request)) }
     TextButton(onClick = viewModel::refreshLifecycle, enabled = !state.busy) { Text(stringResource(R.string.privacy_refresh_requests)) }
     state.requests.forEach { request ->
         Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
             Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                Text(stringResource(R.string.privacy_space_request_title), style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(if (request.reset) R.string.privacy_reset_request_title else R.string.privacy_space_request_title), style = MaterialTheme.typography.titleSmall)
                 val label = when (request.status) {
                     "AwaitingApprovals" -> R.string.privacy_awaiting_approvals
-                    "Completed" -> R.string.privacy_deletion_completed
+                    "Completed" -> if (request.reset) R.string.privacy_reset_completed else R.string.privacy_deletion_completed
                     "Cancelled" -> R.string.privacy_request_cancelled
                     "Invalidated" -> R.string.privacy_request_invalidated
-                    else -> R.string.privacy_processing
+                    else -> if (request.reset) R.string.privacy_reset_processing else R.string.privacy_processing
                 }
                 Text(stringResource(label))
                 Text(stringResource(R.string.privacy_approval_count, request.approvals.size, request.members.size))
@@ -68,8 +72,8 @@ fun DeletionControls(viewModel: PrivacyViewModel) {
                 }
                 if (request.status == "AwaitingApprovals") {
                     if (viewModel.currentPerson !in request.approvals) {
-                        TextButton(onClick = { prompt = DeletionPrompt(PrivacyAction.ApproveSpaceDeletion, request.id) }, enabled = !state.busy) {
-                            Text(stringResource(R.string.privacy_approve))
+                        TextButton(onClick = { prompt = DeletionPrompt(PrivacyAction.ApproveSpaceDeletion, request.id, request.reset) }, enabled = !state.busy) {
+                            Text(stringResource(if (request.reset) R.string.privacy_reset_approve else R.string.privacy_approve))
                         }
                     }
                     TextButton(onClick = { viewModel.spaceAction(PrivacyAction.CancelSpaceDeletion, request.id) }, enabled = !state.busy) {
@@ -83,10 +87,10 @@ fun DeletionControls(viewModel: PrivacyViewModel) {
         val account = chosen.action == PrivacyAction.PrepareAccountDeletion
         AlertDialog(
             onDismissRequest = { prompt = null; password = "" },
-            title = { Text(stringResource(if (account) R.string.privacy_delete_account else R.string.privacy_delete_space_confirm)) },
+            title = { Text(stringResource(if (account) R.string.privacy_delete_account else if (chosen.reset) R.string.privacy_reset_space_confirm else R.string.privacy_delete_space_confirm)) },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
-                    Text(stringResource(if (account) R.string.privacy_delete_account_warning else R.string.privacy_delete_space_warning))
+                    Text(stringResource(if (account) R.string.privacy_delete_account_warning else if (chosen.reset) R.string.privacy_reset_space_warning else R.string.privacy_delete_space_warning))
                     OutlinedTextField(value = password, onValueChange = { password = it }, label = { Text(stringResource(R.string.privacy_password)) },
                         singleLine = true, visualTransformation = PasswordVisualTransformation(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password))
                 }
@@ -97,7 +101,7 @@ fun DeletionControls(viewModel: PrivacyViewModel) {
                     password = ""; prompt = null
                     if (account) viewModel.deleteAccount(transientPassword)
                     else viewModel.spaceAction(chosen.action, checkNotNull(chosen.id), transientPassword)
-                }) { Text(stringResource(if (account) R.string.privacy_delete_account_confirm else R.string.privacy_approve)) }
+                }) { Text(stringResource(if (account) R.string.privacy_delete_account_confirm else if (chosen.reset) R.string.privacy_reset_approve else R.string.privacy_approve)) }
             },
             dismissButton = { TextButton(onClick = { prompt = null; password = "" }) { Text(stringResource(R.string.privacy_cancel)) } },
         )

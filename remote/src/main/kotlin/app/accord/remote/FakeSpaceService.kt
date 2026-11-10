@@ -74,6 +74,8 @@ class FakeSpaceService(
         val invites = mutableListOf<Invite>()
         val entities = linkedMapOf<EntityKey, RemoteEntityState>()
         var cursor = 0L
+        /** Sobe a cada reset do espaço (ADR 0088); o cursor não volta atrás. */
+        var resetEpoch = 0L
     }
 
     private class AppliedRecord(val spaceId: String, val changes: List<EntityChangeEnvelope>, val result: OperationResult.Applied)
@@ -88,7 +90,7 @@ class FakeSpaceService(
     private val applied = mutableMapOf<String, AppliedRecord>()
     private val failedAttempts = mutableMapOf<String, MutableList<Long>>()
     private class DeletionJob(var id: String, var subject: String?, var proofHash: String, var status: String = "Prepared")
-    private class SpaceDeletion(val id: String, val spaceId: String, val members: Set<String>, val approvals: MutableSet<String>, var status: String = "AwaitingApprovals")
+    private class SpaceDeletion(val id: String, val spaceId: String, val members: Set<String>, val approvals: MutableSet<String>, var status: String = "AwaitingApprovals", val kind: String = "Delete")
     private val deletions = mutableMapOf<String, DeletionJob>()
     private val spaceDeletions = mutableMapOf<String, SpaceDeletion>()
     private val closedSpaces = mutableMapOf<String, MutableMap<String, String>>()
@@ -100,6 +102,14 @@ class FakeSpaceService(
     private fun proofHash(proof: String): String = java.util.Base64.getEncoder().encodeToString(
         java.security.MessageDigest.getInstance("SHA-256").digest(proof.toByteArray(Charsets.UTF_8)),
     )
+
+    /** Zera só os dados financeiros: membros, convites e o cursor ficam; a época sobe para os aparelhos limparem o que guardam. */
+    private fun resetSpace(space: Space) {
+        space.entities.keys.forEach(entityOwner::remove)
+        space.entities.clear()
+        applied.entries.removeAll { it.value.spaceId == space.id }
+        space.resetEpoch++
+    }
 
     private fun deleteSpace(space: Space) {
         space.members.forEach { member ->
@@ -159,7 +169,7 @@ class FakeSpaceService(
             return@call privacyResult(buildJsonObject { put("requestId", job.id); put("status", job.status) })
         }
         val account = accessToken?.let(::authenticate) ?: return@call fail(RemoteFailure.SessionExpired)
-        if (command.action in setOf(PrivacyAction.PrepareAccountDeletion, PrivacyAction.RequestSpaceDeletion, PrivacyAction.ApproveSpaceDeletion)
+        if (command.action in setOf(PrivacyAction.PrepareAccountDeletion, PrivacyAction.RequestSpaceDeletion, PrivacyAction.RequestSpaceReset, PrivacyAction.ApproveSpaceDeletion)
             && account.password != command.password) return@call fail(RemoteFailure.InvalidCredentials)
         if (command.action == PrivacyAction.PrepareAccountDeletion) {
             val id = command.requestId ?: return@call fail(RemoteFailure.NotMember)
@@ -171,31 +181,40 @@ class FakeSpaceService(
             return@call privacyResult(buildJsonObject { put("requestId", id); put("status", "Prepared") })
         }
         if (command.action == PrivacyAction.Status) return@call privacyResult(buildJsonObject {
-            put("requests", JsonArray(spaceDeletions.values.filter { memberSpace(account, it.spaceId) != null }.map { job ->
-                buildJsonObject { put("requestId", job.id); put("spaceId", job.spaceId); put("status", job.status)
+            // Como no serviço: pedidos de exclusão ficam todos; dos resets só o que espera aprovação e o último concluído/recusado.
+            val visible = spaceDeletions.values.filter { memberSpace(account, it.spaceId) != null }
+            val lastResets = visible.filter { it.kind == "Reset" && it.status != "AwaitingApprovals" }.groupBy { it.spaceId }.mapNotNull { it.value.lastOrNull() }
+            put("requests", JsonArray(visible.filter { it.kind == "Delete" || it.status == "AwaitingApprovals" || it in lastResets }.map { job ->
+                buildJsonObject { put("requestId", job.id); put("spaceId", job.spaceId); put("status", job.status); put("kind", job.kind)
                     put("members", JsonArray(job.members.map(::JsonPrimitive))); put("approvals", JsonArray(job.approvals.map(::JsonPrimitive))) }
             }))
             put("closedSpaces", JsonArray(closedSpaces[account.id].orEmpty().map { (id, name) -> buildJsonObject { put("spaceId", id); put("name", name) } }))
+            put("spaces", JsonArray(spaces.values.filter { space -> space.members.any { it.accountId == account.id } }.map { space ->
+                buildJsonObject { put("spaceId", space.id); put("resetEpoch", space.resetEpoch) }
+            }))
         })
         val id = command.requestId ?: return@call fail(RemoteFailure.NotMember)
-        val job = if (command.action == PrivacyAction.RequestSpaceDeletion) {
+        val job = if (command.action == PrivacyAction.RequestSpaceDeletion || command.action == PrivacyAction.RequestSpaceReset) {
+            val kind = if (command.action == PrivacyAction.RequestSpaceReset) "Reset" else "Delete"
             val space = command.spaceId?.let { memberSpace(account, it) } ?: return@call fail(RemoteFailure.NotMember)
-            spaceDeletions[id]?.takeIf { it.spaceId == space.id }
+            // Um pedido por vez no espaço: excluir e resetar não se confundem nem se aprovam um pelo outro.
+            val existing = spaceDeletions[id]?.takeIf { it.spaceId == space.id }
                 ?: spaceDeletions.values.firstOrNull { it.spaceId == space.id && it.status == "AwaitingApprovals" }
-                ?: SpaceDeletion(id, space.id, space.members.map { it.accountId }.toSet(), mutableSetOf(account.id)).also { spaceDeletions[id] = it }
+            if (existing != null && existing.kind != kind) return@call fail(RemoteFailure.NotMember)
+            existing ?: SpaceDeletion(id, space.id, space.members.map { it.accountId }.toSet(), mutableSetOf(account.id), kind = kind).also { spaceDeletions[id] = it }
         } else spaceDeletions[id] ?: return@call fail(RemoteFailure.NotMember)
         val space = memberSpace(account, job.spaceId)
-        if (space == null && !(job.status == "Completed" && account.id in job.members)) return@call fail(RemoteFailure.NotMember)
+        if (space == null && !(job.status == "Completed" && job.kind == "Delete" && account.id in job.members)) return@call fail(RemoteFailure.NotMember)
         if (job.status == "AwaitingApprovals") {
             if (space?.members?.map { it.accountId }?.toSet() != job.members) job.status = "Invalidated"
             else if (command.action == PrivacyAction.CancelSpaceDeletion) job.status = "Cancelled"
             else if (command.action == PrivacyAction.ApproveSpaceDeletion) job.approvals += account.id
             if (job.status == "AwaitingApprovals" && job.approvals.containsAll(job.members)) {
                 job.status = "Completed"
-                deleteSpace(checkNotNull(space))
+                if (job.kind == "Reset") resetSpace(checkNotNull(space)) else deleteSpace(checkNotNull(space))
             }
         }
-        privacyResult(buildJsonObject { put("requestId", job.id); put("spaceId", job.spaceId); put("status", job.status)
+        privacyResult(buildJsonObject { put("requestId", job.id); put("spaceId", job.spaceId); put("status", job.status); put("kind", job.kind)
             put("members", JsonArray(job.members.map(::JsonPrimitive))); put("approvals", JsonArray(job.approvals.map(::JsonPrimitive))) })
     }
 

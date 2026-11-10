@@ -11,12 +11,20 @@ import kotlinx.serialization.json.jsonArray
 /** Snapshot consistente de tabelas explicitamente permitidas, sem acesso, tokens nem arquivos externos. */
 class RoomDataExport(private val db: AccordDatabase) {
     /** Encerramento confirmado pelo serviço: preserva só o histórico pessoal do Chat. */
-    suspend fun clearFinancial() = db.useWriterConnection { connection ->
+    suspend fun clearFinancial() = clear(FINANCIAL_TABLES)
+
+    /**
+     * Reset do espaço confirmado pelo serviço (ADR 0088): zera os dados financeiros e a fila deste aparelho, mas mantém a preferência
+     * de avisos, que é escolha da pessoa neste aparelho e não dado do espaço. O Chat também fica, como em qualquer limpeza financeira.
+     */
+    suspend fun clearForReset() = clear(FINANCIAL_TABLES - LOCAL_PREFERENCE_TABLES)
+
+    private suspend fun clear(wanted: Set<String>) = db.useWriterConnection { connection ->
         connection.withTransaction(Transactor.SQLiteTransactionType.IMMEDIATE) {
             val tables = connection.usePrepared("SELECT name FROM sqlite_master WHERE type='table'") { statement ->
                 buildSet { while (statement.step()) add(statement.getText(0)) }
             }
-            for (table in FINANCIAL_TABLES.filter { it in tables }) {
+            for (table in wanted.filter { it in tables }) {
                 connection.usePrepared("DELETE FROM \"$table\"") { it.step() }
             }
         }
@@ -45,6 +53,9 @@ class RoomDataExport(private val db: AccordDatabase) {
     }
 
     companion object {
+        /** Escolhas da pessoa neste aparelho que o reset do espaço preserva. */
+        private val LOCAL_PREFERENCE_TABLES = setOf("alert_preference")
+
         // Atualizar esta lista explicitamente quando um novo domínio persistido for incorporado.
         val PERSONAL_TABLES = setOf("chat_message", "chat_attempt", "chat_question", "chat_receipt", "chat_feedback", "chat_conversation")
         val FINANCIAL_TABLES = setOf(

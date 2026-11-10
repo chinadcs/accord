@@ -23,7 +23,8 @@ class PrivacyAccessCenterTest {
             val identity = Session(spaceId,accountId)
             val space = RoomFinanceSpace.open(db.db, BudgetClock.system(), { identity })
             val store = SyncStore(db.db)
-            return SpaceRuntime(space,store,SyncEngine(store,remote,access),RoomChatStore(db.db),identity,dataExport=RoomDataExport(db.db))
+            return SpaceRuntime(space,store,SyncEngine(store,remote,access),RoomChatStore(db.db),identity,dataExport=RoomDataExport(db.db),
+                resetLocal={ RoomDataExport(db.db).clearForReset(); space.reseed() })
         }
         override fun close(accountId: String, spaceId: String) = Unit
         override suspend fun eraseAccountData(accountId: String) { erased += accountId }
@@ -82,5 +83,47 @@ class PrivacyAccessCenterTest {
         assertTrue(center.archivedChatData(space)!!.contains("mensagem fictícia"))
         center.signOut(true); center.signIn(b.email,"senha-ficticia-2")
         assertNull(center.archivedChatData(space)); assertTrue(center.status.value.archivedSpaces.isEmpty())
+    }
+
+    @Test fun `reset aprovado por todos limpa dados e fila locais, preserva Chat e so roda uma vez`() = runBlocking<Unit> {
+        val remote=FakeSpaceService(); val a=ok(remote.signUp("reset-a@teste.exemplo","senha-ficticia-1")); val b=ok(remote.signUp("reset-b@teste.exemplo","senha-ficticia-2"))
+        val space=UUID.randomUUID().toString(); ok(remote.createSpace(a.accessToken,space,"Casa"))
+        val invite=ok(remote.generateInvite(a.accessToken,space)); ok(remote.joinWithCode(b.accessToken,invite.code))
+        val factory=Factory(remote); val store=InMemoryAccessStore(snapshot(a,space)); val center=AccessCenter(remote,store,factory,{YearMonth.of(2026,11)})
+        center.restore()
+        val runtime=center.runtime.value!!
+        runtime.chatStore!!.saveMessage(ChatMessage("msg","mensagem fictícia",100))
+        assertIs<app.accord.core.space.CommandResult.Applied>(runtime.space.execute(app.accord.core.space.Envelope(app.accord.core.space.CommandId("cartao-reset")),
+            app.accord.core.space.ConfigureCard(null,"Cartão do reset",8,15)))
+        assertEquals(1,runtime.syncStore.summary().awaitingOperations)
+        assertIs<SyncOutcome.Completed>(runtime.engine.syncNow())
+        assertTrue(remote.entityCount(space)>0)
+        // Alteração ainda não enviada: o reset a descarta, e o aviso da tela diz isso.
+        runtime.space.execute(app.accord.core.space.Envelope(app.accord.core.space.CommandId("cartao-pendente")),
+            app.accord.core.space.ConfigureCard(null,"Cartão pendente",8,15))
+        assertEquals(1,runtime.syncStore.summary().awaitingOperations)
+
+        val request=UUID.randomUUID().toString()
+        assertIs<RemoteResult.Ok<String>>(center.privacySpaceAction(PrivacyAction.RequestSpaceReset,request,"senha-ficticia-1"))
+        assertEquals(0L,store.read().bindings[a.accountId]!!.resetEpoch,"sem unanimidade nada é limpo")
+        assertEquals(1,runtime.syncStore.summary().awaitingOperations)
+        ok(remote.privacy(b.accessToken,PrivacyCommand(PrivacyAction.ApproveSpaceDeletion,request,password="senha-ficticia-2")))
+        assertEquals(0,remote.entityCount(space))
+
+        // O aparelho de quem aprovou primeiro aprende na próxima leitura (antes de cada sincronização).
+        assertIs<RemoteResult.Ok<String>>(center.reconcilePrivacy())
+        assertEquals(1L,store.read().bindings[a.accountId]!!.resetEpoch)
+        assertSame(runtime,center.runtime.value,"o espaço continua aberto, sem recriar a fachada")
+        assertEquals(0,runtime.syncStore.summary().awaitingOperations,"fila descartada")
+        assertEquals(0L,runtime.syncStore.cursor())
+        val local=RoomDataExport(factory.rooms[a.accountId to space]!!.db)
+        assertEquals(0,local.snapshot(DataExportScope.Financial)["operation"]!!.let { (it as kotlinx.serialization.json.JsonArray).size })
+        assertTrue(local.snapshot(DataExportScope.Personal)["chat_message"].toString().contains("msg"),"Chat preservado")
+        assertNotNull(center.status.value.space,"espaço, membros e convite preservados")
+        // Nova leitura com a mesma época não limpa de novo.
+        runtime.space.execute(app.accord.core.space.Envelope(app.accord.core.space.CommandId("cartao-depois")),
+            app.accord.core.space.ConfigureCard(null,"Cartão depois do reset",8,15))
+        center.reconcilePrivacy()
+        assertEquals(1,runtime.syncStore.summary().awaitingOperations,"mesma época não apaga o que veio depois")
     }
 }

@@ -34,7 +34,8 @@ data class PrivacyExportState(
 /** Relatório dos últimos sete dias do Chat neste aparelho: só texto com contagens (accord-8q5). */
 data class UsageReportState(val busy: Boolean = false, val text: String? = null, val error: Boolean = false)
 
-data class SpaceDeletionUi(val id: String, val status: String, val members: List<String>, val approvals: Set<String>)
+/** [reset] é o pedido de zerar os dados financeiros (ADR 0088); sem o campo (serviço antigo) o pedido é de exclusão. */
+data class SpaceDeletionUi(val id: String, val status: String, val members: List<String>, val approvals: Set<String>, val reset: Boolean = false)
 data class PrivacyLifecycleState(
     val busy: Boolean = false, val available: Boolean = false, val error: Boolean = false,
     val wrongPassword: Boolean = false, val requests: List<SpaceDeletionUi> = emptyList(),
@@ -66,7 +67,8 @@ class PrivacyViewModel(private val container: AppContainer) : ViewModel() {
                             val request = element as? JsonObject ?: return@mapNotNull null
                             fun strings(key: String) = (request[key] as? JsonArray).orEmpty().mapNotNull { it.jsonPrimitive.contentOrNull }
                             SpaceDeletionUi(request["requestId"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null,
-                                request["status"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null, strings("members"), strings("approvals").toSet())
+                                request["status"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null, strings("members"), strings("approvals").toSet(),
+                                reset = request["kind"]?.jsonPrimitive?.contentOrNull == "Reset")
                         }
                         lifecycleState.value = PrivacyLifecycleState(available = true, requests = requests)
                     }

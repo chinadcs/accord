@@ -1,6 +1,6 @@
 package app.accord.core.sync
 
-enum class PrivacyAction { PrepareAccountDeletion, ContinueAccountDeletion, RequestSpaceDeletion, ApproveSpaceDeletion, CancelSpaceDeletion, Status }
+enum class PrivacyAction { PrepareAccountDeletion, ContinueAccountDeletion, RequestSpaceDeletion, RequestSpaceReset, ApproveSpaceDeletion, CancelSpaceDeletion, Status }
 
 /** Senha existe só nesta chamada. Comprovante autoriza apenas retomar uma exclusão já confirmada. */
 data class PrivacyCommand(

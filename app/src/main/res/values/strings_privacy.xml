@@ -21,7 +21,7 @@
     <string name="privacy_export_local_body">Não foi possível consultar seus dados no serviço. Você pode salvar uma cópia local, identificada como incompleta, ou cancelar e tentar novamente depois.</string>
     <string name="privacy_export_local_action">Usar cópia local incompleta</string>
     <string name="privacy_export_save">Escolher onde salvar</string>
-    <string name="privacy_delete_heading">Excluir conta ou espaço</string>
+    <string name="privacy_delete_heading">Excluir conta, excluir ou zerar o espaço</string>
     <string name="privacy_delete_intro">Você pode baixar seus dados antes de excluir. A exclusão definitiva exige conexão e confirmação da sua senha.</string>
     <string name="privacy_delete_account">Excluir minha conta</string>
     <string name="privacy_delete_account_confirm">Excluir conta definitivamente</string>
@@ -29,6 +29,13 @@
     <string name="privacy_delete_space_request">Solicitar exclusão do espaço</string>
     <string name="privacy_delete_space_confirm">Confirmar exclusão do espaço?</string>
     <string name="privacy_delete_space_warning">Após todos os membros atuais aprovarem, as finanças e os cofrinhos serão apagados. As contas individuais continuam e o Chat local fica somente para leitura. Registros locais ainda não enviados serão descartados quando o aparelho reconhecer o encerramento. Cada pessoa pode baixar seus dados antes de aprovar. Mudar os membros invalida este pedido.</string>
+    <string name="privacy_reset_space_request">Solicitar reset do espaço</string>
+    <string name="privacy_reset_space_confirm">Confirmar reset do espaço?</string>
+    <string name="privacy_reset_space_warning">Após todos os membros atuais aprovarem, as finanças e os cofrinhos do espaço serão apagados em todos os aparelhos: lançamentos, orçamento, cartões, contas, rendas e o resto. O espaço, os participantes, o código de convite e o Chat de cada pessoa continuam. Registros ainda não enviados de qualquer aparelho serão descartados quando ele reconhecer o reset, e não há como desfazer. Cada pessoa pode baixar seus dados antes de aprovar. Mudar os membros invalida este pedido.</string>
+    <string name="privacy_reset_request_title">Pedido de reset do espaço</string>
+    <string name="privacy_reset_completed">Reset concluído</string>
+    <string name="privacy_reset_processing">Reset em andamento</string>
+    <string name="privacy_reset_approve">Aprovar reset</string>
     <string name="privacy_password">Sua senha do Accord</string>
     <string name="privacy_wrong_password">Senha incorreta. Confira e tente novamente.</string>
     <string name="privacy_lifecycle_unavailable">Não foi possível consultar os pedidos de exclusão no serviço. Tente novamente para continuar.</string>

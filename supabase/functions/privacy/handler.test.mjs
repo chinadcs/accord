@@ -112,3 +112,21 @@ test("recibo concluído não repete exclusão nem exige conta viva", async () =>
   assert.equal((await result.json()).data.status, "Completed");
   assert.equal(calls.length, 1);
 });
+
+test("pedir reset do espaço exige senha e chama a RPC do espaço com a conta da sessão", async () => {
+  globalThis.fetch = async (url, options) => {
+    calls.push({ url, options });
+    const data = url.endsWith("/auth/v1/user") ? { id: "person-a", email: "pessoa@teste.exemplo" }
+      : url.includes("grant_type=password") ? { user: { id: "person-a" }, access_token: "temporary-test" }
+      : url.includes("/logout") ? {} : { requestId: "pedido", status: "AwaitingApprovals", kind: "Reset" };
+    return new Response(JSON.stringify(data), { status: 200 });
+  };
+  const semSenha = await handle(request({ action: "request_space_reset", request_id: "pedido", space_id: "espaco" }));
+  assert.equal(semSenha.status, 400);
+  assert.equal(calls.some((call) => call.url.includes("/rpc/")), false);
+  calls = [];
+  const result = await handle(request({ action: "request_space_reset", request_id: "pedido", space_id: "espaco", password: "ficticia" }));
+  assert.equal(result.status, 200);
+  const rpc = calls.find((call) => call.url.includes("/rpc/privacy_space_action"));
+  assert.deepEqual(JSON.parse(rpc.options.body), { p_account: "person-a", p_action: "request_space_reset", p_id: "pedido", p_space: "espaco" });
+});

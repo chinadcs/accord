@@ -37,6 +37,8 @@ data class SpaceBinding(
     val firstStepsDismissed: Boolean = false,
     /** Entrou por convite (ADR 0053): os primeiros passos são os do convidado, sem refazer o que o espaço já tem. */
     val joinedByInvite: Boolean = false,
+    /** Última época de reset do espaço (ADR 0088) cujos dados este aparelho já limpou; o serviço começa em 0. */
+    val resetEpoch: Long = 0,
 )
 
 /** Criação de espaço em andamento: o mesmo ID é reutilizado se a resposta se perder. */

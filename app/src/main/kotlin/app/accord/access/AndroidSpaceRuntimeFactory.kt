@@ -43,7 +43,12 @@ class AndroidSpaceRuntimeFactory(
         val space = RoomFinanceSpace.open(database, clock, { identity })
         space.onAlertRecorded = alertSink
         val store = SyncStore(database)
-        return SpaceRuntime(space, store, SyncEngine(store, remote, access, onReceived = { space.evaluateAlerts(); alertSink() }), RoomChatStore(database), identity, imports = space.importSession(), dataExport = app.accord.persistence.RoomDataExport(database))
+        return SpaceRuntime(space, store, SyncEngine(store, remote, access, onReceived = { space.evaluateAlerts(); alertSink() }), RoomChatStore(database), identity, imports = space.importSession(), dataExport = app.accord.persistence.RoomDataExport(database),
+            resetLocal = {
+                app.accord.persistence.RoomDataExport(database).clearForReset()
+                app.accord.ui.intentions.SharedPreferencesIntentionDrafts.eraseSpace(context, accountId, spaceId)
+                space.reseed()
+            })
     }
 
     override fun close(accountId: String, spaceId: String) {

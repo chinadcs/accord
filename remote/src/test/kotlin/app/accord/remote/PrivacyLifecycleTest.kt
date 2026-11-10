@@ -76,4 +76,50 @@ class PrivacyLifecycleTest {
         assertEquals(3, service.accountCount()); assertNull(ok(service.currentSpace(a.accessToken)))
         assertTrue("Casa" in ok(service.privacy(b.accessToken, PrivacyCommand(PrivacyAction.Status))))
     }
+
+    private fun epochOf(result: RemoteResult<String>, space: String): Long =
+        (Json.parseToJsonElement(ok(result)).jsonObject["spaces"] as kotlinx.serialization.json.JsonArray)
+            .map { it.jsonObject }.first { it["spaceId"]!!.jsonPrimitive.content == space }["resetEpoch"]!!.jsonPrimitive.content.toLong()
+
+    @Test fun `reset do espaco exige todos os membros, zera so os dados e preserva membros e convite`() = runBlocking<Unit> {
+        val service = FakeSpaceService(); val a = member(service, 1); val b = member(service, 2)
+        val space = UUID.randomUUID().toString(); ok(service.createSpace(a.accessToken, space, "Casa")); join(service, a, b, space)
+        ok(service.push(a.accessToken, space, listOf(OperationEnvelope("op-reset", space, PROTOCOL_VERSION, "i", 1,
+            listOf(EntityChangeEnvelope("Movement", "mov-reset", null, """{"valor":6800}"""))))))
+        assertEquals(1, service.entityCount(space))
+        assertEquals(0L, epochOf(service.privacy(b.accessToken, PrivacyCommand(PrivacyAction.Status)), space))
+
+        val request = UUID.randomUUID().toString()
+        assertEquals(RemoteFailure.InvalidCredentials, assertIs<RemoteResult.Failed>(service.privacy(a.accessToken,
+            PrivacyCommand(PrivacyAction.RequestSpaceReset, request, password = "errada", spaceId = space))).failure)
+        assertEquals("AwaitingApprovals", status(service.privacy(a.accessToken, PrivacyCommand(PrivacyAction.RequestSpaceReset, request, password = "senha-ficticia-1", spaceId = space))))
+        assertEquals(1, service.entityCount(space))
+        // Excluir o espaço não corre junto com o reset pendente.
+        assertIs<RemoteResult.Failed>(service.privacy(a.accessToken, PrivacyCommand(PrivacyAction.RequestSpaceDeletion, UUID.randomUUID().toString(), password = "senha-ficticia-1", spaceId = space)))
+        assertEquals("Completed", status(service.privacy(b.accessToken, PrivacyCommand(PrivacyAction.ApproveSpaceDeletion, request, password = "senha-ficticia-2"))))
+
+        assertEquals(0, service.entityCount(space)); assertEquals(2, service.memberCount(space)); assertEquals(1, service.spaceCount())
+        assertNotNull(ok(service.currentSpace(a.accessToken)))
+        assertEquals(1L, epochOf(service.privacy(a.accessToken, PrivacyCommand(PrivacyAction.Status)), space))
+        assertEquals(0, ok(service.pull(b.accessToken, space, 0, 100)).changes.size)
+        // Repetir a aprovação não zera de novo.
+        status(service.privacy(a.accessToken, PrivacyCommand(PrivacyAction.ApproveSpaceDeletion, request, password = "senha-ficticia-1")))
+        assertEquals(1L, epochOf(service.privacy(a.accessToken, PrivacyCommand(PrivacyAction.Status)), space))
+    }
+
+    @Test fun `reset recusado ou invalidado preserva os dados`() = runBlocking<Unit> {
+        val service = FakeSpaceService(); val a = member(service, 1); val b = member(service, 2); val c = member(service, 3)
+        val space = UUID.randomUUID().toString(); ok(service.createSpace(a.accessToken, space, "Casa")); join(service, a, b, space)
+        ok(service.push(a.accessToken, space, listOf(OperationEnvelope("op-keep", space, PROTOCOL_VERSION, "i", 1,
+            listOf(EntityChangeEnvelope("Movement", "mov-keep", null, """{"valor":100}"""))))))
+        val refused = UUID.randomUUID().toString()
+        ok(service.privacy(a.accessToken, PrivacyCommand(PrivacyAction.RequestSpaceReset, refused, password = "senha-ficticia-1", spaceId = space)))
+        assertEquals("Cancelled", status(service.privacy(b.accessToken, PrivacyCommand(PrivacyAction.CancelSpaceDeletion, refused))))
+        val stale = UUID.randomUUID().toString()
+        ok(service.privacy(a.accessToken, PrivacyCommand(PrivacyAction.RequestSpaceReset, stale, password = "senha-ficticia-1", spaceId = space)))
+        join(service, a, c, space)
+        assertEquals("Invalidated", status(service.privacy(b.accessToken, PrivacyCommand(PrivacyAction.ApproveSpaceDeletion, stale, password = "senha-ficticia-2"))))
+        assertEquals(1, service.entityCount(space))
+        assertEquals(0L, epochOf(service.privacy(a.accessToken, PrivacyCommand(PrivacyAction.Status)), space))
+    }
 }

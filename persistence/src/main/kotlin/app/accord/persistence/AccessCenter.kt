@@ -46,6 +46,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.longOrNull
 import app.accord.core.sync.PrivacyAction
 import app.accord.core.sync.PrivacyCommand
 import app.accord.core.sync.ArchivedSpace
@@ -65,6 +66,8 @@ class SpaceRuntime(
     /** Sessão de importação OFX/PDF do espaço (S4); nula onde o espaço não a oferece (testes de acesso). */
     val imports: app.accord.core.importing.ImportSession? = null,
     val dataExport: RoomDataExport? = null,
+    /** Limpa os dados financeiros e a fila deste aparelho depois de um reset do espaço (ADR 0088) e refaz as linhas iniciais. */
+    val resetLocal: suspend () -> Unit = {},
 ) {
     /** Cancela consumidores antes de fechar/apagar o banco, sem acoplar a persistência ao Android. */
     @Volatile var beforeClose: () -> Unit = {}
@@ -405,6 +408,7 @@ class AccessCenter(
                         notice["name"]?.jsonPrimitive?.contentOrNull ?: "Espaço encerrado"),
                 ) }
             }
+            applyResetIfNeeded(accountId, data)
             val currentBinding = store.read().bindings[accountId]
             if (currentBinding != null) {
                 val participants = authorized { remote.participants(it, currentBinding.spaceId) }
@@ -415,6 +419,34 @@ class AccessCenter(
             publish(store.read())
         }
         result
+    }
+
+    /**
+     * Reset do espaço (ADR 0088): se o serviço está numa época de reset maior que a já aplicada aqui, os dados financeiros e a fila
+     * deste aparelho são descartados (o espaço voltou a vazio para todos) e a época nova é guardada. Só depois de limpar com êxito:
+     * falha ou banco ainda fechado deixa a época antiga, e a próxima leitura tenta de novo. Alterações deste aparelho ainda não
+     * enviadas também se perdem, e o serviço não tem como dizer quantas eram.
+     */
+    private suspend fun applyResetIfNeeded(accountId: String, status: JsonObject) {
+        val binding = store.read().bindings[accountId] ?: return
+        val remoteEpoch = (status["spaces"] as? JsonArray).orEmpty().firstNotNullOfOrNull { element ->
+            (element as? JsonObject)?.takeIf { it["spaceId"]?.jsonPrimitive?.contentOrNull == binding.spaceId }
+                ?.get("resetEpoch")?.jsonPrimitive?.longOrNull
+        } ?: return
+        if (remoteEpoch <= binding.resetEpoch) return
+        val runtime = runtimeState.value?.takeIf { openKey == (accountId to binding.spaceId) } ?: return
+        try {
+            runtime.resetLocal()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            return
+        }
+        store.update { current ->
+            val now = current.bindings[accountId]?.takeIf { it.spaceId == binding.spaceId } ?: return@update current
+            current.copy(bindings = current.bindings + (accountId to now.copy(resetEpoch = remoteEpoch)))
+        }
+        runtime.engine.refresh()
     }
 
     suspend fun archivedChatData(spaceId: String): String? {

@@ -97,6 +97,7 @@ class SupabaseSpaceService(
             app.accord.core.sync.PrivacyAction.PrepareAccountDeletion -> "prepare_account_deletion"
             app.accord.core.sync.PrivacyAction.ContinueAccountDeletion -> "continue_account_deletion"
             app.accord.core.sync.PrivacyAction.RequestSpaceDeletion -> "request_space_deletion"
+            app.accord.core.sync.PrivacyAction.RequestSpaceReset -> "request_space_reset"
             app.accord.core.sync.PrivacyAction.ApproveSpaceDeletion -> "approve_space_deletion"
             app.accord.core.sync.PrivacyAction.CancelSpaceDeletion -> "cancel_space_deletion"
             app.accord.core.sync.PrivacyAction.Status -> "status"

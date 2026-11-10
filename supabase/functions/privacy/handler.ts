@@ -57,7 +57,7 @@ export async function handle(request: Request): Promise<Response> {
     if (!authResponse.ok) return reply(401, { error: "session_required" });
     const user = await authResponse.json();
     if (typeof user.id !== "string") return reply(401, { error: "session_required" });
-    if (["prepare_account_deletion", "request_space_deletion", "approve_space_deletion"].includes(body.action)) {
+    if (["prepare_account_deletion", "request_space_deletion", "request_space_reset", "approve_space_deletion"].includes(body.action)) {
       if (typeof body.password !== "string" || !body.password || typeof user.email !== "string") {
         return reply(400, { error: "password_required" });
       }
@@ -84,7 +84,7 @@ export async function handle(request: Request): Promise<Response> {
       if (!prepared.ok) return reply(prepared.status === 403 ? 403 : 503, { error: "deletion_not_available" });
       return lifecycle(await prepared.json());
     }
-    if (["request_space_deletion", "approve_space_deletion", "cancel_space_deletion"].includes(body.action)) {
+    if (["request_space_deletion", "request_space_reset", "approve_space_deletion", "cancel_space_deletion"].includes(body.action)) {
       if (typeof body.request_id !== "string") return reply(400, { error: "invalid_request" });
       const result = await rpc("privacy_space_action", {
         p_account: user.id, p_action: body.action, p_id: body.request_id, p_space: body.space_id ?? null,

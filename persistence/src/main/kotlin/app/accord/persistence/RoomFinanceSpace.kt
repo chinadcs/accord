@@ -1025,6 +1025,9 @@ class RoomFinanceSpace private constructor(
         return rows
     }
 
+    /** Refaz as linhas iniciais (categorias, Carteira, cartão) depois de o reset do espaço (ADR 0088) limpar o banco; o que já existe não é tocado. */
+    suspend fun reseed() = seed(sessions.current().spaceId)
+
     private suspend fun seed(spaceId: String) {
         val orders = mutableMapOf<String?, Int>()
         val rows = CategorySeed.items.map { item ->
