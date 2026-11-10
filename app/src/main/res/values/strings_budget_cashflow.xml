@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Seção "Fluxo do mês" do Orçamento (accord-0xi8, ADR 0078). As frases da Início continuam em strings.xml. -->
+<resources>
+    <string name="budget_flow_title">Fluxo do mês</string>
+    <string name="budget_flow_retry_description">Tentar de novo: fluxo do mês</string>
+    <string name="cashflow_label_received">Renda já recebida</string>
+    <string name="cashflow_label_to_receive">Renda prevista a receber</string>
+    <string name="cashflow_label_known">Gastos comprometidos no mês</string>
+    <string name="cashflow_known_paid_note">Dos quais %1$s já pagos</string>
+    <string name="cashflow_label_estimated">Gastos variáveis estimados até o fim do mês</string>
+    <string name="cashflow_label_result_received">Só com a renda recebida</string>
+    <string name="cashflow_label_result_expected">Se toda a renda prevista chegar</string>
+    <string name="cashflow_outcome_surplus">sobra %1$s</string>
+    <string name="cashflow_outcome_shortfall">falta %1$s</string>
+    <string name="cashflow_outcome_even">fica em %1$s, sem sobra nem falta</string>
+    <string name="cashflow_result_line">%1$s: %2$s</string>
+</resources>

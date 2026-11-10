@@ -48,6 +48,9 @@ import app.accord.core.space.GeneralBudgetView
 import app.accord.ui.components.AdaptiveRow
 import app.accord.ui.components.BudgetBar
 import app.accord.ui.components.DecorativeIcon
+import app.accord.ui.components.HomeSectionCard
+import app.accord.ui.components.SectionStatus
+import app.accord.ui.home.CashFlowBody
 import app.accord.ui.components.MonthSelector
 import app.accord.ui.components.MoneyChart
 import app.accord.ui.components.MoneyChartValue
@@ -78,6 +81,7 @@ fun BudgetRoute(
     BudgetScreen(
         state, padding,
         onPrevious = viewModel::previousMonth, onNext = viewModel::nextMonth, onRetry = viewModel::retry,
+        onRetryFlow = viewModel::retryFlow,
         onOpenCategory = onOpenCategory, onClassify = onClassify, onRegister = onRegister,
         onOpenCommitments = onOpenCommitments, onOpenIncomes = onOpenIncomes, onOpenCard = onOpenCard, onSearch = onSearch,
         hasFloatingAction = true, onOpenForecasts = onOpenForecasts,
@@ -100,6 +104,7 @@ fun BudgetScreen(
     onSearch: (() -> Unit)? = null,
     hasFloatingAction: Boolean = false,
     onOpenForecasts: (YearMonth) -> Unit = {},
+    onRetryFlow: () -> Unit = {},
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -129,9 +134,9 @@ fun BudgetScreen(
             }
             is BudgetContent.Failed -> {
                 item { FailureBanner(content.last?.month, onRetry) }
-                content.last?.let { budgetContent(it, onOpenCategory, onClassify, onRegister, onOpenCommitments, onOpenIncomes, onOpenCard, !hasFloatingAction, onOpenForecasts) }
+                content.last?.let { budgetContent(it, onOpenCategory, onClassify, onRegister, onOpenCommitments, onOpenIncomes, onOpenCard, !hasFloatingAction, onOpenForecasts, state.flow.takeIf { _ -> it.month == state.month }, onRetryFlow) }
             }
-            is BudgetContent.Ready -> budgetContent(content.data, onOpenCategory, onClassify, onRegister, onOpenCommitments, onOpenIncomes, onOpenCard, !hasFloatingAction, onOpenForecasts)
+            is BudgetContent.Ready -> budgetContent(content.data, onOpenCategory, onClassify, onRegister, onOpenCommitments, onOpenIncomes, onOpenCard, !hasFloatingAction, onOpenForecasts, state.flow.takeIf { content.data.month == state.month }, onRetryFlow)
         }
     }
 }
@@ -168,6 +173,8 @@ private fun LazyListScope.budgetContent(
     onOpenCard: () -> Unit,
     showInlineManual: Boolean,
     onOpenForecasts: (YearMonth) -> Unit,
+    flow: BudgetFlowState?,
+    onRetryFlow: () -> Unit,
 ) {
     if (data.isEmpty) {
         item { EmptyMonth(onRegister, showInlineManual) }
@@ -178,6 +185,8 @@ private fun LazyListScope.budgetContent(
     item { BudgetCriteria() }
     item { IncomeBlock(data) }
     if (data.budget.toClassify.count > 0) item { ToClassifyRow(data) { onClassify(data.month) } }
+    // O fluxo é do mês escolhido e só aparece junto de uma visão desse mesmo mês (nunca com a do mês anterior).
+    if (flow != null) item(key = "cash-flow") { BudgetFlowSection(flow, onRetryFlow) }
     item {
         val values = data.budget.categories.map { category ->
             MoneyChartValue(
@@ -207,6 +216,35 @@ private fun LazyListScope.budgetContent(
         )
     }
     item { MonthLinks({ onOpenCommitments(data.month) }, { onOpenIncomes(data.month) }, onOpenCard, { onOpenForecasts(data.month) }) }
+}
+
+/**
+ * Fluxo do mês escolhido: renda contra o comprometido e o ritmo estimado dos gastos variáveis (leitura; nada é gravado).
+ * Carga, falha e pronto têm cada um o seu corpo e a mesma altura mínima; só a falha oferece "Tentar de novo", que
+ * relê apenas o fluxo.
+ */
+@Composable
+private fun BudgetFlowSection(flow: BudgetFlowState, onRetry: () -> Unit) {
+    val retryDescription = stringResource(R.string.budget_flow_retry_description)
+    HomeSectionCard(
+        title = stringResource(R.string.budget_flow_title),
+        status = when (flow) {
+            BudgetFlowState.Loading -> SectionStatus.Loading
+            BudgetFlowState.Failed -> SectionStatus.Failed
+            is BudgetFlowState.Ready -> SectionStatus.Ready
+        },
+        loadingDescription = stringResource(R.string.cashflow_loading),
+        failedMessage = stringResource(R.string.cashflow_failed),
+        skeletonLines = 4,
+        failedAction = {
+            OutlinedButton(
+                onClick = onRetry,
+                modifier = Modifier.heightIn(min = AccordSpacing.touchMin).semantics { contentDescription = retryDescription },
+            ) { Text(stringResource(R.string.action_retry)) }
+        },
+    ) {
+        if (flow is BudgetFlowState.Ready) CashFlowBody(flow.value, showTitle = false, detailed = true)
+    }
 }
 
 @Composable

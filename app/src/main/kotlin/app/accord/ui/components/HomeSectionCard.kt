@@ -39,7 +39,8 @@ val SectionMinHeight: Dp = 120.dp
  * Cartão de seção da Início: título (cabeçalho para o TalkBack), ícone decorativo opcional e um de três corpos.
  *
  * - [SectionStatus.Loading]: esqueleto, com [loadingDescription] como único nó lido.
- * - [SectionStatus.Failed]: só a frase curta [failedMessage], sem botão (o "Tentar de novo" é do banner agregado).
+ * - [SectionStatus.Failed]: a frase curta [failedMessage]. Na Início não há botão (o "Tentar de novo" é do banner agregado);
+ *   fora dela, quem não tem banner próprio passa [failedAction] (por exemplo, o Orçamento).
  * - [SectionStatus.Ready]: [content]. Com [onClick], o cartão inteiro é um botão com [onClickLabel]; sem ele, é só leitura.
  *
  * [headerAction] (por exemplo, o botão de informação) fica como irmão do alvo do cartão, no canto superior, para não
@@ -58,6 +59,7 @@ fun HomeSectionCard(
     headerAction: (@Composable () -> Unit)? = null,
     minHeight: Dp = SectionMinHeight,
     skeletonLines: Int = 2,
+    failedAction: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val actionable = sectionIsActionable(status, onClick != null)
@@ -84,7 +86,10 @@ fun HomeSectionCard(
                 }
                 when (status) {
                     SectionStatus.Loading -> SkeletonLines(loadingDescription, lines = skeletonLines)
-                    SectionStatus.Failed -> Text(failedMessage, style = MaterialTheme.typography.bodyMedium)
+                    SectionStatus.Failed -> {
+                        Text(failedMessage, style = MaterialTheme.typography.bodyMedium)
+                        failedAction?.invoke()
+                    }
                     SectionStatus.Ready -> content()
                 }
             }

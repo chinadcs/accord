@@ -4,13 +4,17 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.accord.SpaceProvider
+import app.accord.core.MonthCashFlow
+import app.accord.core.monthCashFlow
 import app.accord.core.space.CategoryNode
 import app.accord.core.space.MonthBudget
 import app.accord.core.space.QueryResult
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.YearMonth
 
@@ -45,7 +49,31 @@ sealed interface BudgetContent {
     data class Failed(val last: BudgetData?) : BudgetContent
 }
 
-data class BudgetUiState(val month: YearMonth, val content: BudgetContent)
+/**
+ * Fluxo do mês exibido, lido à parte do orçamento: se só ele falhar, o resto da tela continua (e vice-versa).
+ * Carga e falha nunca viram zero; a falha não guarda valor antigo para não apresentá-lo como atual.
+ */
+sealed interface BudgetFlowState {
+    data object Loading : BudgetFlowState
+
+    data object Failed : BudgetFlowState
+
+    data class Ready(val value: MonthCashFlow) : BudgetFlowState
+}
+
+/** Lê o fluxo do mês escolhido (orçamento e previsão do mesmo mês); nulo se qualquer leitura falhar. */
+suspend fun loadMonthCashFlow(provider: SpaceProvider, month: YearMonth): MonthCashFlow? {
+    val space = provider.space()
+    val budget = (space.budget(month) as? QueryResult.Data)?.value ?: return null
+    val forecast = (space.forecasts(month) as? QueryResult.Data)?.value ?: return null
+    return monthCashFlow(budget, forecast)
+}
+
+data class BudgetUiState(
+    val month: YearMonth,
+    val content: BudgetContent,
+    val flow: BudgetFlowState = BudgetFlowState.Loading,
+)
 
 /**
  * Estado do Orçamento. O mês escolhido sobrevive à recriação do processo (SavedStateHandle) e a
@@ -60,6 +88,7 @@ class BudgetViewModel(
     val state: StateFlow<BudgetUiState> = _state.asStateFlow()
 
     private var job: Job? = null
+    private var flowJob: Job? = null
     private var lastGood: BudgetData? = null
 
     init {
@@ -72,6 +101,9 @@ class BudgetViewModel(
     fun nextMonth() = select(_state.value.month.plusMonths(1))
 
     fun retry() = load(_state.value.month)
+
+    /** Tentar de novo só do fluxo do mês: não recarrega nem esconde o resto da tela. */
+    fun retryFlow() = loadFlow(_state.value.month, keepReady = false)
 
     /** Volta de outra tela: relê o mês mantendo a visão atual até a nova chegar. */
     fun refresh() = load(_state.value.month, keepContent = true)
@@ -86,10 +118,35 @@ class BudgetViewModel(
         if (!keepContent) _state.value = BudgetUiState(month, BudgetContent.Loading)
         job = viewModelScope.launch {
             val data = loadBudgetData(provider, month)
-            _state.value = BudgetUiState(
-                month,
-                if (data != null) BudgetContent.Ready(data).also { lastGood = data } else BudgetContent.Failed(lastGood),
-            )
+            _state.update {
+                it.copy(
+                    month = month,
+                    content = if (data != null) BudgetContent.Ready(data).also { lastGood = data } else BudgetContent.Failed(lastGood),
+                )
+            }
+        }
+        loadFlow(month, keepReady = keepContent)
+    }
+
+    /**
+     * O fluxo acompanha o mês escolhido. Só relê sem voltar ao esqueleto ([keepReady]) quando já há um resultado pronto
+     * do mesmo mês; troca de mês ou falha anterior mostram a carga. Resultado de outro mês nunca é gravado.
+     */
+    private fun loadFlow(month: YearMonth, keepReady: Boolean) {
+        flowJob?.cancel()
+        _state.update {
+            if (keepReady && it.month == month && it.flow is BudgetFlowState.Ready) it
+            else it.copy(month = month, flow = BudgetFlowState.Loading)
+        }
+        flowJob = viewModelScope.launch {
+            val result = try {
+                loadMonthCashFlow(provider, month)?.let(BudgetFlowState::Ready) ?: BudgetFlowState.Failed
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Exception) {
+                BudgetFlowState.Failed
+            }
+            _state.update { if (it.month == month) it.copy(flow = result) else it }
         }
     }
 
