@@ -87,16 +87,18 @@ object ImportSteps {
     fun affectedMonths(steps: List<ConfirmStep>, card: Boolean, billing: BillingContext): Set<YearMonth> = buildSet {
         steps.filter { it.commands.isNotEmpty() || it.resolution in LINKS }.forEach { s -> s.item.movement.date?.let { add(YearMonth.from(it)) } }
         billing.documentInvoice?.let { if (card && steps.any { it.commands.isNotEmpty() }) add(it) }
+        // A fatura que o próprio arquivo atribui a cada linha (coluna `fatura` do CSV) também muda.
+        if (card) steps.filter { it.commands.isNotEmpty() || it.resolution in LINKS }.forEach { s -> s.item.movement.invoice?.let { add(it) } }
         // Sem fatura única do documento, cada compra criada cai na fatura da sua data (ciclo do cartão).
         if (card && billing.documentInvoice == null) {
-            steps.filter { it.item.effect is ProposedEffect.CreateEntry && it.commands.isNotEmpty() }
+            steps.filter { it.item.effect is ProposedEffect.CreateEntry && it.commands.isNotEmpty() && it.item.movement.invoice == null }
                 .forEach { s -> s.item.movement.date?.let { add(billing.cycle.assign(it).dueMonth) } }
         }
         steps.forEach { s -> (s.item.effect as? ProposedEffect.LinkInstallment)?.shift?.let { addAll(it.before); addAll(it.after) } }
         steps.forEach { s -> (s.item.effect as? ProposedEffect.CreateInstallmentPurchase)?.takeIf { s.commands.isNotEmpty() }?.let { addAll(it.months) } }
         // A credit with no purchase to refund registers one: it lands on the document's invoice, or on the one its date falls in.
         if (card && billing.documentInvoice == null) {
-            steps.filter { it.item.effect is ProposedEffect.CreateRefundWithPurchase && it.commands.isNotEmpty() }
+            steps.filter { it.item.effect is ProposedEffect.CreateRefundWithPurchase && it.commands.isNotEmpty() && it.item.movement.invoice == null }
                 .forEach { s -> s.item.movement.date?.let { add(billing.cycle.assign(it).dueMonth) } }
         }
     }
@@ -130,13 +132,13 @@ object ImportSteps {
                     )
                     is ProposedEffect.LinkEntry -> ConfirmStep(
                         item, Resolution.Linked,
-                        listOfNotNull(correction(effect.entryId, effect.correctInvoiceTo ?: if (effect.clearToConfirm) billing.documentInvoice else null)),
+                        listOfNotNull(correction(effect.entryId, effect.correctInvoiceTo ?: if (effect.clearToConfirm) m.invoice ?: billing.documentInvoice else null)),
                         StepTarget(targetType, effect.entryId),
                     )
                     is ProposedEffect.LinkInstallment -> {
                         val record = billing.purchases.firstOrNull { it.purchaseId == effect.purchaseId }?.installments?.firstOrNull { it.number == effect.number }
                         // The shifted first installment is the one the document's line implies (the document's invoice itself when the line is 1/N).
-                        val fix = if (effect.shift != null) effect.shift.after.first() else if (effect.number == 1 && record?.toConfirm == true) billing.documentInvoice else null
+                        val fix = if (effect.shift != null) effect.shift.after.first() else if (effect.number == 1 && record?.toConfirm == true) m.invoice ?: billing.documentInvoice else null
                         ConfirmStep(
                             item, Resolution.InstallmentLinked,
                             listOfNotNull(correction(effect.purchaseId, fix)),

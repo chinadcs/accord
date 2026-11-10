@@ -7,6 +7,7 @@ import java.nio.charset.CodingErrorAction
 import java.security.MessageDigest
 import java.time.DateTimeException
 import java.time.LocalDate
+import java.time.YearMonth
 
 /**
  * Leitor do **CSV do Accord** (ADR 0042): um formato definido por nós, documentado em `docs/importacao-csv.md`, não o CSV de nenhum banco.
@@ -16,7 +17,7 @@ import java.time.LocalDate
  */
 object CsvReader {
     private val REQUIRED = listOf("data", "descricao", "valor")
-    private val KNOWN = REQUIRED + listOf("id", "moeda", "parcela", "categoria", "origem")
+    private val KNOWN = REQUIRED + listOf("id", "moeda", "parcela", "categoria", "origem", "fatura")
 
     /** Os bytes parecem um CSV do Accord: a primeira linha com texto traz as três colunas obrigatórias. Usado só para reconhecer o formato. */
     fun looksLikeAccordCsv(bytes: ByteArray): Boolean {
@@ -83,13 +84,15 @@ object CsvReader {
         val fields = buildList {
             // O id do arquivo é guardado como veio; só vira FITID (o que a reimportação usa) se for único no arquivo, em [promoteUniqueIds].
             raw("id")?.trim()?.takeIf { it.isNotEmpty() }?.let { add(ID_FIELD to it) }
-            for (name in listOf("data", "descricao", "valor", "moeda", "parcela", "categoria", "origem")) raw(name)?.let { add(name.uppercase() to it) }
+            for (name in listOf("data", "descricao", "valor", "moeda", "parcela", "categoria", "origem", "fatura")) raw(name)?.let { add(name.uppercase() to it) }
         }
         val doubts = mutableSetOf<MovementDoubt>()
         val date = raw("data")?.let(::day)
         if (date == null) doubts += MovementDoubt.DateNotInterpreted
         val amount = raw("valor")?.let(::cents)
         if (amount == null) doubts += MovementDoubt.AmountNotInterpreted
+        // Fatura escrita de outro jeito não é adivinhada: o movimento fica em dúvida, com o texto original.
+        raw("fatura")?.trim()?.takeIf { it.isNotEmpty() && invoiceMonth(it) == null }?.let { doubts += MovementDoubt.InvoiceNotInterpreted }
         val currency = raw("moeda")?.trim()?.uppercase()?.takeIf { it.isNotEmpty() } ?: "BRL"
         val description = raw("descricao").orEmpty().replace(Regex("\\s+"), " ").trim()
         return ExtractedMovement(ordinal, fields, date, amount, currency, description, raw("parcela")?.let(::installment), doubts)
@@ -150,6 +153,19 @@ object CsvReader {
             else -> text
         }
         return OfxReader.cents(sign + plain)
+    }
+
+    /** Mês de vencimento da fatura: `MM/AA`, `MM/AAAA` ou `AAAA-MM`, e nada além disso (`11/26` é novembro de 2026). */
+    internal fun invoiceMonth(raw: String): YearMonth? {
+        val text = raw.trim()
+        val br = Regex("^(\\d{1,2})\\s*/\\s*(\\d{2}|\\d{4})$").find(text)
+        val iso = Regex("^(\\d{4})-(\\d{2})$").find(text)
+        val (year, month) = when {
+            br != null -> br.groupValues[2].let { y -> (if (y.length == 2) 2000 + y.toInt() else y.toInt()) } to br.groupValues[1].toInt()
+            iso != null -> iso.groupValues[1].toInt() to iso.groupValues[2].toInt()
+            else -> return null
+        }
+        return if (month in 1..12) YearMonth.of(year, month) else null
     }
 
     private val installmentPattern = Regex("^\\s*(\\d{1,2})\\s*/\\s*(\\d{1,2})\\s*$")

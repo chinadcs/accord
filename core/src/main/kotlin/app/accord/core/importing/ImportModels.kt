@@ -1,6 +1,7 @@
 ﻿package app.accord.core.importing
 
 import java.time.LocalDate
+import java.time.YearMonth
 
 /** Source format of an imported bank document (ADR 0019). */
 enum class SourceFormat { Ofx, Pdf, Csv }
@@ -15,7 +16,7 @@ enum class ReadFailureReason { Unreadable, UnsupportedFormat, Protected, NoUsabl
 data class ReadFailure(val reason: ReadFailureReason, val hint: String? = null)
 
 /** Reasons a single extracted movement cannot be trusted as read. The original fields stay untouched. */
-enum class MovementDoubt { AmountNotInterpreted, DateNotInterpreted, RepeatedFitidInFile }
+enum class MovementDoubt { AmountNotInterpreted, DateNotInterpreted, RepeatedFitidInFile, InvoiceNotInterpreted }
 
 /** Only a hint: "03/10" may be an installment or something else. Reconciliation and the person decide. */
 data class InstallmentHint(val number: Int, val total: Int)
@@ -35,6 +36,12 @@ data class ExtractedMovement(
     val doubts: Set<MovementDoubt>,
 ) {
     val fitid: String? get() = originalFields.firstOrNull { it.first == "FITID" }?.second?.takeIf { it.isNotBlank() }
+
+    /**
+     * A fatura (mês de vencimento) que o próprio arquivo atribui a este movimento, hoje só pela coluna `fatura` do CSV do Accord (`11/26` é a fatura de novembro de 2026).
+     * Vem do campo original `FATURA`, então não precisa de coluna própria e sobrevive à retomada. Vale mais que a fatura única do lote e que a data da compra; só se aplica no cartão.
+     */
+    val invoice: YearMonth? get() = originalFields.firstOrNull { it.first == "FATURA" }?.second?.let(CsvReader::invoiceMonth)
 }
 
 enum class WarningCode {

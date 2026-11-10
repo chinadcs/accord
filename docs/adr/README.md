@@ -190,6 +190,7 @@ observada em 24/10/2026. Os estados abaixo são de decisão, não de conclusão 
 | [0077](0077-reagrupamento-da-aba-mais.md) | Reagrupamento da aba Mais | accepted (10/11/2026; não implementado); substitui, em [0071](0071-ordem-das-abas-saldo-e-botao-de-registro-no-inicio.md), só a composição de Mais |
 | [0078](0078-remodelagem-da-tela-inicio.md) | Remodelagem da tela Início: resumo do mês e faixa de atenção | accepted (10/11/2026; não implementado); substitui em [0067](0067-inicio-como-abertura-e-revisar-em-mais.md) e [0071](0071-ordem-das-abas-saldo-e-botao-de-registro-no-inicio.md) só a composição do corpo da Início e altera em [0068](0068-margem-diaria-e-semanal-do-orcamento.md) só o rótulo e a apresentação |
 | [0079](0079-compra-no-dia-do-fechamento-entra-na-fatura-que-fecha.md) | Compra no dia do fechamento entra na fatura que fecha nele | accepted (10/11/2026; só testes JVM); substitui só a regra do dia do fechamento do plano §14, da spec S1 §7.2 e do [0043](0043-fatura-do-cartao-importado-pela-data-da-compra.md) |
+| [0080](0080-coluna-fatura-no-csv.md) | Coluna `fatura` no CSV do Accord | accepted (10/11/2026; só testes JVM); estende [0042](0042-csv-no-formato-proprio-do-accord.md) e [0043](0043-fatura-do-cartao-importado-pela-data-da-compra.md) |
 
 Questões ainda sem decisão, como modelo/motor, leitores bancários, acesso local, retenção de
 idempotência e validação financeira no serviço, permanecem nos Beads/specs S2–S4. Suas tarefas

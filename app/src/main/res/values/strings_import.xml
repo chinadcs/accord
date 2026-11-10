@@ -199,6 +199,7 @@
     <string name="import_class_blocked">Bloqueado pela moeda</string>
     <string name="import_doubt_amount">O valor não pôde ser lido com exatidão.</string>
     <string name="import_doubt_date">A data não pôde ser lida.</string>
+    <string name="import_doubt_invoice_text">A fatura não pôde ser lida. Use o formato 11/26.</string>
     <string name="import_doubt_zero">O valor é zero.</string>
     <string name="import_doubt_foreign">A linha está em moeda estrangeira dentro de um arquivo em reais.</string>
     <string name="import_doubt_fitid">O mesmo identificador aparece com data ou valor diferentes.</string>

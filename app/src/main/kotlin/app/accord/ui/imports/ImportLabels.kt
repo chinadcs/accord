@@ -64,6 +64,7 @@ fun DoubtReason.label(card: Boolean = false): String = stringResource(
     when (this) {
         DoubtReason.AmountNotInterpreted -> R.string.import_doubt_amount
         DoubtReason.DateNotInterpreted -> R.string.import_doubt_date
+        DoubtReason.InvoiceNotInterpreted -> R.string.import_doubt_invoice_text
         DoubtReason.ZeroAmount -> R.string.import_doubt_zero
         DoubtReason.ForeignCurrencyMovement -> R.string.import_doubt_foreign
         DoubtReason.FitidDivergent -> R.string.import_doubt_fitid

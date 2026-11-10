@@ -9,7 +9,7 @@ enum class Classification { AlreadyKnown, SafeLink, New, Doubt, BlockedByCurrenc
 
 /** Why a movement is a doubt. A movement can carry several; none of them discards the movement. */
 enum class DoubtReason {
-    AmountNotInterpreted, DateNotInterpreted, ZeroAmount, ForeignCurrencyMovement, FitidDivergent, PossibleRepetition,
+    AmountNotInterpreted, DateNotInterpreted, InvoiceNotInterpreted, ZeroAmount, ForeignCurrencyMovement, FitidDivergent, PossibleRepetition,
     RemovedPreviously, CreditToClassify, PossibleMatch, CategoryUnknown,
     // Billing rules (accord-c9m.7)
     InvoiceDiverges, InstallmentInvoiceDiverges, InstallmentShiftBlocked, InstallmentValueDiverges, InstallmentPurchaseNotRegistered, InstallmentScheduleHitsPaidInvoice,

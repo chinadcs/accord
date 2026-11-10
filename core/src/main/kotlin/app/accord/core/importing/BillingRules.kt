@@ -52,8 +52,8 @@ internal object BillingRules {
             return newPurchase?.let { createPurchase(m, hint, b, amount, it, series) } ?: Outcome(reasons = setOf(DoubtReason.InstallmentPurchaseNotRegistered))
         }
         val (purchase, row) = exact.single()
-        // A data da linha é a da compra: sem fatura declarada, a parcela n cai n - 1 meses depois da fatura atribuída pela data (ADR 0043, 0076).
-        val doc = b.documentInvoice ?: m.date?.let { b.cycle.assign(it).dueMonth.plusMonths((hint.number - 1).toLong()) }
+        // A fatura da própria linha (coluna `fatura` do CSV) vale mais que tudo; a data da linha é a da compra: sem fatura declarada, a parcela n cai n - 1 meses depois da fatura atribuída pela data (ADR 0043, 0076).
+        val doc = m.invoice ?: b.documentInvoice ?: m.date?.let { b.cycle.assign(it).dueMonth.plusMonths((hint.number - 1).toLong()) }
             ?: return Outcome(reasons = setOf(DoubtReason.InstallmentInvoiceDiverges))
         if (row.dueMonth == doc) return Outcome(ProposedEffect.LinkInstallment(purchase.purchaseId, row.number, row.entryId))
         // Only the first installment changes invoice: a later line suggests the first one it implies, applied only when the person accepts it.
@@ -77,7 +77,7 @@ internal object BillingRules {
     fun createPurchase(m: ExtractedMovement, hint: InstallmentHint, b: BillingContext, amount: Long, plan: NewPurchase, series: InstallmentSeries? = null): Outcome {
         val notRegistered = Outcome(reasons = setOf(DoubtReason.InstallmentPurchaseNotRegistered))
         val leaderNumber = series?.leader?.number ?: hint.number
-        val leaderInvoice = b.documentInvoice ?: m.date?.let { b.cycle.assign(it).dueMonth.plusMonths((leaderNumber - 1).toLong()) } ?: return notRegistered
+        val leaderInvoice = m.invoice ?: b.documentInvoice ?: m.date?.let { b.cycle.assign(it).dueMonth.plusMonths((leaderNumber - 1).toLong()) } ?: return notRegistered
         if (hint.number !in 1..hint.total || plan.totalCents < hint.total) return notRegistered
         val fits = series?.fits(plan.totalCents) ?: Installments.lineFits(plan.totalCents, hint.total, hint.number, amount)
         if (!fits) return notRegistered

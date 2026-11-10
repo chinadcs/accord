@@ -51,6 +51,7 @@ object Reconciler {
             val r = reasons[i]
             if (MovementDoubt.AmountNotInterpreted in m.doubts || m.amountCents == null) r += DoubtReason.AmountNotInterpreted
             if (MovementDoubt.DateNotInterpreted in m.doubts || m.date == null) r += DoubtReason.DateNotInterpreted
+            if (MovementDoubt.InvoiceNotInterpreted in m.doubts) r += DoubtReason.InvoiceNotInterpreted
             if (m.amountCents == 0L) r += DoubtReason.ZeroAmount
             if (!blockedByCurrency && m.currency != null && m.currency != SUPPORTED_CURRENCY) r += DoubtReason.ForeignCurrencyMovement
             if (divergentWithin(i) || divergentAgainstEarlier(i)) r += DoubtReason.FitidDivergent
@@ -103,10 +104,10 @@ object Reconciler {
         fun wanted(entryId: String, except: Int) = exact.keys.any { it != except && (entryId in exact.getValue(it) || entryId in near.getValue(it) || entryId in value.getValue(it)) }
 
         // The facade already computed the estimated invoice and the to-confirm mark; the document decides (rule 8).
-        fun linkEffect(entryId: String, key: String): Pair<ProposedEffect?, DoubtReason?> {
+        fun linkEffect(entryId: String, key: String, m: ExtractedMovement): Pair<ProposedEffect?, DoubtReason?> {
             if (billing == null) return null to null
             val info = entries.firstOrNull { it.id == entryId }?.card
-            val doc = billing.documentInvoice
+            val doc = m.invoice ?: billing.documentInvoice
             return when {
                 !isCard || info == null || doc == null -> ProposedEffect.LinkEntry(entryId) to null
                 info.assignedDueMonth == doc -> ProposedEffect.LinkEntry(entryId, null, info.toConfirm) to null
@@ -136,7 +137,7 @@ object Reconciler {
                 else if (candidates.isNotEmpty()) r += DoubtReason.PossibleMatch
             }
             if (outcome == null && linked != null) {
-                val (linkedEffect, divergence) = linkEffect(linked!!, keys[i])
+                val (linkedEffect, divergence) = linkEffect(linked!!, keys[i], m)
                 if (divergence != null) { r += divergence; linked = null } else effect = linkedEffect
             }
             val normalized = BillingRules.upper(m.description)
@@ -148,10 +149,10 @@ object Reconciler {
             val suggestion = fromHistory ?: fromBank
             if (investmentCredit[i] && r.isEmpty()) effect = ProposedEffect.CreateIncome(IncomeBasis.InvestmentCredit, app.accord.core.space.IncomeCategorySeed.INVESTMENT)
             if (chosenIncome[i] && r.isEmpty()) effect = ProposedEffect.CreateIncome(IncomeBasis.ChosenByPerson, null, decisions.incomeByKey[keys[i]])
-            if (chosenRefund[i] && r.isEmpty()) effect = ProposedEffect.CreateRefund(decisions.refundByKey.getValue(keys[i]), if (isCard) billing?.documentInvoice else null)
+            if (chosenRefund[i] && r.isEmpty()) effect = ProposedEffect.CreateRefund(decisions.refundByKey.getValue(keys[i]), if (isCard) m.invoice ?: billing?.documentInvoice else null)
             if (chosenSelfRefund[i] && r.isEmpty()) {
                 if (category == null) r += DoubtReason.CategoryUnknown
-                else if (billing != null) effect = ProposedEffect.CreateRefundWithPurchase(category, billing.documentInvoice)
+                else if (billing != null) effect = ProposedEffect.CreateRefundWithPurchase(category, if (isCard) m.invoice ?: billing.documentInvoice else billing.documentInvoice)
             }
             val needsCategory = r.isEmpty() && !knownMatch[i] && linked == null && effect == null
             if (needsCategory && category == null) r += DoubtReason.CategoryUnknown
@@ -166,7 +167,7 @@ object Reconciler {
                 else -> Classification.New
             }
             if (classification == Classification.New && billing != null && effect == null && !investmentCredit[i] && !chosenIncome[i] && !chosenRefund[i]) {
-                effect = ProposedEffect.CreateEntry(category!!, if (isCard) billing.documentInvoice else null)
+                effect = ProposedEffect.CreateEntry(category!!, if (isCard) m.invoice ?: billing.documentInvoice else null)
             }
             ReconciledMovement(
                 movement = m,

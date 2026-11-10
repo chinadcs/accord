@@ -2,6 +2,7 @@ package app.accord.core.importing
 
 import java.io.File
 import java.time.LocalDate
+import java.time.YearMonth
 import kotlin.test.*
 
 /** accord-3m7k: CSV do Accord (ADR 0042). Dados fictícios; o arquivo de `docs/modelos` é testado como contrato do formato. */
@@ -29,6 +30,16 @@ class CsvReaderTest {
         assertEquals(0, r.unrecognizedSegments)
         assertEquals(emptyList(), r.warnings)
         assertTrue(r.movements.all { it.doubts.isEmpty() })
+    }
+
+    @Test fun `the fatura column is the invoice of each line, in the formats 11-26, 11-2026 and 2026-11, and anything else is a doubt that keeps the text`() {
+        val r = extracted("data;descricao;valor;fatura\n2026-10-01;A;-1,00;11/26\n2026-10-01;B;-2,00;11/2026\n2026-10-01;C;-3,00;2026-11\n2026-10-01;D;-4,00;\n2026-10-01;E;-5,00;13/26\n2026-10-01;F;-6,00;novembro")
+        assertEquals(listOf(YearMonth.of(2026, 11), YearMonth.of(2026, 11), YearMonth.of(2026, 11), null, null, null), r.movements.map { it.invoice })
+        assertEquals(emptySet(), r.movements[3].doubts, "an empty cell means the file says nothing: the date decides")
+        assertEquals(setOf(MovementDoubt.InvoiceNotInterpreted), r.movements[4].doubts)
+        assertEquals(setOf(MovementDoubt.InvoiceNotInterpreted), r.movements[5].doubts)
+        assertEquals("13/26", r.movements[4].originalFields.first { it.first == "FATURA" }.second, "the original text stays")
+        assertEquals(YearMonth.of(2027, 1), extracted("data;descricao;valor;fatura\n2026-10-01;A;-1,00; 01 / 27 ").movements.single().invoice)
     }
 
     @Test fun `only an id that is unique in the file takes the place of the FITID, and repeating one is not a doubt`() {
