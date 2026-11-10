@@ -278,7 +278,7 @@ class AppContainer(
 
     /** Ao voltar ao primeiro plano: um ciclo e a leitura dos indicadores. */
     fun onForeground() {
-        updates.check()
+        updates.check(onOpen = true)
         apkUpdate.onResume()
         appScope.launch {
             access.reconcilePrivacy()

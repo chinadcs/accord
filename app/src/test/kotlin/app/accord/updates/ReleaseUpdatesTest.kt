@@ -76,6 +76,44 @@ class ReleaseUpdatesTest {
         assertNull(restarted.state.value.available)
     }
 
+    @Test fun openingTheAppChecksAfterTenMinutesButTheWorkerStaysDaily() = runBlocking<Unit> {
+        var calls = 0
+        var time = 1_000_000L
+        var tag = "v0.1.1"
+        val updates = ReleaseUpdates(this, { calls++; "[${release(tag)}]" }, Store(), 100, now = { time })
+        updates.check(onOpen = true).join()
+        assertEquals(1, calls)
+        time += 599_999
+        updates.check(onOpen = true).join()
+        assertEquals(1, calls)
+        // Release publicada depois da última consulta: abrir o app depois de 10 min já a encontra.
+        tag = "v0.1.2"
+        time += 1
+        updates.check(onOpen = true).join()
+        assertEquals(2, calls)
+        assertEquals(102, updates.state.value.available?.code)
+        // A tarefa em segundo plano continua com a trava de 24 h.
+        time += 600_000
+        updates.check().join()
+        assertEquals(2, calls)
+        time += 86_400_000 - 600_000
+        updates.check().join()
+        assertEquals(3, calls)
+    }
+
+    @Test fun openingTheAppAfterFailureStillWaitsAnHour() = runBlocking<Unit> {
+        var calls = 0
+        var time = 1_000_000L
+        val updates = ReleaseUpdates(this, { calls++; error("offline") }, Store(), 100, now = { time })
+        updates.check(onOpen = true).join()
+        time += 600_000
+        updates.check(onOpen = true).join()
+        assertEquals(1, calls)
+        time += 3_000_000
+        updates.check(onOpen = true).join()
+        assertEquals(2, calls)
+    }
+
     @Test fun failureKeepsKnownUpdateAndRetriesHourly() = runBlocking<Unit> {
         val store = Store()
         var time = 1_000_000L

@@ -18,6 +18,8 @@ e a regra de versão permanecem vigentes.
 > o download passa a ser feito pelo app e a instalação é oferecida nele, com confirmação do Android.
 > Também parcialmente substituído em 09/11/2026 por [ADR 0072](0072-aviso-de-versao-nova-na-barra-de-notificacoes.md):
 > há verificação periódica com o app fechado e aviso na barra de notificações.
+> Também parcialmente substituído em 10/11/2026 por [ADR 0087](0087-verificacao-de-versao-ao-abrir-o-app-com-trava-curta.md):
+> ao entrar em primeiro plano, o intervalo após sucesso passa de 24 horas para 10 minutos.
 
 ## Decisão
 

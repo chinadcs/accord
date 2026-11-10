@@ -293,7 +293,8 @@ Para preparar o APK com versão, conferir a assinatura e comparar com o APK ante
 
 O guia detalhado fica em `docs/distribuicao.md`, mantido apenas localmente. A decisão do canal
 está no [ADR 0061](docs/adr/0061-distribuicao-por-github-releases-e-obtainium.md).
-O Accord verifica novas versões pela API pública do GitHub ao abrir, no máximo uma vez por dia,
+O Accord verifica novas versões pela API pública do GitHub ao abrir (no máximo a cada 10 minutos),
+e com o app fechado no máximo uma vez por dia ([ADR 0087](docs/adr/0087-verificacao-de-versao-ao-abrir-o-app-com-trava-curta.md)),
 e oferece **Mais > Verificar atualizações**. Pré-releases estão incluídas neste piloto.
 Uma versão nova permite abrir o download de `accord.apk` no navegador; confirme a atualização
 no Android, preservando a instalação existente. **Não desinstale**: isso apaga dados locais.

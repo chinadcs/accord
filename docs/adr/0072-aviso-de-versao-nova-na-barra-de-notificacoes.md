@@ -6,6 +6,9 @@ decision_date: 2026-11-09
 
 # ADR 0072 — Aviso de versão nova na barra de notificações
 
+> Parcialmente substituído em 10/11/2026 por [ADR 0087](0087-verificacao-de-versao-ao-abrir-o-app-com-trava-curta.md):
+> o intervalo de 24 horas vale só para a tarefa em segundo plano; ao abrir o app a consulta espera 10 minutos.
+
 ## Contexto
 
 O [ADR 0066](0066-verificacao-de-atualizacoes-pela-api-do-github.md) fez o Accord consultar as Releases só ao

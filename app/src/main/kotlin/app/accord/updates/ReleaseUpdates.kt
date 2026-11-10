@@ -81,7 +81,7 @@ object GitHubReleases {
     }
 }
 
-/** Checks (foreground or the periodic worker): daily after success, hourly after failure; manual retries at most every 30s. */
+/** Checks: on open every 10 min after success, in the periodic worker daily, hourly after failure; manual at most every 30s. */
 class ReleaseUpdates(
     private val scope: CoroutineScope,
     private val feed: ReleaseFeed,
@@ -98,6 +98,13 @@ class ReleaseUpdates(
     val state = mutable.asStateFlow()
     private val mutex = Mutex()
 
+    private companion object {
+        const val MANUAL_INTERVAL_MS = 30_000L
+        const val OPEN_INTERVAL_MS = 600_000L
+        const val RETRY_INTERVAL_MS = 3_600_000L
+        const val DAILY_INTERVAL_MS = 86_400_000L
+    }
+
     /** Versão a avisar na barra de notificações: mais nova que a instalada, não dispensada e ainda não avisada. */
     fun dueNotification(): AppRelease? =
         store.available?.takeIf { it.code > installedCode && it.code > store.dismissedCode && it.code > store.notifiedCode }
@@ -111,13 +118,24 @@ class ReleaseUpdates(
         mutable.value = mutable.value.copy(showNotice = false)
     }
 
-    fun check(manual: Boolean = false) = scope.launch {
+    /**
+     * [manual]: pedido na tela Mais, no máximo a cada 30 s. [onOpen]: o app voltou ao primeiro plano, então espera só
+     * 10 min após sucesso (a versão nova aparece ao abrir). Sem nenhum dos dois (tarefa em segundo plano): 24 h após
+     * sucesso. Após falha, qualquer consulta automática espera 1 h.
+     */
+    fun check(manual: Boolean = false, onOpen: Boolean = false) = scope.launch {
         if (!mutex.tryLock()) return@launch
         try {
             val time = now()
             fun recent(previous: Long, interval: Long) = previous > 0 && time >= previous && time - previous < interval
-            if (recent(store.lastAttempt, if (manual) 30_000 else 3_600_000) ||
-                (!manual && store.lastSuccess >= store.lastAttempt && recent(store.lastSuccess, 86_400_000))) return@launch
+            val failedLast = store.lastAttempt > store.lastSuccess
+            val interval = when {
+                manual -> MANUAL_INTERVAL_MS
+                failedLast -> RETRY_INTERVAL_MS
+                onOpen -> OPEN_INTERVAL_MS
+                else -> DAILY_INTERVAL_MS
+            }
+            if (recent(store.lastAttempt, interval)) return@launch
             store.lastAttempt = time
             mutable.value = mutable.value.copy(checking = true, failed = false)
             try {
