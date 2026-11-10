@@ -187,6 +187,7 @@ observada em 24/10/2026. Os estados abaixo são de decisão, não de conclusão 
 | [0074](0074-no-cartao-todo-valor-positivo-e-estorno.md) | No cartão, todo valor positivo da importação é estorno | accepted; restringe ao documento de conta o [0037](0037-credito-de-investimento-e-renda-na-importacao.md) |
 | [0075](0075-orcamento-geral-do-mes.md) | Orçamento geral do mês, sem exigir limite por categoria | accepted; complementa os limites por categoria |
 | [0076](0076-compra-parcelada-em-varias-linhas-e-estorno-sem-compra.md) | Compra parcelada em várias linhas do mesmo arquivo e estorno sem compra registrada | proposed; estende [0073](0073-parcela-sem-compra-vira-a-compra-parcelada-inteira.md) e [0074](0074-no-cartao-todo-valor-positivo-e-estorno.md) |
+| [0077](0077-reagrupamento-da-aba-mais.md) | Reagrupamento da aba Mais | accepted (10/11/2026; não implementado); substitui, em [0071](0071-ordem-das-abas-saldo-e-botao-de-registro-no-inicio.md), só a composição de Mais |
 
 Questões ainda sem decisão, como modelo/motor, leitores bancários, acesso local, retenção de
 idempotência e validação financeira no serviço, permanecem nos Beads/specs S2–S4. Suas tarefas

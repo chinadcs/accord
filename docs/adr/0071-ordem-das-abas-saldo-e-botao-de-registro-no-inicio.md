@@ -42,5 +42,7 @@ em Mais, indicadores de pendência) continua valendo.
 
 ## Fontes e evidências
 
+- Em 10/11/2026 o [ADR 0077](0077-reagrupamento-da-aba-mais.md) substituiu apenas a composição de Mais (a linha de
+  sincronização passa a ter uma única entrada); o botão "Registrar manualmente" e a linha de sincronização em Mais continuam.
 - `accord-wecg`: decisão do usuário de 09/11/2026. [ADR 0067](0067-inicio-como-abertura-e-revisar-em-mais.md),
   [Início](../specs/design/inicio.md), [07 — Lançamentos](../specs/design/07-lancamentos.md).
