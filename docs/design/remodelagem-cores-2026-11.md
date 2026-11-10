@@ -30,7 +30,7 @@ separação entre camadas, medida na paleta Accord vigente:
 | Container de estado (atenção, sucesso, erro) contra o fundo | 1,10, 1,16, 1,26 | 1,81, 1,76, 1,93 |
 
 Além disso: âmbar, vermelho e a marca oliva se confundem em daltonismo; o âmbar escuro é um bloco marrom; e as seis paletas
-alternativas herdam `success`/`attention` de `secondary`/`tertiary` (receita roxa, azul ou magenta).
+alternativas herdam `success`/`attention` de `secondary`/`tertiary` (receita roxa, azul ou magenta; quatro delas saem, §7).
 
 ## 2. Regras
 
@@ -157,20 +157,22 @@ Limites conhecidos, a tratar nos critérios de aceite:
 - **Não recebem `income`:** crédito líquido do Orçamento (estorno não vira renda); o resultado do mês ("Sobra", "Falta", "Fica em") fica **neutro**, só com ícone e palavra (decisão do usuário, 10/11/2026).
 - Distinto de `success` (teal) e `error` (carmim): matiz diferente (receita 148° contra teal 188°; despesa 29° contra carmim 14°), e dinheiro aparece como texto de valor com ícone, enquanto estado aparece como faixa com borda.
 
-## 7. As sete paletas de Aparência
+## 7. As três paletas de Aparência
 
-Contrato (decisão do usuário): **estados, `income*`/`expense*` e `financeSurface` são constantes e iguais em todas as paletas**. Cada paleta (Accord, Catppuccin,
-Midnight Dusk, Nord, Tako, Tidal Wave, Tokyo Night) fornece só o matiz/croma do neutro e o matiz da marca; o app **deriva** a escada de superfícies e os pares de texto
-por razão-alvo (§2), com a luminância das superfícies limitada para manter receita e despesa ≥4,5:1: claro, Y ≥ 0,627 (receita) e Y ≥ 0,448 (despesa); escuro, Y ≤ 0,108 (receita) e Y ≤ 0,077 (despesa).
+Decisão do usuário (10/11/2026, depois do aceite): a tela Aparência passa de sete para **três paletas: Accord, Catppuccin e Midnight Dusk**. Nord, Tako, Tidal Wave e Tokyo Night saem do app.
+Quem tinha uma delas escolhida volta à Accord (o `ThemeStore` já trata nome desconhecido assim).
+
+Contrato: **estados, `income*`/`expense*` e `financeSurface` são constantes e iguais nas três paletas**. Cada paleta fornece só o matiz/croma do neutro e o matiz da marca; o app **deriva** a escada
+de superfícies e os pares de texto por razão-alvo (§2), com a luminância das superfícies limitada para manter receita e despesa ≥4,5:1: claro, Y ≥ 0,627 (receita) e Y ≥ 0,448 (despesa); escuro, Y ≤ 0,108 (receita) e Y ≤ 0,077 (despesa).
+A Accord usa a marca azul da §3; Catppuccin e Midnight Dusk mantêm a marca de cada uma (roxo e magenta), sujeita ao mesmo piso de contraste.
 
 Defeitos atuais que a derivação corrige por construção (medidos nesta sessão):
 
-- Tokyo Night claro: `Container`, `High` e `Highest` escuros (receita 4,22 e 2,92 sobre `Highest`) e `primary` 2,43.
-- Midnight Dusk claro: `Lowest` com receita 4,12. Nord escuro: `High` e `Highest` com despesa 3,96 e 3,84; `outline` 2,56.
-- Catppuccin: `Low`, `Container` e `High` idênticos; Nord claro com cartão→container 1,04; Tidal Wave 1,03.
-- Nord, Midnight Dusk, Tako e Tidal Wave claros com `Lowest` mais escuro que o fundo.
-- Estados herdados: sucesso magenta no Midnight Dusk, roxo no Catppuccin, laranja no Tako escuro, atenção verde no Tidal Wave escuro.
-- Cinco paletas não definem `error` e herdam o vermelho da Accord.
+- **Catppuccin:** `Low`, `Container` e `High` idênticos (`#EFF1F5` no claro, `#1E1E2E` no escuro); claro com `primary` 4,45 e `error` 3,87 sobre `Highest`; no escuro, sucesso, atenção e marca viram o mesmo roxo `#CBA6F7`.
+- **Midnight Dusk:** claro com `Lowest` (`#DAC0CD`) mais escuro que o fundo e receita 4,12 sobre ele; escuro com fundo→cartão 1,04 e cartão→container 1,02, e `primary` perto de 4,5:1; estados herdados (sucesso magenta); `error` herdado do vermelho da Accord.
+- Os defeitos do Nord escuro (escada invertida, `outline` 2,56:1) e do Tokyo Night claro (`primary` 2,43:1, superfícies escuras demais) deixam de existir com a remoção das duas paletas.
+
+Remoção (para o fatiamento): enum `ThemePalette` (`Theme.kt:26-34`), os oito `themes_*.xml` de Nord, Tako, Tidal Wave e Tokyo Night, as entradas dessas paletas em `themes_attention.xml`, os nomes e a introdução em `strings_more.xml` e `strings_redesign_settings.xml`, os testes de contraste e as capturas de `UiAuditPaletteCaptureTest`, e os fontes em `docs/branding/themes/`.
 
 ## 8. Categorias
 
@@ -188,9 +190,9 @@ Verde e vermelho de categoria ficam a ΔE 5–12 de receita e despesa; o sinal, 
 
 ## 10. Critérios de aceite (propostos)
 
-1. Texto ≥4,5:1 e componentes essenciais ≥3:1 em todas as paletas e nos dois temas, sem exceção para as seis alternativas.
+1. Texto ≥4,5:1 e componentes essenciais ≥3:1 em todas as paletas e nos dois temas, sem exceção para Catppuccin e Midnight Dusk.
 2. Escada de superfícies **estritamente monótona** em cada paleta/modo; fundo→cartão ≥1,15; degraus ≥1,10; `outline` ≥3:1 contra fundo, cartão e container.
-3. `income` e `expense` iguais nas 14 variantes, ≥4,5:1 sobre as seis superfícies; `incomeOnFinance`/`expenseOnFinance` ≥4,5:1 sobre `financeSurface`.
+3. `income` e `expense` iguais nas 6 variantes (3 paletas, claro e escuro), ≥4,5:1 sobre as seis superfícies; `incomeOnFinance`/`expenseOnFinance` ≥4,5:1 sobre `financeSurface`.
 4. Estados com ícone, forma, texto e borda; nenhum estado só por cor; sinal, ícone e rótulo em receita e despesa.
 5. Nenhum `*_income*`/`*_expense*` nos `themes_*.xml`; `Color.kt` e `themes_accord.xml` em sincronia (teste de igualdade).
 6. Categorias ≥3:1 contra o cartão **e o trilho** da paleta ativa; índices e ordem inalterados; barra de limite de categoria sempre na cor da categoria, com o estado no selo e no marcador.
@@ -199,13 +201,13 @@ Verde e vermelho de categoria ficam a ΔE 5–12 de receita e despesa; o sinal, 
 
 ## 11. Impacto no código (para o fatiamento; nada implementado)
 
-`ui/theme/Color.kt` (`AccordColors`, `paletteAccordColors`, `loadPalette`), `res/values/themes_accord.xml` e os seis `themes_*.xml`, `themes_attention.xml`, `res/values/colors.xml` e
+`ui/theme/Color.kt` (`AccordColors`, `paletteAccordColors`, `loadPalette`), `res/values/themes_accord.xml` e os `themes_*.xml` que ficam (Catppuccin e Midnight Dusk; Nord, Tako, Tidal Wave e Tokyo Night são removidos), `themes_attention.xml`, `res/values/colors.xml` e
 `values-night/colors.xml`, `ui/CategoryColors.kt`, `ui/entries/TotalBalanceCard.kt` (`readableOn`), `ui/entries/EntriesScreen.kt`, `ui/home/ForecastSummary.kt`, `ui/receivables/ReceivablesScreen.kt`,
 `ui/components/Components.kt` (barra de limite, hoje por estado) e `ui/budget/BudgetScreen.kt` (`CategoryRow`), `RootNavigation.kt`, `HomeSectionCard.kt`, `res/drawable/ic_launcher_background.xml`. Novo `AccordCard` em `ui/components/`. Testes a mudar:
 `PaletteSemanticContrastTest`, `PaletteAttentionContrastTest`, `HomeContrastTest`, `ChartContrastTest`, `FlowBarTest`; novos: escada, razões, `outline`, income/expense, fixidez, ausência nos XML, sincronia e categorias.
 
 Fatias de bead sugeridas, a criar só depois do aceite: capturas "antes"; base de tokens e testes; tokens semânticos e income/expense; `AccordCard` e migração; estados e migração de receita/despesa;
-gerador e seis paletas; categorias, launcher e janela; Aparência (amostras, opcional); validação visual e nos aparelhos.
+remoção de quatro paletas; derivação de Catppuccin e Midnight Dusk; categorias, launcher e janela; Aparência (amostras, opcional); validação visual e nos aparelhos.
 
 ## 12. Decisões que continuam abertas
 

@@ -224,7 +224,7 @@ O [guia carvão e amarelo suave](../branding/carvao-2026-10/README.md) registra 
 seguinte com as referências locais escolhidas pelo usuário: navegação compacta, botão “+”
 flutuante, pesquisa e aplicação uniforme ao Android, preservando à época o Chat como início (substituído pelo ADR 0067).
 
-**Remodelagem de cores aceita, ainda não implementada (10/11/2026, `accord-9rjk`, [ADR 0085](../adr/0085-remodelagem-de-cores-e-camadas.md), accepted):** a [spec](remodelagem-cores-2026-11.md) descreve o alvo (marca azul, cartões com borda, receita verde e despesa vermelha fixas, contrato das sete paletas); não está implementada, e o parágrafo acima segue vigente até a implementação.
+**Remodelagem de cores aceita, ainda não implementada (10/11/2026, `accord-9rjk`, [ADR 0085](../adr/0085-remodelagem-de-cores-e-camadas.md), accepted):** a [spec](remodelagem-cores-2026-11.md) descreve o alvo (marca azul, cartões com borda, receita verde e despesa vermelha fixas, contrato para as três paletas (Accord, Catppuccin e Midnight Dusk)); não está implementada, e o parágrafo acima segue vigente até a implementação.
 
 - **Tom:** claro, calmo e sem julgamento. Preferir “Podemos conferir este gasto?” a acusações; não culpar por lacunas nem chamar assinatura de inútil.
 - **Temas:** claro e escuro, com preferência Sistema como padrão. Usar tokens semânticos de fundo, superfície, texto, ação, atenção, erro e sucesso; não fixar cores independentes por tela. Valores implementados em [Tokens de design](../design-tokens.md).

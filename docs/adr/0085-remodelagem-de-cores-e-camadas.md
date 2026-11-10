@@ -24,7 +24,7 @@ Medição feita nesta sessão (fórmula de luminância do WCAG 2.x, paleta Accor
   código-fonte de `material-color-utilities`) e se apoia em sombra e forma para separar camadas; o app seguiu o M3 sem elas.
 - Os estados se confundem em daltonismo: âmbar, vermelho e oliva da marca chegam a ΔE2000 de 2–3 na simulação de
   deuteranopia/protanopia; o container de atenção escuro é um bloco marrom (`#5E3C0A`).
-- As seis paletas alternativas de Aparência herdam `success` de `secondary` e `attention` de `tertiary`
+- As seis paletas alternativas de Aparência (quatro delas saem, ver a decisão 5) herdam `success` de `secondary` e `attention` de `tertiary`
   (`Color.kt:49-57`): a receita aparece roxa, azul ou magenta em várias. O Catppuccin tem três níveis de superfície
   idênticos; o Nord escuro tem a escada invertida e `outline` 2,56:1; quatro paletas claras têm `Lowest` mais escuro que o fundo.
 - Em tempo de execução, a fonte da paleta Accord é `res/values/themes_accord.xml`; `Color.kt` é reserva e base de testes.
@@ -45,8 +45,8 @@ Aceita em 10/11/2026. Abaixo, primeiro as escolhas que o usuário fez ao respond
 2. **Receita sempre verde e despesa sempre vermelha, em qualquer tema ou paleta**; o tom ficou a critério do design.
 3. Marca **azul**; o fundo do ícone do launcher passa para a nova marca, mantendo o símbolo "Encontro".
 4. Cartões separados por **tom e borda de 1 dp**; fundo escuro em grafite `#141518`, sem preto puro.
-5. As sete paletas de Aparência entram sob um **contrato**: estados, receita e despesa fixos e iguais em todas; cada
-   paleta define só superfícies e marca; o painel financeiro é neutro e fixo; as seis alternativas são **derivadas por regra**.
+5. A tela Aparência passa de sete para **três paletas: Accord, Catppuccin e Midnight Dusk** (pedido do usuário em 10/11/2026, depois do aceite). Nord, Tako, Tidal Wave e Tokyo Night saem. As três restantes seguem um **contrato**: estados, receita e despesa fixos e iguais em todas; cada
+   paleta define só superfícies e marca; o painel financeiro é neutro e fixo; Catppuccin e Midnight Dusk são **derivadas por regra**.
 6. Verde e vermelho de dinheiro em totais, ícones de direção e valores a receber ("Quem me deve"); gasto por categoria e linhas de lista ficam neutros.
 7. **Barra de categoria na cor da categoria.** Sempre que um elemento envolve categoria (disco do ícone, barra de limite do Orçamento, gráfico por categoria), usa a cor dela, em qualquer estado; o estado passa para o selo com ícone e texto e para o marcador de limite. Pedido do usuário em 10/11/2026, depois da primeira rodada de perguntas.
 8. Limite estourado continua **estado de erro** (ícone e "Passou R$ …"), distinto do vermelho de despesa.
@@ -77,11 +77,11 @@ Crédito líquido do Orçamento não é renda e não recebe `income`. O resultad
 
 - Mexe na identidade: o app passa de verde-oliva e amarelo para azul, e o ícone do launcher muda de fundo.
 - Os testes de contraste atuais (`PaletteSemanticContrastTest`, `PaletteAttentionContrastTest`, `HomeContrastTest`, `ChartContrastTest`, `FlowBarTest`) deixam de descrever o desenho; entram
-  testes novos de escada monótona e razões entre camadas, de `outline` ≥3:1 (o Nord escuro falha hoje), de receita e despesa nas 14 variantes, de fixidez entre paletas e de sincronia entre `Color.kt` e `themes_accord.xml`.
+  testes novos de escada monótona e razões entre camadas, de `outline` ≥3:1 (o Nord escuro falha hoje, mas a paleta sai), de receita e despesa nas 6 variantes (3 paletas, claro e escuro), de fixidez entre paletas e de sincronia entre `Color.kt` e `themes_accord.xml`.
 - A migração toca cerca de 60 cartões em 45 arquivos (um `AccordCard` central) e cerca de 78 dialogs, sheets e menus no claro; testes instrumentados rodam uma classe por vez.
 - Receita e despesa passam a ter cor própria e fixa, mas continuam separadas do erro e do excesso de limite; um vermelho de despesa ao lado de um vermelho de erro exige
   distinção por matiz, forma e rótulo.
-- A tela Aparência perde estados e dinheiro específicos por paleta; as seis alternativas mudam suas superfícies (ainda sem número final de variantes).
+- A tela Aparência perde estados e dinheiro específicos por paleta e perde quatro paletas (Nord, Tako, Tidal Wave, Tokyo Night): exige remover `ThemePalette`, os oito `themes_*.xml` e as entradas de `themes_attention.xml` dessas paletas, os nomes em `strings_more.xml` e as capturas de auditoria. Quem tinha uma delas escolhida volta à Accord, porque o `ThemeStore` trata nome desconhecido assim. Catppuccin e Midnight Dusk mudam suas superfícies; os defeitos medidos do Nord escuro e do Tokyo Night claro deixam de existir com a remoção.
 - Revisar este ADR se a validação nos Galaxy S20 FE e S23 FE, o TalkBack ou o texto ampliado mostrarem que a borda ou os tons não bastam.
 - Não prova qualidade nos aparelhos: os números medem cor contra cor, não pixels com opacidade, sombra e antialiasing.
 
