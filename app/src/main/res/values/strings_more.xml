@@ -7,7 +7,19 @@
     <string name="more_group_follow">Acompanhar</string>
     <string name="more_group_device">Neste aparelho</string>
     <string name="more_group_notifications">Notificações</string>
-    <string name="more_group_entries">Lançamentos</string>
+    <string name="more_group_app">Aplicativo</string>
+    <!-- Data nos lançamentos (ADR 0077): valor atual na linha e folha com as duas opções. -->
+    <string name="more_entries_date">Data nos lançamentos</string>
+    <string name="more_entries_date_purchase">Data da compra</string>
+    <string name="more_entries_date_budget">Mês do orçamento</string>
+    <string name="more_theme_system_short">Sistema</string>
+    <string name="more_appearance_summary">%1$s · %2$s</string>
+    <string name="more_app_version">Versão e atualizações</string>
+    <string name="more_app_version_current">Versão %1$s</string>
+    <plurals name="more_sign_out_pending">
+        <item quantity="one">%d alteração por enviar fica no aparelho</item>
+        <item quantity="other">%d alterações por enviar ficam no aparelho</item>
+    </plurals>
     <!-- Cabeçalho de pessoa e espaço (ADR 0077): o número de participantes só aparece quando o aparelho já conhece a lista. -->
     <string name="more_header_open">Abrir espaço, participantes e convite</string>
     <string name="more_header_space_participants">%1$s · %2$d de %3$d participantes</string>

@@ -32,6 +32,8 @@ import app.accord.core.space.CommandResult
 import app.accord.core.space.CreateCategory
 import app.accord.core.space.DefineLimits
 import app.accord.core.space.Envelope
+import app.accord.core.space.DateCriterion
+import app.accord.ui.theme.ThemePalette
 import app.accord.ui.theme.ThemePreference
 import app.accord.ui.theme.CornerStyle
 import kotlinx.coroutines.runBlocking
@@ -88,6 +90,8 @@ class MoreFlowTest {
         scenario?.close()
         (ApplicationProvider.getApplicationContext<AccordApplication>()).container.theme.set(ThemePreference.System)
         (ApplicationProvider.getApplicationContext<AccordApplication>()).container.theme.setCorners(CornerStyle.Rounded)
+        (ApplicationProvider.getApplicationContext<AccordApplication>()).container.theme.setPalette(ThemePalette.Accord)
+        (ApplicationProvider.getApplicationContext<AccordApplication>()).container.theme.setEntriesDateCriterion(DateCriterion.PurchaseDate)
     }
 
     private fun waitForText(text: String) {
@@ -142,6 +146,52 @@ class MoreFlowTest {
         val restored = ThemeStore(ApplicationProvider.getApplicationContext())
         org.junit.Assert.assertEquals(ThemePreference.Dark, restored.preference.value)
         org.junit.Assert.assertEquals(CornerStyle.Straight, restored.corners.value)
+    }
+
+    @Test
+    fun dataNosLancamentosAbreFolhaComValorAtualEEscolherAplicaNaHoraEPersiste() {
+        val container = (ApplicationProvider.getApplicationContext<AccordApplication>()).container
+        compose.onNodeWithText("Mais").performClick()
+        waitForText("Categorias e subcategorias")
+        // Sem os rádios soltos de antes: a seção "Lançamentos" saiu e o valor atual vive no subtítulo da linha.
+        assert(compose.onAllNodesWithText("Critério:", substring = true).fetchSemanticsNodes().isEmpty())
+        scrollTo("Data nos lançamentos")
+        compose.onNode(hasText("Data nos lançamentos") and hasText("Data da compra")).assertIsDisplayed()
+
+        tap("Data nos lançamentos")
+        waitForText("Mostra as parcelas que vencem no período.")
+        // As duas opções são rádios; a atual vem marcada.
+        compose.onNode(hasText("Data da compra") and androidx.compose.ui.test.isSelectable() and androidx.compose.ui.test.isSelected()).assertExists()
+        compose.onNode(hasText("Mês do orçamento") and androidx.compose.ui.test.isSelectable()).performClick()
+
+        compose.waitUntil(5_000) { container.theme.entriesDateCriterion.value == DateCriterion.BudgetMonth }
+        waitGone("Mostra as parcelas que vencem no período.") // a folha fecha ao escolher
+        compose.onNode(hasText("Data nos lançamentos") and hasText("Mês do orçamento")).assertExists()
+        assertEquals(DateCriterion.BudgetMonth, ThemeStore(ApplicationProvider.getApplicationContext()).entriesDateCriterion.value)
+    }
+
+    @Test
+    fun aparenciaMostraModoEPaletaAtuaisNoSubtitulo() {
+        val container = (ApplicationProvider.getApplicationContext<AccordApplication>()).container
+        container.theme.set(ThemePreference.Dark)
+        container.theme.setPalette(ThemePalette.Nord)
+        compose.onNodeWithText("Mais").performClick()
+        waitForText("Categorias e subcategorias")
+        scrollTo("Aparência")
+        compose.onNode(hasText("Aparência") and hasText("Escuro · Nord")).assertExists()
+    }
+
+    @Test
+    fun versaoEAtualizacoesAbreOPainelDeAtualizacoesEmUmaFolha() {
+        compose.onNodeWithText("Mais").performClick()
+        waitForText("Categorias e subcategorias")
+        scrollTo("Versão e atualizações")
+        compose.onNode(hasText("Versão e atualizações") and hasClickAction()).assertExists()
+        // O painel só aparece depois de abrir a linha.
+        assert(compose.onAllNodesWithText("Verificar atualizações").fetchSemanticsNodes().isEmpty())
+        tap("Versão e atualizações")
+        waitForText("Atualizações do Accord")
+        compose.onNodeWithText("Verificar atualizações").assertExists()
     }
 
     @Test

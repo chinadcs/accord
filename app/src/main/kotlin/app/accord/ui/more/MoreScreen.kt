@@ -45,6 +45,15 @@ import app.accord.core.space.DateCriterion
 import app.accord.ui.components.DecorativeIcon
 import app.accord.ui.pending.PendingQueueUiState
 import app.accord.ui.theme.AccordSpacing
+import app.accord.ui.theme.ThemePalette
+import app.accord.ui.theme.ThemePreference
+import app.accord.BuildConfig
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.material3.RadioButton
 import com.composables.icons.lucide.R as Lucide
 
@@ -117,12 +126,18 @@ data class MoreUiState(
     val review: PendingQueueUiState = PendingQueueUiState(),
     val session: SessionState = SessionState.Valid,
     val entriesCriterion: DateCriterion = DateCriterion.PurchaseDate,
+    /** Modo e paleta deste aparelho, só para o subtítulo da linha Aparência. */
+    val themePreference: ThemePreference = ThemePreference.System,
+    val themePalette: ThemePalette = ThemePalette.Accord,
+    /** Alterações que ainda não saíram deste aparelho (por enviar, em conflito ou recusadas); zero some do subtítulo de Sair. */
+    val pendingOperations: Int = 0,
     /** Preferência e situação real das notificações deste aparelho; nulo onde o menu não se aplica. */
     val alerts: AlertPreferencesUiState? = null,
 )
 
 private val ChevronSize = AccordSpacing.s5 - AccordSpacing.s1
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoreScreen(
     padding: PaddingValues,
@@ -135,6 +150,8 @@ fun MoreScreen(
     updateActions: app.accord.updates.UpdateActions = app.accord.updates.UpdateActions({}, {}, {}, { false }),
 ) {
     var showChatSettings by rememberSaveable { mutableStateOf(false) }
+    var showEntriesDate by rememberSaveable { mutableStateOf(false) }
+    var showUpdates by rememberSaveable { mutableStateOf(false) }
     if (showChatSettings) {
         ChatSettingsScreen(padding, actions, onBack = { showChatSettings = false })
         return
@@ -158,6 +175,12 @@ fun MoreScreen(
         // "Salvo no aparelho" até haver sincronização concluída; depois, "Dados sincronizados até …", nunca um selo de "em dia".
         // É a única entrada da tela Sincronização (ADR 0071, ADR 0077); o destino vem de LocalOpenSync.
         app.accord.ui.sync.SyncIndicator()
+        // Sessão a renovar: a ação fica logo abaixo da linha que já diz "Entre de novo para sincronizar" (sem repetir o texto).
+        if (state.session == SessionState.NeedsRenewal) {
+            OutlinedButton(onClick = actions.onRenew, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+                Text(stringResource(R.string.more_renew_access))
+            }
+        }
 
         Section(R.string.more_group_review) {
             MoreRow(R.string.tab_review, Lucide.drawable.lucide_ic_circle_check, actions.onReview,
@@ -191,28 +214,7 @@ fun MoreScreen(
             actions.onClues?.let { MoreRow(R.string.clues_title, Lucide.drawable.lucide_ic_search, it) }
         }
 
-        // Daqui para baixo, os grupos seguem como antes: cada um tem o seu próprio bead no ADR 0077.
-        Section(R.string.more_group_entries) {
-            Text(stringResource(R.string.entries_criterion_settings_note), style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2))
-            CriterionOption(R.string.entries_criterion_purchase, state.entriesCriterion == DateCriterion.PurchaseDate) {
-                onEntriesCriterionChange(DateCriterion.PurchaseDate)
-            }
-            CriterionOption(R.string.entries_criterion_budget, state.entriesCriterion == DateCriterion.BudgetMonth) {
-                onEntriesCriterionChange(DateCriterion.BudgetMonth)
-            }
-        }
-
-        if (state.header != null) {
-            Section(R.string.more_group_account) {
-                if (state.session == SessionState.NeedsRenewal) {
-                    MoreRow(R.string.more_renew_access, Lucide.drawable.lucide_ic_log_in, actions.onRenew)
-                }
-                MoreRow(R.string.more_sign_out, Lucide.drawable.lucide_ic_log_out, actions.onSignOut)
-            }
-        }
-
+        // Notificações e Chat seguem nas seções atuais até os beads D e E do ADR 0077.
         state.alerts?.takeIf { !it.loading && !it.failed }?.let { alerts ->
             Section(R.string.more_group_notifications) { NotificationsMenu(alerts, actions) }
         }
@@ -223,12 +225,103 @@ fun MoreScreen(
         }
 
         Section(R.string.more_group_device) {
+            MoreRow(
+                R.string.more_entries_date, Lucide.drawable.lucide_ic_calendar, { showEntriesDate = true },
+                supporting = stringResource(state.entriesCriterion.labelRes()),
+            )
+            MoreRow(
+                R.string.appearance_title, Lucide.drawable.lucide_ic_palette, actions.onAppearance,
+                supporting = stringResource(
+                    R.string.more_appearance_summary,
+                    stringResource(state.themePreference.shortLabelRes()), stringResource(state.themePalette.labelRes),
+                ),
+            )
             MoreRow(R.string.security_title, Lucide.drawable.lucide_ic_lock, actions.onSecurity)
             MoreRow(R.string.privacy_title, Lucide.drawable.lucide_ic_shield_check, actions.onPrivacy)
             MoreRow(R.string.bank_notifications_title, Lucide.drawable.lucide_ic_bell, actions.onBankNotifications)
-            MoreRow(R.string.appearance_title, Lucide.drawable.lucide_ic_palette, actions.onAppearance)
         }
-        updates?.let { app.accord.updates.UpdatePanel(it, installState, onCheckUpdates, updateActions) }
+
+        // Sem verificação de versões (nulo), o grupo não aparece. O download vive em AppContainer.apkUpdate: fechar a folha não o interrompe.
+        updates?.let { update ->
+            Section(R.string.more_group_app) {
+                val available = update.available != null
+                MoreRow(
+                    R.string.more_app_version, Lucide.drawable.lucide_ic_info, { showUpdates = true },
+                    supporting = if (available) stringResource(R.string.updates_available)
+                    else stringResource(R.string.more_app_version_current, BuildConfig.VERSION_NAME),
+                    attention = available,
+                )
+            }
+        }
+
+        // Conta no fim, afastada dos grupos de uso (24 dp no total, somados aos 16 dp do ritmo da coluna).
+        if (state.header != null) {
+            Section(R.string.more_group_account, Modifier.padding(top = AccordSpacing.s5 - AccordSpacing.s4)) {
+                if (state.session == SessionState.NeedsRenewal) {
+                    MoreRow(R.string.more_renew_access, Lucide.drawable.lucide_ic_log_in, actions.onRenew)
+                }
+                MoreRow(
+                    R.string.more_sign_out, Lucide.drawable.lucide_ic_log_out, actions.onSignOut, chevron = false,
+                    supporting = state.pendingOperations.takeIf { it > 0 }?.let { pluralStringResource(R.plurals.more_sign_out_pending, it, it) },
+                    attention = state.pendingOperations > 0,
+                )
+            }
+        }
+    }
+
+    if (showEntriesDate) {
+        EntriesDateSheet(
+            current = state.entriesCriterion,
+            onSelect = { onEntriesCriterionChange(it); showEntriesDate = false },
+            onDismiss = { showEntriesDate = false },
+        )
+    }
+    if (showUpdates && updates != null) {
+        ModalBottomSheet(onDismissRequest = { showUpdates = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                app.accord.updates.UpdatePanel(updates, installState, onCheckUpdates, updateActions)
+            }
+        }
+    }
+}
+
+private fun DateCriterion.labelRes(): Int = when (this) {
+    DateCriterion.PurchaseDate -> R.string.more_entries_date_purchase
+    DateCriterion.BudgetMonth -> R.string.more_entries_date_budget
+}
+
+private fun ThemePreference.shortLabelRes(): Int = when (this) {
+    ThemePreference.System -> R.string.more_theme_system_short
+    ThemePreference.Light -> R.string.more_theme_light
+    ThemePreference.Dark -> R.string.more_theme_dark
+}
+
+/**
+ * Folha de "Data nos lançamentos": duas opções de rádio, cada uma com a dica do que muda. Escolher aplica na hora e fecha;
+ * é só uma preferência deste aparelho (ThemeStore) e não altera nenhum lançamento.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun EntriesDateSheet(current: DateCriterion, onSelect: (DateCriterion) -> Unit, onDismiss: () -> Unit) {
+    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(
+            Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = AccordSpacing.s4).padding(bottom = AccordSpacing.s4),
+            verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+        ) {
+            Text(stringResource(R.string.more_entries_date), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+            Text(
+                stringResource(R.string.entries_criterion_settings_note), style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Column(Modifier.selectableGroup()) {
+                CriterionOption(R.string.more_entries_date_purchase, R.string.entries_criterion_purchase_hint, current == DateCriterion.PurchaseDate) {
+                    onSelect(DateCriterion.PurchaseDate)
+                }
+                CriterionOption(R.string.more_entries_date_budget, R.string.entries_criterion_budget_hint, current == DateCriterion.BudgetMonth) {
+                    onSelect(DateCriterion.BudgetMonth)
+                }
+            }
+        }
     }
 }
 
@@ -291,20 +384,24 @@ private fun ChatSettingsScreen(padding: PaddingValues, actions: MoreActions, onB
 }
 
 @Composable
-private fun CriterionOption(label: Int, selected: Boolean, onClick: () -> Unit) {
+private fun CriterionOption(label: Int, hint: Int, selected: Boolean, onClick: () -> Unit) {
+    // A linha inteira é o rádio (selecionado anunciado pelo TalkBack); o botão interno só desenha o estado.
     Row(
-        Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).clickable(role = Role.RadioButton, onClick = onClick)
-            .padding(horizontal = AccordSpacing.s3),
-        verticalAlignment = Alignment.CenterVertically,
+        Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
+            .padding(vertical = AccordSpacing.s2),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
     ) {
-        RadioButton(selected = selected, onClick = onClick)
-        Text(stringResource(label), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = AccordSpacing.s2))
+        RadioButton(selected = selected, onClick = null)
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(label), style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
 
 @Composable
-private fun Section(title: Int, content: @Composable () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+private fun Section(title: Int, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
         Text(
             stringResource(title), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = AccordSpacing.s1).semantics { heading() },
@@ -359,7 +456,13 @@ private fun NotificationsMenu(state: AlertPreferencesUiState, actions: MoreActio
 }
 
 @Composable
-private fun MoreRow(label: Int, icon: Int, onClick: () -> Unit, supporting: String? = null) {
+private fun MoreRow(
+    label: Int, icon: Int, onClick: () -> Unit, supporting: String? = null,
+    /** Linha de ação (como Sair): sem seta de navegação. */
+    chevron: Boolean = true,
+    /** Atenção no subtítulo: ícone + texto + cor, nunca só a cor. */
+    attention: Boolean = false,
+) {
     Row(
         Modifier.fillMaxWidth().heightIn(min = AccordSpacing.rowMedium).clickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2),
@@ -370,8 +473,17 @@ private fun MoreRow(label: Int, icon: Int, onClick: () -> Unit, supporting: Stri
         }
         Column(Modifier.weight(1f)) {
             Text(stringResource(label), style = MaterialTheme.typography.bodyLarge)
-            supporting?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            supporting?.let {
+                if (attention) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+                        DecorativeIcon(Lucide.drawable.lucide_ic_circle_alert, modifier = Modifier.size(AccordSpacing.s4), tint = Accord.colors.attention)
+                        Text(it, style = MaterialTheme.typography.bodySmall, color = Accord.colors.attention)
+                    }
+                } else {
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
         }
-        DecorativeIcon(Lucide.drawable.lucide_ic_chevron_right, modifier = Modifier.size(ChevronSize))
+        if (chevron) DecorativeIcon(Lucide.drawable.lucide_ic_chevron_right, modifier = Modifier.size(ChevronSize))
     }
 }

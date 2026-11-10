@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import app.accord.BuildConfig
 import app.accord.R
 import app.accord.ui.components.AccordOutlinedButton
+import app.accord.ui.theme.AccordSpacing
 
 /** Ações da pessoa sobre o download e a instalação da versão nova. */
 class UpdateActions(
@@ -40,7 +41,7 @@ private fun versionLabel(release: AppRelease) =
 @Composable
 fun UpdateInstallControls(release: AppRelease, install: InstallState, actions: UpdateActions) {
     var settingsFailed by remember { mutableStateOf(false) }
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
         when (install) {
             InstallState.Idle, is InstallState.Failed -> {
                 if (install is InstallState.Failed) Text(stringResource(when (install.reason) {
@@ -83,7 +84,7 @@ fun UpdateInstallControls(release: AppRelease, install: InstallState, actions: U
 
 @Composable
 fun UpdatePanel(state: UpdateState, install: InstallState, onCheck: () -> Unit, actions: UpdateActions) {
-    Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
         Text(stringResource(R.string.updates_title), style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.semantics { heading() })
         Text(stringResource(R.string.updates_installed, BuildConfig.VERSION_NAME))
@@ -111,7 +112,7 @@ fun UpdateNotice(state: UpdateState, install: InstallState, actions: UpdateActio
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.updates_available)) },
-        text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        text = { Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             Text(versionLabel(release))
             if (install == InstallState.Idle) Text(stringResource(R.string.updates_install_note))
             UpdateInstallControls(release, install, actions)
@@ -127,7 +128,7 @@ fun WhatsNewDialog(release: AppRelease, onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.updates_whats_new_title, release.version)) },
         text = {
-            Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
                 Text(stringResource(R.string.updates_whats_new_done))
                 Text(release.notes.ifBlank { stringResource(R.string.updates_whats_new_empty) })
             }
