@@ -81,16 +81,14 @@ class NavigationTest {
         compose.onNodeWithTag("root-register-fab").assertDoesNotExist()
     }
 
-    @Test fun registroManualAbreDeQualquerRaizEVoltaParaAOrigem() {
-        listOf("Home", "Budget", "Entries", "More").forEach { tab ->
+    @Test fun registroManualAbreDasRaizesComBotaoEVoltaParaAOrigem() {
+        listOf("Home", "Budget", "Entries").forEach { tab ->
             compose.onNodeWithTag("tab-$tab").performClick()
-            if (tab == "Home" || tab == "Budget" || tab == "Entries") {
-                // O botão some enquanto o teclado ainda recolhe do formulário anterior (showAdd depende do inset do teclado,
-                // que o Compose não espera): aguarda o botão em vez de falhar na primeira leitura.
-                compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Abrir opções de registro").fetchSemanticsNodes().isNotEmpty() }
-                compose.onNodeWithContentDescription("Abrir opções de registro").performClick()
-                compose.onAllNodes(hasText("Despesa") and hasClickAction()).onFirst().performClick()
-            } else compose.onNodeWithText("Registrar manualmente").performClick()
+            // O botão some enquanto o teclado ainda recolhe do formulário anterior (showAdd depende do inset do teclado,
+            // que o Compose não espera): aguarda o botão em vez de falhar na primeira leitura.
+            compose.waitUntil(5_000) { compose.onAllNodesWithContentDescription("Abrir opções de registro").fetchSemanticsNodes().isNotEmpty() }
+            compose.onNodeWithContentDescription("Abrir opções de registro").performClick()
+            compose.onAllNodes(hasText("Despesa") and hasClickAction()).onFirst().performClick()
             compose.onNodeWithTag("root-navigation").assertDoesNotExist()
             back()
             compose.onNodeWithTag("tab-$tab").assertIsSelected()

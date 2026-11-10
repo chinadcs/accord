@@ -66,7 +66,6 @@ internal fun MoreRoute(
     padding: PaddingValues,
     reviewState: PendingQueueUiState,
     access: AccessState,
-    onRegister: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val entriesCriterion by container.theme.entriesDateCriterion.collectAsStateWithLifecycle()
@@ -86,7 +85,6 @@ internal fun MoreRoute(
         padding,
         actions = MoreActions(
             onSpace = { navController.navigate(ROUTE_SPACE) },
-            onRegister = onRegister,
             onSync = { navController.navigate(ROUTE_SYNC) },
             onReview = { navController.navigate(ROUTE_REVIEW) },
             onImport = { navController.navigate(ROUTE_IMPORT_HUB) },

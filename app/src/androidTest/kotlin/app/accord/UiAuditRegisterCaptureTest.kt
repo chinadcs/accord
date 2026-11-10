@@ -121,8 +121,9 @@ class UiAuditRegisterCaptureTest {
     }
 
     @Test fun registroComTeclado() {
-        compose.onAllNodes(hasText("Mais") and hasClickAction()).onFirst().performClick()
-        compose.onNodeWithText("Registrar manualmente").performScrollTo().performClick()
+        // O registro abre pelo botão flutuante (ADR 0071); a aba Mais não tem mais o botão "Registrar manualmente".
+        compose.onNodeWithContentDescription("Abrir opções de registro").performClick()
+        compose.onAllNodes(hasText("Despesa") and hasClickAction()).onFirst().performClick()
         compose.waitUntil(12_000) { compose.onAllNodesWithText("Descrição").fetchSemanticsNodes().isNotEmpty() }
         pages("09_registro_vazio")
         compose.onNodeWithText("Descrição").performScrollTo().performTextInput("Compra de mercado com uma descrição suficientemente longa para testar a quebra de linha")

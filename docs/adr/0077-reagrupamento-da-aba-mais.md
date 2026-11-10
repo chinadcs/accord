@@ -25,8 +25,8 @@ sem mudar nenhuma regra financeira, de sincronização ou de privacidade. Ordem 
 1. **Cabeçalho** (cartão tocável, abre o Espaço; substitui o título "Mais", a introdução, a linha "Espaço da casa" e a
    frase "Conectado como"): e-mail e nome do espaço; "N de 4 participantes" só quando o aparelho já conhece a lista
    (cache), sem chamada de rede ao abrir Mais e sem afirmar o que não se sabe. Sem conta, o cartão some.
-2. **Topo fixo** (mantido do [ADR 0071](0071-ordem-das-abas-saldo-e-botao-de-registro-no-inicio.md)): botão
-   "Registrar manualmente" e a linha de sincronização, que passa a ser a **única** entrada da tela Sincronização
+2. **Topo fixo** (mantido do [ADR 0071](0071-ordem-das-abas-saldo-e-botao-de-registro-no-inicio.md)): a linha de sincronização
+   (o botão "Registrar manualmente" saiu de Mais a pedido do usuário em 10/11/2026, `accord-r31b`; o registro abre pelo botão flutuante), que passa a ser a **única** entrada da tela Sincronização
    (a linha duplicada "Sincronização" sai), com texto de conflitos/fila/"Salvo no aparelho" e semântica de botão.
 3. **Revisar e importar:** Revisar (subtítulo de pendências) · Importar do banco.
 4. **Orçamento e contas:** Limites do orçamento · Categorias e subcategorias · Rendas · Cartões e faturas · Contas ·

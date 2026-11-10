@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import app.accord.ui.components.AccordButton as Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -58,9 +57,8 @@ import com.composables.icons.lucide.R as Lucide
  * O que ainda não existe (fase P2) é nulo e a linha não aparece, sem botão vazio.
  */
 data class MoreActions(
-    // Topo: cabeçalho, registro manual e sincronização.
+    // Topo: cabeçalho e sincronização.
     val onSpace: () -> Unit = {},
-    val onRegister: () -> Unit = {},
     val onSync: () -> Unit = {},
     // Revisar e importar.
     val onReview: () -> Unit = {},
@@ -146,11 +144,6 @@ fun MoreScreen(
             MoreHeader(state.header, actions.onSpace)
         } else {
             Text(stringResource(R.string.more_title), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { heading() })
-        }
-
-        // O registro manual continua a um toque de qualquer raiz, sem depender de modelo nem de rede.
-        Button(onClick = actions.onRegister, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
-            Text(stringResource(R.string.action_register_manually))
         }
 
         // "Salvo no aparelho" até haver sincronização concluída; depois, "Dados sincronizados até …", nunca um selo de "em dia".

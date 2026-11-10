@@ -707,7 +707,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
             }
             navigation(startDestination = Root.More.start, route = Root.More.graph) {
                 composable(Root.More.start) {
-                    MoreRoute(container, navController, padding, reviewState, access, onRegister = register)
+                    MoreRoute(container, navController, padding, reviewState, access)
                 }
             }
 

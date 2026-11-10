@@ -26,7 +26,7 @@ em Mais, indicadores de pendência) continua valendo.
    só a descrição do que carrega; com movimento reduzido o esqueleto fica parado. Falha continua com mensagem e
    “Tentar de novo”; carga ou falha nunca viram zero.
 4. **Botão flutuante no Início:** o mesmo botão de registro de Orçamento e Lançamentos (Receita, Despesa e Despesa no
-   cartão) aparece no Início, e o botão “Registrar manualmente” do corpo do Início é removido. Mais mantém o seu botão.
+   cartão) aparece no Início, e o botão “Registrar manualmente” do corpo do Início é removido. Mais mantinha o seu botão, retirado em 10/11/2026 a pedido do usuário (`accord-r31b`, ADR 0077).
 5. **Sincronização só em Mais:** a linha “Salvo no aparelho” / “Dados sincronizados até …”, com fila, conflitos e causa
    de parada, aparece apenas em Mais; sai de Início, Chat e Orçamento. A regra de não afirmar que o outro aparelho
    está em dia permanece, e a tela Sincronização continua alcançável por Mais.
