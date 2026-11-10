@@ -11,11 +11,13 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import app.accord.ui.components.AccordButton as Button
 import androidx.compose.material3.MaterialTheme
 import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -28,6 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -39,6 +42,7 @@ import app.accord.ui.vendors.ChooseIconFlow
 import app.accord.ui.vendors.EntryIdentityIcon
 import app.accord.ui.vendors.LocalIconActions
 import app.accord.ui.banks.BankLogo
+import app.accord.core.RecurrenceScope
 import app.accord.core.label
 import app.accord.core.space.EntryDetail
 import app.accord.core.space.EntryKind
@@ -79,6 +83,9 @@ fun EntryDetailRoute(
         content, delete, padding, onBack, onEdit,
         onRetry = viewModel::load, onRequestDelete = viewModel::requestDelete, onCancelDelete = viewModel::cancelDelete,
         onConfirmDelete = viewModel::confirmDelete,
+        onRequestDeleteOccurrence = viewModel::requestDeleteOccurrence,
+        onConfirmDeleteOccurrence = { viewModel.confirmDeleteOccurrence(it) },
+        onConfirmDeleteRealized = viewModel::confirmDeleteRealized,
         onOpenCommitment = onOpenCommitment, onOpenIntention = onOpenIntention,
         linked = linked, onOpenAction = viewModel::openAction, onToggleSettle = viewModel::toggleSettle, onAdjustSettle = viewModel::adjustSettle,
         onLinkedChange = viewModel::updateLinked,
@@ -97,6 +104,9 @@ fun EntryDetailScreen(
     onRequestDelete: () -> Unit,
     onCancelDelete: () -> Unit,
     onConfirmDelete: (extraConfirmed: Boolean) -> Unit,
+    onRequestDeleteOccurrence: () -> Unit = {},
+    onConfirmDeleteOccurrence: (RecurrenceScope) -> Unit = {},
+    onConfirmDeleteRealized: () -> Unit = {},
     onOpenCommitment: (String) -> Unit = {},
     onOpenIntention: (String) -> Unit = {},
     linked: LinkedState? = null,
@@ -129,11 +139,11 @@ fun EntryDetailScreen(
             }
             is DetailContent.Ready -> {
                 app.accord.ui.intentions.OriginIntentionLink(content.data.origin, onOpenIntention)
-                ReadyDetail(content.data, onEdit, onRequestDelete, onOpenAction, onOpenCommitment, onToggleSettle, onAdjustSettle)
+                ReadyDetail(content.data, onEdit, onRequestDelete, onRequestDeleteOccurrence, onOpenAction, onOpenCommitment, onToggleSettle, onAdjustSettle)
             }
         }
     }
-    DeleteDialogs(delete, (content as? DetailContent.Ready)?.data, onCancelDelete, onConfirmDelete)
+    DeleteDialogs(delete, (content as? DetailContent.Ready)?.data, onCancelDelete, onConfirmDelete, onConfirmDeleteOccurrence, onConfirmDeleteRealized)
     linked?.let { LinkedActionDialog(it, onLinkedChange, onLinkedSubmit, onLinkedClose) }
 }
 
@@ -142,6 +152,7 @@ private fun ReadyDetail(
     data: DetailData,
     onEdit: (String) -> Unit,
     onRequestDelete: () -> Unit,
+    onRequestDeleteOccurrence: () -> Unit,
     onOpenAction: (LinkedAction) -> Unit,
     onOpenCommitment: (String) -> Unit,
     onToggleSettle: (Boolean) -> Unit,
@@ -245,6 +256,11 @@ private fun ReadyDetail(
         if (data.canDelete) {
             OutlinedButton(onClick = onRequestDelete, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
                 Text(stringResource(R.string.detail_delete), color = MaterialTheme.colorScheme.error)
+            }
+        }
+        if (data.canDeleteOccurrence) {
+            OutlinedButton(onClick = onRequestDeleteOccurrence, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+                Text(stringResource(R.string.edit_delete_occurrence), color = MaterialTheme.colorScheme.error)
             }
         }
     }
@@ -360,9 +376,27 @@ private fun DeleteDialogs(
     data: DetailData?,
     onCancel: () -> Unit,
     onConfirm: (extraConfirmed: Boolean) -> Unit,
+    onConfirmOccurrence: (RecurrenceScope) -> Unit,
+    onConfirmRealized: () -> Unit,
 ) {
     when (phase) {
         DeletePhase.Idle -> Unit
+        DeletePhase.ChoosingScope -> OccurrenceScopeDialog(onConfirmOccurrence, onCancel)
+        is DeletePhase.ConfirmingRealized -> AlertDialog(
+            onDismissRequest = onCancel,
+            title = { Text(stringResource(R.string.edit_realized_title)) },
+            text = { Text(stringResource(R.string.edit_realized_body, phase.numbers.joinToString(", "))) },
+            confirmButton = {
+                TextButton(onClick = onConfirmRealized, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                    Text(stringResource(R.string.edit_delete_confirm), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onCancel, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                    Text(stringResource(R.string.delete_keep))
+                }
+            },
+        )
         DeletePhase.Confirming, DeletePhase.Working -> AlertDialog(
             onDismissRequest = onCancel,
             title = { Text(stringResource(R.string.delete_title)) },
@@ -417,6 +451,47 @@ private fun DeleteDialogs(
         DeletePhase.Stale -> MessageDialog(stringResource(R.string.delete_stale), onCancel)
         DeletePhase.Failed -> MessageDialog(stringResource(R.string.delete_failed), onCancel)
     }
+}
+
+/** Exclusão de ocorrência de série: o alcance é obrigatório e o botão só vale depois de escolhê-lo. */
+@Composable
+private fun OccurrenceScopeDialog(onConfirm: (RecurrenceScope) -> Unit, onCancel: () -> Unit) {
+    var chosen by remember { mutableStateOf<RecurrenceScope?>(null) }
+    AlertDialog(
+        onDismissRequest = onCancel,
+        title = { Text(stringResource(R.string.edit_delete_title)) },
+        text = {
+            Column {
+                listOf(
+                    RecurrenceScope.OnlyThis to R.string.edit_scope_only_this,
+                    RecurrenceScope.ThisAndNext to R.string.edit_scope_this_and_next,
+                ).forEach { (value, label) ->
+                    Row(
+                        Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)
+                            .selectable(selected = chosen == value, onClick = { chosen = value }, role = Role.RadioButton),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = chosen == value, onClick = null)
+                        Text(stringResource(label), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = AccordSpacing.s2))
+                    }
+                }
+                chosen?.let {
+                    Text(
+                        stringResource(if (it == RecurrenceScope.OnlyThis) R.string.edit_delete_note_only_this else R.string.edit_delete_note_next),
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { chosen?.let(onConfirm) }, enabled = chosen != null, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                Text(stringResource(R.string.edit_delete_confirm), color = MaterialTheme.colorScheme.error)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onCancel, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.delete_keep)) }
+        },
+    )
 }
 
 @Composable

@@ -11,6 +11,7 @@ import app.accord.core.space.EditRecurrence
 import app.accord.core.space.EntryDetail
 import app.accord.core.space.EntryKind
 import app.accord.core.space.PaymentMethod
+import app.accord.core.space.RecurrenceKind
 import app.accord.ui.register.FormError
 import java.time.LocalDate
 
@@ -41,10 +42,12 @@ data class EditOriginal(
     val method: PaymentMethod? = null,
     /** Só renda: a categoria de renda (ADR 0038); nula é "sem categoria". */
     val incomeCategoryId: String? = null,
+    /** Ocorrência de série de renda: a série não tem categoria, então o formulário não pede categoria de despesa. */
+    val incomeSeries: Boolean = false,
 ) {
     val incomeCategoryEditable: Boolean get() = target == EditTarget.Income
     val amountEditable: Boolean get() = !(target == EditTarget.CardPurchase && installments > 1)
-    val categoryEditable: Boolean get() = target != EditTarget.Income
+    val categoryEditable: Boolean get() = target != EditTarget.Income && !incomeSeries
     val dateEditable: Boolean get() = target != EditTarget.Occurrence && date != null
     val accountEditable: Boolean
         get() = when (target) {
@@ -86,6 +89,7 @@ data class EditOriginal(
                     EditOriginal(
                         detail.id, EditTarget.Occurrence, o.description, o.categoryId, null, o.expectedAmount, o.accountId,
                         detail.revision, recurrenceId = o.recurrenceId, occurrence = o.number, paid = o.paid,
+                        incomeSeries = o.kind == RecurrenceKind.Income,
                     )
                 }
                 EntryKind.Refund, EntryKind.InvoicePayment -> null

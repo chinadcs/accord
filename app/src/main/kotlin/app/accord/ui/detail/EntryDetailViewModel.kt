@@ -11,7 +11,9 @@ import app.accord.core.space.CategoryNode
 import app.accord.core.space.CommandId
 import app.accord.core.space.CommandResult
 import app.accord.core.space.Decision
+import app.accord.core.RecurrenceScope
 import app.accord.core.space.DeleteEntry
+import app.accord.core.space.DeleteRecurrence
 import app.accord.core.space.Envelope
 import app.accord.core.space.EntryDetail
 import app.accord.core.space.EntryKind
@@ -33,9 +35,13 @@ data class DetailData(
     /** Intenção de compra de onde o lançamento nasceu (S7, P2); nula fora da fase ou sem vínculo. */
     val origin: app.accord.core.space.IntentionView? = null,
 ) {
-    /** Só lançamentos de despesa e renda avulsos se excluem aqui; ocorrência, estorno e quitação têm outros caminhos. */
+    /** Despesa e renda avulsas se excluem aqui; ocorrência de série tem o alcance próprio ([canDeleteOccurrence]); estorno e quitação, outros caminhos. */
     val canDelete: Boolean
         get() = !detail.voided && detail.kind in DELETABLE
+
+    /** Ocorrência de série (despesa ou renda): exclui só ela ou ela e as próximas. */
+    val canDeleteOccurrence: Boolean
+        get() = !detail.voided && detail.kind == EntryKind.RecurrenceOccurrence && detail.occurrence != null
 
     /** Boleto e renda têm o interruptor; os demais pagamentos seguem como botão. */
     val settleSwitch: SettleSwitch? get() = settleSwitch(detail)
@@ -67,6 +73,10 @@ sealed interface DeletePhase {
     data object Idle : DeletePhase
     data object Confirming : DeletePhase
     data class ConfirmingExtra(val reasons: List<ExtraReason>) : DeletePhase
+    /** Ocorrência de série: a pessoa escolhe o alcance antes de excluir. */
+    data object ChoosingScope : DeletePhase
+    /** Ocorrências do alcance já pagas ou recebidas: pede confirmação antes de excluir. */
+    data class ConfirmingRealized(val numbers: List<Int>) : DeletePhase
     data object Working : DeletePhase
     /** O lançamento mudou depois que a tela abriu; nada foi alterado. */
     data object Stale : DeletePhase
@@ -153,6 +163,37 @@ class EntryDetailViewModel(
                 is CommandResult.Rejected -> DeletePhase.Failed
             }
         }
+    }
+
+    fun requestDeleteOccurrence() {
+        _delete.value = DeletePhase.ChoosingScope
+    }
+
+    private var occurrenceScope: RecurrenceScope? = null
+
+    fun confirmDeleteOccurrence(scope: RecurrenceScope, confirmRealized: Boolean = false) {
+        val data = (_content.value as? DetailContent.Ready)?.data ?: return
+        val occurrence = data.detail.occurrence ?: return
+        occurrenceScope = scope
+        _delete.value = DeletePhase.Working
+        viewModelScope.launch {
+            val command = DeleteRecurrence(occurrence.recurrenceId, occurrence.number, scope, confirmRealized = confirmRealized)
+            _delete.value = when (val result = provider.space().execute(Envelope(CommandId(UUID.randomUUID().toString())), command)) {
+                is CommandResult.Applied -> { deletedWith(result.receipt.operationId, result.receipt.undoable); DeletePhase.Idle }
+                is CommandResult.AlreadyApplied -> { deletedWith(result.receipt.operationId, result.receipt.undoable); DeletePhase.Idle }
+                is CommandResult.DecisionNeeded -> when (val d = result.decision) {
+                    is Decision.RealizedOccurrences -> DeletePhase.ConfirmingRealized(d.numbers)
+                    else -> DeletePhase.Failed
+                }
+                is CommandResult.StaleVersion -> DeletePhase.Stale.also { load() }
+                is CommandResult.Rejected -> DeletePhase.Failed
+            }
+        }
+    }
+
+    /** Confirma a exclusão que pediu [DeletePhase.ConfirmingRealized], com o alcance já escolhido. */
+    fun confirmDeleteRealized() {
+        confirmDeleteOccurrence(occurrenceScope ?: return, confirmRealized = true)
     }
 
     // ---- ações vinculadas (pagar, receber, estornar, cancelar parcelas) ----

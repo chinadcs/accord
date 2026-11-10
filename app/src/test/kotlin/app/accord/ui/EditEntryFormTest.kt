@@ -34,6 +34,23 @@ class EditEntryFormTest {
     private fun ok(form: EditForm, original: EditOriginal) = assertIs<EditForm.Built.Ok>(form.build(original))
 
     @Test
+    fun ocorrenciaDeRendaNaoPedeCategoriaDeDespesa() {
+        val o = original(target = EditTarget.Occurrence, category = null, date = null).copy(incomeSeries = true)
+        assertFalse(o.categoryEditable)
+        val built = ok(EditForm.of(o).copy(description = "Empréstimo", scope = RecurrenceScope.OnlyThis), o)
+        val command = assertIs<EditRecurrence>(built.command)
+        assertNull(command.fields.classificationId)
+        assertTrue(built.changed)
+    }
+
+    @Test
+    fun ocorrenciaDeDespesaSemCategoriaContinuaExigindoCategoria() {
+        val o = original(target = EditTarget.Occurrence, category = null, date = null)
+        val built = assertIs<EditForm.Built.Invalid>(EditForm.of(o).copy(scope = RecurrenceScope.OnlyThis).build(o))
+        assertTrue(EditField.Category in built.errors)
+    }
+
+    @Test
     fun semMudancaOComandoNaoTemNadaParaGravar() {
         val o = original()
         assertFalse(ok(EditForm.of(o), o).changed)
