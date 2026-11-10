@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Quem me deve (ADR 0083, spec 39) -->
+    <string name="receivables_title">Quem me deve</string>
+    <string name="more_receivables">Quem me deve</string>
+    <string name="receivables_to_receive">A receber</string>
+    <plurals name="receivables_people">
+        <item quantity="one">%d pessoa</item>
+        <item quantity="other">%d pessoas</item>
+    </plurals>
+    <string name="receivables_new">Novo valor a receber</string>
+    <string name="receivables_empty_title">Ninguém te deve nada por aqui</string>
+    <string name="receivables_empty_body">Registre o que alguém vai te pagar para acompanhar o que falta e quando foi combinado.</string>
+    <string name="receivables_settled_group">Resolvidos</string>
+    <string name="receivables_open_label">Em aberto</string>
+    <string name="receivables_agreed_for">Combinado p/ %1$s</string>
+    <string name="receivables_when_possible">Quando der</string>
+    <string name="receivables_registered_on">Registrado em %1$s · %2$s</string>
+    <string name="receivables_resolved_of">%1$s resolvidos</string>
+    <string name="receivables_of_total">de %1$s no total</string>
+    <string name="receivables_progress_description">%1$s resolvidos de %2$s</string>
+    <string name="receivables_received">Recebi</string>
+    <string name="receivables_reschedule">Remarcar</string>
+    <string name="receivables_schedule_title">Cronograma de recebimento</string>
+    <string name="receivables_schedule_edit">Editar</string>
+    <string name="receivables_schedule_note">Cada recebimento entra no fluxo de caixa como entrada esperada. O que cair abate sempre o mais antigo.</string>
+    <string name="receivables_schedule_empty">Sem data combinada.</string>
+    <string name="receivables_unscheduled">Sem data combinada: %1$s</string>
+    <string name="receivables_entries_title">Lançamentos</string>
+    <string name="receivables_entry_lent">A receber de %1$s</string>
+    <string name="receivables_entry_lent_sub">Valor a receber · %1$s</string>
+    <string name="receivables_entry_receipt">Recebimento de %1$s</string>
+    <string name="receivables_entry_receipt_sub">Recebimento · %1$s</string>
+    <string name="receivables_entry_agreed_sub">Data combinada · %1$s</string>
+    <string name="receivables_history_title">Histórico</string>
+    <string name="receivables_history_empty">Nenhum recebimento ainda.</string>
+    <string name="receivables_history_line">Recebimento · %1$s</string>
+    <string name="receivables_history_after">Saldo após: %1$s</string>
+    <string name="receivables_remove_receipt_description">Remover recebimento de %1$s</string>
+    <string name="receivables_counts_badge">Conta como despesa e renda</string>
+    <string name="receivables_cancel_receivable">Cancelar este valor a receber</string>
+    <string name="receivables_rename">Renomear</string>
+    <string name="receivables_rename_title">Renomear devedor</string>
+    <string name="receivables_rename_label">Nome</string>
+    <string name="receivables_missing">Este devedor não está mais na lista.</string>
+    <string name="receivables_saved">Valor a receber registrado</string>
+    <string name="receivables_received_saved">Recebimento registrado</string>
+    <string name="receivables_rescheduled_saved">Data remarcada</string>
+    <string name="receivables_schedule_saved">Cronograma atualizado</string>
+    <string name="receivables_receipt_removed">Recebimento removido</string>
+    <string name="receivables_cancelled">Valor a receber cancelado</string>
+    <string name="receivables_renamed">Nome atualizado</string>
+
+    <!-- Recebi -->
+    <string name="receivables_receive_title">Recebi</string>
+    <string name="receivables_receive_amount">Valor recebido</string>
+    <string name="receivables_receive_date">Data do recebimento</string>
+    <string name="receivables_receive_hint">Abate o recebimento previsto mais antigo. Em aberto: %1$s.</string>
+    <string name="receivables_receive_confirm">Registrar</string>
+
+    <!-- Remarcar -->
+    <string name="receivables_reschedule_title">Remarcar</string>
+    <string name="receivables_reschedule_which">Recebimento de %1$s, combinado p/ %2$s</string>
+    <string name="receivables_reschedule_new_date">Nova data</string>
+    <string name="receivables_reschedule_only">Só este recebimento</string>
+    <string name="receivables_reschedule_following">Este e os seguintes</string>
+    <string name="receivables_reschedule_none">Não há recebimento previsto para remarcar.</string>
+    <string name="receivables_reschedule_confirm">Remarcar</string>
+
+    <!-- Editar cronograma -->
+    <string name="receivables_edit_title">Editar cronograma</string>
+    <string name="receivables_edit_hint">A soma pode ser menor que o em aberto (%1$s); o resto fica sem data combinada.</string>
+    <string name="receivables_add_slot">Adicionar recebimento</string>
+    <string name="receivables_remove_slot">Remover recebimento %1$d</string>
+    <string name="receivables_slot_date">Data do recebimento %1$d</string>
+    <string name="receivables_slot_amount">Valor do recebimento %1$d</string>
+
+    <!-- Remover recebimento / cancelar -->
+    <string name="receivables_remove_title">Remover recebimento</string>
+    <string name="receivables_remove_body">O recebimento de %1$s em %2$s deixa de contar e o valor volta a ficar em aberto, sem data combinada.</string>
+    <string name="receivables_cancel_title">Cancelar valor a receber</string>
+    <string name="receivables_cancel_body">O valor a receber, o cronograma e a saída de dinheiro deixam de existir. Só é possível se não houver recebimentos.</string>
+    <string name="receivables_confirm_remove">Remover</string>
+    <string name="receivables_confirm_cancel">Cancelar valor</string>
+    <string name="receivables_keep">Manter</string>
+
+    <!-- Novo valor a receber -->
+    <string name="receivable_form_title">Novo valor a receber</string>
+    <string name="receivable_form_amount">Valor a receber</string>
+    <string name="receivable_form_amount_note">Não entra nos relatórios de gasto — vira saldo a receber em "Quem me deve".</string>
+    <string name="receivable_form_amount_note_counted">Entra nos gastos e na renda do mês, além de aparecer em "Quem me deve".</string>
+    <string name="receivable_form_account">Conta</string>
+    <string name="receivable_form_account_pick">Escolha a conta</string>
+    <string name="receivable_form_who">Pra quem</string>
+    <string name="receivable_form_who_hint">Nome da pessoa</string>
+    <string name="receivable_form_date">Data</string>
+    <string name="receivable_form_income_category">Categoria de renda</string>
+    <string name="receivable_form_schedule">Cronograma de recebimento (opcional)</string>
+    <string name="receivable_form_schedule_hint">Quando combinaram o pagamento — uma data, parcelas mensais ou "quando der".</string>
+    <string name="receivable_form_mode_when">Quando der</string>
+    <string name="receivable_form_mode_single">Data única</string>
+    <string name="receivable_form_mode_installments">Parcelar</string>
+    <string name="receivable_form_installments">Parcelas</string>
+    <string name="receivable_form_installments_less">Menos uma parcela</string>
+    <string name="receivable_form_installments_more">Mais uma parcela</string>
+    <string name="receivable_form_start">a partir de %1$s</string>
+    <string name="receivable_form_split">Dividir</string>
+    <string name="receivable_form_sum">Soma %1$s de %2$s</string>
+    <string name="receivable_form_sum_ok">Bate com o saldo</string>
+    <string name="receivable_form_sum_missing">Faltam %1$s</string>
+    <string name="receivable_form_sum_over">Passa %1$s</string>
+    <string name="receivable_form_no_outflow">O dinheiro não saiu da minha conta</string>
+    <string name="receivable_form_no_outflow_body">Venda, racha de conta, ou saída antes do app — só registra o saldo, sem debitar conta.</string>
+    <string name="receivable_form_counts">Contar como despesa e renda</string>
+    <string name="receivable_form_counts_body">Entra nos gastos do mês, na categoria escolhida, e os recebimentos contam na renda do mês.</string>
+    <string name="receivable_form_expense_category">Categoria da despesa</string>
+    <string name="receivable_form_expense_category_pick">Escolha a categoria</string>
+    <string name="receivable_form_someone_owes">Alguém me deve isso</string>
+    <string name="receivable_form_someone_owes_body">Vira saldo a receber em "Quem me deve", fora dos relatórios de gasto.</string>
+    <string name="receivable_form_note">Observações</string>
+    <string name="receivable_form_save">Registrar</string>
+    <string name="receivable_form_invalid_amount">Informe um valor em reais maior que zero.</string>
+    <string name="receivable_form_invalid_name">Informe quem vai pagar.</string>
+    <string name="receivable_form_invalid_account">Escolha a conta.</string>
+    <string name="receivable_form_invalid_slot">Confira os valores do cronograma.</string>
+    <string name="receivable_form_invalid_sum">A soma dos recebimentos passa do valor a receber.</string>
+    <string name="receivable_form_invalid_expense">Escolha a categoria da despesa.</string>
+    <string name="receivable_form_failed">Não foi possível salvar agora. Seus dados continuam aqui; tente de novo.</string>
+</resources>

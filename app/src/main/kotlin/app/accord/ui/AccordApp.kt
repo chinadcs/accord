@@ -241,6 +241,8 @@ import app.accord.ui.nav.ROUTE_IMPORT_HUB
 import app.accord.ui.nav.ROUTE_IMPORT_RESULT
 import app.accord.ui.nav.ROUTE_IMPORT_REVIEW
 import app.accord.ui.nav.ROUTE_INCOMES
+import app.accord.ui.nav.ROUTE_RECEIVABLES
+import app.accord.ui.nav.ROUTE_RECEIVABLE_NEW
 import app.accord.ui.nav.ROUTE_INVOICE
 import app.accord.ui.nav.ROUTE_REGISTER
 import app.accord.ui.nav.Root
@@ -432,7 +434,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
     val resources = LocalResources.current
     // O aviso da ação anterior não cobre o botão Salvar do formulário que abre em seguida.
     val formRoute = destination?.route?.substringBefore('?')?.substringBefore('/')
-    val inForm = formRoute in setOf(ROUTE_REGISTER, ROUTE_EDIT, ROUTE_CARD, ROUTE_ACCOUNTS, ROUTE_CATEGORIES, ROUTE_CATEGORY_MOVE, ROUTE_LIMITS, ROUTE_FIRST_STEPS, ROUTE_ALERT_PREFS, ROUTE_SIMULATOR, ROUTE_INTENTION)
+    val inForm = formRoute in setOf(ROUTE_REGISTER, ROUTE_EDIT, ROUTE_CARD, ROUTE_ACCOUNTS, ROUTE_CATEGORIES, ROUTE_CATEGORY_MOVE, ROUTE_LIMITS, ROUTE_FIRST_STEPS, ROUTE_ALERT_PREFS, ROUTE_SIMULATOR, ROUTE_INTENTION, ROUTE_RECEIVABLE_NEW)
     // Ao abrir um formulário novo (de fora ou de outro formulário) o aviso some; voltar de uma tela de edição para a lista
     // (também formulário, já aberta antes) não apaga o aviso da ação que acabou de salvar.
     var cameFromForm by remember { mutableStateOf(false) }
@@ -751,6 +753,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             onLimits = { navController.navigate(ROUTE_LIMITS) },
                             onCard = { navController.navigate(ROUTE_CARD) },
                             onIncomes = { navController.navigate(ROUTE_INCOMES) },
+                            onReceivables = { navController.navigate(ROUTE_RECEIVABLES) },
                             onCommitments = { navController.navigate(ROUTE_COMMITMENTS) },
                             onSubscriptions = { navController.navigate(ROUTE_SUBSCRIPTIONS) },
                             onActivity = { navController.navigate(ROUTE_ACTIVITY) },
@@ -1385,6 +1388,33 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     viewModel, padding, onBack = { navController.popBackStack() },
                     onResolved = { navController.popBackStack() },
                     onOpenCard = { navController.navigate("$ROUTE_CARD?initialSetup=false") },
+                )
+            }
+            composable(ROUTE_RECEIVABLES) {
+                val viewModel: app.accord.ui.receivables.ReceivablesViewModel = viewModel(
+                    factory = viewModelFactory { initializer { app.accord.ui.receivables.ReceivablesViewModel(container, createSavedStateHandle()) } },
+                )
+                app.accord.ui.receivables.ReceivablesRoute(
+                    viewModel, padding, onBack = { navController.popBackStack() }, onNew = { navController.navigate(ROUTE_RECEIVABLE_NEW) },
+                )
+            }
+            composable(
+                "$ROUTE_RECEIVABLE_NEW?amount={amount}&account={account}&date={date}&fromExpense={fromExpense}",
+                arguments = listOf(
+                    navArgument("amount") { type = NavType.StringType; nullable = true; defaultValue = null },
+                    navArgument("account") { type = NavType.StringType; nullable = true; defaultValue = null },
+                    navArgument("date") { type = NavType.StringType; nullable = true; defaultValue = null },
+                    navArgument("fromExpense") { type = NavType.BoolType; defaultValue = false },
+                ),
+            ) { backStackEntry ->
+                val viewModel: app.accord.ui.receivables.ReceivableFormViewModel = viewModel(
+                    factory = viewModelFactory { initializer { app.accord.ui.receivables.ReceivableFormViewModel(container, createSavedStateHandle()) } },
+                )
+                val fromExpense = backStackEntry.arguments?.getBoolean("fromExpense") == true
+                app.accord.ui.receivables.ReceivableFormRoute(
+                    viewModel, padding, onBack = { navController.popBackStack() },
+                    onDone = { navController.navigate(ROUTE_RECEIVABLES) { popUpTo(ROUTE_RECEIVABLE_NEW) { inclusive = true } } },
+                    onBackToExpense = if (fromExpense) ({ navController.popBackStack() }) else null,
                 )
             }
             composable(

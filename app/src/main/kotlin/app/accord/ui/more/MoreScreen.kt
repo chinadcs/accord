@@ -75,6 +75,8 @@ data class MoreActions(
     /** Intenções de compra (tela 34, P2); nulo antes da fase P2. */
     val onIntentions: (() -> Unit)? = null,
     val onClues: (() -> Unit)? = null,
+    /** "Quem me deve" (ADR 0083, spec 39). */
+    val onReceivables: () -> Unit = {},
     /** Liga ou desliga os avisos neste aparelho (salva na hora). */
     val onAlertsToggle: (Boolean) -> Unit = {},
     /** "Permitir notificações" (ou abrir os ajustes do sistema), quando falta a permissão ou o canal está desativado. */
@@ -139,6 +141,7 @@ fun MoreScreen(
             MoreRow(R.string.more_limits, Lucide.drawable.lucide_ic_gauge, actions.onLimits)
             MoreRow(R.string.more_card, Lucide.drawable.lucide_ic_credit_card, actions.onCard)
             MoreRow(R.string.more_incomes, Lucide.drawable.lucide_ic_wallet, actions.onIncomes)
+            MoreRow(R.string.more_receivables, Lucide.drawable.lucide_ic_users, actions.onReceivables)
             MoreRow(R.string.more_commitments, Lucide.drawable.lucide_ic_calendar, actions.onCommitments)
             MoreRow(R.string.more_subscriptions, Lucide.drawable.lucide_ic_repeat, actions.onSubscriptions)
             MoreRow(R.string.more_activity, Lucide.drawable.lucide_ic_shopping_bag, actions.onActivity)

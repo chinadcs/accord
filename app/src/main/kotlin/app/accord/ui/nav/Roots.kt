@@ -97,6 +97,10 @@ const val ROUTE_PENDING_ITEM = "pending_item"
 /** Rendas do mês: `incomes?month=2026-11`. */
 const val ROUTE_INCOMES = "incomes"
 
+/** "Quem me deve" (ADR 0083): lista e detalhe de devedores; `receivable_new` é o formulário (valor, conta e data podem vir do Registrar). */
+const val ROUTE_RECEIVABLES = "receivables"
+const val ROUTE_RECEIVABLE_NEW = "receivable_new"
+
 /** Edição de um lançamento existente: `edit/{entryId}`. */
 const val ROUTE_EDIT = "edit"
 

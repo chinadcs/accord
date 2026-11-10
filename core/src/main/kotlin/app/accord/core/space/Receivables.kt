@@ -91,6 +91,8 @@ data class ReceivableView(
     val scheduled: List<IncomeView>,
     /** Recebimentos confirmados, do mais antigo ao mais novo. */
     val receipts: List<IncomeView>,
+    /** O dinheiro saiu da conta ao registrar (saída que só reduz o saldo ou despesa contada); falso em "não saiu da minha conta". */
+    val outflow: Boolean = false,
 )
 
 /** Um devedor na lista: o que falta e o que já foi resolvido, somando todos os seus valores a receber. */

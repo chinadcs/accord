@@ -55,6 +55,7 @@ internal class ReceivablePlanner(
             resolved = Money(resolved), open = Money(open), unscheduled = Money((open - scheduled).coerceAtLeast(0)),
             scheduled = expected.sortedBy { it.expectedEpochDay }.map { it.toView().copy(countsInIncome = counts) },
             receipts = received.sortedBy { it.receivedEpochDay }.map { it.toView().copy(countsInIncome = counts) },
+            outflow = row.lentFromAccountId != null || dao.movementsOfReceivable(row.id).any { !it.voided },
         )
     }
 
