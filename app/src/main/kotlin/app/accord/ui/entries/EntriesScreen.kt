@@ -72,6 +72,8 @@ import app.accord.core.space.EntryKind
 import app.accord.core.space.EntryRow
 import app.accord.core.space.EntrySituation
 import app.accord.core.space.EntrySummary
+import app.accord.core.space.IncomeCategoryNode
+import app.accord.ui.ownColorKey
 import app.accord.core.space.PaymentMethod
 import app.accord.ui.categoryPath
 import app.accord.ui.components.AdaptiveRow
@@ -213,7 +215,7 @@ fun EntriesScreen(
                             modifier = Modifier.padding(top = AccordSpacing.s2, bottom = AccordSpacing.s1).semantics { heading() },
                         )
                     }
-                    EntryItem(row, state.categories, onOpenEntry)
+                    EntryItem(row, state.categories, state.incomeCategories, onOpenEntry)
                 }
             }
             if (state.status == EntriesStatus.Loading && state.nextCursor != null) {
@@ -420,9 +422,15 @@ private fun EntryRow.visibleSituations(): List<EntrySituation> {
 }
 
 @Composable
-private fun EntryItem(row: EntryRow, categories: Map<String, CategoryNode>, onOpen: (String) -> Unit) {
-    val category = row.categoryId?.let(categories::get)
-    val categoryName = category?.name
+private fun EntryItem(
+    row: EntryRow,
+    categories: Map<String, CategoryNode>,
+    incomeCategories: Map<String, IncomeCategoryNode>,
+    onOpen: (String) -> Unit,
+) {
+    val expenseCategory = row.categoryId?.let(categories::get)
+    val incomeCategory = row.incomeCategoryId?.let(incomeCategories::get)
+    val categoryName = expenseCategory?.name ?: incomeCategory?.name
     val situations = row.visibleSituations()
     val installmentNumber = row.installmentNumber
     val installmentCount = row.installmentCount
@@ -463,17 +471,18 @@ private fun EntryItem(row: EntryRow, categories: Map<String, CategoryNode>, onOp
                         end = { Text(row.amount.format(), style = Accord.typography.amountRow, textAlign = TextAlign.End) },
                     )
                     Text(subtitle, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    if (category != null) {
+                    if (expenseCategory != null || incomeCategory != null) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
                         ) {
                             DecorativeIcon(
-                                lucideRes(category.iconKey),
+                                lucideRes(expenseCategory?.iconKey ?: incomeCategory!!.iconKey),
                                 modifier = Modifier.size(16.dp),
-                                tint = categoryColor(categories, category.id),
+                                tint = if (expenseCategory != null) categoryColor(categories, expenseCategory.id)
+                                else categoryColor(incomeCategory!!.ownColorKey()),
                             )
-                            Text(category.name, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(categoryName.orEmpty(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                     if (situations.isNotEmpty()) SituationTags(situations)

@@ -227,13 +227,16 @@ private fun CategoryLimit(row: LimitRow, state: LimitsUiState, onTotal: (String,
             }
             OutlinedTextField(
                 value = totalText, onValueChange = { onTotal(row.categoryId, it) }, singleLine = true,
-                label = { Text(stringResource(R.string.limits_field_total, row.name)) },
+                label = { Text(if (row.isGeneral) stringResource(R.string.limits_general_field) else stringResource(R.string.limits_field_total, row.name)) },
                 placeholder = { Text(stringResource(R.string.limits_undefined)) },
                 isError = totalError != null, supportingText = errorText(totalError)?.let { { Text(it) } },
                 leadingIcon = { DecorativeIcon(Lucide.drawable.lucide_ic_banknote) },
                 textStyle = Accord.typography.amountPanel.copy(textAlign = TextAlign.End),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth(),
             )
+            if (row.isGeneral) {
+                Text(stringResource(R.string.limits_general_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             if (row.laterChanges.isNotEmpty()) {
                 Text(
                     stringResource(R.string.limits_later_changes, row.laterChanges.joinToString(", ") { it.label() }),

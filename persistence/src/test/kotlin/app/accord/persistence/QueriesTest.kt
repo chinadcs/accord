@@ -250,6 +250,19 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
+    fun `linha de renda na lista traz a categoria de renda escolhida`() = runBlocking<Unit> {
+        val h = open()
+        h.withDefaultAccount()
+        val salary = h.space.incomeCategories().value().first { it.seedKey == "salario" }.id
+        h.space.execute(h.env(), RegisterIncome("Salário", brl(500), d(2026, 10, 5), incomeCategoryId = salary)).applied()
+        h.space.execute(h.env(), RegisterIncome("Sem categoria", brl(50), d(2026, 10, 6))).applied()
+
+        val rows = h.space.entries(filter()).value().rows.filter { it.kind == EntryKind.Income }
+        assertEquals(salary, rows.single { it.description == "Salário" }.incomeCategoryId)
+        assertEquals(null, rows.single { it.description == "Sem categoria" }.incomeCategoryId)
+    }
+
+    @Test
     fun `saldo usa só renda recebida e não conta renda prevista nem quitação de fatura`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()

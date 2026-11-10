@@ -4,6 +4,7 @@ import app.accord.core.LimitView
 import app.accord.core.Money
 import app.accord.core.space.AssignmentState
 import app.accord.core.space.CategoryBudget
+import app.accord.core.space.GeneralBudgetView
 import app.accord.core.space.IncomeSummary
 import app.accord.core.space.IncomeTotals
 import app.accord.core.space.IncomeView
@@ -96,6 +97,9 @@ internal class BudgetQueries(
         val unclassifiedCredit = credits.filter { it.classificationId == null }.sumOf { it.cents }
 
         val limitSettings = categories.mains.associate { it.id to limits.timeline(it.id).settingFor(month) }
+        // Orçamento geral: gasto líquido de tudo (inclusive "a classificar"), sem depender de limite por categoria.
+        val generalLimit = limits.generalView(month)
+        val generalSpent = Money(aggregates.sumOf { it.total } - credits.sumOf { it.cents })
 
         return MonthBudget(
             month = month,
@@ -107,6 +111,7 @@ internal class BudgetQueries(
             invoiceLinksToConfirm = dao.cards().sumOf { dao.linksToConfirm(month.toString(), it.id) } +
                 recurringExpenses.count { it.assignment == AssignmentState.ToConfirm },
             income = IncomeTotals(income.received, income.toReceive),
+            general = GeneralBudgetView(generalLimit, generalSpent, LimitView.of(generalLimit.setting, generalSpent, emptyMap())),
             categories = categories.mains.map { main ->
                 val rows = perCategory[main.id].orEmpty()
                 val gross = Money(rows.sumOf { it.total })

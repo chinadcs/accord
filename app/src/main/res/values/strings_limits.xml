@@ -5,6 +5,13 @@
     <string name="limits_reference">Referência: %1$s</string>
     <string name="limits_field_total">Limite de %1$s (R$)</string>
     <string name="limits_undefined">Não definido</string>
+    <string name="limits_general_field">Orçamento geral do mês (R$)</string>
+    <string name="limits_general_note">Um total para o mês todo, valendo para qualquer categoria. As categorias não precisam de limite próprio.</string>
+    <string name="general_budget_title">Orçamento geral</string>
+    <string name="general_budget_of">de %1$s</string>
+    <string name="general_budget_remaining">Restam %1$s</string>
+    <string name="general_budget_excess">Passou %1$s do orçamento geral</string>
+    <string name="general_budget_description">Orçamento geral: gastou %1$s de %2$s. %3$s</string>
     <string name="limits_spent">Gasto no mês: %1$s</string>
     <string name="limits_later_changes">Já existem alterações em %1$s.</string>
     <string name="limits_split_toggle">Dividir entre subcategorias</string>

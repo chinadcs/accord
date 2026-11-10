@@ -8,6 +8,7 @@ import app.accord.core.analysis.ReviewPeriod
 import app.accord.core.analysis.ReviewPoint
 import app.accord.core.analysis.PeriodChange
 import app.accord.core.analysis.SubscriptionCharge
+import app.accord.core.GENERAL_BUDGET_ID
 import app.accord.core.LimitEdit
 import app.accord.core.LimitScope
 import app.accord.core.LimitSetting
@@ -1264,6 +1265,8 @@ data class EntryRow(
     val situations: Set<EntrySituation>,
     val authorId: String?,
     val cardId: String? = null,
+    /** Categoria de renda (lista própria, distinta da de despesa); só preenchida em [EntryKind.Income]. */
+    val incomeCategoryId: String? = null,
 )
 
 /**
@@ -1467,6 +1470,21 @@ data class CategoryBudget(
 
 data class IncomeTotals(val received: Money, val toReceive: Money)
 
+/**
+ * Orçamento geral do mês: [spent] é o gasto líquido de todas as categorias (inclui "a classificar", abatido dos estornos
+ * confirmados); [view] traz restante ou excesso. Sem total definido, é "não definido", nunca zero.
+ */
+data class GeneralBudgetView(val limit: CategoryLimit, val spent: Money, val view: LimitView) {
+    val isDefined: Boolean get() = view.total != null
+
+    companion object {
+        fun undefined(month: YearMonth) = GeneralBudgetView(
+            CategoryLimit(GENERAL_BUDGET_ID, LimitSetting.UNDEFINED, null, false, emptyList()),
+            Money.ZERO, LimitView.of(LimitSetting.UNDEFINED, Money.ZERO, emptyMap()),
+        )
+    }
+}
+
 data class MonthBudget(
     val month: YearMonth,
     val committed: Money,
@@ -1481,6 +1499,8 @@ data class MonthBudget(
     val invoiceLinksToConfirm: Int,
     val income: IncomeTotals,
     val categories: List<CategoryBudget>,
+    /** Total do mês que vale para todas as categorias; as categorias não precisam de limite próprio. */
+    val general: GeneralBudgetView = GeneralBudgetView.undefined(month),
 )
 
 // ---- assinaturas (S6, telas 31 e 32) ----

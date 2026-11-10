@@ -173,7 +173,7 @@ internal class EntryQueries(
             val date = received ?: LocalDate.ofEpochDay(i.expectedEpochDay)
             built += Built(
                 EntryRow(
-                    id = i.id, kind = EntryKind.Income, description = i.description, categoryId = null,
+                    id = i.id, kind = EntryKind.Income, description = i.description, categoryId = null, incomeCategoryId = i.incomeCategoryId,
                     amount = Money(i.receivedCents ?: i.expectedCents), date = date, dueDate = null, method = null,
                     installmentNumber = null, installmentCount = null,
                     situations = setOf(if (received != null) EntrySituation.Paid else EntrySituation.NotPaid),

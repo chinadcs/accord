@@ -1,5 +1,6 @@
 package app.accord.persistence
 
+import app.accord.core.GENERAL_BUDGET_ID
 import app.accord.core.LimitApplyResult
 import app.accord.core.LimitEntry
 import app.accord.core.LimitProblem
@@ -80,6 +81,10 @@ internal class LimitsPlanner(
         for (e in c.edits) {
             val field = "limits[${e.categoryId}]"
             when {
+                e.categoryId == GENERAL_BUDGET_ID -> when {
+                    !e.edit.split.isNullOrEmpty() -> errors += FieldError(field, ErrorCode.NotAllowed, "O orçamento geral não tem divisão.")
+                    e.edit.total == null -> errors += FieldError(field, ErrorCode.Required, "Informe o orçamento geral.")
+                }
                 categories.row(e.categoryId) == null ->
                     errors += FieldError(field, ErrorCode.UnknownReference, "Categoria não encontrada.")
                 !categories.isMain(e.categoryId) ->
@@ -107,14 +112,19 @@ internal class LimitsPlanner(
     }
 
     /** Limite vigente de cada categoria principal em [month], com a origem da vigência. */
-    suspend fun views(month: YearMonth): List<CategoryLimit> = tree().mains.map { main ->
-        val timeline = timeline(main.id)
+    suspend fun views(month: YearMonth): List<CategoryLimit> = tree().mains.map { limitOf(it.id, month) }
+
+    /** Orçamento geral vigente em [month]; a mesma linha do tempo das categorias, com identidade reservada. */
+    suspend fun generalView(month: YearMonth): CategoryLimit = limitOf(GENERAL_BUDGET_ID, month)
+
+    private suspend fun limitOf(categoryId: String, month: YearMonth): CategoryLimit {
+        val timeline = timeline(categoryId)
         val entries = timeline.entries
         val exception = entries.any { it.scope == LimitScope.OnlyThisMonth && it.month == month }
         val since = if (exception) month
         else entries.filter { it.scope == LimitScope.FromThisMonth && it.month <= month }.maxOfOrNull { it.month }
-        CategoryLimit(
-            categoryId = main.id,
+        return CategoryLimit(
+            categoryId = categoryId,
             setting = timeline.settingFor(month),
             sinceMonth = since,
             isException = exception,

@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import app.accord.FeedbackEvent
 import app.accord.R
 import app.accord.SpaceProvider
+import app.accord.core.GENERAL_BUDGET_ID
 import app.accord.core.LimitScope
 import app.accord.core.Money
 import app.accord.core.label
@@ -56,7 +57,7 @@ data class LimitsUiState(
     val rows: List<LimitRow> get() = (content as? LimitsContent.Ready)?.rows.orEmpty()
 
     /** Soma dos limites das categorias principais, só do que está digitado; "não definido" não soma zero escondido. */
-    fun totalOfCategories(): Money = rows.fold(Money.ZERO) { acc, row ->
+    fun totalOfCategories(): Money = rows.filterNot { it.isGeneral }.fold(Money.ZERO) { acc, row ->
         acc + ((app.accord.core.Money.parse(draft.totals[row.categoryId].orEmpty()) as? app.accord.core.MoneyParse.Ok)?.money ?: Money.ZERO)
     }
 }
@@ -132,7 +133,14 @@ class LimitsViewModel(
                 return@launch
             }
             val limitOf = limits.associateBy { it.categoryId }
-            val rows = categories.filter { it.parentId == null }.sortedBy { it.order }.map { main ->
+            val general = budget?.general
+            val generalRow = general?.let {
+                LimitRow(
+                    categoryId = GENERAL_BUDGET_ID, name = GENERAL_BUDGET_NAME, subs = emptyList(),
+                    original = it.limit.setting, spent = it.spent, laterChanges = it.limit.laterChanges, iconKey = "wallet",
+                )
+            }
+            val rows = listOfNotNull(generalRow) + categories.filter { it.parentId == null }.sortedBy { it.order }.map { main ->
                 val limit = limitOf[main.id]
                 LimitRow(
                     categoryId = main.id, name = main.name,
@@ -308,6 +316,7 @@ class LimitsViewModel(
     }
 
     companion object {
+        const val GENERAL_BUDGET_NAME = "Orçamento geral"
         const val ARG_MONTH = "month"
         const val ARG_INITIAL_SETUP = "initialSetup"
         private const val KEY_DRAFT = "limitsDraftId"

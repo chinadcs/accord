@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import app.accord.SpaceProvider
 import app.accord.core.BudgetClock
 import app.accord.core.space.CategoryNode
+import app.accord.core.space.IncomeCategoryNode
 import app.accord.core.space.EntryPage
 import app.accord.core.space.EntryRow
 import app.accord.core.space.EntrySummary
@@ -36,6 +37,7 @@ data class EntriesUiState(
     /** A última tentativa de buscar mais linhas falhou; as já carregadas permanecem. */
     val loadMoreFailed: Boolean = false,
     val categories: Map<String, CategoryNode> = emptyMap(),
+    val incomeCategories: Map<String, IncomeCategoryNode> = emptyMap(),
     /** O resultado mostrado vem de uma consulta anterior (carregando ou falha). */
     val stale: Boolean = false,
 )
@@ -111,14 +113,19 @@ class EntriesViewModel(
             if (debounce) delay(SEARCH_DEBOUNCE_MS)
             val space = provider.space()
             val categories = (space.categories() as? QueryResult.Data)?.value?.associateBy { it.id }
+            val incomeCategories = (space.incomeCategories() as? QueryResult.Data)?.value?.associateBy { it.id }
             when (val result = space.entries(filter.toQuery(), 0, PAGE_SIZE)) {
                 is QueryResult.Data -> _state.value = merge(
-                    _state.value.copy(filter = filter, categories = categories ?: _state.value.categories),
+                    _state.value.copy(
+                        filter = filter, categories = categories ?: _state.value.categories,
+                        incomeCategories = incomeCategories ?: _state.value.incomeCategories,
+                    ),
                     result.value, append = false,
                 )
                 is QueryResult.Failure -> _state.value = _state.value.copy(
                     status = EntriesStatus.Failed, stale = _state.value.rows.isNotEmpty(),
                     categories = categories ?: _state.value.categories,
+                    incomeCategories = incomeCategories ?: _state.value.incomeCategories,
                 )
             }
         }

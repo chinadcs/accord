@@ -29,6 +29,12 @@ data class LimitEdit(val total: TotalChange? = null, val split: Map<SubcategoryI
 
 enum class LimitScope { OnlyThisMonth, FromThisMonth }
 
+/**
+ * Identidade reservada do orçamento geral do mês: um total que conta o gasto líquido de todas as categorias,
+ * sem divisão. Reaproveita a linha do tempo de limites (alcance, vigência futura e sincronização).
+ */
+const val GENERAL_BUDGET_ID = "orcamento-geral"
+
 sealed interface LimitProblem {
     val month: YearMonth
 

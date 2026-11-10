@@ -185,6 +185,7 @@ observada em 24/10/2026. Os estados abaixo são de decisão, não de conclusão 
 | [0072](0072-aviso-de-versao-nova-na-barra-de-notificacoes.md) | Aviso de versão nova na barra de notificações | accepted; substitui, em 0066, a ausência de tarefa periódica |
 | [0073](0073-parcela-sem-compra-vira-a-compra-parcelada-inteira.md) | Parcela n/N sem compra registrada vira a compra parcelada inteira | accepted |
 | [0074](0074-no-cartao-todo-valor-positivo-e-estorno.md) | No cartão, todo valor positivo da importação é estorno | accepted; restringe ao documento de conta o [0037](0037-credito-de-investimento-e-renda-na-importacao.md) |
+| [0075](0075-orcamento-geral-do-mes.md) | Orçamento geral do mês, sem exigir limite por categoria | accepted; complementa os limites por categoria |
 
 Questões ainda sem decisão, como modelo/motor, leitores bancários, acesso local, retenção de
 idempotência e validação financeira no serviço, permanecem nos Beads/specs S2–S4. Suas tarefas

@@ -22,6 +22,7 @@ import app.accord.ui.components.AccordButton as Button
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
 import androidx.compose.material3.Surface
@@ -43,6 +44,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.accord.R
 import app.accord.core.Money
 import app.accord.core.space.CategoryBudget
+import app.accord.core.space.GeneralBudgetView
 import app.accord.ui.components.AdaptiveRow
 import app.accord.ui.components.BudgetBar
 import app.accord.ui.components.DecorativeIcon
@@ -280,8 +282,44 @@ private fun SummaryCard(data: BudgetData) {
                 }
             }
         }
+        if (budget.general.isDefined) GeneralBudgetCard(budget.general)
         if (budget.credits.cents != 0L) LabelledAmount(stringResource(R.string.summary_credits), budget.credits.format())
         if (budget.invoiceLinksToConfirm > 0) LinksToConfirm(budget.invoiceLinksToConfirm)
+    }
+}
+
+/** Orçamento geral do mês: quanto do total já foi gasto em qualquer categoria; excesso aparece em texto, não só em cor. */
+@Composable
+private fun GeneralBudgetCard(general: GeneralBudgetView) {
+    val total = general.view.total ?: return
+    val excess = general.view.excess
+    val status = if (excess != null) stringResource(R.string.general_budget_excess, excess.format())
+    else stringResource(R.string.general_budget_remaining, (general.view.remaining ?: Money.ZERO).format())
+    val description = stringResource(R.string.general_budget_description, general.spent.format(), total.format(), status)
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+        Column(
+            Modifier.fillMaxWidth().padding(AccordSpacing.s4).semantics(mergeDescendants = true) { contentDescription = description },
+            verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+        ) {
+            AdaptiveRow(
+                start = { Text(stringResource(R.string.general_budget_title), style = MaterialTheme.typography.titleMedium) },
+                end = {
+                    Text(
+                        "${general.spent.format()} ${stringResource(R.string.general_budget_of, total.format())}",
+                        style = Accord.typography.amountRow, textAlign = TextAlign.End,
+                    )
+                },
+            )
+            LinearProgressIndicator(
+                progress = { (general.view.usedFraction ?: if (general.spent.cents > 0) 1.0 else 0.0).coerceIn(0.0, 1.0).toFloat() },
+                modifier = Modifier.fillMaxWidth(),
+                color = if (excess != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
+            )
+            Text(
+                status, style = MaterialTheme.typography.bodyMedium,
+                color = if (excess != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

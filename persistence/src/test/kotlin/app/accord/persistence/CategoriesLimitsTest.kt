@@ -1,5 +1,6 @@
 package app.accord.persistence
 
+import app.accord.core.GENERAL_BUDGET_ID
 import app.accord.core.LimitEdit
 import app.accord.core.LimitScope
 import app.accord.core.Money
@@ -67,7 +68,53 @@ class CategoriesLimitsTest : SpaceTestBase() {
     private suspend fun Handle.budgetOf(category: String, month: YearMonth = oct) =
         space.budget(month).value().categories.single { it.categoryId == seed(category) }
 
-    // ---- divisão (cenário 13) ----
+    // ---- orçamento geral do mês ----
+
+    private suspend fun Handle.general(edit: LimitEdit, month: YearMonth = oct, scope: LimitScope = LimitScope.FromThisMonth) =
+        space.execute(env(), DefineLimits(month, scope, listOf(CategoryLimitEdit(GENERAL_BUDGET_ID, edit))))
+
+    @Test
+    fun `orçamento geral conta o gasto de todas as categorias, sem limite por categoria`() = runBlocking<Unit> {
+        val h = open()
+        h.withDefaultAccount()
+        assertTrue(!h.space.budget(oct).value().general.isDefined, "sem total definido não vira zero")
+
+        h.general(total(5000)).applied()
+        h.spend("alimentacao", 1200)
+        h.spend("lazer", 800)
+
+        val general = h.space.budget(oct).value().general
+        assertEquals(brl(5000), general.view.total)
+        assertEquals(brl(2000), general.spent)
+        assertEquals(brl(3000), general.view.remaining)
+        assertNull(general.view.excess)
+        assertNull(h.budgetOf("alimentacao").limit.total, "a categoria segue sem limite")
+        assertEquals(Money.ZERO, h.space.budget(oct).value().totalLimits, "o orçamento geral não entra na soma dos limites das categorias")
+    }
+
+    @Test
+    fun `orçamento geral mostra excesso e vale para os meses seguintes`() = runBlocking<Unit> {
+        val h = open()
+        h.withDefaultAccount()
+        h.general(total(1000)).applied()
+        h.spend("alimentacao", 1300)
+
+        val general = h.space.budget(oct).value().general
+        assertEquals(brl(300), general.view.excess)
+        assertNull(general.view.remaining)
+        assertEquals(brl(1000), h.space.budget(dec).value().general.view.total)
+        assertNull(h.space.budget(sep).value().general.view.total, "meses anteriores não mudam")
+    }
+
+    @Test
+    fun `orçamento geral recusa divisão`() = runBlocking<Unit> {
+        val h = open()
+        val result = h.general(LimitEdit(total = TotalChange.Set(brl(1000)), split = mapOf(seed("alimentacao") to brl(10))))
+        assertIs<CommandResult.Rejected>(result)
+        assertEquals(ErrorCode.NotAllowed, result.errors.single().code)
+    }
+
+        // ---- divisão (cenário 13) ----
 
     @Test
     fun `Alimentação R$ 1200 com Delivery 400 e Mercado 500 — sem distribuir 300, restante 220, restante da parte 120 e 0`() = runBlocking<Unit> {

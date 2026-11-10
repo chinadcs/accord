@@ -1,5 +1,6 @@
 package app.accord.ui.limits
 
+import app.accord.core.GENERAL_BUDGET_ID
 import app.accord.core.LimitEdit
 import app.accord.core.LimitSetting
 import app.accord.core.LimitScope
@@ -24,7 +25,10 @@ data class LimitRow(
     val iconKey: String = "tag",
     /** Chave da cor da categoria principal; as subcategorias herdam a mesma cor. */
     val colorKey: String = "",
-)
+) {
+    /** O orçamento geral do mês: sem subcategorias e fora do total das categorias. */
+    val isGeneral: Boolean get() = categoryId == GENERAL_BUDGET_ID
+}
 
 data class LimitSub(val id: String, val name: String, val iconKey: String = "tag")
 
