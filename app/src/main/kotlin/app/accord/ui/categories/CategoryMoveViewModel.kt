@@ -63,6 +63,7 @@ sealed interface CategoryMoveContent {
 class CategoryMoveViewModel(
     private val provider: SpaceProvider,
     saved: SavedStateHandle,
+    private val text: (Int) -> String,
 ) : ViewModel() {
     val categoryId: String = checkNotNull(saved[ARG_CATEGORY])
     private val removeMode: Boolean = saved.get<Boolean>(ARG_REMOVE) == true
@@ -168,7 +169,7 @@ class CategoryMoveViewModel(
             MoveCategoryEntries(s.source.id, destination, scopeOf(s), s.removing, s.confirmDiscard)
         }
         if (s.limitMonths.isNotEmpty() && !s.confirmDiscard) {
-            return update { it.copy(message = "Confirme que o limite desta categoria será descartado para continuar.") }
+            return update { it.copy(message = text(R.string.category_move_confirm_limit)) }
         }
         update { it.copy(working = true, message = null) }
         viewModelScope.launch {
@@ -177,7 +178,7 @@ class CategoryMoveViewModel(
                 is CommandResult.AlreadyApplied -> finish(s, result.receipt.operationId, result.receipt.undoable)
                 is CommandResult.Rejected -> update { it.copy(working = false, message = result.errors.joinToString(" ") { e -> e.message }) }
                 is CommandResult.StaleVersion -> {
-                    update { it.copy(working = false, message = "Esta categoria mudou. Volte e abra de novo para ver a versão atual.") }
+                    update { it.copy(working = false, message = text(R.string.category_move_stale)) }
                     commandId = CommandId(UUID.randomUUID().toString())
                 }
                 is CommandResult.DecisionNeeded -> {
@@ -186,7 +187,7 @@ class CategoryMoveViewModel(
                         it.copy(
                             working = false,
                             limitMonths = (decision as? Decision.RemovedCategoryLimits)?.months ?: it.limitMonths,
-                            message = "Confirme a decisão sobre o limite para continuar.",
+                            message = text(R.string.category_move_decision_limit),
                         )
                     }
                 }

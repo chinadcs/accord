@@ -82,3 +82,13 @@ Aceita pelo usuário em 10/11/2026. As escolhas abaixo foram respondidas por ele
   vêm de conhecimento geral do agente de UI/UX, **não** de fonte primária consultada.
 - Aceite: o usuário aceitou o ADR em 10/11/2026 ("Aceito o ADR, prossiga"). Aceite não prova implementação nem validação:
   no momento do aceite nenhuma linha de código havia sido alterada; a implementação segue em beads próprios (`accord-10rp` e filhos).
+
+## Emenda de 11/11/2026 — criar já com ícone e cor (`accord-10rp.3`)
+
+- Decisão do usuário ("a", 11/11/2026): `CreateCategory` e `CreateIncomeCategory` ganham `iconKey` e `colorIndex` opcionais; a criação passa a gravar
+  nome, ícone e cor numa só operação, no mesmo painel da edição. Ausentes, valem o ícone `tag` e a cor derivada, como antes.
+- Validação no serviço, igual à da edição: ícone não vazio; cor na paleta (0–11); subcategoria de despesa não aceita cor (herda a da principal).
+- Sem mudança de esquema: `colorIndex` já existe nas linhas e sincroniza como estado da entidade (mesmo caminho de `EditCategory`). Comandos antigos
+  sem os campos continuam válidos. Não verificado contra o Supabase hospedado.
+- Regra de sugestão (**proposta**, não aceita pelo usuário): principal recebe a primeira cor da paleta ainda sem uso entre as principais da aba, com
+  rodízio se todas estiverem em uso; ícone inicial "tag". Agrupamento dos ícones por tema segue em aberto.

@@ -4,6 +4,8 @@ import app.accord.core.space.CategoryNode
 import app.accord.core.space.IncomeCategoryNode
 import app.accord.ui.categories.CategoriesContent
 import app.accord.ui.categories.CategoryRow
+import app.accord.ui.categories.DragOrder
+import app.accord.ui.categories.moved
 import app.accord.ui.categories.CategoryTab
 import app.accord.ui.categories.MainCategory
 import app.accord.ui.categories.buildRows
@@ -69,5 +71,23 @@ class CategoryRowsTest {
     fun `sem dados prontos nao ha linhas`() {
         assertTrue(buildRows(CategoriesContent.Loading, CategoryTab.Expense, setOf("food")).isEmpty())
         assertTrue(buildRows(CategoriesContent.Failed, CategoryTab.Income, emptySet()).isEmpty())
+    }
+
+    @Test
+    fun `ordem provisoria reordena so o nivel arrastado e informa a posicao`() {
+        val rows = buildRows(ready, CategoryTab.Expense, setOf("food"), DragOrder("food", listOf("market", "delivery")))
+        assertEquals(listOf("main:food", "sub:market", "sub:delivery", "new:food", "main:shop"), rows.map { it.key })
+        assertEquals(listOf(1, 2), listOf(rows[1], rows[2]).map { (it as CategoryRow.Sub).pos })
+        val mains = buildRows(ready, CategoryTab.Expense, emptySet(), DragOrder(null, listOf("shop", "food")))
+        assertEquals(listOf("main:shop", "main:food"), mains.map { it.key })
+        assertEquals(2, (mains[1] as CategoryRow.Main).pos)
+    }
+
+    @Test
+    fun `moved leva o id ao destino e devolve a mesma lista quando nada muda`() {
+        val ids = listOf("a", "b", "c")
+        assertEquals(listOf("b", "c", "a"), ids.moved("a", 2))
+        assertEquals(listOf("c", "a", "b"), ids.moved("c", -5))
+        assertEquals(ids, ids.moved("b", 1))
     }
 }

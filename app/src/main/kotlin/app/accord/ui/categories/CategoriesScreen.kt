@@ -14,6 +14,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -60,6 +71,7 @@ import app.accord.core.label
 import app.accord.core.space.CategoryNode
 import app.accord.core.space.IncomeCategoryNode
 import app.accord.ui.components.RefreshOnResume
+import app.accord.ui.components.SkeletonBlock
 import app.accord.ui.components.DecorativeIcon
 import app.accord.ui.components.lucideRes
 import app.accord.ui.theme.AccordSpacing
@@ -83,6 +95,7 @@ fun CategoriesRoute(
         content, rows, dialog, reordering, tab, padding, onBack, onRetry = { viewModel.load() },
         onTab = viewModel::selectTab,
         onToggle = viewModel::toggle, onToggleReorder = viewModel::toggleReorder, onMove = viewModel::move,
+        onDragStart = viewModel::startDrag, onDragTo = viewModel::dragTo, onDragEnd = viewModel::endDrag, onDragCancel = viewModel::cancelDrag,
         onCreate = viewModel::startCreate, onEdit = viewModel::startEdit, onEditIncome = viewModel::startEditIncome,
         onMoveSub = viewModel::startMove,
         onName = viewModel::setName, onIcon = viewModel::setIcon, onColor = viewModel::setColor,
@@ -111,6 +124,10 @@ fun CategoriesScreen(
     onToggle: (String) -> Unit,
     onToggleReorder: () -> Unit,
     onMove: (CategoryNode, Int) -> Unit,
+    onDragStart: (CategoryNode) -> Unit,
+    onDragTo: (CategoryNode, Int) -> Unit,
+    onDragEnd: (CategoryNode) -> Unit,
+    onDragCancel: () -> Unit,
     onCreate: (String?) -> Unit,
     onEdit: (CategoryNode) -> Unit,
     onEditIncome: (IncomeCategoryNode) -> Unit,
@@ -153,12 +170,31 @@ fun CategoriesScreen(
             }
         }
         when (content) {
-            CategoriesContent.Loading -> Text(stringResource(R.string.state_loading), style = MaterialTheme.typography.bodyLarge)
+            CategoriesContent.Loading -> {
+                // Esqueleto estático com movimento reduzido (SkeletonBlock); um nó só para o TalkBack.
+                val loading = stringResource(R.string.categories_loading)
+                Column(
+                    Modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = loading },
+                    verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
+                ) { repeat(6) { SkeletonBlock(height = 64.dp) } }
+            }
             CategoriesContent.Failed -> {
-                Text(stringResource(R.string.state_error), style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(R.string.categories_error), style = MaterialTheme.typography.bodyLarge)
                 OutlinedButton(onClick = onRetry, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.action_retry)) }
             }
-            is CategoriesContent.Ready -> {
+            is CategoriesContent.Ready -> if (rows.isEmpty()) {
+                val income = tab == CategoryTab.Income
+                Column(Modifier.fillMaxWidth().padding(vertical = AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                    Text(stringResource(if (income) R.string.categories_empty_income_title else R.string.categories_empty_expense_title), style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        stringResource(if (income) R.string.categories_empty_income_body else R.string.categories_empty_expense_body),
+                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    OutlinedButton(onClick = { onCreate(null) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                        Text(stringResource(R.string.categories_new_label))
+                    }
+                }
+            } else {
                 if (tab == CategoryTab.Expense) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(
@@ -170,12 +206,15 @@ fun CategoriesScreen(
                         }
                     }
                 }
-                LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(bottom = AccordSpacing.s4)) {
+                val listState = rememberLazyListState()
+                LazyColumn(Modifier.weight(1f).fillMaxWidth(), state = listState, contentPadding = PaddingValues(bottom = AccordSpacing.s4)) {
                     itemsIndexed(rows, key = { _, row -> row.key }) { index, row ->
                         CategoryListRow(
-                            row, first = index == 0, last = index == rows.lastIndex, reordering = reordering,
-                            onToggle = onToggle, onMove = onMove, onCreate = onCreate,
+                            row, rows, listState, first = index == 0, last = index == rows.lastIndex, reordering = reordering,
+                            onToggle = onToggle, onMove = onMove, onDragStart = onDragStart, onDragTo = onDragTo, onDragEnd = onDragEnd,
+                            onDragCancel = onDragCancel, onCreate = onCreate,
                             onEdit = onEdit, onEditIncome = onEditIncome, onMoveSub = onMoveSub,
+                            onMoveEntries = onMoveEntries, onRemove = onRemove,
                         )
                     }
                     item(key = "note") {
@@ -190,22 +229,39 @@ fun CategoriesScreen(
         }
     }
     val mains = (content as? CategoriesContent.Ready)?.mains.orEmpty()
-    dialog?.let { CategoryDialogs(it, mains, onName, onIcon, onColor, onDestination, onAnswer, onSubmit, onClose, onMoveEntries, onRemove) }
+    dialog?.let { CategoryDialogs(it, mains, onName, onIcon, onColor, onDestination, onAnswer, onSubmit, onClose) }
+}
+
+/** Estado do arraste de uma linha: [total] é o deslocamento do dedo e [start] o `offset` da linha quando a alça foi segurada. */
+private class DragState {
+    var active by mutableStateOf(false)
+    var total by mutableFloatStateOf(0f)
+    var start = 0
 }
 
 /** Uma linha do contêiner agrupado: o canto arredondado só na primeira e na última, divisor recuado entre as demais. */
+// announceForAccessibility é o anúncio pontual da nova posição; shortcut: API depreciada, trocar por live region se o TalkBack não anunciar.
+@Suppress("DEPRECATION")
 @Composable
 private fun CategoryListRow(
     row: CategoryRow,
+    rows: List<CategoryRow>,
+    listState: LazyListState,
     first: Boolean,
     last: Boolean,
     reordering: Boolean,
     onToggle: (String) -> Unit,
     onMove: (CategoryNode, Int) -> Unit,
+    onDragStart: (CategoryNode) -> Unit,
+    onDragTo: (CategoryNode, Int) -> Unit,
+    onDragEnd: (CategoryNode) -> Unit,
+    onDragCancel: () -> Unit,
     onCreate: (String?) -> Unit,
     onEdit: (CategoryNode) -> Unit,
     onEditIncome: (IncomeCategoryNode) -> Unit,
     onMoveSub: (CategoryNode) -> Unit,
+    onMoveEntries: (String) -> Unit,
+    onRemove: (String) -> Unit,
 ) {
     val square = CornerSize(0.dp)
     val medium = MaterialTheme.shapes.medium
@@ -213,11 +269,71 @@ private fun CategoryListRow(
         topStart = if (first) medium.topStart else square, topEnd = if (first) medium.topEnd else square,
         bottomStart = if (last) medium.bottomStart else square, bottomEnd = if (last) medium.bottomEnd else square,
     )
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = shape, modifier = Modifier.fillMaxWidth()) {
+    val node = when (row) { is CategoryRow.Main -> row.expense; is CategoryRow.Sub -> row.expense; else -> null }
+    val pos = when (row) { is CategoryRow.Main -> row.pos; is CategoryRow.Sub -> row.pos; else -> 1 }
+    val total = when (row) { is CategoryRow.Main -> row.total; is CategoryRow.Sub -> row.total; else -> 1 }
+    val drag = remember { DragState() }
+    val currentRows by rememberUpdatedState(rows)
+    val currentRow by rememberUpdatedState(row)
+    val view = LocalView.current
+    val upLabel = stringResource(R.string.categories_move_up)
+    val downLabel = stringResource(R.string.categories_move_down)
+    val announce = { delta: Int ->
+        node?.let { view.announceForAccessibility(view.context.getString(R.string.categories_position, it.name, pos + delta, total)) }
+    }
+    // "Subir"/"Descer" em toda linha de despesa, inclusive fora do modo; omitidas na primeira e na última irmã.
+    val actions = buildList {
+        if (node != null && pos > 1) add(CustomAccessibilityAction(upLabel) { onMove(node, -1); announce(-1); true })
+        if (node != null && pos < total) add(CustomAccessibilityAction(downLabel) { onMove(node, 1); announce(1); true })
+    }
+    val handle: (@Composable () -> Unit)? = if (reordering && node != null) ({
+        val handleModifier = Modifier.size(AccordSpacing.touchMin).pointerInput(row.key) {
+            detectDragGesturesAfterLongPress(
+                onDragStart = {
+                    drag.start = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == row.key }?.offset ?: 0
+                    drag.total = 0f
+                    drag.active = true
+                    onDragStart(node)
+                },
+                onDrag = { change, delta ->
+                    change.consume()
+                    drag.total += delta.y
+                    val items = listState.layoutInfo.visibleItemsInfo
+                    val me = items.firstOrNull { it.key == row.key } ?: return@detectDragGesturesAfterLongPress
+                    val center = drag.start + drag.total + me.size / 2
+                    val keys = siblingKeys(currentRow, currentRows)
+                    val target = items.firstOrNull { it.key != row.key && it.key in keys && center >= it.offset && center < it.offset + it.size }
+                    if (target != null) onDragTo(node, keys.indexOf(target.key))
+                },
+                onDragEnd = { drag.active = false; onDragEnd(node) },
+                onDragCancel = { drag.active = false; onDragCancel() },
+            )
+        }
+        Box(handleModifier, contentAlignment = Alignment.Center) {
+            Icon(
+                painterResource(Lucide.drawable.lucide_ic_grip_vertical),
+                contentDescription = stringResource(R.string.categories_drag_handle, node.name),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }) else null
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceContainerLow, shape = shape,
+        // Borda de 2 dp e elevação tonal identificam o item arrastado, sem escala nem depender de cor.
+        tonalElevation = if (drag.active) 8.dp else 0.dp,
+        border = if (drag.active) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
+        modifier = Modifier.fillMaxWidth().graphicsLayer {
+            // Mantém a linha sob o dedo mesmo quando a lista a realoca ao trocar de lugar.
+            if (drag.active) {
+                val now = listState.layoutInfo.visibleItemsInfo.firstOrNull { it.key == row.key }?.offset ?: drag.start
+                translationY = drag.total - (now - drag.start)
+            }
+        },
+    ) {
         Column {
             when (row) {
-                is CategoryRow.Main -> MainLine(row, reordering, onToggle, onMove, onEdit, onEditIncome)
-                is CategoryRow.Sub -> SubLine(row, reordering, onMove, onEdit, onEditIncome, onMoveSub)
+                is CategoryRow.Main -> MainLine(row, handle, actions, onToggle, onCreate, onEdit, onEditIncome, onMoveEntries, onRemove)
+                is CategoryRow.Sub -> SubLine(row, handle, actions, onEdit, onEditIncome, onMoveSub, onMoveEntries, onRemove)
                 is CategoryRow.NewSub -> NewSubLine(row, onCreate)
             }
             if (!last) HorizontalDivider(Modifier.padding(start = AccordSpacing.s4), color = MaterialTheme.colorScheme.outlineVariant)
@@ -225,14 +341,24 @@ private fun CategoryListRow(
     }
 }
 
+/** Chaves das linhas irmãs de [row] na ordem atual: principais entre si; subcategorias da mesma principal. */
+private fun siblingKeys(row: CategoryRow, rows: List<CategoryRow>): List<String> = when (row) {
+    is CategoryRow.Main -> rows.filterIsInstance<CategoryRow.Main>().map { it.key }
+    is CategoryRow.Sub -> rows.filterIsInstance<CategoryRow.Sub>().filter { it.expense?.parentId == row.expense?.parentId }.map { it.key }
+    else -> emptyList()
+}
+
 @Composable
 private fun MainLine(
     row: CategoryRow.Main,
-    reordering: Boolean,
+    handle: (@Composable () -> Unit)?,
+    actions: List<CustomAccessibilityAction>,
     onToggle: (String) -> Unit,
-    onMove: (CategoryNode, Int) -> Unit,
+    onCreate: (String?) -> Unit,
     onEdit: (CategoryNode) -> Unit,
     onEditIncome: (IncomeCategoryNode) -> Unit,
+    onMoveEntries: (String) -> Unit,
+    onRemove: (String) -> Unit,
 ) {
     val color = categoryColor(row.colorKey)
     val state = stringResource(if (row.expanded) R.string.categories_state_expanded else R.string.categories_state_collapsed)
@@ -240,7 +366,7 @@ private fun MainLine(
     Row(
         Modifier.fillMaxWidth().heightIn(min = 64.dp)
             .clickable(onClickLabel = toggleLabel) { onToggle(row.id) }
-            .semantics(mergeDescendants = true) { stateDescription = state }
+            .semantics(mergeDescendants = true) { stateDescription = state; customActions = actions }
             .padding(start = AccordSpacing.s3),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
@@ -254,11 +380,17 @@ private fun MainLine(
             painterResource(if (row.expanded) Lucide.drawable.lucide_ic_chevron_up else Lucide.drawable.lucide_ic_chevron_down),
             contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        if (reordering && row.expense != null) {
-            ReorderButtons(row.expense, onMove)
+        if (handle != null) {
+            handle()
         } else {
             RowMenu(row.name) { close ->
                 MenuItem(R.string.categories_menu_edit) { close(); row.expense?.let(onEdit) ?: row.income?.let(onEditIncome) }
+                MenuItem(R.string.categories_new_sub) { close(); onCreate(row.id) }
+                if (row.expense != null) {
+                    MenuItem(R.string.categories_menu_reclassify) { close(); onMoveEntries(row.id) }
+                    HorizontalDivider()
+                    MenuItem(R.string.categories_menu_remove) { close(); onRemove(row.id) }
+                }
             }
         }
     }
@@ -267,30 +399,35 @@ private fun MainLine(
 @Composable
 private fun SubLine(
     row: CategoryRow.Sub,
-    reordering: Boolean,
-    onMove: (CategoryNode, Int) -> Unit,
+    handle: (@Composable () -> Unit)?,
+    actions: List<CustomAccessibilityAction>,
     onEdit: (CategoryNode) -> Unit,
     onEditIncome: (IncomeCategoryNode) -> Unit,
     onMoveSub: (CategoryNode) -> Unit,
+    onMoveEntries: (String) -> Unit,
+    onRemove: (String) -> Unit,
 ) {
     val color = categoryColor(row.colorKey)
     val editLabel = stringResource(R.string.categories_action_edit)
     Row(
         Modifier.fillMaxWidth().heightIn(min = AccordSpacing.rowMedium)
             .clickable(onClickLabel = editLabel) { row.expense?.let(onEdit) ?: row.income?.let(onEditIncome) }
-            .semantics(mergeDescendants = true) {}
+            .semantics(mergeDescendants = true) { customActions = actions }
             .padding(start = AccordSpacing.s6 + AccordSpacing.s3),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
     ) {
         DecorativeIcon(lucideRes(row.iconKey), tint = color)
         Text(row.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f).padding(vertical = AccordSpacing.s2))
-        if (reordering && row.expense != null) {
-            ReorderButtons(row.expense, onMove)
+        if (handle != null) {
+            handle()
         } else if (row.expense != null) {
             RowMenu(row.name) { close ->
                 MenuItem(R.string.categories_menu_edit) { close(); onEdit(row.expense) }
                 MenuItem(R.string.categories_menu_pass) { close(); onMoveSub(row.expense) }
+                MenuItem(R.string.categories_menu_reclassify) { close(); onMoveEntries(row.id) }
+                HorizontalDivider()
+                MenuItem(R.string.categories_menu_remove) { close(); onRemove(row.id) }
             }
         } else {
             Box(Modifier.size(AccordSpacing.touchMin))
@@ -300,6 +437,12 @@ private fun SubLine(
 
 @Composable
 private fun NewSubLine(row: CategoryRow.NewSub, onCreate: (String?) -> Unit) {
+    if (row.noSubs) {
+        Text(
+            stringResource(R.string.categories_no_subs_yet), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = AccordSpacing.s6 + AccordSpacing.s3, top = AccordSpacing.s2),
+        )
+    }
     Row(
         Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)
             .clickable { onCreate(row.parentId) }
@@ -344,18 +487,6 @@ private fun CategoryBadge(iconKey: String, color: Color) {
 }
 
 @Composable
-private fun ReorderButtons(node: CategoryNode, onMove: (CategoryNode, Int) -> Unit) {
-    Row {
-        IconButton(onClick = { onMove(node, -1) }, modifier = Modifier.size(AccordSpacing.touchMin)) {
-            Icon(painterResource(Lucide.drawable.lucide_ic_chevron_up), contentDescription = stringResource(R.string.categories_move_up, node.name))
-        }
-        IconButton(onClick = { onMove(node, 1) }, modifier = Modifier.size(AccordSpacing.touchMin)) {
-            Icon(painterResource(Lucide.drawable.lucide_ic_chevron_down), contentDescription = stringResource(R.string.categories_move_down, node.name))
-        }
-    }
-}
-
-@Composable
 private fun CategoryDialogs(
     dialog: CategoryDialog,
     mains: List<MainCategory>,
@@ -366,23 +497,25 @@ private fun CategoryDialogs(
     onAnswer: (java.time.YearMonth, PartChoice?, String?) -> Unit,
     onSubmit: () -> Unit,
     onClose: () -> Unit,
-    onMoveEntries: (String) -> Unit,
-    onRemove: (String) -> Unit,
 ) {
     when (dialog) {
-        is CategoryDialog.Create -> NameDialog(
-            title = if (dialog.income && dialog.parentId == null) R.string.categories_create_income_title else R.string.categories_create_title,
-            name = dialog.name, error = dialog.nameError, message = dialog.message,
-            working = dialog.working, onName = onName, onSubmit = onSubmit, onClose = onClose,
-            note = when {
-                dialog.parentId != null -> R.string.categories_create_sub_note
-                dialog.income -> R.string.categories_create_income_note
-                else -> null
-            },
+        is CategoryDialog.Create -> CategoryEditSheet(
+            PanelState(
+                title = if (dialog.parentId == null) R.string.categories_create_title else R.string.categories_create_sub_title,
+                isMain = dialog.parentId == null, parentName = dialog.parentName, name = dialog.name, iconKey = dialog.iconKey,
+                originalIcon = dialog.iconKey, colorIndex = dialog.colorIndex, nameError = dialog.nameError, message = dialog.message,
+                working = dialog.working, changed = dialog.changed, fallbackName = "", creating = true,
+            ),
+            onName, onIcon, onColor, onSave = onSubmit, onClose = onClose,
         )
         is CategoryDialog.Edit -> CategoryEditSheet(
-            dialog, onName, onIcon, onColor, onSave = onSubmit,
-            onMoveEntries = { onMoveEntries(dialog.id) }, onRemove = { onRemove(dialog.id) }, onClose = onClose,
+            PanelState(
+                title = if (dialog.isMain) R.string.category_edit_title else R.string.category_edit_sub_title,
+                isMain = dialog.isMain, parentName = dialog.parentName, name = dialog.name, iconKey = dialog.iconKey,
+                originalIcon = dialog.originalIcon, colorIndex = dialog.colorIndex, nameError = dialog.nameError, message = dialog.message,
+                working = dialog.working, changed = dialog.changed, fallbackName = dialog.originalName, creating = false,
+            ),
+            onName, onIcon, onColor, onSave = onSubmit, onClose = onClose,
         )
         is CategoryDialog.Move -> AlertDialog(
             onDismissRequest = onClose,
@@ -455,41 +588,4 @@ private fun ChoiceRow(label: String, selected: Boolean, onClick: () -> Unit) {
         RadioButton(selected = selected, onClick = null)
         Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = AccordSpacing.s2))
     }
-}
-
-@Composable
-private fun NameDialog(
-    title: Int,
-    name: String,
-    error: Boolean,
-    message: String?,
-    working: Boolean,
-    onName: (String) -> Unit,
-    onSubmit: () -> Unit,
-    onClose: () -> Unit,
-    note: Int?,
-) {
-    AlertDialog(
-        onDismissRequest = onClose,
-        title = { Text(stringResource(title)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                OutlinedTextField(
-                    value = name, onValueChange = onName, singleLine = true, label = { Text(stringResource(R.string.categories_name)) },
-                    isError = error || message != null,
-                    supportingText = when {
-                        error -> ({ Text(stringResource(R.string.categories_name_required)) })
-                        message != null -> ({ Text(message) })
-                        else -> null
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                note?.let { Text(stringResource(it), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onSubmit, enabled = !working, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.categories_save)) }
-        },
-        dismissButton = { TextButton(onClick = onClose, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.edit_cancel)) } },
-    )
 }

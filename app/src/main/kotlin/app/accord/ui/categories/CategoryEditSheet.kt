@@ -21,7 +21,16 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.SheetValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,52 +58,78 @@ import app.accord.R
 import app.accord.ui.CATEGORY_PALETTE_SIZE
 import app.accord.ui.CategoryColorNames
 import app.accord.ui.categoryPaletteColor
-import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
 import app.accord.ui.components.DecorativeIcon
 import app.accord.ui.components.lucideRes
 import app.accord.ui.theme.AccordSpacing
 import com.composables.icons.lucide.R as Lucide
 
+/** O que o painel mostra, vindo de [CategoryDialog.Create] ou [CategoryDialog.Edit]. */
+internal data class PanelState(
+    val title: Int,
+    val isMain: Boolean,
+    val parentName: String?,
+    val name: String,
+    val iconKey: String,
+    /** Ícone de partida: se não está na lista de escolhas, aparece como "Ícone atual". */
+    val originalIcon: String,
+    val colorIndex: Int,
+    val nameError: Boolean,
+    val message: String?,
+    val working: Boolean,
+    val changed: Boolean,
+    val fallbackName: String,
+    val creating: Boolean,
+)
+
 /**
- * Painel único de edição de categoria (nome, ícone e cor), que sobe de baixo como o seletor de categoria do registro. Une o antigo
- * "Renomear" e a tela "Editar". Na categoria de despesa também leva a mover lançamentos e a remover (telas próprias, ADR 0039).
+ * Painel único de criar e editar de categoria (nome, ícone e cor), que sobe de baixo como o seletor de categoria do registro. Une o antigo
+ * "Renomear" e a tela "Editar". Reclassificar e remover ficam só no ⋮ da lista (spec 02).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun CategoryEditSheet(
-    state: CategoryDialog.Edit,
+    state: PanelState,
     onName: (String) -> Unit,
     onIcon: (String) -> Unit,
     onColor: (Int) -> Unit,
     onSave: () -> Unit,
-    onMoveEntries: () -> Unit,
-    onRemove: () -> Unit,
     onClose: () -> Unit,
 ) {
+    var asking by remember { mutableStateOf(false) }
+    // Com alteração, fechar pergunta antes; sem ela, fecha direto. O arrasto para baixo é recusado com alteração para o painel não sumir sem a pergunta.
+    val requestClose = { if (state.changed) asking = true else onClose() }
     ModalBottomSheet(
-        onDismissRequest = onClose,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        onDismissRequest = requestClose,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true, confirmValueChange = { it != SheetValue.Hidden || !state.changed }),
         dragHandle = { BottomSheetDefaults.DragHandle() },
         containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
-        EditSheetBody(state, onName, onIcon, onColor, onSave, onMoveEntries, onRemove, onClose)
+        EditSheetBody(state, onName, onIcon, onColor, onSave, requestClose)
+    }
+    if (asking) {
+        AlertDialog(
+            onDismissRequest = { asking = false },
+            title = { Text(stringResource(R.string.categories_discard_title)) },
+            confirmButton = { TextButton(onClick = onClose, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.categories_discard_confirm)) } },
+            dismissButton = { TextButton(onClick = { asking = false }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.categories_discard_keep)) } },
+        )
     }
 }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun EditSheetBody(
-    state: CategoryDialog.Edit,
+    state: PanelState,
     onName: (String) -> Unit,
     onIcon: (String) -> Unit,
     onColor: (Int) -> Unit,
     onSave: () -> Unit,
-    onMoveEntries: () -> Unit,
-    onRemove: () -> Unit,
     onClose: () -> Unit,
 ) {
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { if (state.creating) focus.requestFocus() }
     val tint = categoryPaletteColor(state.colorIndex)
-    // Cabeçalho e Salvar ficam fixos; só o miolo (nome, cor, ícones, mover/remover) rola, para Salvar nunca ficar depois de 70 ícones.
+    // Cabeçalho e Salvar ficam fixos; só o miolo (nome, cor, ícones) rola, para Salvar nunca ficar depois de 70 ícones.
     Column(
         Modifier
             .fillMaxWidth()
@@ -106,7 +141,7 @@ private fun EditSheetBody(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                stringResource(R.string.category_edit_title), style = MaterialTheme.typography.headlineSmall,
+                stringResource(state.title), style = MaterialTheme.typography.headlineSmall,
                 modifier = Modifier.weight(1f),
             )
             IconButton(onClick = onClose, modifier = Modifier.size(AccordSpacing.touchMin)) {
@@ -120,7 +155,7 @@ private fun EditSheetBody(
                 label = { Text(stringResource(R.string.categories_name)) },
                 isError = state.nameError || state.message != null,
                 supportingText = if (state.nameError) ({ Text(stringResource(R.string.categories_name_required)) }) else null,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().focusRequester(focus),
             )
             if (state.isMain) {
                 Text(stringResource(R.string.category_edit_color), style = MaterialTheme.typography.titleSmall)
@@ -154,16 +189,6 @@ private fun EditSheetBody(
                     IconOption(choice, selected = choice.key == state.iconKey, tint = tint) { onIcon(choice.key) }
                 }
             }
-            if (state.canMoveOrRemove) {
-                OutlinedButton(onClick = onMoveEntries, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
-                    DecorativeIcon(lucideRes("arrow-left-right"))
-                    Text(stringResource(R.string.category_edit_move_entries))
-                }
-                TextButton(onClick = onRemove, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
-                    Icon(painterResource(lucideRes("trash-2")), contentDescription = null, tint = MaterialTheme.colorScheme.error)
-                    Text(stringResource(R.string.category_edit_remove), color = MaterialTheme.colorScheme.error)
-                }
-            }
         }
         state.message?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
         Button(
@@ -174,7 +199,7 @@ private fun EditSheetBody(
 }
 
 @Composable
-private fun Preview(state: CategoryDialog.Edit, tint: Color) {
+private fun Preview(state: PanelState, tint: Color) {
     Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
         Row(
             Modifier.padding(AccordSpacing.s3), verticalAlignment = Alignment.CenterVertically,
@@ -185,7 +210,7 @@ private fun Preview(state: CategoryDialog.Edit, tint: Color) {
                     DecorativeIcon(lucideRes(state.iconKey), tint = tint)
                 }
             }
-            Text(state.name.ifBlank { state.originalName }, style = MaterialTheme.typography.titleMedium)
+            Text(state.name.ifBlank { state.fallbackName }, style = MaterialTheme.typography.titleMedium)
         }
     }
 }

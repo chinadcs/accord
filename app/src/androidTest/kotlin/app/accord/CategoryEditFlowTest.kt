@@ -77,12 +77,16 @@ class CategoryEditFlowTest {
     private fun click(text: String) =
         compose.onAllNodes(hasText(text) and hasClickAction()).onLast().performSemanticsAction(SemanticsActions.OnClick)
 
-    private fun openLastCategoryEdit() {
+    private fun openCategories() {
         compose.onNodeWithText("Mais").performClick()
         waitForText("Categorias e subcategorias")
         compose.onNode(hasScrollAction()).performScrollToNode(hasText("Categorias e subcategorias"))
         compose.onAllNodes(hasText("Categorias e subcategorias") and hasClickAction()).onLast().performSemanticsAction(SemanticsActions.OnClick)
         waitForText("Reordenar")
+    }
+
+    private fun openLastCategoryEdit() {
+        openCategories()
         // A lista é preguiçosa: rolar até a linha. A ação fica no ⋮ ("Mais ações de <nome>") e o painel sobe de baixo.
         compose.onNode(hasScrollAction()).performScrollToNode(hasText(nameB))
         compose.onNodeWithContentDescription("Mais ações de $nameB").performSemanticsAction(SemanticsActions.OnClick)
@@ -107,6 +111,17 @@ class CategoryEditFlowTest {
     }
 
     @Test
+    fun subirPelaAcaoAcessivelReordenaEGravaAOrdem() {
+        openCategories()
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText(nameB))
+        val row = compose.onNode(hasText(nameB))
+        val up = row.fetchSemanticsNode().config[SemanticsActions.CustomActions].first { it.label == "Subir" }
+        compose.runOnUiThread { up.action() }
+        compose.waitUntil(8_000) { categories().map { it.id }.let { ids -> ids.indexOf(idB) < ids.indexOf(idA) } }
+        waitForText("Ordem atualizada.")
+    }
+
+    @Test
     fun removerCategoriaComLancamentosExigeDestinoMostraPreviaEMoveTudo() {
         val boleto = runBlocking {
             val result = container.space().execute(
@@ -115,17 +130,20 @@ class CategoryEditFlowTest {
             ) as CommandResult.Applied
             result.receipt.changes.first().id
         }
-        openLastCategoryEdit()
-        click("Remover categoria")
-        waitForText("Mover para")
+        // Remover vive só no ⋮ da linha (spec 02).
+        openCategories()
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText(nameB))
+        compose.onNodeWithContentDescription("Mais ações de $nameB").performSemanticsAction(SemanticsActions.OnClick)
+        click("Remover…")
+        waitForText("Reclassificar para")
         // Sem destino escolhido, nada é gravado.
-        click("Mover e remover categoria")
+        click("Reclassificar e remover categoria")
         waitForText("Escolha o destino.")
         assertNotNull(categories().firstOrNull { it.id == idB })
 
         compose.onNodeWithText(nameA).performSemanticsAction(SemanticsActions.OnClick)
         waitForText("1 lançamento muda de categoria")
-        click("Mover e remover categoria")
+        click("Reclassificar e remover categoria")
         waitForText("Categoria removida.")
 
         assertTrue(categories().none { it.id == idB })

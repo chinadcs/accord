@@ -328,7 +328,8 @@ enum class DirectPaymentKind { Pix, Debit, Cash }
 
 sealed interface Command
 
-data class CreateCategory(val name: String, val parentId: String? = null) : Command
+/** [iconKey] e [colorIndex] opcionais criam já com ícone e cor (spec 02); ausentes, valem o ícone padrão e a cor derivada. A subcategoria não aceita cor. */
+data class CreateCategory(val name: String, val parentId: String? = null, val iconKey: String? = null, val colorIndex: Int? = null) : Command
 
 /**
  * Registra o evento de aviso gerado pela avaliação interna da fachada (S5, ADR 0044). Nunca vem da interface nem do Chat: só a fachada o emite, com origem
@@ -337,7 +338,7 @@ data class CreateCategory(val name: String, val parentId: String? = null) : Comm
 data class RecordAlertEvent(val event: AlertEvent) : Command
 
 /** Categoria de renda (receitas), separada das categorias de despesa; lista plana, nome único sem diferenciar caixa e acentos. */
-data class CreateIncomeCategory(val name: String, val parentId: String? = null) : Command
+data class CreateIncomeCategory(val name: String, val parentId: String? = null, val iconKey: String? = null, val colorIndex: Int? = null) : Command
 
 data class RenameIncomeCategory(val categoryId: String, val name: String, val expectedRevision: Long? = null) : Command
 

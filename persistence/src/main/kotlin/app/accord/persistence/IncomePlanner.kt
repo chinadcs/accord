@@ -41,16 +41,22 @@ internal class IncomePlanner(
                 return stop("parentId", ErrorCode.NotAllowed, "Uma subcategoria de renda não pode ter subcategorias.")
             }
         }
-        if (all.any { it.parentId == parentId && it.nameKey == key }) {
-            return stop("name", ErrorCode.DuplicateName, DUPLICATE_NAME)
+        val errors = mutableListOf<FieldError>()
+        if (c.iconKey?.isBlank() == true) errors += FieldError("iconKey", ErrorCode.Required, "Escolha um ícone.")
+        val color = c.colorIndex
+        if (color != null && color !in 0 until CategoryPalette.SIZE) {
+            errors += FieldError("colorIndex", ErrorCode.OutOfRange, "Escolha uma das cores da paleta.")
         }
+        if (all.any { it.parentId == parentId && it.nameKey == key }) errors += FieldError("name", ErrorCode.DuplicateName, DUPLICATE_NAME)
+        if (errors.isNotEmpty()) return stop(errors)
         return Planned.Go(months = emptySet()) {
             val row = IncomeCategoryRow(
                 id = UUID.randomUUID().toString(),
                 name = name,
                 nameKey = key,
                 sortOrder = (all.filter { it.parentId == parentId }.maxOfOrNull { it.sortOrder } ?: -1) + 1,
-                iconKey = IncomeCategorySeed.CUSTOM_ICON,
+                iconKey = c.iconKey ?: IncomeCategorySeed.CUSTOM_ICON,
+                colorIndex = color,
                 seedKey = null,
                 revision = 1,
                 parentId = parentId,

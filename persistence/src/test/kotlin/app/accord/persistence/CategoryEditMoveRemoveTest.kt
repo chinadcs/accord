@@ -84,6 +84,23 @@ class CategoryEditMoveRemoveTest : SpaceTestBase() {
     }
 
     @Test
+    fun `criar já com ícone e cor grava ambos e valida como a edição`() = runBlocking<Unit> {
+        val h = open()
+        h.space.execute(h.env(), CreateCategory("Filhote", iconKey = "dog", colorIndex = 5)).applied()
+        val main = h.space.categories().value().single { it.name == "Filhote" }
+        assertEquals("dog", main.iconKey)
+        assertEquals(5, main.colorIndex)
+        val sub = h.space.execute(h.env(), CreateCategory("Ração", seed("lazer"), colorIndex = 2))
+        assertEquals("colorIndex", assertIs<CommandResult.Rejected>(sub).errors.single().field)
+        val outside = h.space.execute(h.env(), CreateCategory("Outra", colorIndex = 12))
+        assertEquals(ErrorCode.OutOfRange, assertIs<CommandResult.Rejected>(outside).errors.single().code)
+        h.space.execute(h.env(), CreateCategory("Ração", seed("lazer"), iconKey = "bone")).applied()
+        val created = h.space.categories().value().single { it.name == "Ração" }
+        assertEquals("bone", created.iconKey)
+        assertNull(created.colorIndex)
+    }
+
+    @Test
     fun `subcategoria não escolhe cor e a cor precisa estar na paleta`() = runBlocking<Unit> {
         val h = open()
         val sub = h.space.execute(h.env(), EditCategory(seed("lazer.passeios"), colorIndex = 2))

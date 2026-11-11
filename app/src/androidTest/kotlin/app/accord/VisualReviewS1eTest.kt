@@ -231,16 +231,16 @@ class VisualReviewS1eTest {
     @Test
     fun fatura() {
         val divergent = invoice(nov, 1300, 1280, InvoiceStatus.Closed).copy(divergentPayments = listOf(PaymentView("x", brl(500), LocalDate.of(2026, 11, 14), null, false)))
-        both("s1e_fatura_divergente") { InvoiceScreen(nov, InvoiceContent.Ready(divergent, card), null, PaddingValues(), {}, {}, {}, {}, {}, { _, _ -> }, {}, {}) }
+        both("s1e_fatura_divergente") { InvoiceScreen(nov, InvoiceContent.Ready(divergent, card), null, PaddingValues(), {}, {}, {}, {}, {}, {}, { _, _ -> }, {}, {}) }
         val conferred = invoice(nov, 1300, 1300, InvoiceStatus.Closed)
         capture("s1e_fatura_quitacao", ThemePreference.Light, window = true) {
             InvoiceScreen(
                 nov, InvoiceContent.Ready(conferred, card), InvoiceDialogState(InvoiceDialog.Pay, "1.300,00", LocalDate.of(2026, 11, 14)),
-                PaddingValues(), {}, {}, {}, {}, {}, { _, _ -> }, {}, {},
+                PaddingValues(), {}, {}, {}, {}, {}, {}, { _, _ -> }, {}, {},
             )
         }
         capture("s1e_fatura_fonte150", ThemePreference.Light, 1.5f) {
-            InvoiceScreen(nov, InvoiceContent.Ready(conferred, card), null, PaddingValues(), {}, {}, {}, {}, {}, { _, _ -> }, {}, {})
+            InvoiceScreen(nov, InvoiceContent.Ready(conferred, card), null, PaddingValues(), {}, {}, {}, {}, {}, {}, { _, _ -> }, {}, {})
         }
     }
 
@@ -357,7 +357,8 @@ class VisualReviewS1eTest {
             @androidx.compose.runtime.Composable {
                 app.accord.ui.categories.CategoriesScreen(
                     content, app.accord.ui.categories.buildRows(content, tab, expanded), dialog, reordering, tab, PaddingValues(), onBack = {}, onRetry = {}, onTab = {},
-                    onToggle = {}, onToggleReorder = {}, onMove = { _, _ -> }, onCreate = {}, onEdit = {}, onEditIncome = {},
+                    onToggle = {}, onToggleReorder = {}, onMove = { _, _ -> }, onDragStart = {}, onDragTo = { _, _ -> }, onDragEnd = {}, onDragCancel = {},
+                    onCreate = {}, onEdit = {}, onEditIncome = {},
                     onMoveSub = {}, onName = {}, onIcon = {}, onColor = {}, onDestination = {}, onAnswer = { _, _, _ -> },
                     onSubmit = {}, onClose = {}, onMoveEntries = {}, onRemove = {},
                 )

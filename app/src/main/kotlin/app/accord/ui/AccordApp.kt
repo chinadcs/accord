@@ -1096,8 +1096,9 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 )
             }
             composable(ROUTE_CATEGORIES) {
+                val appContext = LocalContext.current.applicationContext
                 val viewModel: CategoriesViewModel = viewModel(
-                    factory = viewModelFactory { initializer { CategoriesViewModel(container, createSavedStateHandle()) } },
+                    factory = viewModelFactory { initializer { CategoriesViewModel(container, createSavedStateHandle()) { id, args -> appContext.getString(id, *args) } } },
                 )
                 PullToRefresh(viewModel::refresh) {
                     CategoriesRoute(
@@ -1114,8 +1115,9 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     navArgument(CategoryMoveViewModel.ARG_REMOVE) { type = NavType.BoolType; defaultValue = false },
                 ),
             ) {
+                val appContext = LocalContext.current.applicationContext
                 val viewModel: CategoryMoveViewModel = viewModel(
-                    factory = viewModelFactory { initializer { CategoryMoveViewModel(container, createSavedStateHandle()) } },
+                    factory = viewModelFactory { initializer { CategoryMoveViewModel(container, createSavedStateHandle()) { id -> appContext.getString(id) } } },
                 )
                 // Depois de mover ou remover, volta à lista de categorias (a edição pode já nem existir).
                 CategoryMoveRoute(viewModel, padding, onBack = {

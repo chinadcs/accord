@@ -52,12 +52,23 @@ internal class CategoryPlanner(
                 return stop("parentId", ErrorCode.NotAllowed, "Subcategoria não pode ter subcategorias.")
             }
         }
+        val errors = mutableListOf<FieldError>()
+        if (c.iconKey?.isBlank() == true) errors += FieldError("iconKey", ErrorCode.Required, "Escolha um ícone.")
+        val color = c.colorIndex
+        if (color != null) {
+            if (parentId != null) {
+                errors += FieldError("colorIndex", ErrorCode.NotAllowed, "A subcategoria usa a cor da categoria principal.")
+            } else if (color !in 0 until CategoryPalette.SIZE) {
+                errors += FieldError("colorIndex", ErrorCode.OutOfRange, "Escolha uma das cores da paleta.")
+            }
+        }
         val key = NameKey.of(name)
         val now = currentMonth()
         val siblings = tree().childrenAt(parentId, now)
         if (siblings.any { it.nameKey == key }) {
-            return stop("name", ErrorCode.DuplicateName, "Já existe uma categoria com esse nome neste nível. Escolha outro nome.")
+            errors += FieldError("name", ErrorCode.DuplicateName, "Já existe uma categoria com esse nome neste nível. Escolha outro nome.")
         }
+        if (errors.isNotEmpty()) return stop(errors)
         return Planned.Go(months = emptySet()) {
             val row = CategoryRow(
                 id = UUID.randomUUID().toString(),
@@ -65,7 +76,8 @@ internal class CategoryPlanner(
                 name = name,
                 nameKey = key,
                 sortOrder = (siblings.maxOfOrNull { it.sortOrder } ?: -1) + 1,
-                iconKey = CategorySeed.CUSTOM_ICON,
+                iconKey = c.iconKey ?: CategorySeed.CUSTOM_ICON,
+                colorIndex = color,
                 seedKey = null,
                 revision = 1,
             )
