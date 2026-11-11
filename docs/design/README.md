@@ -101,9 +101,9 @@ Evidência e limites: [validação do piloto no emulador](../poc/ui-classificaca
 | 04 | P0 | [Chat](04-chat.md) |
 | 05 | P0 | [Orçamento mensal](05-orcamento-mensal.md) |
 | 06 | P0 | [Categoria no mês](06-detalhe-categoria.md) |
-| 07 | P0 | [Lançamentos](07-lancamentos.md) (remodelagem proposta, não aceita: [ADR 0089](../adr/0089-remodelagem-das-telas-de-lancamentos.md)) |
-| 08 | P0 | [Detalhe do lançamento](08-detalhe-lancamento.md) (remodelagem proposta, não aceita: [ADR 0089](../adr/0089-remodelagem-das-telas-de-lancamentos.md)) |
-| 09 | P0 | [Registro manual e edição](09-registro-manual.md) (remodelagem proposta, não aceita: [ADR 0089](../adr/0089-remodelagem-das-telas-de-lancamentos.md)) |
+| 07 | P0 | [Lançamentos](07-lancamentos.md) (remodelagem aceita, não implementada: [ADR 0089](../adr/0089-remodelagem-das-telas-de-lancamentos.md)) |
+| 08 | P0 | [Detalhe do lançamento](08-detalhe-lancamento.md) (remodelagem aceita, não implementada: [ADR 0089](../adr/0089-remodelagem-das-telas-de-lancamentos.md)) |
+| 09 | P0 | [Registro manual e edição](09-registro-manual.md) (remodelagem aceita, não implementada: [ADR 0089](../adr/0089-remodelagem-das-telas-de-lancamentos.md)) |
 | 10 | P0 | [Compromissos futuros](10-compromissos-futuros.md) |
 | 11 | P0 | [Detalhe do compromisso](11-detalhe-compromisso.md) |
 | 12 | P0 | [Cartão e faturas](12-cartao-e-faturas.md) |

@@ -1,6 +1,6 @@
 # 08 — Detalhe do lançamento
 
-> **REMODELAGEM PROPOSTA, AINDA NÃO ACEITA NEM IMPLEMENTADA — 11/11/2026 ([ADR 0089](../adr/0089-remodelagem-das-telas-de-lancamentos.md), `accord-h8j5`):** a seção "Alvo" no fim deste arquivo descreve a tela como **ficaria**, não o que está implementado nem uma decisão aceita. Até o aceite e a implementação, o texto abaixo continua sendo a referência do comportamento atual. Sem código alterado e sem validação em emulador, Galaxy S20 FE/S23 FE, TalkBack ou movimento reduzido.
+> **REMODELAGEM ACEITA, AINDA NÃO IMPLEMENTADA — 11/11/2026 ([ADR 0089](../adr/0089-remodelagem-das-telas-de-lancamentos.md), `accord-h8j5`, `accord-5mkz`, aceito pelo usuário):** a seção "Alvo" no fim deste arquivo descreve a tela como **ficará**, não o que está implementado. Até a implementação, o texto abaixo continua sendo a referência do comportamento atual. Sem código alterado e sem validação em emulador, Galaxy S20 FE/S23 FE, TalkBack ou movimento reduzido.
 
 > **Validação vigente — 09/11/2026 (`accord-rub9`):** MainActivity fixa em retrato; validar em retrato e fonte padrão, com teclado, temas, TalkBack e movimento reduzido. Por decisão explícita do usuário, paisagem e fonte a 200% deixam de ser critérios de aceite ou etapas dos roteiros. Referências anteriores a essa matriz são históricas, não exigências atuais. Isso não comprova validação nem remove as adaptações de acessibilidade existentes.
 
@@ -160,7 +160,7 @@ Na ocorrência de uma série recorrente (despesa ou renda), o detalhe tem **Excl
 
 ## Alvo — remodelagem (11/11/2026, ADR 0089)
 
-Proposta do [ADR 0089](../adr/0089-remodelagem-das-telas-de-lancamentos.md) (`accord-h8j5`), com as escolhas do usuário de 10 e 11/11/2026. Descreve o alvo; **não** está aceita nem implementada. Regras financeiras, de datas, de alcance e de sincronização das seções anteriores não mudam. Cores e bordas seguem o [ADR 0085](../adr/0085-remodelagem-de-cores-e-camadas.md). Mockup antes/depois: Artifact privado da sessão.
+Remodelagem do [ADR 0089](../adr/0089-remodelagem-das-telas-de-lancamentos.md) (`accord-h8j5`), com as escolhas do usuário de 10 e 11/11/2026. Aceita pelo usuário em 11/11/2026; **ainda não implementada**. Regras financeiras, de datas, de alcance e de sincronização das seções anteriores não mudam. Cores e bordas seguem o [ADR 0085](../adr/0085-remodelagem-de-cores-e-camadas.md). Mockup antes/depois: Artifact privado da sessão.
 
 ### Layout (parcela de compra no cartão)
 

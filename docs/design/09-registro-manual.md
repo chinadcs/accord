@@ -1,6 +1,6 @@
 # 09 — Registro manual e edição
 
-> **REMODELAGEM PROPOSTA, AINDA NÃO ACEITA NEM IMPLEMENTADA — 11/11/2026 ([ADR 0089](../adr/0089-remodelagem-das-telas-de-lancamentos.md), `accord-h8j5`):** a seção "Alvo" no fim deste arquivo descreve a tela como **ficaria**, não o que está implementado nem uma decisão aceita. Até o aceite e a implementação, o texto abaixo continua sendo a referência do comportamento atual. Sem código alterado e sem validação em emulador, Galaxy S20 FE/S23 FE, TalkBack ou movimento reduzido.
+> **REMODELAGEM ACEITA, AINDA NÃO IMPLEMENTADA — 11/11/2026 ([ADR 0089](../adr/0089-remodelagem-das-telas-de-lancamentos.md), `accord-h8j5`, `accord-5mkz`, aceito pelo usuário):** a seção "Alvo" no fim deste arquivo descreve a tela como **ficará**, não o que está implementado. Até a implementação, o texto abaixo continua sendo a referência do comportamento atual. Sem código alterado e sem validação em emulador, Galaxy S20 FE/S23 FE, TalkBack ou movimento reduzido.
 
 > **Validação vigente — 09/11/2026 (`accord-rub9`):** MainActivity fixa em retrato; validar em retrato e fonte padrão, com teclado, temas, TalkBack e movimento reduzido. Por decisão explícita do usuário, paisagem e fonte a 200% deixam de ser critérios de aceite ou etapas dos roteiros. Referências anteriores a essa matriz são históricas, não exigências atuais. Isso não comprova validação nem remove as adaptações de acessibilidade existentes.
 
@@ -210,7 +210,7 @@ Aceite: dois cartões com compras no mesmo mês mantêm faturas e quitações in
 
 ## Alvo — remodelagem (11/11/2026, ADR 0089)
 
-Proposta do [ADR 0089](../adr/0089-remodelagem-das-telas-de-lancamentos.md) (`accord-h8j5`), com as escolhas do usuário de 10 e 11/11/2026. Descreve o alvo; **não** está aceita nem implementada. Regras financeiras, de datas, de alcance e de sincronização das seções anteriores não mudam. Cores e bordas seguem o [ADR 0085](../adr/0085-remodelagem-de-cores-e-camadas.md). Mockup antes/depois: Artifact privado da sessão.
+Remodelagem do [ADR 0089](../adr/0089-remodelagem-das-telas-de-lancamentos.md) (`accord-h8j5`), com as escolhas do usuário de 10 e 11/11/2026. Aceita pelo usuário em 11/11/2026; **ainda não implementada**. Regras financeiras, de datas, de alcance e de sincronização das seções anteriores não mudam. Cores e bordas seguem o [ADR 0085](../adr/0085-remodelagem-de-cores-e-camadas.md). Mockup antes/depois: Artifact privado da sessão.
 
 ### Formulário único
 
@@ -251,7 +251,7 @@ Você mudou: Valor R$ 1.000,00 → R$ 1.200,00
 ```
 
 - **Compra parcelada:** aviso no topo ("Compra em 6 parcelas. Descrição e categoria valem para todas as 6, inclusive as anteriores."), valor e número de parcelas só para leitura, botão "Excluir e registrar de novo", nota "Mudar a data não muda as faturas" sob a data, cartão só para leitura e botão "Salvar nas 6 parcelas" ([ADR 0010](../adr/0010-identidade-da-compra-parcelada.md)). Sem pergunta de alcance.
-- **"Excluir e registrar de novo" (a confirmar no aceite):** abre o formulário de despesa no cartão preenchido com descrição, categoria, data e cartão da compra. Não existe operação única; a proposta é excluir a compra original só quando a nova for salva, para que desistir no meio não perca nada.
+- **"Excluir e registrar de novo":** abre o formulário de despesa no cartão preenchido com descrição, categoria, data e cartão da compra. Não existe operação única; a compra original só é excluída quando a nova for salva, para que desistir no meio não perca nada.
 
 ### Critérios de aceite do alvo
 

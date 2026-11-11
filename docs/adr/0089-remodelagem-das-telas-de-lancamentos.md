@@ -1,7 +1,7 @@
 ---
-status: proposed
+status: accepted
 recorded_at: 2026-11-11
-decision_date: null
+decision_date: 2026-11-11
 ---
 
 # ADR 0089 — Remodelagem das telas de Lançamentos: topo fixo, detalhe por tipo e formulário único
@@ -32,8 +32,7 @@ aceitas.
 
 ## Decisão
 
-**Proposta, ainda não aceita.** As escolhas abaixo foram respondidas pelo usuário na sessão de 10 e 11/11/2026; o aceite do ADR como um
-todo e os itens marcados "a confirmar" cabem a ele. Nenhuma regra financeira, de datas, de alcance de edição, de
+Aceita pelo usuário em 11/11/2026. As escolhas abaixo foram respondidas por ele na sessão de 10 e 11/11/2026. Nenhuma regra financeira, de datas, de alcance de edição, de
 sincronização ou de privacidade muda.
 
 1. **Lista — topo fixo.** Ficam fixos: a barra de mês (`‹ Novembro 2026 ▾ ›`, que passa a ser o título da tela), a busca
@@ -69,8 +68,7 @@ sincronização ou de privacidade muda.
    ([ADR 0011](0011-alcance-de-recorrencias.md)). Na parcelada não há pergunta: aviso no topo e botão "Salvar nas
    N parcelas" ([ADR 0010](0010-identidade-da-compra-parcelada.md)).
 9. **Compra parcelada.** Valor só leitura com o botão "Excluir e registrar de novo", que abre o formulário novo preenchido
-   com descrição, categoria, data e cartão. **A confirmar:** como não há comando atômico, a proposta é excluir a compra
-   original só quando a nova for salva (dois comandos), para que desistir no meio não perca nada.
+   com descrição, categoria, data e cartão. Como não há comando atômico, a compra original é excluída só quando a nova for salva (dois comandos), para que desistir no meio não perca nada (apresentado ao usuário como ponto a confirmar e coberto pelo aceite de 11/11/2026).
 10. **Forma de pagamento na edição.** Troca só entre Pix, Débito e Dinheiro, que mantém a identidade do lançamento
     ([ADR 0029](0029-troca-de-forma-de-pagamento-como-comando.md)). Cartão fica fora.
 11. **Vocabulário.** "Receita" em toda a área de Lançamentos (inclusive no botão "+"); "Rendas" permanece como nome da tela
@@ -108,7 +106,7 @@ sincronização ou de privacidade muda.
 - **Ordem recomendada de implementação:** depois de `accord-6hwi`, `accord-54az`, `accord-7ow7` e `accord-mhkn` (cores do
   ADR 0085, que tocam os mesmos arquivos), com a parte de `EntriesScreen` de `accord-r8a7` absorvida pela fatia da lista.
   Fatias sugeridas: base de componentes; lista; filtros (com a fatia de contrato de leitura); detalhe; formulário único;
-  painéis no lugar de diálogos; validação visual. Nenhum bead de implementação foi criado.
+  painéis no lugar de diálogos; validação visual. Beads de implementação: `accord-5mkz` e filhos.
 - **Fora desta proposta:** filtro por pessoa, total por dia, sincronização por linha, link do detalhe para a tela de
   conflito, nota por lançamento, campo de estabelecimento e histórico de alterações.
 - Pendências de acessibilidade: altura do topo fixo com fonte ampliada e teclado; leitura da linha no TalkBack dizendo
@@ -128,4 +126,7 @@ sincronização ou de privacidade muda.
 - Comparações com padrões de mercado (mês no topo, resumo de receitas e despesas, lista por dia, chips de filtro, valor em
   destaque no formulário, pergunta de alcance ao salvar, ação principal fixa e menu ⋮) vêm de conhecimento geral do agente
   de UI/UX, **não** de fonte primária consultada.
-- Estado: proposto. Nenhuma linha de código foi alterada; nada foi compilado, testado nem validado em aparelho.
+- Aceite: o usuário aceitou o ADR em 11/11/2026 ("Aceito"), em resposta ao pedido de aceite que listava também a
+  regra de "Excluir e registrar de novo" e a ordem de implementação depois das cores do ADR 0085. Aceite não prova
+  implementação nem validação: no momento do aceite nenhuma linha de código havia sido alterada; a implementação segue
+  em `accord-5mkz` e filhos.
