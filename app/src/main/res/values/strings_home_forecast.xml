@@ -31,6 +31,7 @@
     <string name="home_refreshed">Informações da Início atualizadas.</string>
     <string name="home_banner_and">e</string>
     <string name="home_banner_block_balance">saldo</string>
+    <string name="home_banner_block_income">receitas do mês</string>
     <string name="home_banner_block_review">pendências</string>
     <string name="home_banner_block_dates">datas dos próximos 7 dias</string>
     <string name="home_banner_block_exceed">estouro de categorias</string>

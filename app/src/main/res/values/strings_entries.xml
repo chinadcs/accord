@@ -42,7 +42,8 @@
         <item quantity="other">%d despesas</item>
     </plurals>
     <string name="entries_balance_title">Saldo total</string>
-    <string name="entries_balance_income">Receita do mês</string>
+    <string name="entries_balance_income">Receitas do mês</string>
+    <string name="entries_balance_income_with_expected">Receitas do mês, incluindo previstas</string>
     <string name="entries_balance_expense">Despesa do mês</string>
 
     <!-- Painel de filtros -->

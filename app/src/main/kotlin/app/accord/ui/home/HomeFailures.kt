@@ -3,7 +3,7 @@ package app.accord.ui.home
 import app.accord.ui.pending.PendingQueueUiState
 
 /** Os blocos da Início que dependem de uma leitura, na ordem de leitura da tela (ADR 0078). */
-enum class HomeBlock { Balance, Review, Dates, Exceed, Allowance, Forecast }
+enum class HomeBlock { Balance, Income, Review, Dates, Exceed, Allowance, Forecast }
 
 /**
  * Quais leituras da Início falharam, na ordem de leitura. Alimenta o banner único "Tentar de novo": carga não é falha,
@@ -20,6 +20,7 @@ fun homeFailures(
     val attention = attentionPlan(pending, upcoming, projection).failed
     return buildList {
         if (balance is HomeBalanceState.Failed) add(HomeBlock.Balance)
+        if (balance is HomeBalanceState.Ready && balance.incomes is HomeIncomeState.Failed) add(HomeBlock.Income)
         if (AttentionSource.Review in attention) add(HomeBlock.Review)
         if (AttentionSource.Dates in attention) add(HomeBlock.Dates)
         if (AttentionSource.Exceed in attention) add(HomeBlock.Exceed)
@@ -41,6 +42,7 @@ fun homeLoadingBlocks(
     cashFlow: HomeCashFlowState,
 ): Set<HomeBlock> = buildSet {
     if (balance is HomeBalanceState.Loading) add(HomeBlock.Balance)
+    if (balance is HomeBalanceState.Ready && balance.incomes is HomeIncomeState.Loading) add(HomeBlock.Income)
     // A fila de pendências falha antes de carregar, como em attentionPlan.
     if (pending.loading && !pending.failed) add(HomeBlock.Review)
     if (upcoming is HomeUpcomingState.Loading) add(HomeBlock.Dates)

@@ -69,6 +69,7 @@ internal fun MoreRoute(
 ) {
     val scope = rememberCoroutineScope()
     val entriesCriterion by container.theme.entriesDateCriterion.collectAsStateWithLifecycle()
+    val includeExpectedIncome by container.theme.includeExpectedIncomeInHomeSummary.collectAsStateWithLifecycle()
     val themePreference by container.theme.preference.collectAsStateWithLifecycle()
     val themePalette by container.theme.palette.collectAsStateWithLifecycle()
     var signOutPending by remember { mutableStateOf<Int?>(null) }
@@ -122,6 +123,7 @@ internal fun MoreRoute(
             review = reviewState,
             session = access.session,
             entriesCriterion = entriesCriterion,
+            includeExpectedIncome = includeExpectedIncome,
             themePreference = themePreference,
             themePalette = themePalette,
             // Mesma conta do aviso ao sair: o que ainda não saiu do aparelho (por enviar, em conflito ou recusado).
@@ -130,6 +132,7 @@ internal fun MoreRoute(
             alerts = alertsState,
         ),
         onEntriesCriterionChange = container.theme::setEntriesDateCriterion,
+        onIncludeExpectedIncomeChange = container.theme::setIncludeExpectedIncomeInHomeSummary,
         updates = updatesState,
         onCheckUpdates = { container.updates.check(manual = true) },
         installState = apkState.install,

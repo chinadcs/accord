@@ -21,6 +21,16 @@ class ThemeStore(context: Context) {
     )
     val entriesDateCriterion: StateFlow<DateCriterion> = _entriesDateCriterion.asStateFlow()
 
+    private val _includeExpectedIncomeInHomeSummary = MutableStateFlow(
+        prefs.getBoolean(KEY_INCLUDE_EXPECTED_INCOME_IN_HOME_SUMMARY, false),
+    )
+    val includeExpectedIncomeInHomeSummary: StateFlow<Boolean> = _includeExpectedIncomeInHomeSummary.asStateFlow()
+
+    fun setIncludeExpectedIncomeInHomeSummary(value: Boolean) {
+        prefs.edit().putBoolean(KEY_INCLUDE_EXPECTED_INCOME_IN_HOME_SUMMARY, value).apply()
+        _includeExpectedIncomeInHomeSummary.value = value
+    }
+
     fun setEntriesDateCriterion(value: DateCriterion) {
         prefs.edit().putString(KEY_ENTRIES_DATE_CRITERION, value.name).apply()
         _entriesDateCriterion.value = value
@@ -62,5 +72,6 @@ class ThemeStore(context: Context) {
         const val KEY_CORNERS = "corners"
         const val KEY_PALETTE = "palette"
         const val KEY_ENTRIES_DATE_CRITERION = "entries_date_criterion"
+        const val KEY_INCLUDE_EXPECTED_INCOME_IN_HOME_SUMMARY = "include_expected_income_in_home_summary"
     }
 }

@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -45,6 +46,7 @@ import app.accord.ui.theme.ThemePreference
 import app.accord.BuildConfig
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -110,6 +112,7 @@ data class MoreUiState(
     val review: PendingQueueUiState = PendingQueueUiState(),
     val session: SessionState = SessionState.Valid,
     val entriesCriterion: DateCriterion = DateCriterion.PurchaseDate,
+    val includeExpectedIncome: Boolean = false,
     /** Modo e paleta deste aparelho, só para o subtítulo da linha Aparência. */
     val themePreference: ThemePreference = ThemePreference.System,
     val themePalette: ThemePalette = ThemePalette.Accord,
@@ -128,6 +131,7 @@ fun MoreScreen(
     actions: MoreActions,
     state: MoreUiState = MoreUiState(),
     onEntriesCriterionChange: (DateCriterion) -> Unit = {},
+    onIncludeExpectedIncomeChange: (Boolean) -> Unit = {},
     updates: app.accord.updates.UpdateState? = null,
     onCheckUpdates: () -> Unit = {},
     installState: app.accord.updates.InstallState = app.accord.updates.InstallState.Idle,
@@ -200,6 +204,7 @@ fun MoreScreen(
                 R.string.more_entries_date, Lucide.drawable.lucide_ic_calendar, { showEntriesDate = true },
                 supporting = stringResource(state.entriesCriterion.labelRes()),
             )
+            ExpectedIncomeSwitch(state.includeExpectedIncome, onIncludeExpectedIncomeChange)
             MoreRow(
                 R.string.appearance_title, Lucide.drawable.lucide_ic_palette, actions.onAppearance,
                 supporting = stringResource(
@@ -258,6 +263,23 @@ fun MoreScreen(
                 app.accord.updates.UpdatePanel(updates, installState, onCheckUpdates, updateActions)
             }
         }
+    }
+}
+
+@Composable
+private fun ExpectedIncomeSwitch(enabled: Boolean, onToggle: (Boolean) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = AccordSpacing.rowMedium)
+            .toggleable(value = enabled, role = Role.Switch, onValueChange = onToggle)
+            .padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.more_include_expected_income), style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(R.string.more_include_expected_income_hint), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Switch(checked = enabled, onCheckedChange = null)
     }
 }
 

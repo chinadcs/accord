@@ -67,6 +67,7 @@ fun HomeScreen(
     cashFlow: HomeCashFlowState = HomeCashFlowState.Loading,
     onCashFlowRetry: () -> Unit = {},
     balance: HomeBalanceState = HomeBalanceState.Loading,
+    includeExpectedIncome: Boolean = false,
     onBalanceRetry: () -> Unit = {},
     balanceMonth: YearMonth? = null,
     currentMonth: YearMonth = YearMonth.now(),
@@ -95,7 +96,7 @@ fun HomeScreen(
             retrying = true
             failures.forEach { block ->
                 when (block) {
-                    HomeBlock.Balance -> onBalanceRetry()
+                    HomeBlock.Balance, HomeBlock.Income -> onBalanceRetry()
                     HomeBlock.Review -> onRetry()
                     HomeBlock.Dates -> onUpcomingRetry()
                     HomeBlock.Exceed -> onProjectionRetry()
@@ -104,7 +105,7 @@ fun HomeScreen(
                 }
             }
         })
-        BalanceSection(balance, balanceMonth, currentMonth, onBalanceMonthShift)
+        BalanceSection(balance, balanceMonth, currentMonth, includeExpectedIncome, onBalanceMonthShift)
         AttentionStrip(
             pending, upcoming, projection,
             onReview = onReview, onCommitments = onCommitments, onForecasts = onForecasts,
@@ -131,15 +132,15 @@ private fun HomeFooter() {
 
 /** Saldo total do mês: esqueleto enquanto carrega, frase curta em falha (o "Tentar de novo" é do banner), nunca zero no lugar de "não sei". */
 @Composable
-private fun BalanceSection(state: HomeBalanceState, month: YearMonth?, currentMonth: YearMonth, onShift: (Long) -> Unit) {
+private fun BalanceSection(state: HomeBalanceState, month: YearMonth?, currentMonth: YearMonth, includeExpectedIncome: Boolean, onShift: (Long) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
         MonthSelector(month ?: currentMonth, onPrevious = { onShift(-1) }, onNext = { onShift(1) })
-        BalanceCard(state, month)
+        BalanceCard(state, month, includeExpectedIncome)
     }
 }
 
 @Composable
-private fun BalanceCard(state: HomeBalanceState, month: YearMonth?) {
+private fun BalanceCard(state: HomeBalanceState, month: YearMonth?, includeExpectedIncome: Boolean) {
     when (state) {
         HomeBalanceState.Loading -> {
             val description = stringResource(R.string.balance_loading)
@@ -161,6 +162,9 @@ private fun BalanceCard(state: HomeBalanceState, month: YearMonth?) {
         is HomeBalanceState.Ready -> TotalBalanceCard(
             state.value,
             subtitle = month?.let { stringResource(R.string.balance_subtitle_month, it.label()) } ?: stringResource(R.string.balance_subtitle),
+            incomeOverride = if (includeExpectedIncome) (state.incomes as? HomeIncomeState.Ready)?.value?.expected else null,
+            overrideIncome = includeExpectedIncome,
+            incomeLabel = stringResource(if (includeExpectedIncome) R.string.entries_balance_income_with_expected else R.string.entries_balance_income),
         )
     }
 }

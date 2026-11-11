@@ -86,6 +86,7 @@ fun HomeFailureBanner(blocks: List<HomeBlock>, onRetry: () -> Unit, modifier: Mo
 
 private fun HomeBlock.labelRes(): Int = when (this) {
     HomeBlock.Balance -> R.string.home_banner_block_balance
+    HomeBlock.Income -> R.string.home_banner_block_income
     HomeBlock.Review -> R.string.home_banner_block_review
     HomeBlock.Dates -> R.string.home_banner_block_dates
     HomeBlock.Exceed -> R.string.home_banner_block_exceed

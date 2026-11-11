@@ -4,6 +4,8 @@
 
 > **Base vigente — 09/11/2026 (`accord-wecg`, [ADR 0071](../adr/0071-ordem-das-abas-saldo-e-botao-de-registro-no-inicio.md)):** o Início traz o card Saldo total (movido de Lançamentos), usa esqueleto (skeleton) enquanto qualquer painel carrega, tem o botão flutuante de registro no lugar do botão “Registrar manualmente” e não mostra a situação de sincronização, que fica só em Mais.
 
+> **Complemento — 11/11/2026 (`accord-t1pi`):** “Receitas do mês” pode incluir receitas previstas por uma preferência local desligada por padrão, em Mais → Neste aparelho. A opção afeta só o valor dessa linha; saldo acumulado e despesa mantêm as regras atuais.
+
 Prioridade: **P1** · Revisão: **10/11/2026** · `accord-b6og`, `accord-4d5m`, `accord-qjlo`.
 Decisão de navegação aceita pelo usuário em 09/11/2026; [ADR 0067](../adr/0067-inicio-como-abertura-e-revisar-em-mais.md).
 Não renumera as telas 01–38. Mockup antes/depois: Artifact privado da sessão (dados de exemplo).
@@ -73,7 +75,7 @@ Início | Lançamentos | (Astroid) | Orçamento | Mais
 Cabeçalhos (semântica `heading`): título Início, Saldo total, Pede atenção, Margem para gastar e Previsão até o fim do
 mês. Alvos de toque mínimos de 48 dp; linhas da faixa com 60 dp. Rodapé único de 14 sp no lugar das notas repetidas.
 
-- **Saldo total.** Valor em destaque, subtítulo “acumulado até o fim do mês”, Receita e Despesa do mês com ícone. Regras do
+- **Saldo total.** Valor em destaque, subtítulo “acumulado até o fim do mês”, Receitas e Despesas do mês com ícone. Por padrão, Receitas mostra o recebido; com a preferência “Incluir receitas previstas no resumo mensal” ativa, soma também o previsto do mês exibido. Essa preferência não altera o saldo acumulado, que continua contando apenas receita recebida, nem a despesa. Regras do
   ADR 0051/0071 inalteradas. Saldo negativo é lido como “saldo negativo de R$ …” pelo leitor de tela.
 - **Pede atenção.** Ordem fixa: Revisar, datas, estouro; as duas últimas só aparecem se houver dado. Cada linha tem
   ícone decorativo, título, apoio e seta; a linha inteira abre o destino. Revisar usa a fila única
