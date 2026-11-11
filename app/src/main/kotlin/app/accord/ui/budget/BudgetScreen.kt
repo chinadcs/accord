@@ -195,6 +195,7 @@ private fun LazyListScope.budgetContent(
         return
     }
     item { SummaryCard(data) }
+    if (data.noActivity) item { EmptyMonth(onRegister, showInlineManual) }
     item { BudgetCriteria() }
     item { IncomeBlock(data, countExpectedIncome) }
     if (data.budget.toClassify.count > 0) item { ToClassifyRow(data) { onClassify(data.month) } }
@@ -360,14 +361,16 @@ private fun SummaryCard(data: BudgetData) {
                     Text(budget.committed.format(), style = Accord.typography.amountHero, textAlign = TextAlign.Center)
                 }
                 HorizontalDivider(color = Accord.colors.onFinanceSurface.copy(alpha = 0.2f))
+                // Só com Orçamento geral (sem limite por categoria) o resumo não diz "Nenhum limite definido": o geral tem o seu cartão.
+                val limitsText = if (data.hasLimits) budget.totalLimits.format() else if (budget.general.isDefined) "—" else stringResource(R.string.summary_no_limits)
                 if (stackedMetrics) {
                     Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
-                        SummaryMetric(stringResource(R.string.summary_limits), if (data.hasLimits) budget.totalLimits.format() else stringResource(R.string.summary_no_limits))
+                        SummaryMetric(stringResource(R.string.summary_limits), limitsText)
                         SummaryMetric(stringResource(R.string.summary_paid), budget.paid.format(), stringResource(R.string.summary_paid_note))
                     }
                 } else {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s4)) {
-                        SummaryMetric(stringResource(R.string.summary_limits), if (data.hasLimits) budget.totalLimits.format() else stringResource(R.string.summary_no_limits), modifier = Modifier.weight(1f))
+                        SummaryMetric(stringResource(R.string.summary_limits), limitsText, modifier = Modifier.weight(1f))
                         // Pago integra o comprometido; a legenda impede somar os dois novamente.
                         SummaryMetric(stringResource(R.string.summary_paid), budget.paid.format(), stringResource(R.string.summary_paid_note), Modifier.weight(1f))
                     }

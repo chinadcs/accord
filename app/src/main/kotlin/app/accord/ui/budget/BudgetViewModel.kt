@@ -23,13 +23,16 @@ data class BudgetData(val budget: MonthBudget, val categories: Map<String, Categ
     val month: YearMonth get() = budget.month
 
     /** Nada registrado no mês: zero conhecido é diferente de informação indisponível. */
-    val isEmpty: Boolean
+    val noActivity: Boolean
         get() = budget.committed.cents == 0L && budget.toClassify.count == 0 && budget.credits.cents == 0L &&
             budget.income.received.cents == 0L && budget.income.toReceive.cents == 0L &&
             budget.categories.all { it.gross.cents == 0L && it.credits.cents == 0L }
 
-    /** Há alguma categoria com limite definido; sem isso o total dos limites não se aplica. */
+    /** Há alguma categoria com limite definido (presença, não valor: R$ 0,00 conta); sem isso o total dos limites não se aplica. */
     val hasLimits: Boolean get() = budget.categories.any { it.limit.total != null }
+
+    /** Estado vazio só sem movimento, sem limite vigente e sem Orçamento geral (ADR 0086). */
+    val isEmpty: Boolean get() = noActivity && !hasLimits && !budget.general.isDefined
 }
 
 /** Lê o orçamento do mês e os nomes das categorias; nulo se qualquer leitura falhar (nunca vira zero). */
