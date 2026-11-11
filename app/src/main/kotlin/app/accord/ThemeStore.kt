@@ -22,7 +22,7 @@ class ThemeStore(context: Context) {
     val entriesDateCriterion: StateFlow<DateCriterion> = _entriesDateCriterion.asStateFlow()
 
     private val _includeExpectedIncomeInHomeSummary = MutableStateFlow(
-        prefs.getBoolean(KEY_INCLUDE_EXPECTED_INCOME_IN_HOME_SUMMARY, false),
+        prefs.getBoolean(KEY_INCLUDE_EXPECTED_INCOME_IN_HOME_SUMMARY, true),
     )
     val includeExpectedIncomeInHomeSummary: StateFlow<Boolean> = _includeExpectedIncomeInHomeSummary.asStateFlow()
 

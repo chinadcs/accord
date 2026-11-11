@@ -60,6 +60,7 @@
     <string name="links_to_confirm_note">Esses valores estão no mês estimado, de forma provisória.</string>
     <string name="income_received">Renda recebida</string>
     <string name="income_to_receive">A receber</string>
+    <string name="income_month">Receitas do mês</string>
     <string name="to_classify_title">A classificar</string>
     <plurals name="to_classify_detail">
         <item quantity="one">%1$s · %2$d lançamento · sem limite</item>

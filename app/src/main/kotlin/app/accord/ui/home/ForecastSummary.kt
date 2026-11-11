@@ -43,7 +43,7 @@ import com.composables.icons.lucide.R as Lucide
  * em falha só há a frase curta, e o "Tentar de novo" é do banner único da tela. O cartão inteiro abre o Orçamento.
  */
 @Composable
-fun ForecastSummary(state: HomeCashFlowState, onBudget: () -> Unit, modifier: Modifier = Modifier) {
+fun ForecastSummary(state: HomeCashFlowState, onBudget: () -> Unit, modifier: Modifier = Modifier, countExpectedIncome: Boolean = false) {
     HomeSectionCard(
         title = stringResource(R.string.monthforecast_title),
         status = when (state) {
@@ -59,20 +59,24 @@ fun ForecastSummary(state: HomeCashFlowState, onBudget: () -> Unit, modifier: Mo
         skeletonLines = 8,
         loadingMinHeight = 260.dp,
     ) {
-        if (state is HomeCashFlowState.Ready) ForecastReady(state.value)
+        if (state is HomeCashFlowState.Ready) ForecastReady(state.value, countExpectedIncome)
     }
 }
 
 @Composable
-private fun ForecastReady(value: MonthCashFlow) {
+private fun ForecastReady(value: MonthCashFlow, countExpectedIncome: Boolean) {
     Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
         Text(
-            stringResource(R.string.monthforecast_subtitle),
+            stringResource(if (countExpectedIncome) R.string.monthforecast_subtitle_counting_expected else R.string.monthforecast_subtitle),
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         if (hasForecastData(value)) {
-            MainResult(value.resultWithReceivedCents)
-            Text(expectedText(value.resultWithExpectedCents), style = MaterialTheme.typography.bodyLarge)
+            if (countExpectedIncome) {
+                MainResult(value.resultWithExpectedCents)
+            } else {
+                MainResult(value.resultWithReceivedCents)
+                Text(expectedText(value.resultWithExpectedCents), style = MaterialTheme.typography.bodyLarge)
+            }
             Bars(value)
             // As ressalvas qualificam um resultado: sem dados não há resultado a qualificar ("pode estar otimista" não faria sentido).
             if (value.categoriesWithoutEstimate > 0) {

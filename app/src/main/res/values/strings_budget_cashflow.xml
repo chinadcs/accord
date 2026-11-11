@@ -5,6 +5,8 @@
     <string name="budget_flow_retry_description">Tentar de novo: fluxo do mês</string>
     <string name="cashflow_label_received">Renda já recebida</string>
     <string name="cashflow_label_to_receive">Renda prevista a receber</string>
+    <string name="cashflow_label_income">Receitas do mês</string>
+    <string name="cashflow_label_result">Resultado do mês</string>
     <string name="cashflow_label_known">Gastos comprometidos no mês</string>
     <string name="cashflow_known_paid_note">Dos quais %1$s já pagos</string>
     <string name="cashflow_label_estimated">Gastos variáveis estimados até o fim do mês</string>

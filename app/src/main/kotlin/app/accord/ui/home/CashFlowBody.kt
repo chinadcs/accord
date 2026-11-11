@@ -30,9 +30,9 @@ import com.composables.icons.lucide.R as Lucide
  * Início é [ForecastSummary], que usa os mesmos números de [MonthCashFlow]; o título da seção vem do cartão que o hospeda.
  */
 @Composable
-fun CashFlowBody(value: MonthCashFlow) {
+fun CashFlowBody(value: MonthCashFlow, countExpectedIncome: Boolean = false) {
     Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-        DetailedValues(value)
+        DetailedValues(value, countExpectedIncome)
         if (value.categoriesWithoutEstimate > 0) {
             Text(pluralStringResource(R.plurals.cashflow_no_estimate, value.categoriesWithoutEstimate, value.categoriesWithoutEstimate),
                 style = MaterialTheme.typography.bodySmall)
@@ -44,18 +44,26 @@ fun CashFlowBody(value: MonthCashFlow) {
 
 /** Quatro linhas de valor e dois resultados. O pago aparece como parte do comprometido, nunca como linha somável. */
 @Composable
-private fun DetailedValues(value: MonthCashFlow) {
+private fun DetailedValues(value: MonthCashFlow, countExpectedIncome: Boolean) {
     Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
-        ValueRow(stringResource(R.string.cashflow_label_received), Money(value.receivedCents).format())
-        ValueRow(stringResource(R.string.cashflow_label_to_receive), Money(value.toReceiveCents).format())
+        if (countExpectedIncome) {
+            ValueRow(stringResource(R.string.cashflow_label_income), Money(value.receivedCents + value.toReceiveCents).format())
+        } else {
+            ValueRow(stringResource(R.string.cashflow_label_received), Money(value.receivedCents).format())
+            ValueRow(stringResource(R.string.cashflow_label_to_receive), Money(value.toReceiveCents).format())
+        }
         ValueRow(
             stringResource(R.string.cashflow_label_known), Money(value.knownCents).format(),
             note = stringResource(R.string.cashflow_known_paid_note, Money(value.paidCents).format()),
         )
         ValueRow(stringResource(R.string.cashflow_label_estimated), Money(value.estimatedCents).format())
         Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-            ResultRow(stringResource(R.string.cashflow_label_result_received), value.resultWithReceivedCents)
-            ResultRow(stringResource(R.string.cashflow_label_result_expected), value.resultWithExpectedCents)
+            if (countExpectedIncome) {
+                ResultRow(stringResource(R.string.cashflow_label_result), value.resultWithExpectedCents)
+            } else {
+                ResultRow(stringResource(R.string.cashflow_label_result_received), value.resultWithReceivedCents)
+                ResultRow(stringResource(R.string.cashflow_label_result_expected), value.resultWithExpectedCents)
+            }
         }
     }
 }

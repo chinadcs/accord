@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="more_include_expected_income">Incluir receitas previstas no resumo mensal</string>
-    <string name="more_include_expected_income_hint">Soma ao valor recebido as receitas previstas para o mês.</string>
+    <string name="more_include_expected_income">Contar receitas previstas como recebidas</string>
+    <string name="more_include_expected_income_hint">Receitas do mês, Saldo total, Orçamento e a previsão somam o que está previsto junto do que já foi recebido.</string>
     <!-- Mais (tela 22) -->
     <string name="more_title">Mais</string>
     <string name="more_group_budget">Orçamento e contas</string>

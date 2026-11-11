@@ -4,7 +4,7 @@
 
 > **Base vigente — 09/11/2026 (`accord-wecg`, [ADR 0071](../adr/0071-ordem-das-abas-saldo-e-botao-de-registro-no-inicio.md)):** o Início traz o card Saldo total (movido de Lançamentos), usa esqueleto (skeleton) enquanto qualquer painel carrega, tem o botão flutuante de registro no lugar do botão “Registrar manualmente” e não mostra a situação de sincronização, que fica só em Mais.
 
-> **Complemento — 11/11/2026 (`accord-t1pi`):** “Receitas do mês” pode incluir receitas previstas por uma preferência local desligada por padrão, em Mais → Neste aparelho. A opção afeta só o valor dessa linha; saldo acumulado e despesa mantêm as regras atuais.
+> **Complemento — 11/11/2026 (`accord-t1pi`, `accord-imj1`):** a opção local “Contar receitas previstas como recebidas” (Mais → Neste aparelho) vem **ligada por padrão**. Ligada, Receitas do mês, Saldo total (acumulado até o fim do mês exibido) e a Previsão até o fim do mês somam renda recebida e prevista; o rótulo é sempre “Receitas do mês”. Desligada, valem as regras anteriores (só recebida).
 
 Prioridade: **P1** · Revisão: **10/11/2026** · `accord-b6og`, `accord-4d5m`, `accord-qjlo`.
 Decisão de navegação aceita pelo usuário em 09/11/2026; [ADR 0067](../adr/0067-inicio-como-abertura-e-revisar-em-mais.md).
@@ -41,7 +41,7 @@ Início
 [Banner agregado de falha + Tentar de novo — só se algum bloco falhou; depois do toque fica “Atualizando…” com o botão desabilitado]
 ┌ Saldo total · acumulado até o fim do mês ──────────────┐   card carvão
 │ R$ 12.340,00                                    │
-│ ↙ Receita do mês  R$ 6.000,00                   │
+│ ↙ Receitas do mês R$ 6.000,00                   │
 │ ↗ Despesa do mês  R$ 4.100,00                   │
 └─────────────────────────────────────────────────┘
 Pede atenção
@@ -75,7 +75,7 @@ Início | Lançamentos | (Astroid) | Orçamento | Mais
 Cabeçalhos (semântica `heading`): título Início, Saldo total, Pede atenção, Margem para gastar e Previsão até o fim do
 mês. Alvos de toque mínimos de 48 dp; linhas da faixa com 60 dp. Rodapé único de 14 sp no lugar das notas repetidas.
 
-- **Saldo total.** Valor em destaque, subtítulo “acumulado até o fim do mês”, Receitas e Despesas do mês com ícone. Por padrão, Receitas mostra o recebido; com a preferência “Incluir receitas previstas no resumo mensal” ativa, soma também o previsto do mês exibido. Essa preferência não altera o saldo acumulado, que continua contando apenas receita recebida, nem a despesa. Regras do
+- **Saldo total.** Valor em destaque, subtítulo “acumulado até o fim do mês”, Receitas e Despesas do mês com ícone. Receitas e saldo contam a renda prevista junto da recebida enquanto a opção “Contar receitas previstas como recebidas” estiver ligada (padrão); desligada, só a recebida. Regras do
   ADR 0051/0071 inalteradas. Saldo negativo é lido como “saldo negativo de R$ …” pelo leitor de tela.
 - **Pede atenção.** Ordem fixa: Revisar, datas, estouro; as duas últimas só aparecem se houver dado. Cada linha tem
   ícone decorativo, título, apoio e seta; a linha inteira abre o destino. Revisar usa a fila única
@@ -86,7 +86,7 @@ mês. Alvos de toque mínimos de 48 dp; linhas da faixa com 60 dp. Rodapé únic
   barra. Barra de uso com o texto “R$ X de R$ Y usados (Z%)”; em excesso, preenchimento de erro, ícone e “Passou R$ X”.
   Botão de informação (alvo de 48 dp, irmão do alvo do card) abre “Como é calculado”. Fórmula do §11 inalterada.
 - **Previsão até o fim do mês** (antes “Fluxo do mês até o fim”). Resultado só com a renda recebida, com ícone e a
-  palavra “sobra” ou “falta”, nunca só o sinal. Segunda linha com a renda prevista. Duas barras na mesma escala:
+  palavra “sobra” ou “falta”, nunca só o sinal. Com a opção de contar previstas ligada (padrão), só o resultado único com o subtítulo “Com as receitas do mês, recebidas e previstas”; desligada, segunda linha com a renda prevista. Duas barras na mesma escala:
   confirmado cheio, previsto tracejado, texto equivalente completo na descrição. Pago é subconjunto do comprometido e
   nunca se soma a ele. Chips “categorias sem estimativa” e “provisório” só quando houver.
 - **Nada de gráfico novo além dessas barras**, sem biblioteca, com contraste mínimo de 3:1 e sem animar com movimento reduzido.

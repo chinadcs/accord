@@ -80,6 +80,7 @@ fun BudgetRoute(
     onOpenCard: () -> Unit = {},
     onSearch: (() -> Unit)? = null,
     onOpenForecasts: (YearMonth) -> Unit = {},
+    countExpectedIncome: Boolean = false,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     RefreshOnResume(viewModel::refresh)
@@ -89,7 +90,7 @@ fun BudgetRoute(
         onRetryFlow = viewModel::retryFlow,
         onOpenCategory = onOpenCategory, onClassify = onClassify, onRegister = onRegister,
         onOpenCommitments = onOpenCommitments, onOpenIncomes = onOpenIncomes, onOpenCard = onOpenCard, onSearch = onSearch,
-        hasFloatingAction = true, onOpenForecasts = onOpenForecasts,
+        hasFloatingAction = true, onOpenForecasts = onOpenForecasts, countExpectedIncome = countExpectedIncome,
         onCurrentMonth = viewModel::goToCurrentMonth.takeIf { !viewModel.isCurrentMonth(state.month) },
     )
 }
@@ -112,6 +113,7 @@ fun BudgetScreen(
     onOpenForecasts: (YearMonth) -> Unit = {},
     onRetryFlow: () -> Unit = {},
     onCurrentMonth: (() -> Unit)? = null,
+    countExpectedIncome: Boolean = false,
 ) {
     // A barra inferior sobrepõe o conteúdo do Scaffold. O espaço dela vai no recorte da lista (não em contentPadding):
     // assim a área visível termina onde a barra começa e um item levado à tela (rolagem por acessibilidade, foco,
@@ -144,9 +146,9 @@ fun BudgetScreen(
             }
             is BudgetContent.Failed -> {
                 item { FailureBanner(content.last?.month, onRetry) }
-                content.last?.let { budgetContent(it, onOpenCategory, onClassify, onRegister, onOpenCommitments, onOpenIncomes, onOpenCard, !hasFloatingAction, onOpenForecasts, state.flow.takeIf { _ -> it.month == state.month }, onRetryFlow) }
+                content.last?.let { budgetContent(it, onOpenCategory, onClassify, onRegister, onOpenCommitments, onOpenIncomes, onOpenCard, !hasFloatingAction, onOpenForecasts, state.flow.takeIf { _ -> it.month == state.month }, onRetryFlow, countExpectedIncome) }
             }
-            is BudgetContent.Ready -> budgetContent(content.data, onOpenCategory, onClassify, onRegister, onOpenCommitments, onOpenIncomes, onOpenCard, !hasFloatingAction, onOpenForecasts, state.flow.takeIf { content.data.month == state.month }, onRetryFlow)
+            is BudgetContent.Ready -> budgetContent(content.data, onOpenCategory, onClassify, onRegister, onOpenCommitments, onOpenIncomes, onOpenCard, !hasFloatingAction, onOpenForecasts, state.flow.takeIf { content.data.month == state.month }, onRetryFlow, countExpectedIncome)
         }
     }
 }
@@ -185,6 +187,7 @@ private fun LazyListScope.budgetContent(
     onOpenForecasts: (YearMonth) -> Unit,
     flow: BudgetFlowState?,
     onRetryFlow: () -> Unit,
+    countExpectedIncome: Boolean,
 ) {
     if (data.isEmpty) {
         item { EmptyMonth(onRegister, showInlineManual) }
@@ -193,10 +196,10 @@ private fun LazyListScope.budgetContent(
     }
     item { SummaryCard(data) }
     item { BudgetCriteria() }
-    item { IncomeBlock(data) }
+    item { IncomeBlock(data, countExpectedIncome) }
     if (data.budget.toClassify.count > 0) item { ToClassifyRow(data) { onClassify(data.month) } }
     // O fluxo é do mês escolhido e só aparece junto de uma visão desse mesmo mês (nunca com a do mês anterior).
-    if (flow != null) item(key = "cash-flow") { BudgetFlowSection(flow, onRetryFlow) }
+    if (flow != null) item(key = "cash-flow") { BudgetFlowSection(flow, onRetryFlow, countExpectedIncome) }
     item {
         val values = data.budget.categories.map { category ->
             MoneyChartValue(
@@ -237,7 +240,7 @@ private fun LazyListScope.budgetContent(
  * relê apenas o fluxo.
  */
 @Composable
-private fun BudgetFlowSection(flow: BudgetFlowState, onRetry: () -> Unit) {
+private fun BudgetFlowSection(flow: BudgetFlowState, onRetry: () -> Unit, countExpectedIncome: Boolean) {
     val retryDescription = stringResource(R.string.budget_flow_retry_description)
     HomeSectionCard(
         title = stringResource(R.string.budget_flow_title),
@@ -256,7 +259,7 @@ private fun BudgetFlowSection(flow: BudgetFlowState, onRetry: () -> Unit) {
             ) { Text(stringResource(R.string.action_retry)) }
         },
     ) {
-        if (flow is BudgetFlowState.Ready) CashFlowBody(flow.value)
+        if (flow is BudgetFlowState.Ready) CashFlowBody(flow.value, countExpectedIncome)
     }
 }
 
@@ -447,14 +450,18 @@ private fun LinksToConfirm(count: Int) {
 }
 
 @Composable
-private fun IncomeBlock(data: BudgetData) {
+private fun IncomeBlock(data: BudgetData, countExpectedIncome: Boolean) {
     val income = data.budget.income
     Column(Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s1), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-            // Renda recebida e a receber ficam em linhas distintas; prevista não é saldo disponível.
-            LabelledAmount(stringResource(R.string.income_received), income.received.format())
-            LabelledAmount(stringResource(R.string.income_to_receive), income.toReceive.format())
+            // Sem a opção "contar receitas previstas", recebida e a receber ficam em linhas distintas; prevista não é saldo disponível.
+            if (countExpectedIncome) {
+                LabelledAmount(stringResource(R.string.income_month), (income.received + income.toReceive).format())
+            } else {
+                LabelledAmount(stringResource(R.string.income_received), income.received.format())
+                LabelledAmount(stringResource(R.string.income_to_receive), income.toReceive.format())
+            }
         }
     }
 }

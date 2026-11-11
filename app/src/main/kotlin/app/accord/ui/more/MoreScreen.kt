@@ -112,7 +112,7 @@ data class MoreUiState(
     val review: PendingQueueUiState = PendingQueueUiState(),
     val session: SessionState = SessionState.Valid,
     val entriesCriterion: DateCriterion = DateCriterion.PurchaseDate,
-    val includeExpectedIncome: Boolean = false,
+    val includeExpectedIncome: Boolean = true,
     /** Modo e paleta deste aparelho, só para o subtítulo da linha Aparência. */
     val themePreference: ThemePreference = ThemePreference.System,
     val themePalette: ThemePalette = ThemePalette.Accord,

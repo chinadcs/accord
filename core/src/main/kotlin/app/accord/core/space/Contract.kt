@@ -1333,6 +1333,9 @@ data class EntrySummary(
 
     /** Renda recebida menos despesa comprometida, sobre as mesmas linhas filtradas. */
     val balance: Money get() = receivedIncomes - committedExpenses
+
+    /** Como [balance], mas contando também a renda prevista (opção "contar receitas previstas", padrão do app). */
+    val balanceWithExpected: Money get() = incomes - committedExpenses
 }
 
 /**

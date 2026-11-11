@@ -77,7 +77,7 @@ Acompanhar
 Neste aparelho
   Notificações                     [Ligadas/Desligadas/Falta permissão]  [>]
   Data nos lançamentos             [Data da compra/Mês do orçamento]    [>]
-  Incluir receitas previstas no resumo mensal            [desligado]
+  Contar receitas previstas como recebidas               [ligado]
   Aparência                        [modo · paleta]                       [>]
   Ajustes do Chat                                                       [>]
   Privacidade e segurança                                               [>]
@@ -104,7 +104,7 @@ Manter uma ação principal por estado. Explicações e opções avançadas fica
 - **Neste aparelho:**
   - **Notificações** (fusão): a linha só navega e mostra o estado real do sistema; a tela tem a chave, o botão Permitir e duas entradas, [27 — Preferências de alertas](27-preferencias-de-alertas.md) ("Alertas de excesso") e **Notificações de bancos** (ADR 0069, `accord-bced`: escolha, app a app e sem nenhum por padrão, dos apps cujas notificações o Accord lê para propor lançamentos em Revisar; mostra se o acesso do Android está concedido e abre os ajustes do sistema; o texto lido nunca é guardado).
   - **Data nos lançamentos:** linha com o valor atual (Data da compra / Mês do orçamento) que abre uma folha de seleção; preferência local.
-  - **Receitas previstas no resumo mensal** (accord-t1pi): opção local “Incluir receitas previstas no resumo mensal”, desligada por padrão, com apoio “Soma ao valor recebido as receitas previstas para o mês.” Muda apenas o total de Receitas do mês na Início; não altera o saldo acumulado, a despesa nem dados compartilhados.
+  - **Contar receitas previstas como recebidas** (`accord-t1pi`, ampliada em `accord-imj1`): opção local, **ligada por padrão** (decisão do usuário em 11/11/2026), com apoio “Receitas do mês, Saldo total, Orçamento e a previsão somam o que está previsto junto do que já foi recebido.” Ligada, o Saldo total e Receitas do mês da Início somam renda recebida e prevista; o bloco de renda e o Fluxo do mês do Orçamento mostram uma linha “Receitas do mês” e um só resultado; a previsão da Início usa o mesmo total. Desligada, valem as leituras separadas (só recebida; “se a prevista chegar”). A margem para gastar não usa renda e não muda. É por aparelho: não sincroniza nem altera dados compartilhados, e duas pessoas do espaço podem ver totais diferentes.
   - **Aparência:** modo Sistema/Claro/Escuro, paletas Accord, Catppuccin, Midnight Dusk, Nord, Tako, Tidal Wave e Tokyo Night e cantos Arredondados/Discretos, salvos só neste aparelho.
   - **Ajustes do Chat** (fusão, com rota própria): modelo [25 — Modelo no aparelho](25-modelo-no-aparelho.md), exportar, importar e limpar histórico e, quando houver, chats de espaços encerrados.
   - **Privacidade e segurança** (fusão): bloqueio local e Privacidade e dados na mesma tela, em duas seções; a coleta opcional do Chat é por pessoa e revogável aqui (ADR 0054). Segurança tem a chave **Permitir prints de tela** (desligada por padrão; ligada, prints, gravações e a prévia em apps recentes mostram valores; vale só neste celular). Privacidade e dados mostra o **uso do Chat nos últimos 7 dias**, a exportação e, no bloco "Excluir conta, excluir ou zerar o espaço", o **reset do espaço** (ADR 0088, abaixo).

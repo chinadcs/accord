@@ -44,10 +44,10 @@ class HomeBalanceUiTest {
     @get:Rule val compose = createComposeRule()
 
     private fun brl(reais: Long) = Money(reais * 100)
-    private fun home(balance: HomeBalanceState, onBalanceRetry: () -> Unit = {}, fontScale: Float = 1f, theme: ThemePreference = ThemePreference.System) = compose.setContent {
+    private fun home(balance: HomeBalanceState, onBalanceRetry: () -> Unit = {}, fontScale: Float = 1f, theme: ThemePreference = ThemePreference.System, countExpectedIncome: Boolean = false) = compose.setContent {
         val density = LocalDensity.current
         CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
-            AccordTheme(theme) { HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, balance = balance, onBalanceRetry = onBalanceRetry) }
+            AccordTheme(theme) { HomeScreen(PaddingValues(), PendingQueueUiState(loading = false), {}, {}, balance = balance, includeExpectedIncome = countExpectedIncome, onBalanceRetry = onBalanceRetry) }
         }
     }
 
@@ -61,7 +61,7 @@ class HomeBalanceUiTest {
         home(HomeBalanceState.Ready(TotalBalance(total, month)))
         compose.onNodeWithText("Saldo total").assertIsDisplayed()
         compose.onNodeWithText(brl(750).format()).assertIsDisplayed() // 1000 − (300 − 50)
-        compose.onNodeWithText("Receita do mês").assertIsDisplayed()
+        compose.onNodeWithText("Receitas do mês").assertIsDisplayed()
         compose.onNodeWithText(brl(400).format()).assertIsDisplayed()
         compose.onNodeWithText("Despesa do mês").assertIsDisplayed()
         compose.onNodeWithText(brl(100).format()).assertIsDisplayed() // do mês: 120 − 20
@@ -79,10 +79,10 @@ class HomeBalanceUiTest {
         home(HomeBalanceState.Ready(TotalBalance(total, month)))
         compose.onNodeWithTag(iconTag(Lucide.drawable.lucide_ic_arrow_down_left), useUnmergedTree = true).assertIsDisplayed()
         compose.onNodeWithTag(iconTag(Lucide.drawable.lucide_ic_arrow_up_right), useUnmergedTree = true).assertIsDisplayed()
-        // Os ícones não têm descrição própria: o rótulo "Receita do mês"/"Despesa do mês" é que é lido.
+        // Os ícones não têm descrição própria: o rótulo "Receitas do mês"/"Despesa do mês" é que é lido.
         compose.onNodeWithTag(iconTag(Lucide.drawable.lucide_ic_arrow_down_left), useUnmergedTree = true)
             .assert(SemanticsMatcher.keyNotDefined(SemanticsProperties.ContentDescription))
-        compose.onNodeWithText("Receita do mês").assertIsDisplayed()
+        compose.onNodeWithText("Receitas do mês").assertIsDisplayed()
         compose.onNodeWithText("Despesa do mês").assertIsDisplayed()
     }
 
@@ -90,8 +90,17 @@ class HomeBalanceUiTest {
         home(HomeBalanceState.Ready(TotalBalance(total, month)))
         compose.onNodeWithContentDescription(
             "Saldo total, acumulado até o fim do mês: saldo de ${brl(750).format()}. " +
-                "Receita do mês: ${brl(400).format()}. Despesa do mês: ${brl(100).format()}.",
+                "Receitas do mês: ${brl(400).format()}. Despesa do mês: ${brl(100).format()}.",
         ).assertIsDisplayed()
+    }
+
+    @Test fun contandoPrevistasSaldoEReceitasSomamRecebidaEPrevista() {
+        val total = EntrySummary(brl(300), brl(1500), brl(50), Money.ZERO, receivedIncomes = brl(1000))
+        val month = EntrySummary(brl(120), brl(900), brl(20), Money.ZERO, receivedIncomes = brl(400))
+        home(HomeBalanceState.Ready(TotalBalance(total, month)), countExpectedIncome = true)
+        compose.onNodeWithText("Receitas do mês").assertIsDisplayed() // o rótulo é o mesmo com a opção ligada
+        compose.onNodeWithText(brl(1250).format()).assertIsDisplayed() // 1500 − (300 − 50)
+        compose.onNodeWithText(brl(900).format()).assertIsDisplayed()
     }
 
     @Test fun saldoNegativoELidoPorExtenso() {
@@ -104,7 +113,7 @@ class HomeBalanceUiTest {
 
     @Test fun textoAmpliadoEmpilhaReceitaEDespesaComOsIcones() {
         home(HomeBalanceState.Ready(TotalBalance(total, month)), fontScale = 2f)
-        compose.onNodeWithText("Receita do mês").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Receitas do mês").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Despesa do mês").assertIsDisplayed()
         compose.onNodeWithText(brl(750).format()).assertIsDisplayed()
         compose.onNodeWithTag(iconTag(Lucide.drawable.lucide_ic_arrow_up_right), useUnmergedTree = true).assertIsDisplayed()

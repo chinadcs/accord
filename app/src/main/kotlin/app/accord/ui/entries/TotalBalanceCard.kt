@@ -55,9 +55,7 @@ fun TotalBalanceCard(
     balance: TotalBalance?,
     modifier: Modifier = Modifier,
     subtitle: String = stringResource(R.string.balance_subtitle),
-    incomeOverride: Money? = null,
-    overrideIncome: Boolean = false,
-    incomeLabel: String = stringResource(R.string.entries_balance_income),
+    countExpectedIncome: Boolean = false,
 ) {
     val panel = Accord.colors.financeSurface
     val onPanel = Accord.colors.onFinanceSurface
@@ -70,8 +68,9 @@ fun TotalBalanceCard(
     )
     val title = stringResource(R.string.entries_balance_title)
     val expenseLabel = stringResource(R.string.entries_balance_expense)
-    val totalBalance = balance?.total?.balance
-    val income = if (overrideIncome) incomeOverride else balance?.month?.receivedIncomes
+    val incomeLabel = stringResource(R.string.entries_balance_income)
+    val totalBalance = balance?.total?.let { if (countExpectedIncome) it.balanceWithExpected else it.balance }
+    val income = balance?.month?.let { if (countExpectedIncome) it.incomes else it.receivedIncomes }
     val expense = balance?.month?.committedExpenses
     val stacked = LocalDensity.current.fontScale >= 1.3f
     val reading = when {

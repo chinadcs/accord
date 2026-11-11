@@ -96,7 +96,7 @@ fun HomeScreen(
             retrying = true
             failures.forEach { block ->
                 when (block) {
-                    HomeBlock.Balance, HomeBlock.Income -> onBalanceRetry()
+                    HomeBlock.Balance -> onBalanceRetry()
                     HomeBlock.Review -> onRetry()
                     HomeBlock.Dates -> onUpcomingRetry()
                     HomeBlock.Exceed -> onProjectionRetry()
@@ -111,7 +111,7 @@ fun HomeScreen(
             onReview = onReview, onCommitments = onCommitments, onForecasts = onForecasts,
         )
         AllowanceSummary(allowance, onBudget = onBudget)
-        ForecastSummary(cashFlow, onBudget = onBudget)
+        ForecastSummary(cashFlow, onBudget = onBudget, countExpectedIncome = includeExpectedIncome)
         HomeFooter()
         // O botão flutuante de registro fica sobre o canto inferior; este espaço deixa o último bloco acessível.
         Spacer(Modifier.height(AccordSpacing.fabClearance))
@@ -162,9 +162,7 @@ private fun BalanceCard(state: HomeBalanceState, month: YearMonth?, includeExpec
         is HomeBalanceState.Ready -> TotalBalanceCard(
             state.value,
             subtitle = month?.let { stringResource(R.string.balance_subtitle_month, it.label()) } ?: stringResource(R.string.balance_subtitle),
-            incomeOverride = if (includeExpectedIncome) (state.incomes as? HomeIncomeState.Ready)?.value?.expected else null,
-            overrideIncome = includeExpectedIncome,
-            incomeLabel = stringResource(if (includeExpectedIncome) R.string.entries_balance_income_with_expected else R.string.entries_balance_income),
+            countExpectedIncome = includeExpectedIncome,
         )
     }
 }

@@ -3,6 +3,7 @@
 <resources>
     <string name="monthforecast_title">Previsão até o fim do mês</string>
     <string name="monthforecast_subtitle">Só com a renda recebida</string>
+    <string name="monthforecast_subtitle_counting_expected">Com as receitas do mês, recebidas e previstas</string>
     <string name="monthforecast_loading">Calculando a previsão até o fim do mês…</string>
     <string name="monthforecast_failed">Não foi possível calcular a previsão. Este valor não é zero.</string>
     <string name="monthforecast_no_data">Ainda não há dados para prever o mês</string>
@@ -31,7 +32,6 @@
     <string name="home_refreshed">Informações da Início atualizadas.</string>
     <string name="home_banner_and">e</string>
     <string name="home_banner_block_balance">saldo</string>
-    <string name="home_banner_block_income">receitas do mês</string>
     <string name="home_banner_block_review">pendências</string>
     <string name="home_banner_block_dates">datas dos próximos 7 dias</string>
     <string name="home_banner_block_exceed">estouro de categorias</string>

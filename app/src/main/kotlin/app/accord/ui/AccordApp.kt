@@ -630,9 +630,10 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     val viewModel: BudgetViewModel = viewModel(
                         factory = viewModelFactory { initializer { BudgetViewModel(container, createSavedStateHandle()) } },
                     )
+                    val countExpectedIncome by container.theme.includeExpectedIncomeInHomeSummary.collectAsStateWithLifecycle()
                     PullToRefresh(viewModel::refresh) {
                         BudgetRoute(
-                            viewModel, padding,
+                            viewModel, padding, countExpectedIncome = countExpectedIncome,
                             onOpenCategory = { id, month -> navController.navigate("$ROUTE_CATEGORY/$id/$month") },
                             onClassify = { month -> navController.openFilteredEntries(month, null, EntrySituation.ToClassify) },
                             onRegister = register,
