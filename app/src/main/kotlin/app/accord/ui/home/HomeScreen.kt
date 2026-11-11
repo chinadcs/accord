@@ -26,6 +26,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import app.accord.R
 import app.accord.ui.RootScaffold
+import app.accord.core.Money
+import androidx.compose.ui.text.style.TextAlign
+import app.accord.ui.components.AdaptiveRow
 import app.accord.core.label
 import app.accord.ui.components.MonthSelector
 import app.accord.ui.components.SkeletonBlock
@@ -105,6 +108,7 @@ fun HomeScreen(
             }
         })
         BalanceSection(balance, balanceMonth, currentMonth, onBalanceMonthShift)
+        MonthIncomeCard(cashFlow, currentMonth, onBudget)
         AttentionStrip(
             pending, upcoming, projection,
             onReview = onReview, onCommitments = onCommitments, onForecasts = onForecasts,
@@ -114,6 +118,35 @@ fun HomeScreen(
         HomeFooter()
         // O botão flutuante de registro fica sobre o canto inferior; este espaço deixa o último bloco acessível.
         Spacer(Modifier.height(AccordSpacing.fabClearance))
+    }
+}
+
+/**
+ * Receita do mês atual no topo: recebida mais prevista a receber, com a parte já recebida dita à parte (prevista não é saldo
+ * confirmado). Mesmos números de [MonthCashFlow] da Previsão; sem renda no mês, em carga ou falha, não aparece (a falha é do banner).
+ */
+@Composable
+private fun MonthIncomeCard(state: HomeCashFlowState, month: YearMonth, onBudget: () -> Unit) {
+    val value = (state as? HomeCashFlowState.Ready)?.value ?: return
+    val total = value.receivedCents + value.toReceiveCents
+    if (total <= 0) return
+    Surface(
+        onClick = onBudget, color = MaterialTheme.colorScheme.surfaceContainerLow,
+        shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(
+            Modifier.padding(AccordSpacing.s4).semantics(mergeDescendants = true) {},
+            verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
+        ) {
+            AdaptiveRow(
+                start = { Text(stringResource(R.string.home_income_title, month.label()), style = MaterialTheme.typography.titleMedium) },
+                end = { Text(Money(total).format(), style = Accord.typography.amountRow, textAlign = TextAlign.End) },
+            )
+            Text(
+                stringResource(R.string.home_income_split, Money(value.receivedCents).format(), Money(value.toReceiveCents).format()),
+                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }
 

@@ -23,6 +23,9 @@
     <string name="monthforecast_outflows_none_description">Saídas: nenhum gasto previsto no mês.</string>
     <string name="monthforecast_legend">Cheio: já confirmado · tracejado: previsto</string>
 
+    <string name="home_income_title">Receita de %1$s</string>
+    <string name="home_income_split">%1$s já recebidos · %2$s ainda a receber</string>
+
     <string name="home_banner_title">Parte das informações não carregou</string>
     <string name="home_banner_support">Não foi possível carregar: %1$s. Isso não significa valor zero nem que não há itens.</string>
     <string name="home_banner_updating_title">Atualizando as informações</string>
