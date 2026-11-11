@@ -1,5 +1,7 @@
 # 09 — Registro manual e edição
 
+> **REMODELAGEM PROPOSTA, AINDA NÃO ACEITA NEM IMPLEMENTADA — 11/11/2026 ([ADR 0089](../adr/0089-remodelagem-das-telas-de-lancamentos.md), `accord-h8j5`):** a seção "Alvo" no fim deste arquivo descreve a tela como **ficaria**, não o que está implementado nem uma decisão aceita. Até o aceite e a implementação, o texto abaixo continua sendo a referência do comportamento atual. Sem código alterado e sem validação em emulador, Galaxy S20 FE/S23 FE, TalkBack ou movimento reduzido.
+
 > **Validação vigente — 09/11/2026 (`accord-rub9`):** MainActivity fixa em retrato; validar em retrato e fonte padrão, com teclado, temas, TalkBack e movimento reduzido. Por decisão explícita do usuário, paisagem e fonte a 200% deixam de ser critérios de aceite ou etapas dos roteiros. Referências anteriores a essa matriz são históricas, não exigências atuais. Isso não comprova validação nem remove as adaptações de acessibilidade existentes.
 
 Prioridade: **P0** · Documento de UX · Revisão: **23/10/2026**  
@@ -205,3 +207,71 @@ Aceite: dois cartões com compras no mesmo mês mantêm faturas e quitações in
 - **Edição de ocorrência de renda recorrente (`accord-vw0a`):** a série de renda não tem categoria de despesa, então a edição da ocorrência não a exige nem a mostra; antes, isso impedia salvar. A exclusão da ocorrência saiu da edição e fica só no detalhe ([08](08-detalhe-lancamento.md)).
 - **Despesa por Pix ou débito, "Alguém me deve isso" (ADR 0083, `accord-oldt.4`):** a chave leva valor, conta e data ao formulário de **Novo valor a receber** da tela [39](39-quem-me-deve.md); ao salvar, volta a Quem me deve, e desligar lá devolve ao registro de despesa sem perder o rascunho. Fora desta entrega: a saída ainda não aparece como linha em Lançamentos e os previstos não entram na previsão do Início (ver §10 da 39).
 - **Compra no dia do fechamento (ADR 0079):** ao prever a fatura de uma compra no cartão, até o dia do fechamento, inclusive, a compra entra na fatura que fecha nele (detalhe em [12](12-cartao-e-faturas.md)).
+
+## Alvo — remodelagem (11/11/2026, ADR 0089)
+
+Proposta do [ADR 0089](../adr/0089-remodelagem-das-telas-de-lancamentos.md) (`accord-h8j5`), com as escolhas do usuário de 10 e 11/11/2026. Descreve o alvo; **não** está aceita nem implementada. Regras financeiras, de datas, de alcance e de sincronização das seções anteriores não mudam. Cores e bordas seguem o [ADR 0085](../adr/0085-remodelagem-de-cores-e-camadas.md). Mockup antes/depois: Artifact privado da sessão.
+
+### Formulário único
+
+Novo e edição usam os mesmos campos, na mesma ordem e com os mesmos controles:
+
+```text
+←  Nova despesa                            fixo
+Valor (R$)                        68,00    destaque, foco inicial
+Descrição        Delivery
+Categoria        Alimentação › Delivery ▾
+Data             (Hoje) (Ontem) (Outra data)
+Pagamento        (Pix) (Débito) (Dinheiro) (Boleto)
+Conta            Itaú · Salário ▾
+Mais opções ▾    Parcelas, repetição e pagamento
+----------------------------------------
+[         Salvar lançamento         ]      fixo
+```
+
+- **Título pelo tipo:** "Nova despesa", "Nova despesa no cartão", "Nova receita"; "Editar despesa", "Editar compra parcelada", "Editar despesa recorrente", "Editar receita". O tipo continua vindo do botão "+" (Receita / Despesa / Despesa no cartão); não há alternância dentro do formulário.
+- **Ordem:** aviso de contexto (só na edição) → Valor → Descrição → Categoria (ou Categoria de receita) → Data → Pagamento → Cartão (chips lado a lado) ou Conta (com logo) → Mais opções → fatura estimada e cronograma → barra fixa.
+- **Data:** chips Hoje / Ontem / Outra data também na edição. Rótulos: "Data", "Data da compra", "Vencimento", "Data prevista do recebimento".
+- **Seletores:** categoria, categoria de receita, conta e fatura abrem em painel inferior.
+- **Mantidos:** Mais opções (Alguém me deve isso, Parcelas, Repete, Já pago / Já recebido), fatura estimada com "a conferir" e "Corrigir fatura", cronograma, "Previsão de X → pago em Y", rascunho recuperado, faixa de conversão (P2), "Sair sem salvar?", erro junto do campo e foco no primeiro erro.
+
+### Edição
+
+- **Forma de pagamento:** em Pix, Débito e Dinheiro os chips de Pagamento ficam editáveis e trocam entre si, mantendo a identidade ([ADR 0029](../adr/0029-troca-de-forma-de-pagamento-como-comando.md)). Cartão, boleto, receita, recorrência e importados não trocam de forma por esta tela. Trocar a forma e corrigir outro campo no mesmo salvar gera duas operações e dois "Desfazer".
+- **Recorrência:** aviso no topo ("Ocorrência de 10/11/2026. Ao salvar, você escolhe se a mudança vale só para esta ou para esta e as próximas."). O vencimento aparece só para leitura ("Definido pela recorrência"). Ao tocar em "Salvar alterações" com mudança, abre o painel abaixo, sem opção marcada ([ADR 0011](../adr/0011-alcance-de-recorrencias.md)). Se o alcance tocar em ocorrências já pagas ou recebidas, ou substituir ajustes próprios de ocorrências futuras, o mesmo painel lista quais e pede confirmação.
+
+```text
+Aplicar a quais ocorrências?
+Você mudou: Valor R$ 1.000,00 → R$ 1.200,00
+( ) Só esta ocorrência
+    10/11/2026. As próximas continuam como estão.
+( ) Esta e as próximas
+    De 10/11/2026 em diante. As anteriores não mudam.
+[ Cancelar ]            [ Salvar ]  (inativo até escolher)
+```
+
+- **Compra parcelada:** aviso no topo ("Compra em 6 parcelas. Descrição e categoria valem para todas as 6, inclusive as anteriores."), valor e número de parcelas só para leitura, botão "Excluir e registrar de novo", nota "Mudar a data não muda as faturas" sob a data, cartão só para leitura e botão "Salvar nas 6 parcelas" ([ADR 0010](../adr/0010-identidade-da-compra-parcelada.md)). Sem pergunta de alcance.
+- **"Excluir e registrar de novo" (a confirmar no aceite):** abre o formulário de despesa no cartão preenchido com descrição, categoria, data e cartão da compra. Não existe operação única; a proposta é excluir a compra original só quando a nova for salva, para que desistir no meio não perca nada.
+
+### Critérios de aceite do alvo
+
+- Registro e edição do mesmo tipo mostram os campos na mesma ordem, com os mesmos controles (valor em destaque, chips de data, logo na conta).
+- Editar uma ocorrência sem escolher o alcance não salva; o painel mostra o campo alterado e as duas datas de corte.
+- Na compra parcelada, mudar a categoria aplica às N parcelas e o botão de salvar diz isso; valor e parcelas não são editáveis.
+- Trocar Pix por Débito na edição mantém o mesmo lançamento na lista, sem duplicar.
+- Os 15 critérios da §9 continuam valendo.
+- Teclado não cobre a barra de salvar; ao fechar um painel, o foco volta ao controle que o abriu.
+
+### Divergências que este alvo resolve na spec
+
+- §1 diz que o uso cotidiano começa no Chat (substituído pelo ADR 0067) e §4 põe o botão "+" só em Orçamento e Lançamentos; pelo [ADR 0071](../adr/0071-ordem-das-abas-saldo-e-botao-de-registro-no-inicio.md) ele também está no Início.
+- §4 e o plano §14 dizem que dinheiro não pede conta; desde o ADR 0051 o dinheiro usa a conta Carteira.
+- §3 dá a ordem Valor → Descrição → Data → Pagamento → Categoria → Conta; o código atual faz Valor → Cartão/Pagamento → Descrição → Data → Categoria → Conta; o alvo fixa uma ordem única.
+- §4 promete atalho para excluir e registrar de novo; hoje é só texto.
+- §3 mostra "Salvar correção" e "Cancelar" na edição; o código tem "Salvar alterações".
+- A categoria de receita ([ADR 0038](../adr/0038-categorias-de-renda.md)) e o seletor de cartão não estão no wireframe §3.
+- A data da ocorrência não é editável no código e a spec não dizia.
+
+### Não feito
+
+Sem código, build, testes ou validação em emulador, Galaxy S20 FE/S23 FE, TalkBack e movimento reduzido.

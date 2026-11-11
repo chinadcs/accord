@@ -1,5 +1,7 @@
 # 08 — Detalhe do lançamento
 
+> **REMODELAGEM PROPOSTA, AINDA NÃO ACEITA NEM IMPLEMENTADA — 11/11/2026 ([ADR 0089](../adr/0089-remodelagem-das-telas-de-lancamentos.md), `accord-h8j5`):** a seção "Alvo" no fim deste arquivo descreve a tela como **ficaria**, não o que está implementado nem uma decisão aceita. Até o aceite e a implementação, o texto abaixo continua sendo a referência do comportamento atual. Sem código alterado e sem validação em emulador, Galaxy S20 FE/S23 FE, TalkBack ou movimento reduzido.
+
 > **Validação vigente — 09/11/2026 (`accord-rub9`):** MainActivity fixa em retrato; validar em retrato e fonte padrão, com teclado, temas, TalkBack e movimento reduzido. Por decisão explícita do usuário, paisagem e fonte a 200% deixam de ser critérios de aceite ou etapas dos roteiros. Referências anteriores a essa matriz são históricas, não exigências atuais. Isso não comprova validação nem remove as adaptações de acessibilidade existentes.
 
 Prioridade: **P0** · Documento de UX · Revisão: **23/10/2026**  
@@ -155,3 +157,64 @@ prioridades desta spec. Execução e pendências ficam em `accord-foxp`; documen
 ## Excluir ocorrência de recorrência — 10/11/2026 (`accord-vw0a`, `accord-ozj5`)
 
 Na ocorrência de uma série recorrente (despesa ou renda), o detalhe tem **Excluir ocorrência**, em destaque de erro, que abre "Excluir quais ocorrências?" com as duas escolhas da recorrência: **só esta** ("A série continua nas datas seguintes") ou **esta e as próximas** ("A série termina antes desta ocorrência"). Se alguma ocorrência afetada já foi paga ou recebida, a confirmação lista quais antes de excluir; Cancelar mantém tudo. Só esta ação exclui: a **edição** ([09](09-registro-manual.md)) não tem mais botão de excluir, para o alcance de edição e o de exclusão não se misturarem. Ocorrências anteriores, pagamentos e a identidade da série ficam preservados, como na regra de recorrência. Testes automatizados atualizados; sem validação nos Galaxy nem com TalkBack.
+
+## Alvo — remodelagem (11/11/2026, ADR 0089)
+
+Proposta do [ADR 0089](../adr/0089-remodelagem-das-telas-de-lancamentos.md) (`accord-h8j5`), com as escolhas do usuário de 10 e 11/11/2026. Descreve o alvo; **não** está aceita nem implementada. Regras financeiras, de datas, de alcance e de sincronização das seções anteriores não mudam. Cores e bordas seguem o [ADR 0085](../adr/0085-remodelagem-de-cores-e-camadas.md). Mockup antes/depois: Artifact privado da sessão.
+
+### Layout (parcela de compra no cartão)
+
+```text
+←  Parcela de compra                 ⋮     fixo
+[EQ] Equipamento
+     Parcela 2 de 6
+     − R$ 200,00
+     Compra de R$ 1.200,00 em 6×
+Detalhes
+  Data da compra   25/09/2026
+  Categoria        Eletrônicos
+  Cartão           Itaú Visa
+  Fatura           11/26            ›
+  Registrado por   Você · manual
+Parcelas
+  1/6  10/26  R$ 200,00  Paga
+▸ 2/6  11/26  R$ 200,00  Esta
+  3/6  12/26  R$ 200,00
+  Ver todas as parcelas             ›
+Salvo no aparelho
+----------------------------------------
+[          Editar a compra          ]      fixo
+```
+
+### Blocos
+
+- **Barra superior fixa:** Voltar, título pelo tipo (Despesa, Receita, Parcela de compra, Compra no cartão, Despesa recorrente, Receita recorrente, Estorno, Pagamento de fatura) e menu ⋮ ("Mais ações").
+- **Herói:** ícone (tocar troca o ícone, [ADR 0047](../adr/0047-associacao-de-icone-de-marca-ao-lancamento.md)), descrição, valor neutro com sinal e uma linha que diz o que o valor é: "Parcela 2 de 6" com "Compra de R$ 1.200,00 em 6×"; "Ocorrência de 10/11/2026"; na compra vista pelo total, "6× de R$ 200,00". Situação de pagamento no herói ("Pago em …", "A pagar").
+- **Ação do momento, sob o herói:** interruptor Pago/Recebido com "Ajustar" (boleto e receita); "Registrar pagamento" ou "Registrar recebimento" (ocorrência); faixa de atenção "Fatura estimada: 12/26, a conferir [Conferir fatura]" ([ADR 0049](../adr/0049-fatura-escolhida-por-ocorrencia-recorrente-no-cartao.md)) e "Confirmar que não foram cobradas".
+- **Detalhes:** pares rótulo/valor conforme o tipo: Data, Data da compra, Vencimento, Pagamento, Data prevista, Recebido em, Mês do orçamento, Valor previsto e efetivo, Categoria (de receita, quando receita; "Sem categoria" se não houver), Forma, Cartão, Fatura, Conta com logo, Registrado por e origem, Quem gastou. Rodapé com a situação do item ("Salvo no aparelho", "Aguardando envio", "Sincronizado", "Conflito", "Falha").
+- **Seções por tipo:** Parcelas (número, fatura, valor e situação, com a atual marcada por marcador e texto "Esta"; "Ver todas as parcelas"); Estornos (com "Confirmar" na linha do estorno pendente); Recorrência ("Ver a recorrência"); boleto ("Ver o boleto").
+- **Barra inferior fixa:** um botão, "Editar" ou "Editar a compra" (parcela). Ausente em estorno, pagamento de fatura e item excluído.
+- **Menu ⋮:** Trocar ícone · Registrar estorno · Corrigir fatura · Pedir cancelamento de parcelas · por último, com ícone e cor de erro, "Excluir…", "Excluir a compra (6 parcelas)…" ou "Excluir ocorrência…".
+- **Painéis e diálogos:** ações vinculadas (data, valor, parcelas) e o alcance de "Excluir ocorrência" abrem em painel inferior com botão fixo; o alcance segue sem pré-seleção. Confirmações de exclusão simples, a conferência extra (fatura quitada ou importado), "mudou depois que abriu" e "não foi possível" continuam diálogo.
+- **Desfazer:** aviso global; após excluir aparece na lista, após editar ou ligar o interruptor aparece no detalhe, acima da barra "Editar". Só aparece quando a operação é desfazível; a escolha de ícone e a fatura da ocorrência não entram (ADRs 0047 e 0049).
+- **Mantidos:** faixa "Este lançamento foi excluído", link "Originado da intenção" (P2), estados de não encontrado, carregando e erro.
+
+### Critérios de aceite do alvo
+
+- Numa parcela, o herói mostra o valor da parcela e o total da compra com rótulos distintos, o botão diz "Editar a compra" e a exclusão diz "Excluir a compra (N parcelas)…".
+- Uma receita mostra sua categoria de receita ou "Sem categoria", nunca "a classificar".
+- Compra no cartão mostra qual cartão foi usado.
+- Nenhuma ação atual fica sem lugar: cada uma está sob o herói, na linha que resolve, na barra fixa ou no ⋮ (mapa de destino no mockup).
+- "Excluir ocorrência…" pergunta o alcance sem opção marcada e lista as ocorrências pagas afetadas.
+- TalkBack: foco no título ao abrir; ao fechar o ⋮ o foco volta a ele; as ações do ⋮ também existem como ações personalizadas do herói; cada par lê "rótulo, valor".
+
+### Divergências que este alvo resolve na spec
+
+- §1 diz que o uso cotidiano começa no Chat; desde o [ADR 0067](../adr/0067-inicio-como-abertura-e-revisar-em-mais.md) começa no Início.
+- O wireframe §3 mostra o herói com o total e "[Editar] [Ver compromisso]" lado a lado; o código mostra a parcela e empilha os botões.
+- O seletor de ícone de marca (ADR 0047) não está descrito em nenhuma spec; passa a constar aqui.
+- §4 prevê consulta aos campos originais de importação e link para a fatura; o alvo mantém o par "Fatura" com seta e não acrescenta a consulta aos originais, que segue pendente.
+
+### Não feito
+
+Sem código, build, testes ou validação em emulador, Galaxy S20 FE/S23 FE, TalkBack e movimento reduzido. O link da situação "Conflito" para a tela de conflito ficou fora desta proposta.

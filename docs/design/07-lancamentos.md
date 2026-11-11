@@ -1,5 +1,7 @@
 # 07 — Lançamentos
 
+> **REMODELAGEM PROPOSTA, AINDA NÃO ACEITA NEM IMPLEMENTADA — 11/11/2026 ([ADR 0089](../adr/0089-remodelagem-das-telas-de-lancamentos.md), `accord-h8j5`):** a seção "Alvo" no fim deste arquivo descreve a tela como **ficaria**, não o que está implementado nem uma decisão aceita. Até o aceite e a implementação, o texto abaixo continua sendo a referência do comportamento atual. Sem código alterado e sem validação em emulador, Galaxy S20 FE/S23 FE, TalkBack ou movimento reduzido.
+
 > **Atualização — 09/11/2026 (`accord-wecg`, [ADR 0071](../adr/0071-ordem-das-abas-saldo-e-botao-de-registro-no-inicio.md)):** o Início traz o card Saldo total (movido de Lançamentos), usa esqueleto (skeleton) enquanto qualquer painel carrega, tem o botão flutuante de registro no lugar do botão “Registrar manualmente” e não mostra a situação de sincronização, que fica só em Mais.
 
 > **Navegação vigente — 09/11/2026 (`accord-b6og`):** Início é a abertura após configuração; primeiro uso continua em Primeiros passos. Barra: Lançamentos, Orçamento, Chat central, Início, Mais. Revisar fica em Mais e tem atalho no Início, com indicadores de pendências locais em Início/Mais. Esta decisão substitui referências anteriores ao Chat como abertura e a Revisar como aba. [ADR 0067](../adr/0067-inicio-como-abertura-e-revisar-em-mais.md) · [Spec Início](inicio.md).
@@ -208,3 +210,78 @@ entalhe. `EntriesFlowTest` 5/5 em 100%; em 200% o teste tem duas falhas que exis
 mudança (conferido ao reverter o rótulo: `excluirPeloDetalhe…` e `conferirLancamentosDaCategoria…`,
 não projetados para 200%). O roteiro `buscaFiltra…` falhava em 200% por usar um nó rolável
 ambíguo (o campo de busca com texto longo também rola); agora usa só a rolagem vertical da lista.
+
+## Alvo — remodelagem (11/11/2026, ADR 0089)
+
+Proposta do [ADR 0089](../adr/0089-remodelagem-das-telas-de-lancamentos.md) (`accord-h8j5`), com as escolhas do usuário de 10 e 11/11/2026. Descreve o alvo; **não** está aceita nem implementada. Regras financeiras, de datas, de alcance e de sincronização das seções anteriores não mudam. Cores e bordas seguem o [ADR 0085](../adr/0085-remodelagem-de-cores-e-camadas.md). Mockup antes/depois: Artifact privado da sessão.
+
+### Layout
+
+```text
+‹        Novembro 2026 ▾        ›      fixo (título da tela)
+[ Buscar lançamentos        ] [Filtros 2]   fixo
+(Alimentação ✕) (Pix ✕)  Limpar        fixo, só com filtro ativo
+----------------------------------------
+↙ Receitas            + R$ 6.500,00
+  R$ 500,00 a receber
+↗ Despesas            − R$ 3.200,00
+Resultado             + R$ 3.300,00
+22 lançamentos
+(Todos) (Despesas) (Receitas)
+(Por data da compra ▾)
+Hoje
+[MX] Mercado Extra       − R$ 152,30
+     Alimentação · Pix
+[NF] Netflix              − R$ 39,90
+     Assinaturas · Itaú Visa
+     ⚠ Fatura a conferir
+Ontem
+[SA] Salário           + R$ 6.000,00
+     Salário · Itaú         Recebido
+sex., 6 de nov.
+[EQ] Equipamento         − R$ 200,00
+     Eletrônicos · Parcela 2/6
+     Fatura 11/26                 (+)
+```
+
+### Blocos
+
+- **Topo fixo:** barra de mês (tocar no mês abre o seletor; em intervalo mostra "Set – Nov 2026"; fora do mês atual aparece o chip "Mês atual"; aberta por outra tela, ganha Voltar), busca "Buscar lançamentos" com limpar, botão compacto de filtros com contagem e linha de chips dos filtros ativos, cada um removível, com "Limpar". A busca não vira chip. Com fonte a partir de 1,3 ou altura compacta, só a barra de mês fica fixa e o resto rola.
+- **Resumo:** Receitas (`income`) e Despesas (`expense`) com sinal, ícone de direção e rótulo; "R$ x a receber" é a receita prevista ainda não recebida; Resultado neutro, com sinal; "N lançamentos". Em carregamento ou falha mostra "—", nunca zero. **Despesas aqui é o total bruto da lista, pelo critério de data da lista, sem abater estornos; não é a "Despesa" do Início** (comprometida, líquida de estornos, pelo mês do orçamento).
+- **Filtro rápido:** Todos / Despesas / Receitas.
+- **Critério de data:** chip "Por data da compra ▾" ou "Por mês do orçamento ▾", com painel que explica cada um (cada compra uma vez pelo total; as parcelas que vencem no mês). Vale só para a lista aberta. O padrão continua em Mais › Data nos lançamentos e o Início não muda.
+- **Dia:** "Hoje", "Ontem" ou "sex., 6 de nov.", como título para leitor de tela. Sem total por dia.
+- **Linha (altura mínima 64 dp, ícone de 40 dp):** descrição em uma linha com reticências e valor neutro com sinal (despesa "−", receita e estorno "+", pagamento de fatura sem sinal); categoria com ícone e nome curto · forma (com dois ou mais cartões, o apelido do cartão) · "Parcela 2/6" (nunca `1/1`); à direita, sob o valor, "Pago", "A pagar", "Recebido" ou "Previsto" só nos tipos em que hoje já aparecem. Terceira linha só quando houver "Fatura MM/AA" ou etiqueta de atenção (A classificar, Fatura a conferir, Vencido, Cancelamento solicitado, Pagamento divergente). "Estorno" e "Pagamento de fatura" como etiqueta neutra. Tocar abre o Detalhe (08).
+- **Painel de filtros:** Período ("Um mês" / "Intervalo" De–Até); Categoria (linha que abre a grade de categorias, com "Todas as categorias"); Categoria de receita; Forma de pagamento; Cartão (com dois ou mais cartões); Conta; Situação em dois grupos (pedem atenção; pagamento). Rodapé fixo "Limpar" (zera tudo menos período e critério; só vale ao aplicar) e "Ver N lançamentos" (se a contagem falhar ou demorar, "Aplicar"). ✕ e Voltar descartam o rascunho. Sem filtro por pessoa.
+- **Mantidos:** botão "+" com Receita / Despesa / Despesa no cartão, seletor de mês, carga progressiva, puxar para atualizar na aba, preservação de busca, filtros e posição ao voltar do detalhe.
+
+### Estados
+
+- Carregando sem linhas: esqueleto. Carregando com linhas: mantém o resultado anterior.
+- Vazio sem filtro: "Nenhum lançamento por aqui", "Registrar manualmente" e "Importar do banco". Vazio por filtro: "Limpar filtros". Busca sem resultado no mês: oferece "Buscar nos últimos 12 meses".
+- Erro: mantém a consulta e o resultado anterior, com "Tentar de novo".
+- Não há situação de sincronização por linha (o dado não existe; [ADR 0071](../adr/0071-ordem-das-abas-saldo-e-botao-de-registro-no-inicio.md)).
+
+### Critérios de aceite do alvo
+
+- Com a lista rolada, mês, busca e filtros continuam visíveis (fonte padrão).
+- Cada filtro ativo aparece como chip e sai com um toque, sem abrir o painel; a contagem do botão acompanha.
+- Receitas − Despesas = Resultado; Resultado sem verde nem vermelho; Receitas e Despesas legíveis sem cor (sinal, ícone e rótulo).
+- "Receitas" mostra só receitas; "Despesas" mostra só despesas; total e resumo acompanham o filtro em todas as páginas.
+- Trocar o critério no chip muda a lista e o resumo e não altera a preferência de Mais nem o Início.
+- Compra de 1.200 em 6× por mês do orçamento aparece como "− R$ 200,00" com "Parcela n/6"; por data da compra, uma vez com o total.
+- TalkBack lê a linha dizendo o tipo por extenso ("Despesa, Mercado Extra, 152 reais e 30 centavos, Alimentação, Pix"); o ✕ de cada chip tem alvo de 48 dp e anuncia "Remover filtro: …".
+- Os critérios das §§5–9 que não conflitam com este alvo continuam valendo.
+
+### Divergências que este alvo resolve na spec
+
+- §4 ainda descreve o card "Saldo total" e o botão Filtros dentro dele; ambos saíram com o ADR 0071.
+- O wireframe §3 e o aviso de navegação do topo trazem a ordem antiga da barra; a vigente é Início, Lançamentos, Chat, Orçamento, Mais (ADR 0071).
+- §3 mostra "Critério: … [Alterar]" na lista; hoje a troca só existe em Mais › Neste aparelho › Data nos lançamentos (ADR 0077).
+- §4 prevê filtro de autoria; o alvo não o inclui.
+- §6 pede marcar sincronização nas linhas; o alvo retira esse pedido.
+- §4 decidiu em 07/11 (`accord-qv3n`) o resumo sem linhas por tipo e com resultado em verde ou vermelho; o alvo substitui só isso.
+
+### Não feito
+
+Sem código, build, testes ou validação em emulador, Galaxy S20 FE/S23 FE, TalkBack e movimento reduzido. Os testes instrumentados que citam rótulos e a estrutura atuais migram na fatia que os quebrar (lista no ADR 0089).
