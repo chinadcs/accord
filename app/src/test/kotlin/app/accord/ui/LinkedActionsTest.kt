@@ -17,6 +17,7 @@ import app.accord.core.space.InstallmentView
 import app.accord.core.space.IncomeView
 import app.accord.core.space.ItemSync
 import app.accord.core.space.PayBoleto
+import app.accord.core.space.PayOccurrence
 import app.accord.core.space.PurchaseDetail
 import app.accord.core.space.ReceiveIncome
 import app.accord.core.space.RefundStatus
@@ -40,6 +41,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNull
 import app.accord.core.space.UndoBoletoPayment
 import app.accord.core.space.UndoIncomeReceipt
+import app.accord.core.space.UndoOccurrencePayment
 import kotlin.test.assertNotNull
 import kotlin.test.assertFalse
 import app.accord.core.space.Settlement
@@ -221,7 +223,20 @@ class LinkedActionsTest {
     private fun occurrenceDetail(o: OccurrenceView) = detail(EntryKind.RecurrenceOccurrence).copy(occurrence = o)
 
     @Test
-    fun ocorrenciaNoCartaoOfereConferirFaturaComAEstimadaEAsVizinhas() {
+    fun interruptorDeOcorrenciaForaDoCartaoLigaComPayOccurrenceEDesligaComUndoOccurrencePayment() {
+        val income = occurrence(form = RecurrenceForm.OffCard, kind = RecurrenceKind.Income, assignment = null).copy(paid = true, settledDate = today)
+        val sw = assertNotNull(settleSwitch(occurrenceDetail(income)))
+        assertTrue(sw.on)
+        assertTrue(sw.receiving)
+        val off = assertIs<UndoOccurrencePayment>(sw.command(turnOn = false, today))
+        assertEquals("rec" to 3, off.recurrenceId to off.occurrence)
+        assertEquals(4L, off.expectedRevision)
+        assertEquals(3, assertIs<PayOccurrence>(sw.command(turnOn = true, today)).occurrence)
+        assertNull(settleSwitch(occurrenceDetail(occurrence())), "ocorrência no cartão é paga pela fatura")
+    }
+
+    @Test
+    fun ocorrenciaNoCartaoOfereceConferirFaturaComAEstimadaEAsVizinhas() {
         val action = availableActions(occurrenceDetail(occurrence())).single()
         assertIs<LinkedAction.OccurrenceInvoice>(action)
         assertEquals(listOf(YearMonth.of(2026, 10), YearMonth.of(2026, 11), YearMonth.of(2026, 12)), action.options)

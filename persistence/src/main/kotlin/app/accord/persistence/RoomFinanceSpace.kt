@@ -122,6 +122,7 @@ import app.accord.core.space.SetAccountBalance
 import app.accord.core.space.TransferBetweenAccounts
 import app.accord.core.space.UndoBoletoPayment
 import app.accord.core.space.UndoIncomeReceipt
+import app.accord.core.space.UndoOccurrencePayment
 import app.accord.core.space.RegisterBoleto
 import app.accord.core.space.RegisterCardPurchase
 import app.accord.core.space.RenameCategory
@@ -310,6 +311,7 @@ class RoomFinanceSpace private constructor(
         is EditRecurrence -> recurrencePlanner.planEdit(command)
         is DeleteRecurrence -> recurrencePlanner.planDelete(command)
         is PayOccurrence -> recurrencePlanner.planPay(session, command)
+        is UndoOccurrencePayment -> recurrencePlanner.planUndoPay(command)
         is CorrectOccurrenceInvoice -> recurrencePlanner.planCorrectInvoice(command)
         is RegisterRefund -> refundPlanner.planRegister(session, origin, command)
         is ConfirmRefund -> refundPlanner.planConfirm(command)

@@ -27,7 +27,7 @@ fun commandLabel(commandType: String): Int = when (commandType) {
     "RegisterDirectPayment", "RegisterCardPurchase" -> R.string.op_new_expense
     "RegisterBoleto" -> R.string.op_new_boleto
     "RegisterIncome" -> R.string.op_new_income
-    "CreateRecurrence", "EditRecurrence", "DeleteRecurrence", "PayOccurrence" -> R.string.op_new_recurrence
+    "CreateRecurrence", "EditRecurrence", "DeleteRecurrence", "PayOccurrence", "UndoOccurrencePayment" -> R.string.op_new_recurrence
     "CorrectEntry", "CorrectInvoiceAssignment", "CorrectOccurrenceInvoice", "EditAccount", "ChangePaymentMethod" -> R.string.op_correction
     "DeleteEntry" -> R.string.op_delete
     "DefineLimits" -> R.string.op_limits

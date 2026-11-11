@@ -22,6 +22,7 @@ import app.accord.core.space.RequestInstallmentCancellation
 import app.accord.core.space.Settlement
 import app.accord.core.space.UndoBoletoPayment
 import app.accord.core.space.UndoIncomeReceipt
+import app.accord.core.space.UndoOccurrencePayment
 import java.time.LocalDate
 import java.time.YearMonth
 
@@ -210,22 +211,29 @@ data class SettleSwitch(
     val doneDate: LocalDate?,
     val doneAmount: Money?,
     val revision: Long,
+    /** Número da ocorrência quando o alvo é uma série ([targetId] é a recorrência). */
+    val occurrence: Int? = null,
 ) {
-    val receiving: Boolean get() = kind == LinkedAction.Settle.Kind.Income
+    val receiving: Boolean get() = kind == LinkedAction.Settle.Kind.Income || kind == LinkedAction.Settle.Kind.OccurrenceIncome
 
     /** O formulário completo, para ajustar data, valor ou conta ao ligar. */
-    fun adjustAction() = LinkedAction.Settle(kind, targetId, expectedAmount, revision = revision)
+    fun adjustAction() = LinkedAction.Settle(kind, targetId, expectedAmount, occurrence = occurrence, revision = revision)
 
     /** Comando de ligar (hoje, valor previsto, conta padrão da fachada) ou de desligar. */
-    fun command(turnOn: Boolean, today: LocalDate): Command = when {
-        turnOn && receiving -> ReceiveIncome(targetId, Settlement(today, null), expectedRevision = revision)
-        turnOn -> PayBoleto(targetId, Settlement(today, null), expectedRevision = revision)
-        receiving -> UndoIncomeReceipt(targetId, expectedRevision = revision)
-        else -> UndoBoletoPayment(targetId, expectedRevision = revision)
+    fun command(turnOn: Boolean, today: LocalDate): Command = when (kind) {
+        LinkedAction.Settle.Kind.Income ->
+            if (turnOn) ReceiveIncome(targetId, Settlement(today, null), expectedRevision = revision)
+            else UndoIncomeReceipt(targetId, expectedRevision = revision)
+        LinkedAction.Settle.Kind.Boleto ->
+            if (turnOn) PayBoleto(targetId, Settlement(today, null), expectedRevision = revision)
+            else UndoBoletoPayment(targetId, expectedRevision = revision)
+        LinkedAction.Settle.Kind.Occurrence, LinkedAction.Settle.Kind.OccurrenceIncome ->
+            if (turnOn) PayOccurrence(targetId, occurrence!!, Settlement(today, null), expectedRevision = revision)
+            else UndoOccurrencePayment(targetId, occurrence!!, expectedRevision = revision)
     }
 }
 
-/** O interruptor só existe para renda e boleto vivos; ocorrências de série têm o próprio caminho. */
+/** O interruptor existe para renda, boleto e ocorrência de série fora do cartão, vivos. */
 fun settleSwitch(detail: EntryDetail): SettleSwitch? {
     if (detail.voided) return null
     return when (detail.kind) {
@@ -234,6 +242,10 @@ fun settleSwitch(detail: EntryDetail): SettleSwitch? {
         }
         EntryKind.Income -> detail.income?.let {
             SettleSwitch(LinkedAction.Settle.Kind.Income, it.id, it.receivedDate != null, it.expectedAmount, it.receivedDate, it.receivedAmount, it.revision)
+        }
+        EntryKind.RecurrenceOccurrence -> detail.occurrence?.takeIf { it.form == RecurrenceForm.OffCard }?.let {
+            val kind = if (it.kind == RecurrenceKind.Income) LinkedAction.Settle.Kind.OccurrenceIncome else LinkedAction.Settle.Kind.Occurrence
+            SettleSwitch(kind, it.recurrenceId, it.paid, it.expectedAmount, it.settledDate, it.settledAmount, detail.revision, it.number)
         }
         else -> null
     }

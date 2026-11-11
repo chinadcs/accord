@@ -17,6 +17,7 @@ import app.accord.core.space.DeleteRecurrence
 import app.accord.core.space.EditRecurrence
 import app.accord.core.space.ErrorCode
 import app.accord.core.space.PayOccurrence
+import app.accord.core.space.UndoOccurrencePayment
 import app.accord.core.space.PreviewResult
 import app.accord.core.space.RecurrenceForm
 import app.accord.core.space.RecurrenceKind
@@ -239,6 +240,24 @@ class RecurrenceTest : SpaceTestBase() {
         h.space.execute(h.env(), Undo(paid.operationId)).applied()
         assertEquals(Money.ZERO, h.space.budget(ym(2026, 10)).value().committed)
         assertEquals(brl(1500), h.space.budget(ym(2026, 11)).value().committed)
+    }
+
+    @Test
+    fun `desmarcar o pagamento da ocorrência a devolve ao mês original e permite registrar de novo`() = runBlocking<Unit> {
+        val h = open()
+        h.withDefaultAccount()
+        val id = h.create(gym(1500, first = d(2026, 11, 5)))
+        h.space.execute(h.env(), PayOccurrence(id, 1, Settlement(d(2026, 10, 30)))).applied()
+        assertEquals(brl(1500), h.space.budget(ym(2026, 10)).value().paid)
+
+        val off = h.space.execute(h.env(), UndoOccurrencePayment(id, 1)).applied()
+        assertTrue(!off.undoable)
+        assertEquals(Money.ZERO, h.space.budget(ym(2026, 10)).value().paid)
+        assertEquals(brl(1500), h.space.budget(ym(2026, 11)).value().committed)
+
+        val again = h.space.execute(h.env(), UndoOccurrencePayment(id, 1))
+        assertEquals(ErrorCode.NotAllowed, assertIs<CommandResult.Rejected>(again).errors.single().code)
+        h.space.execute(h.env(), PayOccurrence(id, 1, Settlement(d(2026, 11, 6)))).applied()
     }
 
     @Test

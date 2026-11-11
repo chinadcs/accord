@@ -631,6 +631,16 @@ data class PayOccurrence(
     val expectedRevision: Long? = null,
 ) : Command
 
+/**
+ * Desliga o "Recebido"/"Pago" de uma ocorrência fora do cartão: a ocorrência volta a prevista na data original. Não é desfazível
+ * (a data e o valor efetivos não ficam guardados); ligar de novo registra hoje, pelo valor previsto.
+ */
+data class UndoOccurrencePayment(
+    val recurrenceId: String,
+    val occurrence: Int,
+    val expectedRevision: Long? = null,
+) : Command
+
 enum class RefundStatus { Requested, Confirmed }
 
 /**

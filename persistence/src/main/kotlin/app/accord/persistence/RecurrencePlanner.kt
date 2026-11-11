@@ -25,6 +25,7 @@ import app.accord.core.space.FieldError
 import app.accord.core.space.OccurrenceView
 import app.accord.core.space.Origin
 import app.accord.core.space.PayOccurrence
+import app.accord.core.space.UndoOccurrencePayment
 import app.accord.core.space.RecurrenceForm
 import app.accord.core.space.RecurrenceKind
 import app.accord.core.space.Session
@@ -260,6 +261,22 @@ internal class RecurrencePlanner(
                     (c.settlement.amount ?: occurrence.template.amount).cents, accountId,
                 ),
             )
+            val next = loaded.row.copy(revision = loaded.row.revision + 1)
+            dao.upsertRecurrence(next)
+            listOf(EntityChange(EntityType.Recurrence, next.id, null, next.revision))
+        }
+    }
+
+    suspend fun planUndoPay(c: UndoOccurrencePayment): Planned {
+        val (loaded, stopped) = loadForCommand(c.recurrenceId, c.expectedRevision)
+        if (loaded == null) return stopped!!
+        val occurrence = loaded.series.occurrence(c.occurrence)
+            ?: return stop("occurrence", ErrorCode.UnknownReference, "Ocorrência não encontrada.")
+        val settled = loaded.settlements[c.occurrence]
+            ?: return stop("occurrence", ErrorCode.NotAllowed, "Esta ocorrência ainda não foi registrada.")
+        val months = setOf(YearMonth.from(occurrence.date), YearMonth.from(LocalDate.ofEpochDay(settled.epochDay)))
+        return Planned.Go(months = months) {
+            dao.deleteSettlement(loaded.row.id, c.occurrence)
             val next = loaded.row.copy(revision = loaded.row.revision + 1)
             dao.upsertRecurrence(next)
             listOf(EntityChange(EntityType.Recurrence, next.id, null, next.revision))
