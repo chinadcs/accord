@@ -66,6 +66,20 @@ class InvoiceTest : SpaceTestBase() {
     private suspend fun Handle.pay(month: YearMonth, reais: Int) =
         space.execute(env(), PayInvoice(month, brl(reais), d(2026, 10, 15)))
 
+    @Test
+    fun `fatura antiga sem total conferido vira paga quando marcada como já paga e o desfazer a reabre`() = runBlocking<Unit> {
+        val h = open()
+        h.withDefaultAccount()
+        h.buy(1000)
+        val receipt = h.space.execute(h.env(), PayInvoice(oct, brl(1000), d(2026, 10, 15), alreadySettled = true)).applied()
+        val paid = h.invoice(oct)
+        assertTrue(paid.paid)
+        assertTrue(paid.divergentPayments.isEmpty())
+        assertNull(paid.checkedTotal)
+        h.space.execute(h.env(), Undo(receipt.operationId)).applied()
+        assertFalse(h.invoice(oct).paid)
+    }
+
     // ---- composição (cenário 9) ----
 
     @Test

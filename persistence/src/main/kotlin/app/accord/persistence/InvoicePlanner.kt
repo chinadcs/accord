@@ -58,7 +58,7 @@ internal class InvoicePlanner(
         val existing = dao.invoice(c.invoice.toString(), cardId)
         val checked = existing?.checkedCents
         // Só a quitação integral de fatura conferida é aceita; o resto é preservado em revisão.
-        val accepted = checked != null && checked == knownTotal(c.invoice, cardId).cents && checked == c.amount.cents
+        val accepted = c.alreadySettled || (checked != null && checked == knownTotal(c.invoice, cardId).cents && checked == c.amount.cents)
 
         return Planned.Go(months = setOf(c.invoice), undoable = true) {
             val id = invoiceId(session.spaceId, c.invoice, cardId)

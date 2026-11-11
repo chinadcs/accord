@@ -51,6 +51,9 @@
     <string name="invoice_total_title">Total cobrado pelo banco</string>
     <string name="invoice_total_amount">Total da fatura (R$)</string>
     <string name="invoice_total_note">Você informa o valor que o banco cobra, sob sua responsabilidade. Se coincidir com a composição, a fatura fica conferida; se não, a diferença fica para conferência.</string>
+    <string name="invoice_already_settled">Já estava paga (antes do app)</string>
+    <string name="invoice_already_settled_title">Fatura já paga</string>
+    <string name="invoice_already_settled_note">Marca a fatura como paga sem exigir o total conferido. Use a data em que ela foi paga: se for depois da data de corte da conta, o valor sai do saldo dessa conta.</string>
     <string name="invoice_pay_title">Quitação da fatura</string>
     <string name="invoice_pay_amount">Valor pago (R$)</string>
     <string name="invoice_pay_date">Data do pagamento</string>

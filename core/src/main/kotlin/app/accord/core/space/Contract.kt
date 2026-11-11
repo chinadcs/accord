@@ -692,7 +692,8 @@ data class RegisterInvoiceTotal(
  * Quitação da fatura. Só é aceita quando a fatura está conferida e o valor é igual ao total
  * conferido: a fatura fica paga e seus itens passam a pagos, sem nova despesa. Em qualquer outro
  * caso o pagamento é preservado pelo valor real numa pendência de pagamento divergente, a fatura
- * não é paga e nenhuma despesa ou baixa parcial é criada.
+ * não é paga e nenhuma despesa ou baixa parcial é criada. Com [alreadySettled] (fatura de antes do
+ * app) o pagamento é aceito sem total conferido.
  */
 data class PayInvoice(
     val invoice: YearMonth,
@@ -701,6 +702,8 @@ data class PayInvoice(
     /** Padrão do autor quando omitida. */
     val accountId: String? = null,
     val cardId: String? = null,
+    /** Fatura de antes do app, já paga: aceita sem total conferido (o valor informado é o pago). */
+    val alreadySettled: Boolean = false,
 ) : Command
 
 /**

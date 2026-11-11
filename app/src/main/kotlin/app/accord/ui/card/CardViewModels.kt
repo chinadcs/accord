@@ -194,6 +194,7 @@ sealed interface InvoiceContent {
 sealed interface InvoiceDialog {
     data object Total : InvoiceDialog
     data object Pay : InvoiceDialog
+    data object Settled : InvoiceDialog
 }
 
 data class InvoiceDialogState(
@@ -248,10 +249,16 @@ class InvoiceViewModel(
         open(InvoiceDialog.Pay, ready.invoice.checkedTotal?.takeIf { ready.invoice.conferred }?.formatPlain().orEmpty())
     }
 
-    private fun open(dialog: InvoiceDialog, amount: String) {
+    /** Fatura de antes do app: parte do total conhecido e do vencimento, ambos editáveis. */
+    fun openSettled() {
+        val ready = _content.value as? InvoiceContent.Ready ?: return
+        open(InvoiceDialog.Settled, ready.invoice.knownTotal.formatPlain(), ready.invoice.dueMonth.atDay(ready.card.dueDay.coerceAtMost(ready.invoice.dueMonth.lengthOfMonth())))
+    }
+
+    private fun open(dialog: InvoiceDialog, amount: String, date: LocalDate = provider.clock.today()) {
         commandId = CommandId(UUID.randomUUID().toString())
         val ready = _content.value as? InvoiceContent.Ready ?: return
-        _dialog.value = InvoiceDialogState(dialog, amount, provider.clock.today(), accountId = ready.card.accountId)
+        _dialog.value = InvoiceDialogState(dialog, amount, date, accountId = ready.card.accountId)
         viewModelScope.launch {
             val accounts = (provider.space().accounts() as? QueryResult.Data)?.value?.accounts.orEmpty()
             _dialog.update { it?.copy(accounts = accounts) }
@@ -284,6 +291,7 @@ class InvoiceViewModel(
             val command = when (state.dialog) {
                 InvoiceDialog.Total -> RegisterInvoiceTotal(month, amount, InvoiceTotalSource.Person, cardId)
                 InvoiceDialog.Pay -> PayInvoice(month, amount, state.date, state.accountId, cardId)
+                InvoiceDialog.Settled -> PayInvoice(month, amount, state.date, state.accountId, cardId, alreadySettled = true)
             }
             when (val result = provider.space().execute(Envelope(commandId), command)) {
                 is CommandResult.Applied -> done(state.dialog, result.receipt.operationId, result.receipt.undoable)

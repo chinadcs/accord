@@ -61,7 +61,7 @@ fun InvoiceRoute(
     RefreshOnResume(viewModel::refresh)
     InvoiceScreen(
         viewModel.month, content, dialog, padding, onBack, onRetry = { viewModel.load() }, onSeeEntries = onSeeEntries,
-        onOpenTotal = viewModel::openTotal, onOpenPay = viewModel::openPay, onChange = viewModel::change,
+        onOpenTotal = viewModel::openTotal, onOpenPay = viewModel::openPay, onOpenSettled = viewModel::openSettled, onChange = viewModel::change,
         onSubmit = viewModel::submit, onClose = viewModel::close, onAccount = viewModel::chooseAccount,
     )
 }
@@ -77,6 +77,7 @@ fun InvoiceScreen(
     onSeeEntries: (YearMonth) -> Unit,
     onOpenTotal: () -> Unit,
     onOpenPay: () -> Unit,
+    onOpenSettled: () -> Unit = {},
     onChange: (amountText: String?, date: java.time.LocalDate?) -> Unit,
     onSubmit: () -> Unit,
     onClose: () -> Unit,
@@ -93,7 +94,7 @@ fun InvoiceScreen(
                 Text(stringResource(R.string.state_error), style = MaterialTheme.typography.bodyLarge)
                 OutlinedButton(onClick = onRetry, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.action_retry)) }
             }
-            is InvoiceContent.Ready -> InvoiceBody(content.invoice, content.card, onSeeEntries, onOpenTotal, onOpenPay)
+            is InvoiceContent.Ready -> InvoiceBody(content.invoice, content.card, onSeeEntries, onOpenTotal, onOpenPay, onOpenSettled)
         }
     }
     dialog?.let { InvoiceDialogs(it, onChange, onSubmit, onClose, onAccount) }
@@ -106,6 +107,7 @@ private fun InvoiceBody(
     onSeeEntries: (YearMonth) -> Unit,
     onOpenTotal: () -> Unit,
     onOpenPay: () -> Unit,
+    onOpenSettled: () -> Unit,
 ) {
     Text(card.nickname, style = MaterialTheme.typography.titleMedium)
     val body = MaterialTheme.typography.bodyLarge
@@ -172,6 +174,9 @@ private fun InvoiceBody(
             Text(stringResource(R.string.invoice_pay))
         }
         if (!invoice.conferred) Text(stringResource(R.string.invoice_pay_needs_total), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        OutlinedButton(onClick = onOpenSettled, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+            Text(stringResource(R.string.invoice_already_settled))
+        }
     }
     OutlinedButton(onClick = onOpenTotal, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
         Text(stringResource(if (checked == null) R.string.invoice_enter_total else R.string.invoice_correct_total))
@@ -198,10 +203,11 @@ private fun InvoiceDialogs(
 ) {
     var pickingDate by remember { mutableStateOf(false) }
     val bring = remember { BringIntoViewRequester() }
-    val paying = state.dialog == InvoiceDialog.Pay
+    val paying = state.dialog != InvoiceDialog.Total
+    val settled = state.dialog == InvoiceDialog.Settled
     AlertDialog(
         onDismissRequest = onClose,
-        title = { Text(stringResource(if (paying) R.string.invoice_pay_title else R.string.invoice_total_title)) },
+        title = { Text(stringResource(if (settled) R.string.invoice_already_settled_title else if (paying) R.string.invoice_pay_title else R.string.invoice_total_title)) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
                 OutlinedTextField(
@@ -218,7 +224,7 @@ private fun InvoiceDialogs(
                         }
                     }
                     PickerField(label = stringResource(R.string.invoice_pay_date), value = state.date.fullLabel(), error = null, bring = bring) { pickingDate = true }
-                    Text(stringResource(R.string.invoice_pay_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(if (settled) R.string.invoice_already_settled_note else R.string.invoice_pay_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 } else {
                     Text(stringResource(R.string.invoice_total_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
