@@ -100,6 +100,10 @@ class BudgetViewModel(
 
     fun nextMonth() = select(_state.value.month.plusMonths(1))
 
+    fun goToCurrentMonth() = select(provider.clock.currentMonth())
+
+    fun isCurrentMonth(month: YearMonth) = month == provider.clock.currentMonth()
+
     fun retry() = load(_state.value.month)
 
     /** Tentar de novo só do fluxo do mês: não recarrega nem esconde o resto da tela. */

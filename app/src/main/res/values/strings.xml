@@ -45,6 +45,7 @@
     <!-- Orçamento (tela 05) -->
     <string name="budget_criteria">Cartão pelo mês de vencimento da fatura, Pix pela movimentação e boleto pelo vencimento até ser pago.</string>
     <string name="month_previous">Mês anterior</string>
+    <string name="month_current">Mês atual</string>
     <string name="month_next">Próximo mês</string>
     <string name="summary_committed">Comprometido</string>
     <string name="summary_limits">Limites</string>

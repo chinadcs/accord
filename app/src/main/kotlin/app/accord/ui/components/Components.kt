@@ -17,6 +17,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -72,7 +74,13 @@ fun DecorativeIcon(@DrawableRes res: Int, modifier: Modifier = Modifier, tint: C
 
 /** Seletor de mês: o mês escolhido controla toda a tela e é anunciado quando muda. */
 @Composable
-fun MonthSelector(month: YearMonth, onPrevious: () -> Unit, onNext: () -> Unit, modifier: Modifier = Modifier) {
+fun MonthSelector(
+    month: YearMonth,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    modifier: Modifier = Modifier,
+    onCurrent: (() -> Unit)? = null, // não nulo = mês diferente do atual: mostra o atalho para voltar a ele
+) {
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -92,6 +100,11 @@ fun MonthSelector(month: YearMonth, onPrevious: () -> Unit, onNext: () -> Unit, 
                 textAlign = TextAlign.Center,
                 modifier = Modifier.weight(1f).semantics { liveRegion = LiveRegionMode.Polite },
             )
+            onCurrent?.let {
+                TextButton(onClick = it, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                    Text(stringResource(R.string.month_current))
+                }
+            }
             IconButton(onClick = onNext, modifier = Modifier.size(AccordSpacing.touchMin)) {
                 Icon(painterResource(Lucide.drawable.lucide_ic_chevron_right), contentDescription = stringResource(R.string.month_next))
             }
