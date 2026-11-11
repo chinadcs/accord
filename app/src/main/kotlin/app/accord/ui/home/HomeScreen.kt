@@ -26,7 +26,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.semantics
 import app.accord.R
 import app.accord.ui.RootScaffold
+import app.accord.core.label
+import app.accord.ui.components.MonthSelector
 import app.accord.ui.components.SkeletonBlock
+import java.time.YearMonth
 import app.accord.ui.entries.TotalBalanceCard
 import app.accord.ui.theme.Accord
 import androidx.compose.ui.semantics.contentDescription
@@ -65,6 +68,9 @@ fun HomeScreen(
     onCashFlowRetry: () -> Unit = {},
     balance: HomeBalanceState = HomeBalanceState.Loading,
     onBalanceRetry: () -> Unit = {},
+    balanceMonth: YearMonth? = null,
+    currentMonth: YearMonth = YearMonth.now(),
+    onBalanceMonthShift: (Long) -> Unit = {},
     onRefreshed: () -> Unit = {},
 ) {
     val failures = homeFailures(pending, balance, upcoming, projection, allowance, cashFlow)
@@ -98,7 +104,7 @@ fun HomeScreen(
                 }
             }
         })
-        BalanceSection(balance)
+        BalanceSection(balance, balanceMonth, currentMonth, onBalanceMonthShift)
         AttentionStrip(
             pending, upcoming, projection,
             onReview = onReview, onCommitments = onCommitments, onForecasts = onForecasts,
@@ -125,7 +131,15 @@ private fun HomeFooter() {
 
 /** Saldo total do mês: esqueleto enquanto carrega, frase curta em falha (o "Tentar de novo" é do banner), nunca zero no lugar de "não sei". */
 @Composable
-private fun BalanceSection(state: HomeBalanceState) {
+private fun BalanceSection(state: HomeBalanceState, month: YearMonth?, currentMonth: YearMonth, onShift: (Long) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+        MonthSelector(month ?: currentMonth, onPrevious = { onShift(-1) }, onNext = { onShift(1) })
+        BalanceCard(state, month)
+    }
+}
+
+@Composable
+private fun BalanceCard(state: HomeBalanceState, month: YearMonth?) {
     when (state) {
         HomeBalanceState.Loading -> {
             val description = stringResource(R.string.balance_loading)
@@ -144,6 +158,9 @@ private fun BalanceSection(state: HomeBalanceState) {
         HomeBalanceState.Failed -> Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.balance_failed), Modifier.fillMaxWidth().padding(AccordSpacing.s4))
         }
-        is HomeBalanceState.Ready -> TotalBalanceCard(state.value)
+        is HomeBalanceState.Ready -> TotalBalanceCard(
+            state.value,
+            subtitle = month?.let { stringResource(R.string.balance_subtitle_month, it.label()) } ?: stringResource(R.string.balance_subtitle),
+        )
     }
 }

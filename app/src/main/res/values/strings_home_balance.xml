@@ -5,6 +5,8 @@
     <string name="balance_failed">Não foi possível calcular o saldo total.</string>
     <!-- O acumulado vai do primeiro lançamento até o fim do mês atual (TotalBalance.total, ADR 0071), por isso não é "até hoje". -->
     <string name="balance_subtitle">acumulado até o fim do mês</string>
+    <!-- Mês escolhido no seletor do Saldo total; só leitura, nada é gravado. -->
+    <string name="balance_subtitle_month">acumulado até o fim de %1$s</string>
     <string name="balance_reading_positive">saldo de %1$s</string>
     <string name="balance_reading_negative">saldo negativo de %1$s</string>
     <string name="balance_reading_unavailable">saldo indisponível</string>

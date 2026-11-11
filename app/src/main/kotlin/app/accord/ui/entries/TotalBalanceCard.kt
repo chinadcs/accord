@@ -54,6 +54,7 @@ private const val MIN_TEXT_CONTRAST = 4.5f
 fun TotalBalanceCard(
     balance: TotalBalance?,
     modifier: Modifier = Modifier,
+    subtitle: String = stringResource(R.string.balance_subtitle),
 ) {
     val panel = Accord.colors.financeSurface
     val onPanel = Accord.colors.onFinanceSurface
@@ -65,7 +66,6 @@ fun TotalBalanceCard(
         listOf(MaterialTheme.colorScheme.error, MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer),
     )
     val title = stringResource(R.string.entries_balance_title)
-    val subtitle = stringResource(R.string.balance_subtitle)
     val incomeLabel = stringResource(R.string.entries_balance_income)
     val expenseLabel = stringResource(R.string.entries_balance_expense)
     val totalBalance = balance?.total?.balance
