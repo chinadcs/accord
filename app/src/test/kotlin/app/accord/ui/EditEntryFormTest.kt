@@ -44,6 +44,15 @@ class EditEntryFormTest {
     }
 
     @Test
+    fun ocorrenciaDeRendaTrocaACategoriaDeRendaPeloCampoDaSerie() {
+        val o = original(target = EditTarget.Occurrence, category = null, date = null).copy(incomeSeries = true, incomeCategoryId = "salario")
+        assertTrue(o.incomeCategoryEditable)
+        val built = ok(EditForm.of(o).copy(incomeCategoryId = "extra", scope = RecurrenceScope.OnlyThis), o)
+        assertEquals("extra", assertIs<EditRecurrence>(built.command).fields.classificationId)
+        assertTrue(built.changed)
+    }
+
+    @Test
     fun ocorrenciaDeDespesaSemCategoriaContinuaExigindoCategoria() {
         val o = original(target = EditTarget.Occurrence, category = null, date = null)
         val built = assertIs<EditForm.Built.Invalid>(EditForm.of(o).copy(scope = RecurrenceScope.OnlyThis).build(o))

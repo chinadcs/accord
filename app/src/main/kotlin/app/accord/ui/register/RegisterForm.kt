@@ -134,7 +134,8 @@ data class RegisterForm(
             frequency != null -> CreateRecurrence(
                 kind = if (kind == FormKind.Income) RecurrenceKind.Income else RecurrenceKind.Expense,
                 description = description.trim(),
-                categoryId = categoryId.takeIf { kind == FormKind.Expense },
+                // Na série de renda o mesmo campo leva a categoria de renda (opcional).
+                categoryId = if (kind == FormKind.Expense) categoryId else incomeCategoryId,
                 amount = amount,
                 form = if (form == ExpenseForm.Card) RecurrenceForm.Card else RecurrenceForm.OffCard,
                 accountId = account,

@@ -442,7 +442,11 @@ internal fun FormTextField(
     val message = errorText(error)
     OutlinedTextField(
         value = value,
-        onValueChange = onChange,
+        // shortcut: teclado numérico de alguns aparelhos só tem ".", sem ","; o ponto recém-digitado vira vírgula
+        // (milhar digitado à mão não é aceito, só colado), rever se o teclado passar a oferecer a vírgula.
+        onValueChange = { v ->
+            onChange(if (keyboard == KeyboardType.Decimal && v.endsWith(".") && ',' !in v && '.' !in v.dropLast(1)) v.dropLast(1) + "," else v)
+        },
         label = { Text(label, style = MaterialTheme.typography.titleMedium) },
         placeholder = hint?.let { { Text(it) } },
         isError = message != null,

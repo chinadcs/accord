@@ -89,8 +89,9 @@ internal class RecurrencePlanner(
                 dao.activeCategory(categoryId) == null ->
                     errors += FieldError("categoryId", ErrorCode.UnknownReference, "Categoria não encontrada.")
             }
-            RecurrenceKind.Income -> if (categoryId != null) {
-                errors += FieldError("categoryId", ErrorCode.NotAllowed, "Renda não tem categoria.")
+            // Série de renda: `categoryId` leva a categoria de renda (ADR 0038), opcional; vai no mesmo campo do modelo.
+            RecurrenceKind.Income -> if (categoryId != null && dao.incomeCategory(categoryId) == null) {
+                errors += FieldError("categoryId", ErrorCode.UnknownReference, "Categoria de renda não encontrada.")
             }
         }
         val cardId = if (c.form == RecurrenceForm.Card) accounts.resolveCard(session, c.cardId, errors) else null
@@ -150,7 +151,9 @@ internal class RecurrencePlanner(
         c.fields.classificationId?.let {
             when {
                 loaded.row.kind == RecurrenceKind.Income.name ->
-                    errors += FieldError("classificationId", ErrorCode.NotAllowed, "Renda não tem categoria.")
+                    if (dao.incomeCategory(it) == null) {
+                        errors += FieldError("classificationId", ErrorCode.UnknownReference, "Categoria de renda não encontrada.")
+                    }
                 dao.activeCategory(it) == null ->
                     errors += FieldError("classificationId", ErrorCode.UnknownReference, "Categoria não encontrada.")
             }
@@ -301,7 +304,8 @@ internal class RecurrencePlanner(
             form = form,
             scheduledDate = occurrence.date,
             description = occurrence.template.description,
-            categoryId = occurrence.template.classificationId,
+            categoryId = occurrence.template.classificationId.takeIf { kind == RecurrenceKind.Expense },
+            incomeCategoryId = occurrence.template.classificationId.takeIf { kind == RecurrenceKind.Income },
             expectedAmount = occurrence.template.amount,
             accountId = settled?.accountId ?: occurrence.template.accountId,
             settledDate = settledDate,

@@ -34,6 +34,8 @@ data class DetailData(
     val currentPersonId: String,
     /** Intenção de compra de onde o lançamento nasceu (S7, P2); nula fora da fase ou sem vínculo. */
     val origin: app.accord.core.space.IntentionView? = null,
+    /** Categorias de renda: a renda guarda a sua em [EntryDetail.income], não em `classification`. */
+    val incomeCategories: List<app.accord.core.space.IncomeCategoryNode> = emptyList(),
 ) {
     /** Despesa e renda avulsas se excluem aqui; ocorrência de série tem o alcance próprio ([canDeleteOccurrence]); estorno e quitação, outros caminhos. */
     val canDelete: Boolean
@@ -131,7 +133,8 @@ class EntryDetailViewModel(
             } else {
                 // A raiz do compromisso: a compra (antes do #) ou a série (antes do :); o lançamento avulso é a própria raiz.
                 val root = detail.id.substringBefore('#').substringBefore(':')
-                DetailContent.Ready(DetailData(detail, categories, accounts, currentPersonId, origin = provider.originIntention(root)))
+                val incomeCategories = (space.incomeCategories() as? QueryResult.Data)?.value.orEmpty()
+                DetailContent.Ready(DetailData(detail, categories, accounts, currentPersonId, origin = provider.originIntention(root), incomeCategories = incomeCategories))
             }
         }
     }

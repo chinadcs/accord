@@ -1,6 +1,8 @@
 package app.accord.ui.detail
 
 import app.accord.ui.categoryColor
+import app.accord.ui.colorKey
+import app.accord.ui.incomeCategoryLabel
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -190,9 +192,20 @@ private fun ReadyDetail(
             DatesAndAmounts(d)
 
             val category = (d.classification as? app.accord.core.space.Classification.Category)?.id?.let(data.categories::get)
+            val incomeCategoryId = d.income?.incomeCategoryId ?: d.occurrence?.incomeCategoryId
+            val incomeCategory = incomeCategoryId?.let { id -> data.incomeCategories.firstOrNull { it.id == id } }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                DecorativeIcon(lucideRes(category?.iconKey ?: "tag"), tint = categoryColor(data.categories, category?.id))
-                Text(category?.name ?: stringResource(R.string.detail_category_unset), style = MaterialTheme.typography.bodyLarge)
+                if (d.income != null || d.occurrence?.kind == app.accord.core.space.RecurrenceKind.Income) {
+                    // Renda tem categoria própria (ADR 0038); sem escolha, "a classificar" segue valendo.
+                    DecorativeIcon(lucideRes(incomeCategory?.iconKey ?: "tag"), tint = incomeCategory?.let { categoryColor(it.colorKey(data.incomeCategories)) } ?: categoryColor(data.categories, null))
+                    Text(
+                        incomeCategory?.let { incomeCategoryLabel(it, data.incomeCategories) } ?: stringResource(R.string.detail_category_unset),
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                } else {
+                    DecorativeIcon(lucideRes(category?.iconKey ?: "tag"), tint = categoryColor(data.categories, category?.id))
+                    Text(category?.name ?: stringResource(R.string.detail_category_unset), style = MaterialTheme.typography.bodyLarge)
+                }
             }
             d.method?.let { Text(it.label(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             if (d.method == app.accord.core.space.PaymentMethod.Cash) {

@@ -42,10 +42,10 @@ data class EditOriginal(
     val method: PaymentMethod? = null,
     /** Só renda: a categoria de renda (ADR 0038); nula é "sem categoria". */
     val incomeCategoryId: String? = null,
-    /** Ocorrência de série de renda: a série não tem categoria, então o formulário não pede categoria de despesa. */
+    /** Ocorrência de série de renda: o formulário pede a categoria de renda, nunca a de despesa. */
     val incomeSeries: Boolean = false,
 ) {
-    val incomeCategoryEditable: Boolean get() = target == EditTarget.Income
+    val incomeCategoryEditable: Boolean get() = target == EditTarget.Income || (target == EditTarget.Occurrence && incomeSeries)
     val amountEditable: Boolean get() = !(target == EditTarget.CardPurchase && installments > 1)
     val categoryEditable: Boolean get() = target != EditTarget.Income && !incomeSeries
     val dateEditable: Boolean get() = target != EditTarget.Occurrence && date != null
@@ -89,7 +89,7 @@ data class EditOriginal(
                     EditOriginal(
                         detail.id, EditTarget.Occurrence, o.description, o.categoryId, null, o.expectedAmount, o.accountId,
                         detail.revision, recurrenceId = o.recurrenceId, occurrence = o.number, paid = o.paid,
-                        incomeSeries = o.kind == RecurrenceKind.Income,
+                        incomeSeries = o.kind == RecurrenceKind.Income, incomeCategoryId = o.incomeCategoryId,
                     )
                 }
                 EntryKind.Refund, EntryKind.InvoicePayment -> null
@@ -144,7 +144,7 @@ data class EditForm(
 
         if (original.target == EditTarget.Occurrence) {
             val fields = RecurrenceFields(
-                description = newDescription, classificationId = newCategory, amount = newAmount, accountId = newAccount,
+                description = newDescription, classificationId = newCategory ?: newIncomeCategory, amount = newAmount, accountId = newAccount,
             )
             return Built.Ok(
                 EditRecurrence(

@@ -206,7 +206,7 @@ private fun LazyListScope.budgetContent(
         } + if (data.budget.toClassify.count > 0) listOf(
             MoneyChartValue(stringResource(R.string.chart_to_classify), data.budget.toClassify.amount, onClick = { onClassify(data.month) }),
         ) else emptyList()
-        MoneyChart(stringResource(R.string.chart_budget_title), stringResource(R.string.chart_budget_criterion, data.month.label()), values)
+        // MoneyChart(stringResource(R.string.chart_budget_title), stringResource(R.string.chart_budget_criterion, data.month.label()), values)
     }
     item {
         Text(
@@ -222,6 +222,7 @@ private fun LazyListScope.budgetContent(
             name = node?.name.orEmpty(),
             iconKey = node?.iconKey ?: "tag",
             tint = categoryColor(data.categories, category.categoryId),
+            incomeCents = data.budget.income.received.cents + data.budget.income.toReceive.cents,
             onClick = { onOpenCategory(category.categoryId, data.month) },
         )
     }
@@ -479,7 +480,7 @@ private fun ToClassifyRow(data: BudgetData, onClick: () -> Unit) {
 }
 
 @Composable
-private fun CategoryRow(category: CategoryBudget, name: String, iconKey: String, tint: Color, onClick: () -> Unit) {
+private fun CategoryRow(category: CategoryBudget, name: String, iconKey: String, tint: Color, incomeCents: Long, onClick: () -> Unit) {
     val limit = category.limit
     val state = barState(limit)
     val money = { m: Money -> m.format() }
@@ -503,7 +504,13 @@ private fun CategoryRow(category: CategoryBudget, name: String, iconKey: String,
     }
     val netCredit = if (category.net.isNegative) stringResource(R.string.category_net_credit, money(-category.net)) else null
     val percent = percentLabel(limit)
-    val description = listOfNotNull(name, amounts, status, barLabel, percent?.let { stringResource(R.string.percent_value, it) }, breakdown, netCredit).joinToString(". ")
+    // Sem renda no mês (ou gasto líquido não positivo) não há fatia a mostrar.
+    val ofIncome = if (incomeCents > 0 && category.net.cents > 0) {
+        stringResource(R.string.category_of_income, Math.round(category.net.cents * 100.0 / incomeCents).toInt())
+    } else {
+        null
+    }
+    val description = listOfNotNull(name, amounts, status, barLabel, percent?.let { stringResource(R.string.percent_value, it) }, ofIncome, breakdown, netCredit).joinToString(". ")
 
     Column(Modifier.fillMaxWidth()) {
         Column(
@@ -558,6 +565,7 @@ private fun CategoryRow(category: CategoryBudget, name: String, iconKey: String,
                 },
                 end = { percent?.let { Text(stringResource(R.string.percent_value, it), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) } },
             )
+            ofIncome?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             breakdown?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             netCredit?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Accord.colors.success) }
         }

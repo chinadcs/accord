@@ -436,6 +436,33 @@ class RecurrenceTest : SpaceTestBase() {
         assertEquals(brl(6000), h.space.incomes(ym(2026, 11)).value().toReceive)
     }
 
+    @Test
+    fun `renda recorrente guarda a categoria de renda e permite trocá-la só nesta ocorrência`() = runBlocking<Unit> {
+        val h = open()
+        h.withDefaultAccount()
+        val salary = h.space.incomeCategories().value().first { it.seedKey == "salario" }.id
+        val extra = h.space.incomeCategories().value().first { it.seedKey == "renda-extra" }.id
+        val id = h.space.execute(
+            h.env(),
+            CreateRecurrence(
+                kind = RecurrenceKind.Income, description = "Salário", categoryId = salary, amount = brl(6000),
+                frequency = Frequency.Monthly, firstDate = d(2026, 10, 5),
+            ),
+        ).applied().changes.single().id
+        suspend fun income(n: Int) = h.space.entry("$id:$n").value()!!.occurrence!!
+
+        assertEquals(salary, income(1).incomeCategoryId)
+        assertNull(income(1).categoryId, "categoria de despesa continua nula na renda")
+
+        h.space.execute(h.env(), EditRecurrence(id, 2, RecurrenceScope.OnlyThis, RecurrenceFields(classificationId = extra))).applied()
+        assertEquals(salary, income(1).incomeCategoryId)
+        assertEquals(extra, income(2).incomeCategoryId)
+        assertEquals(salary, income(3).incomeCategoryId)
+
+        val unknown = h.space.execute(h.env(), EditRecurrence(id, 2, RecurrenceScope.OnlyThis, RecurrenceFields(classificationId = "nada")))
+        assertEquals(ErrorCode.UnknownReference, assertIs<CommandResult.Rejected>(unknown).errors.single().code)
+    }
+
     // ---- validação, versão e desfazer ----
 
     @Test

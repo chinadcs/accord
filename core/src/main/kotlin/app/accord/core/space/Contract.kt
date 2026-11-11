@@ -1215,6 +1215,8 @@ data class OccurrenceView(
     /** Fatura estimada pelo ciclo do cartão; nula fora do cartão. Difere de [budgetMonth] quando a pessoa escolheu outra. */
     val estimatedInvoice: YearMonth? = null,
     val cardId: String? = null,
+    /** Série de renda: a categoria de renda (ADR 0038); nula é "sem categoria". [categoryId] fica nulo nas rendas. */
+    val incomeCategoryId: String? = null,
 )
 
 /** Fase exibida da fatura; "fechada" quando um total foi registrado (pessoa ou importação). */

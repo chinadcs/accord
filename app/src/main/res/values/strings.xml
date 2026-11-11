@@ -73,6 +73,7 @@
     <string name="category_excess">Passou %s</string>
     <string name="category_credits_breakdown">Despesas %1$s · Créditos %2$s · Líquido %3$s</string>
     <string name="category_net_credit">Crédito líquido de %s</string>
+    <string name="category_of_income">%1$d%% da receita do mês</string>
     <string name="category_open">Abrir %s</string>
     <string name="bar_within">Dentro do limite</string>
     <string name="bar_attention">Atenção: perto do limite</string>
