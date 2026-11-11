@@ -160,10 +160,11 @@ class InstallmentSeriesTest {
         assertTrue(items.all { DoubtReason.CategoryUnknown in it.doubts && it.effect == null })
     }
 
-    @Test fun `a series that would reach a paid invoice stays a doubt for every line`() {
+    @Test fun `a series that reaches a paid invoice is created all the same (ADR 0090)`() {
         val paid = BillingContext(cycle, null, "fees", emptyList(), listOf(InvoiceRecord(nov, LocalDate.of(2026, 11, 15), 100000, paid = true)))
         val items = preview(zee, b = paid).items.filter { it.movement.installment != null }
-        assertTrue(items.all { DoubtReason.InstallmentScheduleHitsPaidInvoice in it.doubts })
+        assertTrue(items.none { DoubtReason.InstallmentScheduleHitsPaidInvoice in it.doubts })
+        assertIs<ProposedEffect.CreateInstallmentPurchase>(items.first().effect)
     }
 
     @Test fun `a registered purchase is linked by the line, the cents of rounding included, with the invoice implied by the purchase date`() {

@@ -154,7 +154,9 @@ class ChatQueryRunner(private val space: FinanceSpace, private val clock: Budget
             search = target,
         )
         val page = (space.entries(filter, 0, SEARCH_LIMIT) as? QueryResult.Data)?.value ?: return ConsultOutcome.Failed
-        var found = page.rows.filter { it.kind == EntryKind.CardPurchase }
+        // A lista traz a compra parcelada como uma linha por parcela (id "compra#n"); a consulta quer a compra, uma vez.
+        var found = page.rows.filter { it.kind == EntryKind.CardPurchase || it.kind == EntryKind.CardInstallment }
+            .map { if (it.kind == EntryKind.CardInstallment) it.copy(id = it.id.substringBefore('#')) else it }
         if (request.targetDate != null) found = found.filter { it.date == request.targetDate }
         found = found.distinctBy { it.id }
         if (found.isEmpty()) return ConsultOutcome.Ask(ConsultAskNotice(ConsultAskNotice.Reason.UnknownPurchase))

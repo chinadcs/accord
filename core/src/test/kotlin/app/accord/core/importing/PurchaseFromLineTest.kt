@@ -82,12 +82,13 @@ class PurchaseFromLineTest {
         assertEquals(setOf(DoubtReason.CategoryUnknown), item.doubts)
     }
 
-    @Test fun `a schedule that reaches a paid invoice is blocked instead of changing a closed month`() {
+    @Test fun `a schedule that reaches a paid invoice still creates every installment, the past ones included (ADR 0090)`() {
         val m = line(3)
-        val paid = listOf(InvoiceRecord(nov, LocalDate.of(2026, 11, 15), 50000, paid = true))
+        val paid = listOf(InvoiceRecord(oct, LocalDate.of(2026, 10, 15), 50000, paid = true), InvoiceRecord(nov, LocalDate.of(2026, 11, 15), 50000, paid = true))
         val item = preview(m, billing(invoices = paid), decided(m, 150000)).items.single()
-        assertEquals(setOf(DoubtReason.InstallmentScheduleHitsPaidInvoice), item.doubts)
-        assertNull(item.effect)
+        assertTrue(item.doubts.isEmpty())
+        val effect = assertIs<ProposedEffect.CreateInstallmentPurchase>(item.effect)
+        assertEquals((0L..9L).map { oct.plusMonths(it) }, effect.months)
     }
 
     @Test fun `without an invoice declared by the document the 1st installment is the invoice the purchase date falls in`() {

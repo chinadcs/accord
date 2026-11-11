@@ -71,8 +71,8 @@ internal object BillingRules {
     /**
      * The total of a purchase the document shows by lines n of N is settled (by the person, or by the file when it shows all N): every installment is
      * created, the 1st on the document's invoice minus n - 1 months, or on the invoice the purchase date falls in when the document declares none (the
-     * line's date is the purchase's). Nothing is guessed: a total that does not split into this series' values, or a schedule that reaches a paid
-     * invoice, stays a doubt. [series] is the group the line belongs to; its leader is the line that creates the purchase.
+     * line's date is the purchase's). Nothing is guessed: a total that does not split into this series' values stays a doubt. A schedule that
+     * reaches a paid invoice is created all the same (ADR 0090). [series] is the group the line belongs to; its leader is the line that creates the purchase.
      */
     fun createPurchase(m: ExtractedMovement, hint: InstallmentHint, b: BillingContext, amount: Long, plan: NewPurchase, series: InstallmentSeries? = null): Outcome {
         val notRegistered = Outcome(reasons = setOf(DoubtReason.InstallmentPurchaseNotRegistered))
@@ -83,9 +83,8 @@ internal object BillingRules {
         if (!fits) return notRegistered
         val categoryId = plan.categoryId ?: return Outcome(reasons = setOf(DoubtReason.CategoryUnknown))
         val first = leaderInvoice.minusMonths((leaderNumber - 1).toLong())
+        // Parcela anterior numa fatura já quitada também é criada (ADR 0090): o mês passa a incluí-la e a divergência aparece na conferência.
         val months = Installments.schedule(first, hint.total)
-        val paid = b.invoices.filter { it.paid }.map { it.dueMonth }.toSet()
-        if (months.any { it in paid }) return Outcome(reasons = setOf(DoubtReason.InstallmentScheduleHitsPaidInvoice))
         return Outcome(ProposedEffect.CreateInstallmentPurchase(categoryId, plan.totalCents, hint.number, hint.total, first, months, series?.let { exactSchedule(it, hint.total, plan.totalCents) }))
     }
 

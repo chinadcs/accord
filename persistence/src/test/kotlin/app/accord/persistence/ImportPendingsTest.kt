@@ -428,6 +428,33 @@ class ImportPendingsTest : SpaceTestBase() {
         assertIs<app.accord.core.importing.ProposedEffect.LinkInstallment>(line.effect)
     }
 
+    @Test fun `with an earlier invoice already paid, the installment line still creates every installment and the list shows one row per installment (ADR 0090)`() = runBlocking<Unit> {
+        val h = open()
+        h.account()
+        // Outubro tem fatura quitada: a compra parcelada importada na fatura de dezembro (parcela 3/10) começa em outubro.
+        h.space.execute(h.env(), RegisterCardPurchase("padaria", Classification.Category(groceries), d(2026, 10, 3), brl(70), invoice = oct, cardId = cardId)).applied()
+        h.space.execute(h.env(), app.accord.core.space.RegisterInvoiceTotal(oct, brl(70), cardId = cardId)).applied()
+        h.space.execute(h.env(), app.accord.core.space.PayInvoice(oct, brl(70), d(2026, 10, 15), cardId = cardId)).applied()
+
+        val hint = app.accord.core.importing.InstallmentHint(3, 10)
+        val id = h.confirmedCard("c1", cardDoc("card-p", cmv(1, d(2026, 12, 5), -15000, "MAGAZINE LUIZA", hint), cmv(2, d(2026, 12, 6), -1000, "CAFE")), dec)
+        val pending = h.imports().pendings().value().single()
+        assertEquals(setOf(DoubtReason.InstallmentPurchaseNotRegistered), pending.doubts)
+        h.decide(id, ImportDecision.AsInstallmentPurchase(pending.ordinal, 150000))
+        assertEquals(Resolution.Created, assertIs<ResolveOutcome.Applied>(h.resolve(id, pending.ordinal)).resolution)
+
+        val purchaseId = checkNotNull(checkNotNull(h.imports().result(id).value()).items.first { it.ordinal == 1 }.targetId)
+        assertEquals((0..9).map { oct.plusMonths(it.toLong()) }, checkNotNull(h.space.purchase(purchaseId).value()).installments.map { it.invoiceMonth })
+
+        // A lista de Lançamentos mostra 10 linhas de 150,00, uma por mês, nos dois critérios de data.
+        listOf(app.accord.core.space.DateCriterion.PurchaseDate, app.accord.core.space.DateCriterion.BudgetMonth).forEach { criterion ->
+            val rows = h.space.entries(app.accord.core.space.EntryFilter(oct, oct.plusMonths(9), criterion), 0, Int.MAX_VALUE).value().rows
+                .filter { it.description == "MAGAZINE LUIZA" }
+            assertEquals((1..10).toList(), rows.mapNotNull { it.installmentNumber }.sorted(), criterion.name)
+            assertTrue(rows.all { it.amount == brl(150) }, criterion.name)
+        }
+    }
+
     // ---- accord-96km (ADR 0074): no cartão, todo positivo é estorno ----
 
     @Test fun `a credit on a card document is never income, and the candidates are the card's purchases with the same value first`() = runBlocking<Unit> {

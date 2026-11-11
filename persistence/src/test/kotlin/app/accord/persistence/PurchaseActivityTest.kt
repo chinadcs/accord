@@ -206,20 +206,24 @@ class PurchaseActivityTest : SpaceTestBase() {
     }
 
     @Test
-    fun `coerente com a lista de Lançamentos pela data da compra`() = runBlocking<Unit> {
+    fun `coerente com a lista de Lançamentos pela data da compra, exceto a compra parcelada (uma linha por parcela, ADR 0090)`() = runBlocking<Unit> {
         val h = openWithAccount()
         h.pix("Mercado", 100, "alimentacao.mercado", d(2026, 10, 20))
         h.card("Equipamento", 1200, 6, "eletronicos", d(2026, 10, 3), ym(2026, 11))
+        h.card("Fone", 300, 1, "eletronicos", d(2026, 10, 4), ym(2026, 11))
         h.space.execute(
             h.env(),
             RegisterBoleto("Luz", Classification.Category(seed("casa.contas-domesticas")), d(2026, 10, 25), brl(90)),
         ).applied()
 
-        val list = h.space.entries(EntryFilter(ym(2026, 10), ym(2026, 10), DateCriterion.PurchaseDate), 0, Int.MAX_VALUE).value()
         val a = h.activity(d(2026, 10, 1), d(2026, 11, 1))
-        // A lista inclui o boleto pelo vencimento; a atividade o separa como lacuna. Fora isso, os números são os mesmos.
-        assertEquals(list.summary.expenses, a.total.total + a.gaps!!.total)
-        assertEquals(brl(1300), a.total.total)
+        // A atividade segue a compra original: o Equipamento entra inteiro (1.200) na data da compra.
+        assertEquals(brl(1600), a.total.total)
+        // A lista traz o Equipamento como parcelas no mês da fatura (novembro) e o que é à vista pela data da compra (outubro).
+        val october = h.space.entries(EntryFilter(ym(2026, 10), ym(2026, 10), DateCriterion.PurchaseDate), 0, Int.MAX_VALUE).value()
+        assertEquals(a.total.total - brl(1200) + a.gaps!!.total, october.summary.expenses)
+        val november = h.space.entries(EntryFilter(ym(2026, 11), ym(2026, 11), DateCriterion.PurchaseDate), 0, Int.MAX_VALUE).value()
+        assertEquals(listOf(brl(200)), november.rows.filter { it.description == "Equipamento" }.map { it.amount })
     }
 
     @Test

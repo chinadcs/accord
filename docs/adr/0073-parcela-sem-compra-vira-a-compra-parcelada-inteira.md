@@ -25,7 +25,7 @@ meio do parcelamento) e, perguntado sobre as parcelas anteriores à da linha, es
 3. Sem mudança de esquema, de protocolo nem de migração: o Room e o Supabase continuam com parcelas 1..N.
 4. Propostas dentro da decisão, a revisar com o uso:
    - O total precisa dividir em N parcelas com a parcela n igual ao valor da linha (a diferença de centavos fica na última); senão a dúvida continua.
-   - Se algum mês do cronograma for de uma **fatura já quitada**, a compra não é criada: a dúvida diz isso e fica para revisão.
+   - ~~Se algum mês do cronograma for de uma **fatura já quitada**, a compra não é criada: a dúvida diz isso e fica para revisão.~~ Substituído em 11/11/2026 pelo [ADR 0090](0090-compra-parcelada-uma-linha-por-parcela-e-parcelas-em-fatura-quitada.md): a compra é criada mesmo assim.
    - O resumo da confirmação e o "O que vai acontecer" listam os meses que mudam, antes de aplicar.
 5. Fora desta decisão: vincular a uma compra registrada com outro nome, parcela de refinanciamento da fatura (segue dúvida, 03/11/2026) e a regra de
    estorno no cartão.

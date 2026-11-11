@@ -113,38 +113,39 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
-    fun `critério data da compra mostra a compra uma única vez pelo total e sem as parcelas`() = runBlocking<Unit> {
+    fun `critério data da compra mostra a compra parcelada como uma linha por parcela, cada uma no mês da fatura (ADR 0090)`() = runBlocking<Unit> {
         val h = open()
-        h.card("Equipamento", 1200, 6)
-        val sepPage = h.space.entries(filter(sep, sep, DateCriterion.PurchaseDate)).value()
-        val purchase = sepPage.rows.single()
-        assertEquals(EntryKind.CardPurchase, purchase.kind)
-        assertEquals(brl(1200), purchase.amount)
-        assertEquals(brl(1200), sepPage.summary.expenses)
-        // e nenhum mês seguinte repete o valor da compra
-        assertEquals(emptyList(), h.rows(filter(oct, ym(2027, 3), DateCriterion.PurchaseDate)))
+        h.card("Equipamento", 1200, 6) // compra em 25/09, 1ª fatura em outubro
+        // Setembro não tem parcela: a compra inteira não aparece lá.
+        assertEquals(emptyList(), h.rows(filter(sep, sep, DateCriterion.PurchaseDate)))
+        val rows = h.space.entries(filter(oct, ym(2027, 3), DateCriterion.PurchaseDate)).value().rows
+        assertEquals(6, rows.size)
+        assertTrue(rows.all { it.kind == EntryKind.CardInstallment && it.amount == brl(200) && it.installmentCount == 6 })
+        assertEquals((1..6).toList(), rows.mapNotNull { it.installmentNumber }.sorted())
+        // cada mês mostra só a parcela dele e conta só ela
+        (10..12).forEach { m ->
+            val page = h.space.entries(filter(ym(2026, m), ym(2026, m), DateCriterion.PurchaseDate)).value()
+            assertEquals(listOf(m - 9), page.rows.map { it.installmentNumber })
+            assertEquals(brl(200), page.summary.expenses)
+        }
     }
 
     @Test
-    fun `data da compra mostra a parcela e o valor dela na linha da compra parcelada, sem mudar o total das somas`() = runBlocking<Unit> {
+    fun `data da compra mostra a compra a vista uma vez pelo total e a parcelada por parcela, sem mudar o total das somas`() = runBlocking<Unit> {
         val h = open()
         h.card("Equipamento", 1200, 6)
         h.card("Fone", 300, 1)
-        val page = h.space.entries(filter(sep, sep, DateCriterion.PurchaseDate)).value()
-        val purchase = page.rows.single { it.description == "Equipamento" }
-        // Compra de 25/09, 1ª fatura em 15/10: nenhuma parcela vence em setembro, então a linha mostra a primeira que vence depois.
-        assertEquals(1, purchase.installmentNumber)
-        assertEquals(6, purchase.installmentCount)
-        assertEquals(brl(200), purchase.installmentAmount)
-        assertEquals(brl(1200), purchase.amount)
-        assertEquals(brl(1500), page.summary.expenses) // as somas seguem pelo total das compras
-        // Num período que cobre várias faturas, a linha mostra a primeira parcela que vence no período.
-        val wide = h.space.entries(filter(sep, ym(2026, 12), DateCriterion.PurchaseDate)).value().rows.single { it.description == "Equipamento" }
-        assertEquals(1, wide.installmentNumber)
-        // Compra em uma parcela segue sem parcela exibida.
-        val single = page.rows.single { it.description == "Fone" }
+        val sepPage = h.space.entries(filter(sep, sep, DateCriterion.PurchaseDate)).value()
+        // À vista no cartão segue pela data da compra, sem parcela exibida.
+        val single = sepPage.rows.single()
+        assertEquals("Fone", single.description)
         assertNull(single.installmentAmount)
         assertNull(single.installmentNumber)
+        assertEquals(brl(300), sepPage.summary.expenses)
+        // O período que cobre as faturas soma o total das duas compras, cada parcela uma vez.
+        val wide = h.space.entries(filter(sep, ym(2027, 3), DateCriterion.PurchaseDate)).value()
+        assertEquals(brl(1500), wide.summary.expenses)
+        assertEquals(7, wide.rows.size)
     }
 
     @Test
@@ -381,9 +382,11 @@ class QueriesTest : SpaceTestBase() {
         assertEquals(brl(505), byPurchase.month.committedExpenses)
         assertEquals(byBudget.month, byPurchase.month)
         assertEquals(h.space.entries(filter()).value().summary.committedExpenses, byPurchase.month.committedExpenses)
-        // o Saldo total continua no critério escolhido: a data da compra desconta os R$ 2.400 inteiros
-        assertEquals(brl(2905), byPurchase.total.committedExpenses)
+        // O Saldo total acumula as parcelas por mês da fatura nos dois critérios (ADR 0090): outubro ainda não tem parcela do notebook.
+        assertEquals(brl(505), byPurchase.total.committedExpenses)
         assertEquals(brl(505), byBudget.total.committedExpenses)
+        // Em novembro entra só a 1ª parcela (R$ 400), nunca os R$ 2.400 inteiros.
+        assertEquals(brl(905), h.space.totalBalance(DateCriterion.PurchaseDate, ym(2026, 11)).value().total.committedExpenses)
     }
 
     @Test
@@ -406,37 +409,36 @@ class QueriesTest : SpaceTestBase() {
         val h = open()
         h.withDefaultAccount()
         val id = h.card("Equipamento", 1200, 6) // compra em 25/09, 6 parcelas de R$ 200 a partir da fatura de outubro
-        val byPurchase = filter(from = sep, to = sep, criterion = DateCriterion.PurchaseDate)
+        val byPurchase = filter(from = oct, to = ym(2027, 3), criterion = DateCriterion.PurchaseDate)
 
         h.space.execute(h.env(), RequestInstallmentCancellation(id, listOf(4, 5, 6))).applied()
         // solicitado ainda é comprometido
-        assertEquals(brl(1200), h.space.entries(byPurchase).value().rows.single().amount)
+        assertEquals(brl(1200), h.space.entries(byPurchase).value().summary.expenses)
 
         h.space.execute(h.env(), ConfirmNonCharge(id, listOf(4, 5, 6))).applied()
-        val row = h.space.entries(byPurchase).value().rows.single()
-        assertEquals(brl(600), row.amount)
-        assertTrue(EntrySituation.Cancelled in row.situations)
-        assertEquals(6, row.installmentCount) // a identidade da compra não muda
-        assertEquals(brl(600), h.space.entries(byPurchase).value().summary.expenses)
+        val page = h.space.entries(byPurchase).value()
+        // as parcelas canceladas e confirmadas saem da lista; as outras seguem com a identidade da compra
+        assertEquals(listOf(1, 2, 3), page.rows.mapNotNull { it.installmentNumber }.sorted())
+        assertTrue(page.rows.all { it.installmentCount == 6 })
+        assertEquals(brl(600), page.summary.expenses)
         // as parcelas que valem somam o mesmo que o critério do orçamento mostra mês a mês
         val byBudget = (10..12).sumOf { m ->
             h.space.entries(filter(from = ym(2026, m), to = ym(2026, m))).value().summary.expenses.cents
         }
         assertEquals(brl(600).cents, byBudget)
-        assertEquals(brl(600), h.space.totalBalance(DateCriterion.PurchaseDate, oct).value().total.committedExpenses)
+        assertEquals(brl(600), h.space.totalBalance(DateCriterion.PurchaseDate, ym(2026, 12)).value().total.committedExpenses)
     }
 
     @Test
-    fun `compra toda cancelada continua na lista marcada e vale zero na data da compra`() = runBlocking<Unit> {
+    fun `compra toda cancelada sai da lista por parcela e vale zero`() = runBlocking<Unit> {
         val h = open()
         h.withDefaultAccount()
         val id = h.card("Cancelada", 300, 3)
         h.space.execute(h.env(), RequestInstallmentCancellation(id, listOf(1, 2, 3))).applied()
         h.space.execute(h.env(), ConfirmNonCharge(id, listOf(1, 2, 3))).applied()
 
-        val page = h.space.entries(filter(from = sep, to = sep, criterion = DateCriterion.PurchaseDate)).value()
-        assertEquals(Money.ZERO, page.rows.single().amount)
-        assertTrue(EntrySituation.Cancelled in page.rows.single().situations)
+        val page = h.space.entries(filter(from = sep, to = ym(2027, 3), criterion = DateCriterion.PurchaseDate)).value()
+        assertEquals(emptyList(), page.rows)
         assertEquals(Money.ZERO, page.summary.expenses)
     }
 

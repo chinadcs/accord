@@ -278,7 +278,7 @@ class RegisterFlowTest {
     }
 
     @Test
-    fun compraParceladaMostraOCronogramaAntesDeSalvarEApareceUmaVezPeloTotal() {
+    fun compraParceladaMostraOCronogramaAntesDeSalvarEApareceComoParcelaNaLista() {
         openFormFromPlus("Despesa no cartão")
         fill("Descrição", "Equipamento $tag")
         fill("Valor (R$)", "1.200,00")
@@ -299,12 +299,16 @@ class RegisterFlowTest {
 
         saveAndLeave()
         waitForText("Salvo neste aparelho")
-        // A lista abre por data da compra (spec 07): a compra aparece uma vez, pelo total.
-        // As parcelas por fatura são conferidas no critério do orçamento (EntriesUiTest).
+        // A lista mostra a compra parcelada por parcela, no mês da fatura (spec 07, ADR 0090): a 1ª cai no mês atual ou no seguinte, conforme o fechamento.
         compose.onNodeWithTag("tab-Entries").performClick()
         compose.onNodeWithText("Buscar descrição ou estabelecimento").performTextInput(tag)
+        val inThisMonth = runCatching {
+            compose.waitUntil(3_000) { compose.onAllNodesWithText("Equipamento $tag").fetchSemanticsNodes().isNotEmpty() }
+        }.isSuccess
+        if (!inThisMonth) compose.onNode(androidx.compose.ui.test.hasContentDescription("Próximo mês")).performClick()
         waitForText("Equipamento $tag")
-        compose.onAllNodesWithText("1.200,00", substring = true).onFirst().assertIsDisplayed()
+        compose.onAllNodesWithText("200,00", substring = true).onFirst().assertIsDisplayed()
+        compose.onAllNodesWithText("Parcela", substring = true).onFirst().assertIsDisplayed()
     }
 
     @Test

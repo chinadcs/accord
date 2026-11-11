@@ -83,7 +83,7 @@ internal class EntryQueries(
      * Linhas de todos os tipos no critério de [f], antes dos filtros de categoria, forma de pagamento, situação, pessoa e busca. A lista de
      * Lançamentos (07) e a atividade de compras (30) usam esta mesma construção, para nunca divergirem nas regras de data.
      */
-    private suspend fun build(f: EntryFilter): List<Built> {
+    private suspend fun build(f: EntryFilter, installmentRows: Boolean = false): List<Built> {
         val card = cycle()
         val byBudget = f.criterion == DateCriterion.BudgetMonth
         val fromDay = f.from.atDay(1).toEpochDay()
@@ -107,13 +107,17 @@ internal class EntryQueries(
 
         // Cartão: parcelas no mês de vencimento da fatura, ou a compra uma vez pelo total.
         val purchases = mutableMapOf<String, CardPurchaseRow>()
-        if (byBudget) {
+        // Na lista de Lançamentos a compra parcelada é sempre uma linha por parcela, no mês da fatura (ADR 0090); o critério "data da compra" fica
+        // para a compra à vista. A atividade de compras (30) e as pistas seguem pela compra original.
+        if (byBudget || installmentRows) {
             val installments = dao.installmentsInMonths(f.from.toString(), f.to.toString())
             val counts = mutableMapOf<String, Int>()
             val paidInvoices = mutableMapOf<String, Boolean>()
             installments.filter { it.cancelState != CancellationPlanner.CANCEL_DONE }.forEach { i ->
                 val p = purchases.getOrPut(i.purchaseId) { dao.purchase(i.purchaseId)!! }
                 val count = counts.getOrPut(i.purchaseId) { dao.installments(i.purchaseId).size }
+                // Compra à vista no critério "data da compra": entra uma vez, pela data, no bloco de baixo.
+                if (!byBudget && count == 1) return@forEach
                 val month = YearMonth.parse(i.invoiceMonth)
                 val paid = paidInvoices.getOrPut("${p.cardId}:${i.invoiceMonth}") { dao.isInvoicePaid(i.invoiceMonth, p.cardId) }
                 built += Built(
@@ -133,9 +137,11 @@ internal class EntryQueries(
                     Bucket.Expense, month, p.spentBy,
                 )
             }
-        } else {
+        }
+        if (!byBudget) {
             dao.purchasesBetween(fromDay, toDay).forEach { p ->
                 val rows = dao.installments(p.id)
+                if (installmentRows && rows.size > 1) return@forEach
                 val date = LocalDate.ofEpochDay(p.purchaseEpochDay)
                 // Parcela cancelada e confirmada deixa de contar, como no critério do orçamento; a compra segue na lista, marcada.
                 val cancelled = rows.filter { it.cancelState == CancellationPlanner.CANCEL_DONE }
@@ -280,7 +286,7 @@ internal class EntryQueries(
     suspend fun entries(f: EntryFilter, cursor: Int, pageSize: Int): EntryPage {
         require(cursor >= 0 && pageSize > 0) { "Cursor e tamanho da página precisam ser positivos" }
         val tree = tree()
-        val built = build(f)
+        val built = build(f, installmentRows = true)
         val matching = built.filter { matches(it, f, tree) }
             .sortedWith(compareByDescending<Built> { it.row.date }.thenBy { it.row.id })
         val page = matching.drop(cursor).take(pageSize)

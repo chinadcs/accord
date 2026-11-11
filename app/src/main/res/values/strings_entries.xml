@@ -19,7 +19,7 @@
     <string name="entries_criterion_purchase">Critério: data da compra</string>
     <string name="entries_criterion_change">Alterar</string>
     <string name="entries_criterion_budget_hint">Mostra as parcelas que vencem no período.</string>
-    <string name="entries_criterion_purchase_hint">Mostra cada compra uma vez, pelo total.</string>
+    <string name="entries_criterion_purchase_hint">Mostra cada compra à vista pela data. Compra parcelada aparece por parcela, no mês da fatura.</string>
     <string name="entries_period">%1$s a %2$s</string>
     <string name="entries_clear_filters">Limpar filtros</string>
     <string name="entries_empty_title">Nenhum lançamento por aqui</string>
