@@ -83,6 +83,7 @@ fun BudgetRoute(
     onOpenForecasts: (YearMonth) -> Unit = {},
     countExpectedIncome: Boolean = false,
     onEditLimits: (YearMonth) -> Unit = {},
+    onConfirmLinks: (YearMonth) -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     RefreshOnResume(viewModel::refresh)
@@ -93,7 +94,7 @@ fun BudgetRoute(
         onOpenCategory = onOpenCategory, onClassify = onClassify, onRegister = onRegister,
         onOpenCommitments = onOpenCommitments, onOpenIncomes = onOpenIncomes, onOpenCard = onOpenCard,
         hasFloatingAction = true, onOpenForecasts = onOpenForecasts, countExpectedIncome = countExpectedIncome,
-        onEditLimits = onEditLimits,
+        onEditLimits = onEditLimits, onConfirmLinks = onConfirmLinks,
         onCurrentMonth = viewModel::goToCurrentMonth.takeIf { !viewModel.isCurrentMonth(state.month) },
     )
 }
@@ -117,6 +118,7 @@ fun BudgetScreen(
     onCurrentMonth: (() -> Unit)? = null,
     countExpectedIncome: Boolean = false,
     onEditLimits: (YearMonth) -> Unit = {},
+    onConfirmLinks: (YearMonth) -> Unit = {},
 ) {
     // A barra inferior sobrepõe o conteúdo do Scaffold. O espaço dela vai no recorte da lista (não em contentPadding):
     // assim a área visível termina onde a barra começa e um item levado à tela (rolagem por acessibilidade, foco,
@@ -148,9 +150,9 @@ fun BudgetScreen(
             BudgetContent.Loading -> item { BudgetSkeleton() }
             is BudgetContent.Failed -> {
                 item { FailureBanner(content.last?.month, onRetry) }
-                content.last?.let { budgetContent(it, onOpenCategory, onClassify, onRegister, onOpenCommitments, onOpenIncomes, onOpenCard, !hasFloatingAction, onOpenForecasts, state.flow.takeIf { _ -> it.month == state.month }, onRetryFlow, countExpectedIncome, details, onEditLimits) }
+                content.last?.let { budgetContent(it, onOpenCategory, onClassify, onRegister, onOpenCommitments, onOpenIncomes, onOpenCard, !hasFloatingAction, onOpenForecasts, state.flow.takeIf { _ -> it.month == state.month }, onRetryFlow, countExpectedIncome, details, onEditLimits, onConfirmLinks) }
             }
-            is BudgetContent.Ready -> budgetContent(content.data, onOpenCategory, onClassify, onRegister, onOpenCommitments, onOpenIncomes, onOpenCard, !hasFloatingAction, onOpenForecasts, state.flow.takeIf { content.data.month == state.month }, onRetryFlow, countExpectedIncome, details, onEditLimits)
+            is BudgetContent.Ready -> budgetContent(content.data, onOpenCategory, onClassify, onRegister, onOpenCommitments, onOpenIncomes, onOpenCard, !hasFloatingAction, onOpenForecasts, state.flow.takeIf { content.data.month == state.month }, onRetryFlow, countExpectedIncome, details, onEditLimits, onConfirmLinks)
         }
     }
 }
@@ -215,6 +217,7 @@ private fun LazyListScope.budgetContent(
     countExpectedIncome: Boolean,
     details: DetailsState,
     onEditLimits: (YearMonth) -> Unit,
+    onConfirmLinks: (YearMonth) -> Unit,
 ) {
     if (data.isEmpty) {
         item { EmptyMonth(onRegister, showInlineManual) }
@@ -224,7 +227,7 @@ private fun LazyListScope.budgetContent(
     item { SummaryCard(data) { onEditLimits(data.month) } }
     if (data.noActivity) item { EmptyMonth(onRegister, showInlineManual) }
     // Aviso único: "A classificar" e os vínculos de fatura a conferir ficam juntos, uma vez só na tela.
-    if (data.budget.toClassify.count > 0 || data.budget.invoiceLinksToConfirm > 0) item { NoticeCard(data) { onClassify(data.month) } }
+    if (data.budget.toClassify.count > 0 || data.budget.invoiceLinksToConfirm > 0) item { NoticeCard(data, { onClassify(data.month) }, { onConfirmLinks(data.month) }) }
     item {
         val hasAnyLimit = data.hasLimits || data.budget.general.isDefined
         AdaptiveRow(
@@ -476,9 +479,9 @@ private fun SummaryMetric(label: String, amount: String, note: String? = null, m
     }
 }
 
-/** Aviso único do mês: A classificar abre Lançamentos filtrados; vínculos de fatura a conferir são a segunda linha (a ação é de accord-amkn). */
+/** Aviso único do mês: A classificar abre Lançamentos filtrados; vínculos de fatura a conferir são a segunda linha (Conferir abre Lançamentos filtrados, no mês exibido). */
 @Composable
-private fun NoticeCard(data: BudgetData, onClassify: () -> Unit) {
+private fun NoticeCard(data: BudgetData, onClassify: () -> Unit, onConfirmLinks: () -> Unit) {
     val line = data.budget.toClassify
     val links = data.budget.invoiceLinksToConfirm
     val ink = Accord.colors.onAttentionContainer
@@ -507,9 +510,12 @@ private fun NoticeCard(data: BudgetData, onClassify: () -> Unit) {
                     horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
                 ) {
                     DecorativeIcon(Lucide.drawable.lucide_ic_triangle_alert, tint = ink)
-                    Column {
+                    Column(Modifier.weight(1f)) {
                         Text(pluralStringResource(R.plurals.links_to_confirm, links, links), style = MaterialTheme.typography.bodyMedium, color = ink)
                         Text(stringResource(R.string.links_to_confirm_note), style = MaterialTheme.typography.bodySmall, color = ink)
+                    }
+                    TextButton(onClick = onConfirmLinks, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                        Text(stringResource(R.string.links_to_confirm_action), color = ink)
                     }
                 }
             }

@@ -67,12 +67,12 @@ class BudgetUiTest {
         income = IncomeTotals(brl(6000), brl(500)), categories = categories,
     )
 
-    private fun show(state: BudgetUiState, fontScale: Float = 1f) {
+    private fun show(state: BudgetUiState, fontScale: Float = 1f, onConfirmLinks: (java.time.YearMonth) -> Unit = {}) {
         compose.setContent {
             val density = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
                 AccordTheme {
-                    BudgetScreen(state, PaddingValues(), {}, {}, {}, { _, _ -> }, {}, {})
+                    BudgetScreen(state, PaddingValues(), {}, {}, {}, { _, _ -> }, {}, {}, onConfirmLinks = onConfirmLinks)
                 }
             }
         }
@@ -160,6 +160,14 @@ class BudgetUiTest {
         show(ready(budget(listOf(category("food", 100, limit = 1200)), links = 2)))
         text("2 vínculos de fatura a conferir").assertIsDisplayed()
         text("Esses valores estão no mês estimado, de forma provisória.").assertIsDisplayed()
+    }
+
+    @Test
+    fun conferirNoAvisoDeVinculosAbreOFiltroNoMesExibido() {
+        var opened: java.time.YearMonth? = null
+        show(ready(budget(listOf(category("food", 100, limit = 1200)), links = 2)), onConfirmLinks = { opened = it })
+        text("Conferir").performClick()
+        assertEquals(oct, opened)
     }
 
     @Test

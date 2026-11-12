@@ -642,6 +642,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             onOpenCard = { navController.navigate(ROUTE_CARD) },
                             onOpenForecasts = { month -> navController.navigate("$ROUTE_FORECASTS?$ARG_MONTH=$month") },
                             onEditLimits = { month -> navController.navigate("$ROUTE_LIMITS?$ARG_MONTH=$month") },
+                            onConfirmLinks = { month -> navController.openFilteredEntries(month, null, EntrySituation.InvoiceLinkToConfirm) },
                         )
                     }
                 }
