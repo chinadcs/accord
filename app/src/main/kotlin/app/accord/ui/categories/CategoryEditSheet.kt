@@ -1,5 +1,6 @@
 package app.accord.ui.categories
 
+import app.accord.ui.components.AccordSheet
 import app.accord.ui.components.accordSheetColor
 import app.accord.ui.components.accordDialogColor
 import androidx.compose.foundation.BorderStroke
@@ -100,13 +101,60 @@ internal fun CategoryEditSheet(
     var asking by remember { mutableStateOf(false) }
     // Com alteração, fechar pergunta antes; sem ela, fecha direto. O arrasto para baixo é recusado com alteração para o painel não sumir sem a pergunta.
     val requestClose = { if (state.changed) asking = true else onClose() }
-    ModalBottomSheet(
-        onDismissRequest = requestClose,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true, confirmValueChange = { it != SheetValue.Hidden || !state.changed }),
-        dragHandle = { BottomSheetDefaults.DragHandle() },
-        containerColor = accordSheetColor(),
+    val focus = remember { FocusRequester() }
+    val tint = categoryPaletteColor(state.colorIndex)
+    AccordSheet(
+        title = stringResource(state.title), onRequestClose = requestClose, blockHide = state.changed,
+        footer = {
+            state.message?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
+            Button(
+                onClick = onSave, enabled = !state.working,
+                modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin),
+            ) { Text(stringResource(R.string.categories_save)) }
+        },
     ) {
-        EditSheetBody(state, onName, onIcon, onColor, onSave, requestClose)
+        LaunchedEffect(Unit) { if (state.creating) focus.requestFocus() }
+        Preview(state, tint)
+        OutlinedTextField(
+            value = state.name, onValueChange = onName, singleLine = true,
+            label = { Text(stringResource(R.string.categories_name)) },
+            isError = state.nameError || state.message != null,
+            supportingText = if (state.nameError) ({ Text(stringResource(R.string.categories_name_required)) }) else null,
+            modifier = Modifier.fillMaxWidth().focusRequester(focus),
+        )
+        if (state.isMain) {
+            Text(stringResource(R.string.category_edit_color), style = MaterialTheme.typography.titleSmall)
+            FlowRow(
+                Modifier.fillMaxWidth().selectableGroup(),
+                horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
+                verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
+            ) {
+                for (index in 0 until CATEGORY_PALETTE_SIZE) {
+                    ColorOption(index, selected = index == state.colorIndex) { onColor(index) }
+                }
+            }
+        } else {
+            Text(
+                stringResource(R.string.category_edit_sub_color, state.parentName.orEmpty()),
+                style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Text(stringResource(R.string.category_edit_icon), style = MaterialTheme.typography.titleSmall)
+        val choices = if (CategoryIconChoices.none { it.key == state.originalIcon }) {
+            listOf(IconChoice(state.originalIcon, stringResource(R.string.category_edit_icon_current))) + CategoryIconChoices
+        } else {
+            CategoryIconChoices
+        }
+        FlowRow(
+            Modifier.fillMaxWidth().selectableGroup(),
+            horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
+            verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
+        ) {
+            choices.forEach { choice ->
+                IconOption(choice, selected = choice.key == state.iconKey, tint = tint) { onIcon(choice.key) }
+            }
+        }
+
     }
     if (asking) {
         AlertDialog(
@@ -116,88 +164,6 @@ internal fun CategoryEditSheet(
             confirmButton = { TextButton(onClick = onClose, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.categories_discard_confirm)) } },
             dismissButton = { TextButton(onClick = { asking = false }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.categories_discard_keep)) } },
         )
-    }
-}
-
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-private fun EditSheetBody(
-    state: PanelState,
-    onName: (String) -> Unit,
-    onIcon: (String) -> Unit,
-    onColor: (Int) -> Unit,
-    onSave: () -> Unit,
-    onClose: () -> Unit,
-) {
-    val focus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { if (state.creating) focus.requestFocus() }
-    val tint = categoryPaletteColor(state.colorIndex)
-    // Cabeçalho e Salvar ficam fixos; só o miolo (nome, cor, ícones) rola, para Salvar nunca ficar depois de 70 ícones.
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .fillMaxHeight()
-            .imePadding()
-            .navigationBarsPadding()
-            .padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2),
-        verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                stringResource(state.title), style = MaterialTheme.typography.headlineSmall,
-                modifier = Modifier.weight(1f),
-            )
-            IconButton(onClick = onClose, modifier = Modifier.size(AccordSpacing.touchMin)) {
-                Icon(painterResource(Lucide.drawable.lucide_ic_x), contentDescription = stringResource(R.string.register_picker_close))
-            }
-        }
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
-            Preview(state, tint)
-            OutlinedTextField(
-                value = state.name, onValueChange = onName, singleLine = true,
-                label = { Text(stringResource(R.string.categories_name)) },
-                isError = state.nameError || state.message != null,
-                supportingText = if (state.nameError) ({ Text(stringResource(R.string.categories_name_required)) }) else null,
-                modifier = Modifier.fillMaxWidth().focusRequester(focus),
-            )
-            if (state.isMain) {
-                Text(stringResource(R.string.category_edit_color), style = MaterialTheme.typography.titleSmall)
-                FlowRow(
-                    Modifier.fillMaxWidth().selectableGroup(),
-                    horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
-                    verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
-                ) {
-                    for (index in 0 until CATEGORY_PALETTE_SIZE) {
-                        ColorOption(index, selected = index == state.colorIndex) { onColor(index) }
-                    }
-                }
-            } else {
-                Text(
-                    stringResource(R.string.category_edit_sub_color, state.parentName.orEmpty()),
-                    style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Text(stringResource(R.string.category_edit_icon), style = MaterialTheme.typography.titleSmall)
-            val choices = if (CategoryIconChoices.none { it.key == state.originalIcon }) {
-                listOf(IconChoice(state.originalIcon, stringResource(R.string.category_edit_icon_current))) + CategoryIconChoices
-            } else {
-                CategoryIconChoices
-            }
-            FlowRow(
-                Modifier.fillMaxWidth().selectableGroup(),
-                horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
-                verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
-            ) {
-                choices.forEach { choice ->
-                    IconOption(choice, selected = choice.key == state.iconKey, tint = tint) { onIcon(choice.key) }
-                }
-            }
-        }
-        state.message?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
-        Button(
-            onClick = onSave, enabled = !state.working,
-            modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin),
-        ) { Text(stringResource(R.string.categories_save)) }
     }
 }
 

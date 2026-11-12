@@ -55,8 +55,8 @@ import app.accord.ui.register.AccountDialog
 import app.accord.ui.register.CategoryDialog
 import app.accord.ui.register.DatePickerSheet
 import app.accord.ui.register.IncomeCategoryDialog
-import app.accord.ui.register.FormTextField
-import app.accord.ui.register.PickerField
+import app.accord.ui.components.FormTextField
+import app.accord.ui.components.PickerField
 import app.accord.ui.register.accountLabel
 import app.accord.ui.theme.Accord
 import app.accord.ui.theme.AccordSpacing

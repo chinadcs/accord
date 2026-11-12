@@ -45,7 +45,7 @@ import app.accord.ui.components.DecorativeIcon
 import app.accord.ui.components.RefreshOnResume
 import app.accord.ui.fullLabel
 import app.accord.ui.register.DatePickerSheet
-import app.accord.ui.register.PickerField
+import app.accord.ui.components.PickerField
 import app.accord.ui.theme.Accord
 import app.accord.ui.theme.AccordSpacing
 import com.composables.icons.lucide.R as Lucide

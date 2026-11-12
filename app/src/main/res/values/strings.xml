@@ -157,4 +157,5 @@
     <string name="cashflow_note">Renda prevista não é saldo confirmado. O pago já está nos gastos comprometidos. Não é saldo bancário e não inclui intenções nem simulações.</string>
     <string name="cashflow_loading">Calculando o fluxo do mês…</string>
     <string name="cashflow_failed">Não foi possível calcular o fluxo do mês.</string>
+    <string name="chip_remove_filter">Remover filtro: %1$s</string>
 </resources>

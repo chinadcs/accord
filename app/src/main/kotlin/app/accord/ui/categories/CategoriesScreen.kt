@@ -78,6 +78,8 @@ import app.accord.ui.components.RefreshOnResume
 import app.accord.ui.components.SkeletonBlock
 import app.accord.ui.sync.LocalSyncStatus
 import app.accord.ui.components.DecorativeIcon
+import app.accord.ui.components.RowMenu
+import app.accord.ui.components.RowMenuItem
 import app.accord.ui.components.lucideRes
 import app.accord.ui.theme.AccordSpacing
 import com.composables.icons.lucide.R as Lucide
@@ -401,12 +403,12 @@ private fun MainLine(
             handle()
         } else {
             RowMenu(row.name) { close ->
-                MenuItem(R.string.categories_menu_edit) { close(); row.expense?.let(onEdit) ?: row.income?.let(onEditIncome) }
-                MenuItem(R.string.categories_new_sub) { close(); onCreate(row.id) }
+                RowMenuItem(R.string.categories_menu_edit) { close(); row.expense?.let(onEdit) ?: row.income?.let(onEditIncome) }
+                RowMenuItem(R.string.categories_new_sub) { close(); onCreate(row.id) }
                 if (row.expense != null) {
-                    MenuItem(R.string.categories_menu_reclassify) { close(); onMoveEntries(row.id) }
+                    RowMenuItem(R.string.categories_menu_reclassify) { close(); onMoveEntries(row.id) }
                     HorizontalDivider()
-                    MenuItem(R.string.categories_menu_remove, destructive = true) { close(); onRemove(row.id) }
+                    RowMenuItem(R.string.categories_menu_remove, destructive = true) { close(); onRemove(row.id) }
                 }
             }
         }
@@ -440,11 +442,11 @@ private fun SubLine(
             handle()
         } else if (row.expense != null) {
             RowMenu(row.name) { close ->
-                MenuItem(R.string.categories_menu_edit) { close(); onEdit(row.expense) }
-                MenuItem(R.string.categories_menu_pass) { close(); onMoveSub(row.expense) }
-                MenuItem(R.string.categories_menu_reclassify) { close(); onMoveEntries(row.id) }
+                RowMenuItem(R.string.categories_menu_edit) { close(); onEdit(row.expense) }
+                RowMenuItem(R.string.categories_menu_pass) { close(); onMoveSub(row.expense) }
+                RowMenuItem(R.string.categories_menu_reclassify) { close(); onMoveEntries(row.id) }
                 HorizontalDivider()
-                MenuItem(R.string.categories_menu_remove, destructive = true) { close(); onRemove(row.id) }
+                RowMenuItem(R.string.categories_menu_remove, destructive = true) { close(); onRemove(row.id) }
             }
         } else {
             Box(Modifier.size(AccordSpacing.touchMin))
@@ -475,27 +477,6 @@ private fun NewSubLine(row: CategoryRow.NewSub, onCreate: (String?) -> Unit) {
 @Composable
 private fun subCountText(count: Int): String =
     if (count == 0) stringResource(R.string.categories_subs_none) else pluralStringResource(R.plurals.categories_subs_count, count, count)
-
-/** ⋮ de 48 × 48 dp; o nome da categoria vai no rótulo de acessibilidade ("Mais ações de …"). */
-@Composable
-private fun RowMenu(name: String, items: @Composable (close: () -> Unit) -> Unit) {
-    var open by remember { mutableStateOf(false) }
-    Box {
-        IconButton(onClick = { open = true }, modifier = Modifier.size(AccordSpacing.touchMin)) {
-            Icon(painterResource(Lucide.drawable.lucide_ic_ellipsis_vertical), contentDescription = stringResource(R.string.categories_menu_more, name))
-        }
-        DropdownMenu(containerColor = accordMenuColor(), expanded = open, onDismissRequest = { open = false }) { items { open = false } }
-    }
-}
-
-@Composable
-private fun MenuItem(label: Int, destructive: Boolean = false, onClick: () -> Unit) {
-    DropdownMenuItem(
-        text = { Text(stringResource(label), color = if (destructive) MaterialTheme.colorScheme.error else Color.Unspecified) },
-        onClick = onClick,
-        modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
-    )
-}
 
 /** Ícone da categoria na cor escolhida, sobre um disco de 40 dp da própria cor esmaecida (o mesmo desenho do painel de edição). */
 @Composable

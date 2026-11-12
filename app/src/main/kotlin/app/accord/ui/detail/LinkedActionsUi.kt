@@ -43,7 +43,7 @@ import app.accord.core.label
 import app.accord.core.space.RefundStatus
 import app.accord.ui.fullLabel
 import app.accord.ui.register.DatePickerSheet
-import app.accord.ui.register.PickerField
+import app.accord.ui.components.PickerField
 import app.accord.ui.theme.AccordSpacing
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.relocation.BringIntoViewRequester

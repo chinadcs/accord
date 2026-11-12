@@ -45,8 +45,8 @@ import app.accord.ui.components.DecorativeIcon
 import app.accord.ui.components.DetailHeader
 import app.accord.ui.components.MonthSelector
 import app.accord.ui.register.CategoryDialog
-import app.accord.ui.register.FormTextField
-import app.accord.ui.register.PickerField
+import app.accord.ui.components.FormTextField
+import app.accord.ui.components.PickerField
 import app.accord.ui.theme.Accord
 import app.accord.ui.theme.AccordSpacing
 import com.composables.icons.lucide.R as Lucide

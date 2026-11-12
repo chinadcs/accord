@@ -38,7 +38,7 @@ import app.accord.ui.components.MessageBanner
 import app.accord.ui.components.MonthSelector
 import app.accord.ui.label
 import app.accord.ui.register.FormError
-import app.accord.ui.register.FormTextField
+import app.accord.ui.components.FormTextField
 import app.accord.ui.theme.AccordSpacing
 
 @Composable
