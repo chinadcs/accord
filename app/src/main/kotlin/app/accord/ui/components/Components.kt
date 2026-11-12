@@ -129,7 +129,7 @@ fun BudgetBar(fill: Float, state: BarState, marker: Float?, modifier: Modifier =
         BarState.Attention -> Accord.colors.attentionFill
         else -> MaterialTheme.colorScheme.primary
     }
-    val markerColor = if (state == BarState.Excess) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onSurface
+    val markerColor = if (state == BarState.Excess) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onSurface
     Canvas(modifier.fillMaxWidth().height(8.dp).clearAndSetSemantics { }) {
         val radius = CornerRadius(4.dp.toPx())
         drawRoundRect(track, size = size, cornerRadius = radius)

@@ -48,10 +48,11 @@ fun CategoryRoute(
     onBack: () -> Unit,
     onCheckEntries: (categoryId: String, subcategoryId: String?) -> Unit,
     onOpenForecast: () -> Unit = {},
+    onEditLimit: () -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     RefreshOnResume(viewModel::refresh)
-    CategoryScreen(state, viewModel.month, padding, onBack, { viewModel.load() }, onCheckEntries, onOpenForecast)
+    CategoryScreen(state, viewModel.month, padding, onBack, { viewModel.load() }, onCheckEntries, onOpenForecast, onEditLimit)
 }
 
 @Composable
@@ -63,6 +64,7 @@ fun CategoryScreen(
     onRetry: () -> Unit,
     onCheckEntries: (String, String?) -> Unit,
     onOpenForecast: () -> Unit = {},
+    onEditLimit: () -> Unit = {},
 ) {
     LazyColumn(
         // O espaço inferior (barra do sistema ou de navegação) recorta a lista; em contentPadding só valeria no fim da rolagem e um
@@ -93,7 +95,7 @@ fun CategoryScreen(
                     }
                 }
             }
-            is CategoryContent.Ready -> categoryContent(state.value, onCheckEntries, onOpenForecast)
+            is CategoryContent.Ready -> categoryContent(state.value, onCheckEntries, onOpenForecast, onEditLimit)
         }
     }
 }
@@ -102,6 +104,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.categoryContent(
     value: CategoryData,
     onCheckEntries: (String, String?) -> Unit,
     onOpenForecast: () -> Unit,
+    onEditLimit: () -> Unit,
 ) {
     item { CategorySummary(value.category, value.node.iconKey, categoryColor(value.data.categories, value.node.id)) }
     if (value.subcategories.isEmpty()) {
@@ -129,6 +132,11 @@ private fun androidx.compose.foundation.lazy.LazyListScope.categoryContent(
             onClick = { onCheckEntries(value.category.categoryId, null) },
             modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin),
         ) { Text(stringResource(R.string.action_check_entries)) }
+    }
+    item {
+        OutlinedButton(onClick = onEditLimit, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+            Text(stringResource(R.string.category_edit_limit))
+        }
     }
     item {
         OutlinedButton(onClick = onOpenForecast, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {

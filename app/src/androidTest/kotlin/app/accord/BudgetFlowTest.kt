@@ -106,6 +106,34 @@ class BudgetFlowTest {
         compose.onNodeWithText(current.label()).assertIsDisplayed()
     }
 
+    /** Sem limite algum, "Definir limites" abre Limites no mês exibido e voltar preserva o mês. */
+    @Test
+    fun definirLimitesAbreLimitesNoMesExibidoEVoltaParaOMesmoMes() {
+        compose.onNodeWithText("Orçamento").performClick()
+        waitForTop()
+        compose.onNode(hasText("Definir limites")).performClick()
+        waitForText("Referência: ${YearMonth.now().label()}")
+        compose.onNode(hasContentDescription("Voltar")).performClick()
+        waitForTop()
+        compose.onNodeWithText(YearMonth.now().label()).assertIsDisplayed()
+    }
+
+    /** "Editar limite" na categoria abre Limites no mês dela e voltar retorna à categoria no mesmo mês. */
+    @Test
+    fun editarLimiteDaCategoriaAbreLimitesNoMesEVoltaParaACategoria() {
+        compose.onNodeWithText("Orçamento").performClick()
+        waitForTop()
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Alimentação"))
+        compose.onAllNodes(hasText("Alimentação")).onFirst().performSemanticsAction(SemanticsActions.OnClick)
+        waitForText("Conferir lançamentos")
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Editar limite"))
+        compose.onNodeWithText("Editar limite").performClick()
+        waitForText("Referência: ${YearMonth.now().label()}")
+        compose.onNode(hasContentDescription("Voltar")).performClick()
+        waitForText("Conferir lançamentos")
+        compose.onNodeWithText(YearMonth.now().label()).assertIsDisplayed()
+    }
+
     @Test
     fun mesAtualMostraOQueFoiRegistradoNoBancoDoAparelho() {
         compose.onNodeWithText("Orçamento").performClick()

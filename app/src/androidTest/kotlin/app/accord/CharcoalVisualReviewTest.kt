@@ -201,7 +201,7 @@ class CharcoalVisualReviewTest {
     @Test
     fun lupasAbremLancamentosEBuscaFiltraELimpaDescricoes() {
         showApp(seed = true)
-        // A lupa fica no Chat e no Orçamento; a Início não a tem desde o ADR 0071.
+        // A lupa fica só no Chat (ADR 0086: a busca no Orçamento é a aba Lançamentos).
         tab("Chat")
         compose.onNodeWithContentDescription("Pesquisar lançamentos").performClick()
         waitFor("Buscar descrição ou estabelecimento")
@@ -221,14 +221,5 @@ class CharcoalVisualReviewTest {
         search.performTextInput(unique)
         waitFor(market)
         assertTrue(compose.onAllNodesWithText(spotify).fetchSemanticsNodes().isNotEmpty())
-
-        compose.runOnIdle { dismissKeyboard?.invoke() }
-        compose.waitUntil(8_000) {
-            compose.onAllNodes(hasText("Orçamento") and hasClickAction()).fetchSemanticsNodes().isNotEmpty()
-        }
-        tab("Orçamento")
-        compose.onNodeWithContentDescription("Pesquisar lançamentos").performClick()
-        waitFor("Buscar descrição ou estabelecimento")
-        capture("lancamentos-via-orcamento-escuro")
     }
 }

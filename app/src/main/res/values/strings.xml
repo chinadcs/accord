@@ -50,6 +50,10 @@
     <string name="summary_committed">Comprometido</string>
     <string name="summary_limits">Limites</string>
     <string name="summary_no_limits">Nenhum limite definido</string>
+    <string name="budget_define_limits">Definir limites</string>
+    <string name="category_edit_limit">Editar limite</string>
+    <string name="budget_edit_limits">Editar limites</string>
+    <string name="budget_edit_limits_description">Editar limites de %1$s</string>
     <string name="summary_paid">Já pago</string>
     <string name="summary_paid_note">parte do comprometido</string>
     <string name="summary_credits">Créditos de estorno</string>
@@ -68,6 +72,16 @@
     </plurals>
     <string name="to_classify_action">Classificar</string>
     <string name="categories_title">Categorias</string>
+    <string name="budget_details_title">Mais detalhes do mês</string>
+    <string name="budget_method_title">Como é calculado</string>
+    <string name="budget_month_links_title">Do mês</string>
+    <string name="collapsible_open">Aberto</string>
+    <string name="collapsible_closed">Fechado</string>
+    <string name="category_of_limit_short">de %s</string>
+    <plurals name="budget_notice_to_classify">
+        <item quantity="one">A classificar · %1$d lançamento · %2$s</item>
+        <item quantity="other">A classificar · %1$d lançamentos · %2$s</item>
+    </plurals>
     <string name="category_limit_undefined">Limite não definido</string>
     <string name="category_of_limit">%1$s / %2$s</string>
     <string name="category_remaining">Faltam %s</string>

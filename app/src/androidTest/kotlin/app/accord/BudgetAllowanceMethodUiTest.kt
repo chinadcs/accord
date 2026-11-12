@@ -35,12 +35,12 @@ import org.junit.Rule
 import org.junit.Test
 import java.time.YearMonth
 
-/** "Como é calculada a margem para gastar" no Orçamento (ADR 0078, accord-xj7j): texto fixo e recolhível, sem números. */
+/** "Como é calculado" (critério de data e margem para gastar) no Orçamento (ADR 0078, accord-xj7j): texto fixo e recolhível, sem números. */
 class BudgetAllowanceMethodUiTest {
     @get:Rule val compose = createComposeRule()
 
     private val oct = YearMonth.of(2026, 10)
-    private val title = "Como é calculada a margem para gastar"
+    private val title = "Como é calculado"
 
     private val budget = MonthBudget(
         month = oct, committed = Money(320_000), totalLimits = Money.ZERO, paid = Money(100_000),
@@ -68,7 +68,7 @@ class BudgetAllowanceMethodUiTest {
     @Test fun comecaRecolhidaEAbreComOTextoCompletoSemNumeros() {
         show()
         reveal(title)
-        compose.onNodeWithText(title).assertIsDisplayed().assertHeightIsAtLeast(48.dp)
+        compose.onNodeWithText(title).assertIsDisplayed().assertHeightIsAtLeast(60.dp)
             .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "Fechado"))
         compose.onAllNodesWithText("Restante do mês dividido pelos dias restantes", substring = true).assertCountEquals(0)
 

@@ -640,8 +640,8 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             onOpenCommitments = { month -> navController.navigate("$ROUTE_COMMITMENTS?$ARG_MONTH=$month") },
                             onOpenIncomes = { month -> navController.navigate("$ROUTE_INCOMES?$ARG_MONTH=$month") },
                             onOpenCard = { navController.navigate(ROUTE_CARD) },
-                            onSearch = { openRoot(Root.Entries) },
                             onOpenForecasts = { month -> navController.navigate("$ROUTE_FORECASTS?$ARG_MONTH=$month") },
+                            onEditLimits = { month -> navController.navigate("$ROUTE_LIMITS?$ARG_MONTH=$month") },
                         )
                     }
                 }
@@ -663,6 +663,7 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                             navController.openFilteredEntries(viewModel.month, subcategoryId ?: categoryId, null)
                         },
                         onOpenForecast = { navController.navigate("$ROUTE_FORECAST/${Uri.encode(viewModel.categoryId)}/${viewModel.month}") },
+                        onEditLimit = { navController.navigate("$ROUTE_LIMITS?$ARG_MONTH=${viewModel.month}") },
                     )
                 }
             }

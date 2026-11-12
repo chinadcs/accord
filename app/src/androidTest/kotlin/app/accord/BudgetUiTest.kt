@@ -83,6 +83,11 @@ class BudgetUiTest {
         return compose.onNodeWithText(value)
     }
 
+    private fun textPart(value: String): SemanticsNodeInteraction {
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText(value, substring = true))
+        return compose.onNode(hasText(value, substring = true))
+    }
+
     private fun ready(b: MonthBudget) = BudgetUiState(oct, BudgetContent.Ready(BudgetData(b, nodes)))
 
     @Test fun graficoUsaLiquidoEAClassificarSemSomarPagoEAbreCategoriaDoMesExibido() {
@@ -94,11 +99,14 @@ class BudgetUiTest {
                     { id, month -> opened = id to month }, {}, {})
             }
         }
-        text("Outubro/2026 · mês do orçamento · valores líquidos em R$").assertIsDisplayed()
+        // "Mais detalhes do mês" começa fechado; o gráfico só tem categorias classificadas, e "A classificar" é o aviso.
+        assertEquals(0, compose.onAllNodes(hasText("Alimentação: ", substring = true)).fetchSemanticsNodes().size)
+        text("Gastos por categoria").performClick()
+        textPart("Outubro/2026 · mês do orçamento · valores líquidos em R$").assertIsDisplayed()
         text("1. Alimentação: ${brl(60).format()}").assertIsDisplayed().performClick()
         assertEquals("food" to oct, opened)
-        text("2. A classificar: ${brl(150).format()}").assertIsDisplayed()
-        text("Gastos por categoria").assertIsDisplayed()
+        assertEquals(0, compose.onAllNodes(hasText("2. A classificar", substring = true)).fetchSemanticsNodes().size)
+        text("A classificar · 1 lançamento · ${brl(150).format()}").assertIsDisplayed()
         chartScreenshot(compose, "budget-net-and-unclassified")
     }
 
@@ -109,8 +117,9 @@ class BudgetUiTest {
         text(brl(3200).format()).assertIsDisplayed()
         text("Já pago").assertIsDisplayed()
         text("parte do comprometido").assertIsDisplayed()
-        text("Renda recebida").assertIsDisplayed()
-        text("A receber").assertIsDisplayed()
+        // Renda recebida e A receber ficam só dentro do Fluxo do mês (recolhido).
+        assertEquals(0, compose.onAllNodes(hasText("Renda recebida")).fetchSemanticsNodes().size)
+        assertEquals(0, compose.onAllNodes(hasText("A receber")).fetchSemanticsNodes().size)
         text(brl(4500).format()).assertIsDisplayed()
     }
 
@@ -119,7 +128,7 @@ class BudgetUiTest {
         show(ready(budget(listOf(category("food", 980, limit = 1200)))))
         text("Faltam ${brl(220).format()}").assertIsDisplayed()
         text(brl(980).format()).assertIsDisplayed()
-        text("Limite ${brl(1200).format()}").assertIsDisplayed()
+        textPart("de ${brl(1200).format()}").assertIsDisplayed()
     }
 
     @Test
@@ -134,15 +143,16 @@ class BudgetUiTest {
         show(ready(budget(listOf(category("food", 980, limit = 900)))))
         text("Passou ${brl(80).format()}").assertIsDisplayed()
         text(brl(980).format()).assertIsDisplayed()
-        text("Limite ${brl(900).format()}").assertIsDisplayed()
+        textPart("de ${brl(900).format()}").assertIsDisplayed()
     }
 
     @Test
     fun creditosSuperioresADespesasMostramCreditoLiquidoSemTruncarEmZero() {
         show(ready(budget(listOf(category("fun", 0, credits = 40, limit = 500)), committed = 0, paid = 0, credits = 40)))
         text("Crédito líquido de ${brl(40).format()}").assertIsDisplayed()
-        text("Despesas ${brl(0).format()} · Créditos ${brl(40).format()} · Líquido ${Money(-4_000).format()}")
-            .assertIsDisplayed()
+        // Despesas e créditos ficam na tela da categoria; o leitor de tela ainda recebe a composição na linha.
+        compose.onNode(hasContentDescription("Despesas ${brl(0).format()} · Créditos ${brl(40).format()} · Líquido ${Money(-4_000).format()}", substring = true))
+            .assertExists()
     }
 
     @Test
@@ -155,9 +165,7 @@ class BudgetUiTest {
     @Test
     fun linhaAClassificarFicaSeparadaSemLimiteComAcao() {
         show(ready(budget(listOf(category("food", 100, limit = 1200)), toClassify = ToClassifyLine(brl(150), 1))))
-        text("A classificar").assertIsDisplayed()
-        text("${brl(150).format()} · 1 lançamento · sem limite").assertIsDisplayed()
-        text("Classificar").assertIsDisplayed()
+        text("A classificar · 1 lançamento · ${brl(150).format()}").assertIsDisplayed()
     }
 
     @Test
@@ -188,7 +196,8 @@ class BudgetUiTest {
     fun carregandoMantemOMesSelecionadoVisivel() {
         show(BudgetUiState(oct, BudgetContent.Loading))
         text("Outubro/2026").assertIsDisplayed()
-        text("Carregando…").assertIsDisplayed()
+        compose.onNode(hasContentDescription("Carregando…")).assertIsDisplayed()
+        assertEquals(0, compose.onAllNodes(hasText("R$", substring = true)).fetchSemanticsNodes().size)
     }
 
     @Test

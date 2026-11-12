@@ -72,9 +72,23 @@ class BudgetCashFlowUiTest {
         return compose.onNodeWithText(value, substring = substring)
     }
 
+    /** "Mais detalhes do mês" começa fechado: abre o Fluxo do mês pelo cabeçalho (o estado fica na tela, não na lista). */
+    private fun openFlow() {
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Fluxo do mês"))
+        compose.onNode(hasText("Fluxo do mês") and hasClickAction()).performClick()
+    }
+
+    @Test fun cabecalhoRecolhidoMostraOResultadoComPalavraENadaDeRenda() {
+        show(state(BudgetFlowState.Ready(flow)))
+        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Fluxo do mês"))
+        compose.onNode(hasText("Fluxo do mês") and isHeading()).assertIsDisplayed()
+        text("Sobra ${money(95_000)}").assertIsDisplayed()
+        compose.onAllNodes(hasText("Renda já recebida")).assertCountEquals(0)
+    }
+
     @Test fun prontoMostraQuatroLinhasDeValorPagoComoParteEOsDoisResultadosComPalavra() {
         show(state(BudgetFlowState.Ready(flow)))
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Fluxo do mês") and isHeading())
+        openFlow()
         compose.onNode(hasText("Fluxo do mês") and isHeading()).assertIsDisplayed()
         text("Renda já recebida").assertIsDisplayed()
         text(money(300_000)).assertIsDisplayed()
@@ -98,14 +112,14 @@ class BudgetCashFlowUiTest {
         compose.setContent { AccordTheme {
             BudgetScreen(current.value, PaddingValues(), {}, {}, {}, { _, _ -> }, {}, {}, onRetryFlow = { retries++ })
         } }
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Fluxo do mês") and isHeading())
+        openFlow()
         compose.onNodeWithContentDescription("Calculando o fluxo do mês…").assertIsDisplayed()
         compose.onAllNodes(hasText("Renda já recebida")).assertCountEquals(0)
         compose.runOnIdle { current.value = state(BudgetFlowState.Failed) }
         text("Não foi possível calcular o fluxo do mês.").assertIsDisplayed()
         compose.onAllNodes(hasText("Renda já recebida")).assertCountEquals(0)
         // O resto da tela não falha junto: o resumo do mês continua lá e não há banner geral de erro.
-        text("Renda recebida").assertIsDisplayed()
+        text("Comprometido").assertIsDisplayed()
         compose.onAllNodes(hasText("Não foi possível ler os dados deste aparelho.")).assertCountEquals(0)
         val retry = compose.onNode(hasText("Tentar de novo") and hasClickAction())
         compose.onNode(hasScrollAction()).performScrollToNode(hasText("Tentar de novo") and hasClickAction())
@@ -118,6 +132,7 @@ class BudgetCashFlowUiTest {
     @Test fun resultadoNegativoDizFaltaComIconeETextoSemDependerDoSinal() {
         val negative = flow.copy(receivedCents = 10_000, toReceiveCents = 0)
         show(state(BudgetFlowState.Ready(negative)))
+        openFlow()
         // -195.000 em ambos: "falta" com o valor sem sinal; nunca só o sinal negativo nem só a cor.
         text("Só com a renda recebida: falta ${money(195_000)}").assertIsDisplayed()
         text("Se toda a renda prevista chegar: falta ${money(195_000)}").assertIsDisplayed()
@@ -127,6 +142,7 @@ class BudgetCashFlowUiTest {
     @Test fun resultadosDiferentesSobraNoSegundoEFaltaNoPrimeiro() {
         val mixed = flow.copy(receivedCents = 100_000, toReceiveCents = 200_000)
         show(state(BudgetFlowState.Ready(mixed)))
+        openFlow()
         text("Só com a renda recebida: falta ${money(105_000)}").assertIsDisplayed()
         text("Se toda a renda prevista chegar: sobra ${money(95_000)}").assertIsDisplayed()
     }
@@ -134,11 +150,13 @@ class BudgetCashFlowUiTest {
     @Test fun resultadoExatamenteZeroNaoDizSobraNemFalta() {
         val even = flow.copy(receivedCents = 205_000, toReceiveCents = 0)
         show(state(BudgetFlowState.Ready(even)))
+        openFlow()
         text("Só com a renda recebida: fica em ${money(0)}, sem sobra nem falta").assertIsDisplayed()
     }
 
     @Test fun semEstimativaEProvisorioFicamExplicitos() {
         show(state(BudgetFlowState.Ready(flow.copy(categoriesWithoutEstimate = 2, provisional = true))))
+        openFlow()
         text("2 categorias sem histórico", substring = true).assertIsDisplayed()
         text("Há valores provisórios", substring = true).assertIsDisplayed()
     }
@@ -146,12 +164,15 @@ class BudgetCashFlowUiTest {
     @Test fun fluxoDeOutroMesNaoApareceJuntoDaVisaoDoMesAnterior() {
         // A visão exibida é de outubro, mas o mês escolhido já é novembro: o fluxo (de novembro) não se mistura.
         show(state(BudgetFlowState.Ready(flow), month = oct.plusMonths(1), dataMonth = oct))
-        compose.onAllNodes(hasText("Fluxo do mês") and isHeading()).assertCountEquals(0)
+        // O cabeçalho fica, mas em carga: nenhum valor do mês anterior aparece sob o rótulo do novo.
+        openFlow()
         compose.onAllNodes(hasText("Renda já recebida")).assertCountEquals(0)
+        compose.onAllNodes(hasText(money(300_000))).assertCountEquals(0)
     }
 
     @Test fun textoAmpliadoEmpilhaValoresSemPerderNada() {
         show(state(BudgetFlowState.Ready(flow)), fontScale = 2f)
+        openFlow()
         text("Gastos comprometidos no mês").assertIsDisplayed()
         text(money(185_000)).assertIsDisplayed()
         text("Só com a renda recebida: sobra ${money(95_000)}").assertIsDisplayed()

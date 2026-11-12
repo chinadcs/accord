@@ -20,13 +20,12 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import app.accord.ui.components.AccordButton as Button
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,12 +35,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -49,11 +47,15 @@ import app.accord.R
 import app.accord.core.Money
 import app.accord.core.space.CategoryBudget
 import app.accord.core.space.GeneralBudgetView
+import app.accord.core.MonthCashFlow
 import app.accord.ui.components.AdaptiveRow
+import app.accord.ui.components.CollapsibleSection
+import app.accord.ui.components.SkeletonBlock
+import app.accord.ui.components.SkeletonLines
+import app.accord.ui.components.chartInk
+import app.accord.ui.components.textInk
 import app.accord.ui.components.BudgetBar
 import app.accord.ui.components.DecorativeIcon
-import app.accord.ui.components.HomeSectionCard
-import app.accord.ui.components.SectionStatus
 import app.accord.ui.home.AllowanceMethodText
 import app.accord.ui.home.CashFlowBody
 import app.accord.ui.components.MonthSelector
@@ -78,9 +80,9 @@ fun BudgetRoute(
     onOpenCommitments: (YearMonth) -> Unit = {},
     onOpenIncomes: (YearMonth) -> Unit = {},
     onOpenCard: () -> Unit = {},
-    onSearch: (() -> Unit)? = null,
     onOpenForecasts: (YearMonth) -> Unit = {},
     countExpectedIncome: Boolean = false,
+    onEditLimits: (YearMonth) -> Unit = {},
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     RefreshOnResume(viewModel::refresh)
@@ -89,8 +91,9 @@ fun BudgetRoute(
         onPrevious = viewModel::previousMonth, onNext = viewModel::nextMonth, onRetry = viewModel::retry,
         onRetryFlow = viewModel::retryFlow,
         onOpenCategory = onOpenCategory, onClassify = onClassify, onRegister = onRegister,
-        onOpenCommitments = onOpenCommitments, onOpenIncomes = onOpenIncomes, onOpenCard = onOpenCard, onSearch = onSearch,
+        onOpenCommitments = onOpenCommitments, onOpenIncomes = onOpenIncomes, onOpenCard = onOpenCard,
         hasFloatingAction = true, onOpenForecasts = onOpenForecasts, countExpectedIncome = countExpectedIncome,
+        onEditLimits = onEditLimits,
         onCurrentMonth = viewModel::goToCurrentMonth.takeIf { !viewModel.isCurrentMonth(state.month) },
     )
 }
@@ -108,47 +111,69 @@ fun BudgetScreen(
     onOpenCommitments: (YearMonth) -> Unit = {},
     onOpenIncomes: (YearMonth) -> Unit = {},
     onOpenCard: () -> Unit = {},
-    onSearch: (() -> Unit)? = null,
     hasFloatingAction: Boolean = false,
     onOpenForecasts: (YearMonth) -> Unit = {},
     onRetryFlow: () -> Unit = {},
     onCurrentMonth: (() -> Unit)? = null,
     countExpectedIncome: Boolean = false,
+    onEditLimits: (YearMonth) -> Unit = {},
 ) {
     // A barra inferior sobrepõe o conteúdo do Scaffold. O espaço dela vai no recorte da lista (não em contentPadding):
     // assim a área visível termina onde a barra começa e um item levado à tela (rolagem por acessibilidade, foco,
     // teclado) nunca fica escondido sob ela, o que contentPadding não impede porque só vale no fim da rolagem.
+    // O aberto/fechado de "Mais detalhes do mês" fica fora da lista: sobrevive à rolagem e a voltar de um detalhe.
+    var flowOpen by rememberSaveable { mutableStateOf(false) }
+    var chartOpen by rememberSaveable { mutableStateOf(false) }
+    var methodOpen by rememberSaveable { mutableStateOf(false) }
+    val details = DetailsState(
+        flowOpen, chartOpen, methodOpen,
+        onToggle = { when (it) { DetailSection.Flow -> flowOpen = !flowOpen; DetailSection.Chart -> chartOpen = !chartOpen; DetailSection.Method -> methodOpen = !methodOpen } },
+    )
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(bottom = padding.calculateBottomPadding()),
         contentPadding = PaddingValues(
             start = AccordSpacing.s4, end = AccordSpacing.s4,
             top = padding.calculateTopPadding() + AccordSpacing.s4,
-            bottom = AccordSpacing.s4 + if (hasFloatingAction) 80.dp else 0.dp,
+            bottom = AccordSpacing.s4 + if (hasFloatingAction) AccordSpacing.fabClearance else 0.dp,
         ),
         verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
     ) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    ScreenTitle(stringResource(R.string.tab_budget), Modifier.weight(1f))
-                    onSearch?.let { search ->
-                        IconButton(onClick = search, modifier = Modifier.size(AccordSpacing.touchMin)) {
-                            Icon(painterResource(Lucide.drawable.lucide_ic_search), contentDescription = stringResource(R.string.search_entries))
-                        }
-                    }
-                }
+                ScreenTitle(stringResource(R.string.tab_budget))
                 MonthSelector(state.month, onPrevious, onNext, onCurrent = onCurrentMonth)
             }
         }
         when (val content = state.content) {
-            BudgetContent.Loading -> item {
-                Text(stringResource(R.string.state_loading), style = MaterialTheme.typography.bodyLarge)
-            }
+            BudgetContent.Loading -> item { BudgetSkeleton() }
             is BudgetContent.Failed -> {
                 item { FailureBanner(content.last?.month, onRetry) }
-                content.last?.let { budgetContent(it, onOpenCategory, onClassify, onRegister, onOpenCommitments, onOpenIncomes, onOpenCard, !hasFloatingAction, onOpenForecasts, state.flow.takeIf { _ -> it.month == state.month }, onRetryFlow, countExpectedIncome) }
+                content.last?.let { budgetContent(it, onOpenCategory, onClassify, onRegister, onOpenCommitments, onOpenIncomes, onOpenCard, !hasFloatingAction, onOpenForecasts, state.flow.takeIf { _ -> it.month == state.month }, onRetryFlow, countExpectedIncome, details, onEditLimits) }
             }
-            is BudgetContent.Ready -> budgetContent(content.data, onOpenCategory, onClassify, onRegister, onOpenCommitments, onOpenIncomes, onOpenCard, !hasFloatingAction, onOpenForecasts, state.flow.takeIf { content.data.month == state.month }, onRetryFlow, countExpectedIncome)
+            is BudgetContent.Ready -> budgetContent(content.data, onOpenCategory, onClassify, onRegister, onOpenCommitments, onOpenIncomes, onOpenCard, !hasFloatingAction, onOpenForecasts, state.flow.takeIf { content.data.month == state.month }, onRetryFlow, countExpectedIncome, details, onEditLimits)
+        }
+    }
+}
+
+private enum class DetailSection { Flow, Chart, Method }
+
+private class DetailsState(val flow: Boolean, val chart: Boolean, val method: Boolean, val onToggle: (DetailSection) -> Unit)
+
+/** Esqueleto das formas finais (resumo e linhas de categoria): nunca mostra valor, e o leitor de tela recebe um só nó. */
+@Composable
+private fun BudgetSkeleton() {
+    val description = stringResource(R.string.state_loading)
+    Column(
+        Modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = description },
+        verticalArrangement = Arrangement.spacedBy(AccordSpacing.s4),
+    ) {
+        SkeletonBlock(height = 140.dp)
+        repeat(4) {
+            Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                SkeletonBlock(height = 20.dp, widthFraction = 0.6f)
+                SkeletonBlock(height = 8.dp)
+                SkeletonBlock(height = 16.dp, widthFraction = 0.8f)
+            }
         }
     }
 }
@@ -188,35 +213,38 @@ private fun LazyListScope.budgetContent(
     flow: BudgetFlowState?,
     onRetryFlow: () -> Unit,
     countExpectedIncome: Boolean,
+    details: DetailsState,
+    onEditLimits: (YearMonth) -> Unit,
 ) {
     if (data.isEmpty) {
         item { EmptyMonth(onRegister, showInlineManual) }
         item { BudgetCriteria() }
         return
     }
-    item { SummaryCard(data) }
+    item { SummaryCard(data) { onEditLimits(data.month) } }
     if (data.noActivity) item { EmptyMonth(onRegister, showInlineManual) }
-    item { BudgetCriteria() }
-    item { IncomeBlock(data, countExpectedIncome) }
-    if (data.budget.toClassify.count > 0) item { ToClassifyRow(data) { onClassify(data.month) } }
-    // O fluxo é do mês escolhido e só aparece junto de uma visão desse mesmo mês (nunca com a do mês anterior).
-    if (flow != null) item(key = "cash-flow") { BudgetFlowSection(flow, onRetryFlow, countExpectedIncome) }
+    // Aviso único: "A classificar" e os vínculos de fatura a conferir ficam juntos, uma vez só na tela.
+    if (data.budget.toClassify.count > 0 || data.budget.invoiceLinksToConfirm > 0) item { NoticeCard(data) { onClassify(data.month) } }
     item {
-        val values = data.budget.categories.map { category ->
-            MoneyChartValue(
-                data.categories[category.categoryId]?.name.orEmpty(), category.net,
-                onClick = { onOpenCategory(category.categoryId, data.month) },
-            )
-        } + if (data.budget.toClassify.count > 0) listOf(
-            MoneyChartValue(stringResource(R.string.chart_to_classify), data.budget.toClassify.amount, onClick = { onClassify(data.month) }),
-        ) else emptyList()
-        // MoneyChart(stringResource(R.string.chart_budget_title), stringResource(R.string.chart_budget_criterion, data.month.label()), values)
-    }
-    item {
-        Text(
-            stringResource(R.string.categories_title),
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(top = AccordSpacing.s2),
+        val hasAnyLimit = data.hasLimits || data.budget.general.isDefined
+        AdaptiveRow(
+            start = {
+                Text(
+                    stringResource(R.string.categories_title),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(top = AccordSpacing.s2).semantics { heading() },
+                )
+            },
+            end = {
+                // Sem limite algum, a ação "Definir limites" fica no resumo (spec 06); aqui só quando há o que editar.
+                if (hasAnyLimit) {
+                    val description = stringResource(R.string.budget_edit_limits_description, data.month.label())
+                    TextButton(
+                        onClick = { onEditLimits(data.month) },
+                        modifier = Modifier.heightIn(min = AccordSpacing.touchMin).semantics { contentDescription = description },
+                    ) { Text(stringResource(R.string.budget_edit_limits)) }
+                }
+            },
         )
     }
     items(data.budget.categories, key = { it.categoryId }) { category ->
@@ -226,78 +254,97 @@ private fun LazyListScope.budgetContent(
             name = node?.name.orEmpty(),
             iconKey = node?.iconKey ?: "tag",
             tint = categoryColor(data.categories, category.categoryId),
-            incomeCents = data.budget.income.received.cents + data.budget.income.toReceive.cents,
             onClick = { onOpenCategory(category.categoryId, data.month) },
         )
     }
-    // Texto fixo de "Como é calculado" da margem para gastar (ADR 0078): a margem é a de hoje, então não lê dados do mês escolhido.
-    item(key = "allowance-method") { AllowanceMethodSection() }
-    item { MonthLinks({ onOpenCommitments(data.month) }, { onOpenIncomes(data.month) }, onOpenCard, { onOpenForecasts(data.month) }) }
+    item(key = "details-title") {
+        Text(
+            stringResource(R.string.budget_details_title),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(top = AccordSpacing.s2).semantics { heading() },
+        )
+    }
+    // O fluxo é do mês escolhido e só aparece junto de uma visão desse mesmo mês (nunca com a do mês anterior).
+    item(key = "cash-flow") { BudgetFlowSection(flow ?: BudgetFlowState.Loading, details.flow, { details.onToggle(DetailSection.Flow) }, onRetryFlow, countExpectedIncome) }
+    item(key = "category-chart") {
+        // "A classificar" fica fora do gráfico: é o aviso acima, e as barras são só categorias classificadas.
+        val values = data.budget.categories.map { category ->
+            MoneyChartValue(
+                data.categories[category.categoryId]?.name.orEmpty(), category.net,
+                onClick = { onOpenCategory(category.categoryId, data.month) },
+            )
+        }
+        CollapsibleSection(stringResource(R.string.chart_budget_title), details.chart, { details.onToggle(DetailSection.Chart) }) {
+            MoneyChart(
+                null, stringResource(R.string.chart_budget_criterion, data.month.label()), values,
+                background = MaterialTheme.colorScheme.surfaceContainerLow,
+            )
+        }
+    }
+    // Texto fixo de "Como é calculado" (ADR 0078): a margem é a de hoje, então não lê dados do mês escolhido.
+    item(key = "allowance-method") { AllowanceMethodSection(details.method) { details.onToggle(DetailSection.Method) } }
+    item(key = "month-links") { MonthLinks({ onOpenCommitments(data.month) }, { onOpenIncomes(data.month) }, onOpenCard, { onOpenForecasts(data.month) }) }
 }
 
 /**
  * Fluxo do mês escolhido: renda contra o comprometido e o ritmo estimado dos gastos variáveis (leitura; nada é gravado).
- * Carga, falha e pronto têm cada um o seu corpo e a mesma altura mínima; só a falha oferece "Tentar de novo", que
- * relê apenas o fluxo.
+ * O cabeçalho mostra o resultado (com ícone e palavra), a carga ou a falha, nunca zero; só a falha oferece "Tentar de novo",
+ * que relê apenas o fluxo.
  */
 @Composable
-private fun BudgetFlowSection(flow: BudgetFlowState, onRetry: () -> Unit, countExpectedIncome: Boolean) {
+private fun BudgetFlowSection(flow: BudgetFlowState, open: Boolean, onToggle: () -> Unit, onRetry: () -> Unit, countExpectedIncome: Boolean) {
     val retryDescription = stringResource(R.string.budget_flow_retry_description)
-    HomeSectionCard(
-        title = stringResource(R.string.budget_flow_title),
-        status = when (flow) {
-            BudgetFlowState.Loading -> SectionStatus.Loading
-            BudgetFlowState.Failed -> SectionStatus.Failed
-            is BudgetFlowState.Ready -> SectionStatus.Ready
+    CollapsibleSection(
+        title = stringResource(R.string.budget_flow_title), expanded = open, onToggle = onToggle,
+        summary = {
+            when (flow) {
+                BudgetFlowState.Loading -> Text(stringResource(R.string.cashflow_loading), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                BudgetFlowState.Failed -> Text(stringResource(R.string.cashflow_failed), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                is BudgetFlowState.Ready -> FlowResultSummary(flow.value, countExpectedIncome)
+            }
         },
-        loadingDescription = stringResource(R.string.cashflow_loading),
-        failedMessage = stringResource(R.string.cashflow_failed),
-        skeletonLines = 4,
-        failedAction = {
-            OutlinedButton(
+    ) {
+        when (flow) {
+            BudgetFlowState.Loading -> SkeletonLines(stringResource(R.string.cashflow_loading), lines = 4)
+            BudgetFlowState.Failed -> OutlinedButton(
                 onClick = onRetry,
                 modifier = Modifier.heightIn(min = AccordSpacing.touchMin).semantics { contentDescription = retryDescription },
             ) { Text(stringResource(R.string.action_retry)) }
-        },
-    ) {
-        if (flow is BudgetFlowState.Ready) CashFlowBody(flow.value, countExpectedIncome)
+            is BudgetFlowState.Ready -> CashFlowBody(flow.value, countExpectedIncome)
+        }
+    }
+}
+
+/** Resultado do mês no cabeçalho recolhido: ícone e palavra sobra/falta; a cor nunca é o único sinal. */
+@Composable
+private fun FlowResultSummary(value: MonthCashFlow, countExpectedIncome: Boolean) {
+    val cents = if (countExpectedIncome) value.resultWithExpectedCents else value.resultWithReceivedCents
+    val amount = Money(kotlin.math.abs(cents)).format()
+    val outcome = when {
+        cents > 0 -> stringResource(R.string.cashflow_outcome_surplus, amount)
+        cents < 0 -> stringResource(R.string.cashflow_outcome_shortfall, amount)
+        else -> stringResource(R.string.cashflow_outcome_even, amount)
+    }
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+        DecorativeIcon(if (cents < 0) Lucide.drawable.lucide_ic_circle_alert else Lucide.drawable.lucide_ic_circle_check)
+        Text(outcome.replaceFirstChar { it.uppercase() }, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
 /**
- * Subseção recolhível com o texto de "Como é calculada a margem para gastar". Sem números: a margem é a de hoje e não
- * depende do mês escolhido. Recolhida por padrão; o estado de aberto/fechado é lido pelo leitor de tela.
+ * "Como é calculado": critério de data e o texto da margem para gastar. Sem números: a margem é a de hoje e não
+ * depende do mês escolhido. Recolhida por padrão; o aberto/fechado é anunciado pelo leitor de tela.
  */
 @Composable
-private fun AllowanceMethodSection() {
-    var open by rememberSaveable { mutableStateOf(false) }
-    val state = stringResource(if (open) R.string.budget_allowance_method_open else R.string.budget_allowance_method_closed)
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
-        Column {
-            Row(
-                Modifier.fillMaxWidth().heightIn(min = AccordSpacing.rowMedium)
-                    .clickable(role = Role.Button) { open = !open }
-                    .semantics { stateDescription = state }
-                    .padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
-            ) {
-                DecorativeIcon(Lucide.drawable.lucide_ic_info)
-                Text(stringResource(R.string.budget_allowance_method_title), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                DecorativeIcon(if (open) Lucide.drawable.lucide_ic_chevron_up else Lucide.drawable.lucide_ic_chevron_down)
-            }
-            if (open) {
-                Column(
-                    Modifier.fillMaxWidth().padding(start = AccordSpacing.s4, end = AccordSpacing.s4, bottom = AccordSpacing.s4),
-                    verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
-                ) {
-                    AllowanceMethodText(value = null)
-                    Text(
-                        stringResource(R.string.budget_allowance_method_note),
-                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
+private fun AllowanceMethodSection(open: Boolean, onToggle: () -> Unit) {
+    CollapsibleSection(stringResource(R.string.budget_method_title), open, onToggle) {
+        Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
+            Text(stringResource(R.string.budget_criteria), style = MaterialTheme.typography.bodyMedium)
+            AllowanceMethodText(value = null)
+            Text(
+                stringResource(R.string.budget_allowance_method_note),
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -346,7 +393,7 @@ private fun LabelledAmount(label: String, amount: String, note: String? = null) 
 }
 
 @Composable
-private fun SummaryCard(data: BudgetData) {
+private fun SummaryCard(data: BudgetData, onDefineLimits: () -> Unit) {
     val budget = data.budget
     val stackedMetrics = LocalDensity.current.fontScale >= 1.3f
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
@@ -378,8 +425,10 @@ private fun SummaryCard(data: BudgetData) {
             }
         }
         if (budget.general.isDefined) GeneralBudgetCard(budget.general)
+        if (!data.hasLimits && !budget.general.isDefined) OutlinedButton(onClick = onDefineLimits, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+            Text(stringResource(R.string.budget_define_limits))
+        }
         if (budget.credits.cents != 0L) LabelledAmount(stringResource(R.string.summary_credits), budget.credits.format())
-        if (budget.invoiceLinksToConfirm > 0) LinksToConfirm(budget.invoiceLinksToConfirm)
     }
 }
 
@@ -427,100 +476,84 @@ private fun SummaryMetric(label: String, amount: String, note: String? = null, m
     }
 }
 
+/** Aviso único do mês: A classificar abre Lançamentos filtrados; vínculos de fatura a conferir são a segunda linha (a ação é de accord-amkn). */
 @Composable
-private fun LinksToConfirm(count: Int) {
-    Surface(color = Accord.colors.attentionContainer, shape = MaterialTheme.shapes.small) {
-        Row(
-            Modifier.fillMaxWidth().padding(AccordSpacing.s3),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
-        ) {
-            DecorativeIcon(Lucide.drawable.lucide_ic_triangle_alert, tint = Accord.colors.onAttentionContainer)
-            Column {
-                Text(
-                    pluralStringResource(R.plurals.links_to_confirm, count, count),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Accord.colors.onAttentionContainer,
-                )
-                Text(
-                    stringResource(R.string.links_to_confirm_note),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Accord.colors.onAttentionContainer,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun IncomeBlock(data: BudgetData, countExpectedIncome: Boolean) {
-    val income = data.budget.income
-    Column(Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s1), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-        Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-            // Sem a opção "contar receitas previstas", recebida e a receber ficam em linhas distintas; prevista não é saldo disponível.
-            if (countExpectedIncome) {
-                LabelledAmount(stringResource(R.string.income_month), (income.received + income.toReceive).format())
-            } else {
-                LabelledAmount(stringResource(R.string.income_received), income.received.format())
-                LabelledAmount(stringResource(R.string.income_to_receive), income.toReceive.format())
-            }
-        }
-    }
-}
-
-@Composable
-private fun ToClassifyRow(data: BudgetData, onClick: () -> Unit) {
+private fun NoticeCard(data: BudgetData, onClassify: () -> Unit) {
     val line = data.budget.toClassify
-    val detail = pluralStringResource(R.plurals.to_classify_detail, line.count, line.amount.format(), line.count)
+    val links = data.budget.invoiceLinksToConfirm
+    val ink = Accord.colors.onAttentionContainer
     Surface(color = Accord.colors.attentionContainer, shape = MaterialTheme.shapes.medium) {
-        Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                DecorativeIcon(Lucide.drawable.lucide_ic_tag, tint = Accord.colors.onAttentionContainer)
-                Column {
-                    Text(stringResource(R.string.to_classify_title), style = MaterialTheme.typography.titleMedium, color = Accord.colors.onAttentionContainer)
-                    Text(detail, style = MaterialTheme.typography.bodyMedium, color = Accord.colors.onAttentionContainer)
+        Column(Modifier.fillMaxWidth()) {
+            if (line.count > 0) {
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)
+                        .clickable(role = Role.Button, onClickLabel = stringResource(R.string.to_classify_action), onClick = onClassify)
+                        .padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s3),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+                ) {
+                    DecorativeIcon(Lucide.drawable.lucide_ic_tag, tint = ink)
+                    Text(
+                        pluralStringResource(R.plurals.budget_notice_to_classify, line.count, line.count, line.amount.format()),
+                        style = MaterialTheme.typography.titleMedium, color = ink, modifier = Modifier.weight(1f),
+                    )
+                    DecorativeIcon(Lucide.drawable.lucide_ic_chevron_right, tint = ink)
                 }
             }
-            OutlinedButton(onClick = onClick, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                Text(stringResource(R.string.to_classify_action))
+            if (links > 0) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s3),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+                ) {
+                    DecorativeIcon(Lucide.drawable.lucide_ic_triangle_alert, tint = ink)
+                    Column {
+                        Text(pluralStringResource(R.plurals.links_to_confirm, links, links), style = MaterialTheme.typography.bodyMedium, color = ink)
+                        Text(stringResource(R.string.links_to_confirm_note), style = MaterialTheme.typography.bodySmall, color = ink)
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun CategoryRow(category: CategoryBudget, name: String, iconKey: String, tint: Color, incomeCents: Long, onClick: () -> Unit) {
+private fun CategoryRow(category: CategoryBudget, name: String, iconKey: String, tint: Color, onClick: () -> Unit) {
     val limit = category.limit
     val state = barState(limit)
     val money = { m: Money -> m.format() }
-    val status = when (state) {
+    val surface = MaterialTheme.colorScheme.surface
+    val onSurface = MaterialTheme.colorScheme.onSurface
+    val netCredit = if (category.net.isNegative) stringResource(R.string.category_net_credit, money(-category.net)) else null
+    val status = netCredit ?: when (state) {
         BarState.NoLimit -> stringResource(R.string.category_limit_undefined)
         BarState.Excess -> stringResource(R.string.category_excess, money(limit.excess ?: Money.ZERO))
         else -> stringResource(R.string.category_remaining, money(limit.remaining ?: Money.ZERO))
     }
-    val amounts = limit.total?.let { stringResource(R.string.category_of_limit, money(category.net), money(it)) } ?: money(category.net)
+    // Atenção e excesso: texto na cor semântica só se alcança 4,5:1 sobre a superfície; o ícone e a palavra seguem dizendo o estado.
+    val statusColor = when {
+        netCredit != null -> textInk(Accord.colors.success, surface, onSurface)
+        state == BarState.Excess -> textInk(MaterialTheme.colorScheme.error, surface, onSurface)
+        state == BarState.Attention -> textInk(Accord.colors.attention, surface, onSurface)
+        else -> MaterialTheme.colorScheme.onSurfaceVariant
+    }
     val barLabel = when (state) {
         BarState.WithinLimit -> stringResource(R.string.bar_within)
         BarState.Attention -> stringResource(R.string.bar_attention)
         BarState.Excess -> stringResource(R.string.bar_excess)
         BarState.NoLimit -> stringResource(R.string.bar_none)
     }
-    val hasCredits = category.credits.cents != 0L
-    val breakdown = if (hasCredits) {
+    val percent = percentLabel(limit)
+    val ofLimit = limit.total?.let { stringResource(R.string.category_of_limit_short, money(it)) }
+    // Despesas brutas e créditos ficam na tela da categoria, mas o leitor de tela recebe tudo na leitura da linha.
+    val breakdown = if (category.credits.cents != 0L) {
         stringResource(R.string.category_credits_breakdown, money(category.gross), money(category.credits), money(category.net))
     } else {
         null
     }
-    val netCredit = if (category.net.isNegative) stringResource(R.string.category_net_credit, money(-category.net)) else null
-    val percent = percentLabel(limit)
-    // Sem renda no mês (ou gasto líquido não positivo) não há fatia a mostrar.
-    val ofIncome = if (incomeCents > 0 && category.net.cents > 0) {
-        stringResource(R.string.category_of_income, Math.round(category.net.cents * 100.0 / incomeCents).toInt())
-    } else {
-        null
-    }
-    val description = listOfNotNull(name, amounts, status, barLabel, percent?.let { stringResource(R.string.percent_value, it) }, ofIncome, breakdown, netCredit).joinToString(". ")
+    val description = listOfNotNull(
+        name, money(category.net), ofLimit, status, barLabel, percent?.let { stringResource(R.string.percent_value, it) }, breakdown,
+    ).joinToString(". ")
 
     Column(Modifier.fillMaxWidth()) {
         Column(
@@ -530,54 +563,42 @@ private fun CategoryRow(category: CategoryBudget, name: String, iconKey: String,
                 .padding(horizontal = AccordSpacing.s1, vertical = AccordSpacing.s3),
             verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
         ) {
-            Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
-                Surface(color = MaterialTheme.colorScheme.surface, shape = CircleShape,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+            // Linha 1: ícone, nome e valor líquido.
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
+                Surface(color = surface, shape = CircleShape, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
                     Box(Modifier.size(AccordSpacing.touchMin), contentAlignment = Alignment.Center) {
                         DecorativeIcon(lucideRes(iconKey), tint = tint)
                     }
                 }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
-                    if (LocalDensity.current.fontScale >= 1.3f) {
+                if (LocalDensity.current.fontScale >= 1.3f) {
+                    Column(Modifier.weight(1f)) {
                         Text(name, style = MaterialTheme.typography.titleMedium)
                         Text(money(category.net), style = Accord.typography.amountRow)
-                    } else {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                            Text(name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-                            Text(money(category.net), style = Accord.typography.amountRow, textAlign = TextAlign.End)
-                        }
                     }
-                    limit.total?.let {
-                        Text(
-                            stringResource(R.string.category_limit_value, money(it)),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
+                } else {
+                    Text(name, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
+                    Text(money(category.net), style = Accord.typography.amountRow, textAlign = TextAlign.End)
                 }
             }
-            // Sem limite definido não há barra: o texto "Limite não definido" é o estado.
+            // Linha 2: barra. Sem limite definido não há barra: "Limite não definido" é o estado.
             if (state != BarState.NoLimit) BudgetBar(barFill(limit), state, excessMarker(limit, category.net))
+            // Linha 3: estado (ícone e texto), "de R$ limite" e percentual.
             AdaptiveRow(
                 start = {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
-                        when (state) {
-                            BarState.Attention -> DecorativeIcon(Lucide.drawable.lucide_ic_triangle_alert, tint = Accord.colors.attention)
-                            BarState.Excess -> DecorativeIcon(Lucide.drawable.lucide_ic_circle_alert, tint = MaterialTheme.colorScheme.error)
-                            else -> Unit
+                        when {
+                            netCredit != null -> Unit
+                            state == BarState.Attention -> DecorativeIcon(Lucide.drawable.lucide_ic_triangle_alert, tint = chartInk(Accord.colors.attention, surface, onSurface))
+                            state == BarState.Excess -> DecorativeIcon(Lucide.drawable.lucide_ic_circle_alert, tint = chartInk(MaterialTheme.colorScheme.error, surface, onSurface))
                         }
-                        Text(status, style = MaterialTheme.typography.bodyMedium, color = when (state) {
-                            BarState.Excess -> MaterialTheme.colorScheme.error
-                            BarState.Attention -> Accord.colors.attention
-                            else -> MaterialTheme.colorScheme.onSurfaceVariant
-                        })
+                        Text(status, style = MaterialTheme.typography.bodyMedium, color = statusColor)
                     }
                 },
-                end = { percent?.let { Text(stringResource(R.string.percent_value, it), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) } },
+                end = {
+                    val tail = listOfNotNull(ofLimit, percent?.let { stringResource(R.string.percent_value, it) }).joinToString(" · ")
+                    if (tail.isNotEmpty()) Text(tail, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.End)
+                },
             )
-            ofIncome?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            breakdown?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            netCredit?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Accord.colors.success) }
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
     }
@@ -587,9 +608,14 @@ private fun CategoryRow(category: CategoryBudget, name: String, iconKey: String,
 @Composable
 private fun MonthLinks(onCommitments: () -> Unit, onIncomes: () -> Unit, onCard: () -> Unit, onForecasts: () -> Unit) {
     Column {
+        Text(
+            stringResource(R.string.budget_month_links_title),
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(horizontal = AccordSpacing.s1, vertical = AccordSpacing.s2).semantics { heading() },
+        )
         MonthLink(stringResource(R.string.budget_link_forecasts), Lucide.drawable.lucide_ic_trending_up, onForecasts)
         MonthLink(stringResource(R.string.budget_link_commitments), Lucide.drawable.lucide_ic_calendar, onCommitments)
-        MonthLink(stringResource(R.string.budget_link_incomes), Lucide.drawable.lucide_ic_wallet, onIncomes)
+        MonthLink(stringResource(R.string.budget_link_incomes), Lucide.drawable.lucide_ic_banknote, onIncomes)
         MonthLink(stringResource(R.string.budget_link_card), Lucide.drawable.lucide_ic_credit_card, onCard)
     }
 }

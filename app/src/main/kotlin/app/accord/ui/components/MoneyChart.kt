@@ -75,9 +75,11 @@ internal fun chartInk(preferred: Color, background: Color, fallback: Color): Col
  * Charty's English/Float semantics are replaced by the exact pt-BR list below the decorative plot.
  */
 @Composable
-fun MoneyChart(title: String, criterion: String, values: List<MoneyChartValue>, modifier: Modifier = Modifier) {
+fun MoneyChart(
+    title: String?, criterion: String, values: List<MoneyChartValue>, modifier: Modifier = Modifier,
+    background: Color = MaterialTheme.colorScheme.surface,
+) {
     if (values.isEmpty()) return
-    val background = MaterialTheme.colorScheme.surface
     val text = MaterialTheme.colorScheme.onSurface
     val neutral = chartInk(Accord.colors.dataNeutral, background, text)
     val bars = values.mapIndexedNotNull { index, value ->
@@ -89,7 +91,8 @@ fun MoneyChart(title: String, criterion: String, values: List<MoneyChartValue>, 
         }
     }
     Column(modifier.fillMaxWidth().background(background).padding(vertical = AccordSpacing.s2), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-        Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
+        // Dentro de uma seção recolhível o título já é o cabeçalho dela.
+        title?.let { Text(it, style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() }) }
         Text(criterion, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (bars.any { it.value != 0f }) {
             Text(stringResource(R.string.chart_order), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
