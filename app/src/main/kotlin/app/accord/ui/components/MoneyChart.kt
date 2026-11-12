@@ -12,11 +12,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -49,6 +52,8 @@ data class MoneyChartValue(
     val amount: Money?,
     val unavailable: String = "",
     val projected: Boolean = false,
+    /** Cor da categoria; só barra e ponto da legenda, nunca texto (spec de cores §8). */
+    val color: Color? = null,
     val onClick: (() -> Unit)? = null,
 )
 
@@ -86,7 +91,7 @@ fun MoneyChart(
         value.amount?.let {
             BarData(
                 label = (index + 1).toString(), value = it.cents.toFloat() / 100f,
-                color = ChartyColor.Solid(if (value.projected) text else neutral),
+                color = ChartyColor.Solid(if (value.projected) text else value.color ?: neutral),
             )
         }
     }
@@ -135,10 +140,10 @@ fun MoneyChart(
             val rowModifier = value.onClick?.let { action ->
                 Modifier.heightIn(min = AccordSpacing.touchMin).clickable(role = Role.Button, onClick = action)
             } ?: Modifier
-            Text(
-                line, style = MaterialTheme.typography.bodyLarge,
-                modifier = rowModifier.fillMaxWidth().padding(vertical = AccordSpacing.s1),
-            )
+            Row(rowModifier.fillMaxWidth().padding(vertical = AccordSpacing.s1), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                value.color?.let { Box(Modifier.size(12.dp).background(it, CircleShape).clearAndSetSemantics { }) }
+                Text(line, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            }
         }
     }
 }

@@ -111,7 +111,7 @@ class UiAuditAccessCaptureTest {
     }
 
     @Test fun acessoEspacoEPrimeirosPassos() {
-        waitFor("Controle financeiro do casal")
+        waitFor("Controle financeiro colaborativo")
         pages("01_acesso_entrar")
         compose.onNodeWithText("Criar acesso").performClick()
         waitFor("Nenhum e-mail de confirmação")
@@ -135,7 +135,7 @@ class UiAuditAccessCaptureTest {
 
     /** Limites no modo primeiros passos (Salvar limites + Definir depois), o caso de barra fixa mais alta da tela 24. */
     @Test fun limitesNosPrimeirosPassos() {
-        waitFor("Controle financeiro do casal")
+        waitFor("Controle financeiro colaborativo")
         compose.onNodeWithText("Criar acesso").performScrollTo().performClick()
         waitFor("Nenhum e-mail de confirmação")
         val email = "auditoria-${UUID.randomUUID()}@x.test"

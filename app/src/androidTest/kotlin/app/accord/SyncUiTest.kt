@@ -172,7 +172,7 @@ class SyncUiTest {
         compose.onNodeWithText("Correção · Delivery").performScrollTo().performClick()
         assertEquals(listOf("conflito:op-1"), log)
         compose.onNodeWithText(
-            "Os registros locais continuam disponíveis. Enquanto o conflito não for resolvido, a visão do casal não está plenamente atualizada.",
+            "Os registros locais continuam disponíveis. Enquanto o conflito não for resolvido, a visão do espaço não está plenamente atualizada.",
         ).assertExists()
     }
 

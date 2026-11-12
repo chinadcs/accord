@@ -146,8 +146,9 @@ class HomeUiTest {
         val banner = compose.onNodeWithText("Parte das informações não carregou").fetchSemanticsNode().boundsInRoot.top
         val balance = compose.onNodeWithText("Não foi possível calcular o saldo total.").fetchSemanticsNode().boundsInRoot.top
         assertTrue("banner ($banner) acima do saldo ($balance)", banner < balance)
-        compose.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.LiveRegion), useUnmergedTree = true).assertCountEquals(1)
-        compose.onNode(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite), useUnmergedTree = true).assertExists()
+        // O rótulo do mês (seletor) também é região viva e tem Text; o banner é o único sem Text próprio.
+        compose.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsProperties.LiveRegion) and !SemanticsMatcher.keyIsDefined(SemanticsProperties.Text), useUnmergedTree = true).assertCountEquals(1)
+        compose.onNode(SemanticsMatcher.expectValue(SemanticsProperties.LiveRegion, LiveRegionMode.Polite) and !SemanticsMatcher.keyIsDefined(SemanticsProperties.Text), useUnmergedTree = true).assertExists()
     }
 
     @Test fun ordemDeLeituraDaTelaCompleta() {

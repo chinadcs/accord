@@ -277,6 +277,7 @@ private fun LazyListScope.budgetContent(
         val values = data.budget.categories.map { category ->
             MoneyChartValue(
                 data.categories[category.categoryId]?.name.orEmpty(), category.net,
+                color = categoryColor(data.categories, category.categoryId),
                 onClick = { onOpenCategory(category.categoryId, data.month) },
             )
         }

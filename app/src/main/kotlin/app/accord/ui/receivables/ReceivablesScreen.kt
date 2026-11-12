@@ -51,6 +51,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.accord.R
 import app.accord.core.Money
+import app.accord.core.analysis.formatSigned
 import app.accord.core.space.DebtorSummary
 import app.accord.core.space.IncomeView
 import app.accord.core.space.ReceivableView
@@ -118,7 +119,7 @@ private fun DebtorList(state: ReceivablesUiState, onOpen: (String) -> Unit, onNe
     }
     Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
         Text(stringResource(R.string.receivables_to_receive), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(overview.toReceive.format(), style = MaterialTheme.typography.headlineMedium)
+        Text(overview.toReceive.formatSigned(), style = MaterialTheme.typography.headlineMedium)
         Text(
             pluralStringResource(R.plurals.receivables_people, overview.debtors.size, overview.debtors.size),
             style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -164,7 +165,7 @@ private fun DebtorRow(summary: DebtorSummary, onOpen: (String) -> Unit) {
                 Text(summary.debtor.name, style = MaterialTheme.typography.titleMedium)
                 if (summary.open.cents > 0) Text(agreed, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Text(summary.open.format(), style = Accord.typography.amountRow, textAlign = TextAlign.End)
+            Text(summary.open.formatSigned(), style = Accord.typography.amountRow, textAlign = TextAlign.End)
         }
     }
 }
@@ -201,7 +202,7 @@ private fun ReceivableCard(debtorName: String, r: ReceivableView, state: Receiva
                     start = {
                         Column {
                             Text(stringResource(R.string.receivables_open_label), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text(r.open.format(), style = MaterialTheme.typography.headlineMedium)
+                            Text(r.open.formatSigned(), style = MaterialTheme.typography.headlineMedium)
                         }
                     },
                     end = {
@@ -217,7 +218,7 @@ private fun ReceivableCard(debtorName: String, r: ReceivableView, state: Receiva
                     color = Accord.colors.income,
                 )
                 AdaptiveRow(
-                    start = { Text(stringResource(R.string.receivables_resolved_of, r.resolved.format()), style = MaterialTheme.typography.bodyMedium, color = Accord.colors.income) },
+                    start = { Text(stringResource(R.string.receivables_resolved_of, r.resolved.formatSigned()), style = MaterialTheme.typography.bodyMedium, color = Accord.colors.income) },
                     end = { Text(stringResource(R.string.receivables_of_total, r.total.format()), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) },
                 )
                 if (r.countsInBudget) {
@@ -264,7 +265,7 @@ private fun ScheduleCard(r: ReceivableView, vm: ReceivablesViewModel) {
             r.scheduled.forEachIndexed { index, slot ->
                 AdaptiveRow(
                     start = { Text("${index + 1}   ${slot.expectedDate.full()}", style = MaterialTheme.typography.bodyLarge) },
-                    end = { Text(slot.expectedAmount.format(), style = Accord.typography.amountRow, color = Accord.colors.income, textAlign = TextAlign.End) },
+                    end = { Text(slot.expectedAmount.formatSigned(), style = Accord.typography.amountRow, color = Accord.colors.income, textAlign = TextAlign.End) },
                 )
             }
             if (r.unscheduled.cents > 0 && r.scheduled.isNotEmpty()) {

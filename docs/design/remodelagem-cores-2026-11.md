@@ -1,8 +1,8 @@
 # Remodelagem de cores e camadas
 
-> **Aceita, ainda não implementada — 10/11/2026, `accord-9rjk`, [ADR 0085](../adr/0085-remodelagem-de-cores-e-camadas.md) (accepted).**
-> Esta spec descreve o **alvo**, não o que está implementado. Os valores vigentes continuam em
-> [Tokens de design](../design-tokens.md). Os hex abaixo foram aprovados como alvo, mas são calculados pela fórmula de luminância
+> **Aceita em 10/11/2026 (`accord-9rjk`, [ADR 0085](../adr/0085-remodelagem-de-cores-e-camadas.md)); implementada em código em 12/11/2026**
+> (`accord-54g1`, `54az`, `7ow7`, `mhkn`, `xqi0`, `f9yq`, `r8a7`, `xt4j`), **sem validação nos Galaxy S20 FE e S23 FE** (`accord-tpz8`) e sem TalkBack. O texto abaixo descreve o alvo; onde a
+> implementação decidiu algo que a spec deixava aberto, ver as notas dos beads. Os valores de [Tokens de design](../design-tokens.md) podem estar defasados. Os hex abaixo foram aprovados como alvo, mas são calculados pela fórmula de luminância
 > do WCAG 2.x; não foram vistos em tela, nem no emulador, nem nos Galaxy S20 FE e S23 FE. O contraste mede cor contra
 > cor e não substitui conferir a tela renderizada (opacidade, sombra, antialiasing, logotipos). Mockup antes/depois:
 > Artifact privado da sessão, com dados de exemplo.
@@ -140,7 +140,7 @@ Limites conhecidos, a tratar nos critérios de aceite:
 
 ## 5. Estados e componentes
 
-- **Banner de estado:** container + borda de estado + ícone + texto de abertura ("Salvo", "Atenção:", "Erro:", "Aviso:"). A forma do ícone (círculo, triângulo, octógono) funciona em escala de cinza. TalkBack lê o texto de abertura; o ícone é decorativo.
+- **Banner de estado:** container + borda de estado + ícone + texto de abertura ("Tudo certo", "Atenção:", "Erro:", "Aviso:"). A forma do ícone (círculo, triângulo, octógono) funciona em escala de cinza. TalkBack lê o texto de abertura; o ícone é decorativo.
 - **Barra de limite de categoria:** o preenchimento usa **sempre a cor da própria categoria** (decisão do usuário, 10/11/2026), nos dois temas e em qualquer estado; o trilho é `surfaceContainerHighest`. O estado sai da cor da barra e vai para o **selo** abaixo do nome: dentro do limite = texto neutro "Faltam R$ …"; atenção = selo `attentionContainer` com borda e `triangle-alert` + "Perto do limite"; excesso = selo `errorContainer` com borda e `octagon-alert` + "Passou R$ …", com marcador de limite `onSurface` de 2 dp na posição do limite e a barra seguindo além dele. Sem limite = sem barra. Limite estourado é erro, **não** despesa. Barras sem categoria (Orçamento geral do mês, ADR 0075; Margem para gastar) continuam em `primary`, `attentionFill` e `error`, por estado.
 - **Barra inferior:** `Low` + borda de 1 dp `outlineVariant` + sombra de 2 dp; item ativo `primary`/`onPrimary`. FAB do Chat inativo em `primaryContainer`/`onPrimaryContainer` (12,80 claro, 7,98 escuro); ativo em `primary`.
 - **Cartão:** `Low` + borda de 1 dp `outlineVariant`, `shape.medium`; um `AccordCard` central substitui os ~60 usos de `surfaceContainerLow`. Cartão dentro de cartão não duplica borda (o interno usa `Container`).
