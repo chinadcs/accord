@@ -11,6 +11,10 @@
     <string name="more_group_app">Aplicativo</string>
     <!-- Data nos lançamentos (ADR 0077): valor atual na linha e folha com as duas opções. -->
     <string name="more_entries_date">Data nos lançamentos</string>
+    <string name="more_display">Datas e receitas</string>
+    <string name="more_display_summary">%1$s · receitas previstas %2$s</string>
+    <string name="more_display_income_on">contadas</string>
+    <string name="more_display_income_off">fora da conta</string>
     <string name="more_entries_date_purchase">Data da compra</string>
     <string name="more_entries_date_budget">Mês do orçamento</string>
     <string name="more_theme_system_short">Sistema</string>

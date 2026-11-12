@@ -203,10 +203,12 @@ fun MoreScreen(
                 attention = notificationsStatus?.attention == true,
             )
             MoreRow(
-                R.string.more_entries_date, Lucide.drawable.lucide_ic_calendar, { showEntriesDate = true },
-                supporting = stringResource(state.entriesCriterion.labelRes()),
+                R.string.more_display, Lucide.drawable.lucide_ic_calendar, { showEntriesDate = true },
+                supporting = stringResource(
+                    R.string.more_display_summary, stringResource(state.entriesCriterion.labelRes()),
+                    stringResource(if (state.includeExpectedIncome) R.string.more_display_income_on else R.string.more_display_income_off),
+                ),
             )
-            ExpectedIncomeSwitch(state.includeExpectedIncome, onIncludeExpectedIncomeChange)
             MoreRow(
                 R.string.appearance_title, Lucide.drawable.lucide_ic_palette, actions.onAppearance,
                 supporting = stringResource(
@@ -255,7 +257,9 @@ fun MoreScreen(
     if (showEntriesDate) {
         EntriesDateSheet(
             current = state.entriesCriterion,
-            onSelect = { onEntriesCriterionChange(it); showEntriesDate = false },
+            onSelect = onEntriesCriterionChange,
+            includeExpectedIncome = state.includeExpectedIncome,
+            onIncludeExpectedIncomeChange = onIncludeExpectedIncomeChange,
             onDismiss = { showEntriesDate = false },
         )
     }
@@ -302,13 +306,17 @@ private fun ThemePreference.shortLabelRes(): Int = when (this) {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun EntriesDateSheet(current: DateCriterion, onSelect: (DateCriterion) -> Unit, onDismiss: () -> Unit) {
+private fun EntriesDateSheet(
+    current: DateCriterion, onSelect: (DateCriterion) -> Unit,
+    includeExpectedIncome: Boolean, onIncludeExpectedIncomeChange: (Boolean) -> Unit, onDismiss: () -> Unit,
+) {
     ModalBottomSheet(containerColor = accordSheetColor(), onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = AccordSpacing.s4).padding(bottom = AccordSpacing.s4),
             verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
         ) {
-            Text(stringResource(R.string.more_entries_date), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+            Text(stringResource(R.string.more_display), style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
+            Text(stringResource(R.string.more_entries_date), style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
             Text(
                 stringResource(R.string.entries_criterion_settings_note), style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -321,6 +329,7 @@ private fun EntriesDateSheet(current: DateCriterion, onSelect: (DateCriterion) -
                     onSelect(DateCriterion.BudgetMonth)
                 }
             }
+            ExpectedIncomeSwitch(includeExpectedIncome, onIncludeExpectedIncomeChange)
         }
     }
 }

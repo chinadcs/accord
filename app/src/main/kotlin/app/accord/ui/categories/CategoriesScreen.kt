@@ -406,7 +406,7 @@ private fun MainLine(
                 if (row.expense != null) {
                     MenuItem(R.string.categories_menu_reclassify) { close(); onMoveEntries(row.id) }
                     HorizontalDivider()
-                    MenuItem(R.string.categories_menu_remove) { close(); onRemove(row.id) }
+                    MenuItem(R.string.categories_menu_remove, destructive = true) { close(); onRemove(row.id) }
                 }
             }
         }
@@ -444,7 +444,7 @@ private fun SubLine(
                 MenuItem(R.string.categories_menu_pass) { close(); onMoveSub(row.expense) }
                 MenuItem(R.string.categories_menu_reclassify) { close(); onMoveEntries(row.id) }
                 HorizontalDivider()
-                MenuItem(R.string.categories_menu_remove) { close(); onRemove(row.id) }
+                MenuItem(R.string.categories_menu_remove, destructive = true) { close(); onRemove(row.id) }
             }
         } else {
             Box(Modifier.size(AccordSpacing.touchMin))
@@ -489,8 +489,12 @@ private fun RowMenu(name: String, items: @Composable (close: () -> Unit) -> Unit
 }
 
 @Composable
-private fun MenuItem(label: Int, onClick: () -> Unit) {
-    DropdownMenuItem(text = { Text(stringResource(label)) }, onClick = onClick, modifier = Modifier.heightIn(min = AccordSpacing.touchMin))
+private fun MenuItem(label: Int, destructive: Boolean = false, onClick: () -> Unit) {
+    DropdownMenuItem(
+        text = { Text(stringResource(label), color = if (destructive) MaterialTheme.colorScheme.error else Color.Unspecified) },
+        onClick = onClick,
+        modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
+    )
 }
 
 /** Ícone da categoria na cor escolhida, sobre um disco de 40 dp da própria cor esmaecida (o mesmo desenho do painel de edição). */

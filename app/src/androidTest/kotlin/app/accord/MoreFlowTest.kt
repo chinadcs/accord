@@ -1,6 +1,7 @@
 package app.accord
 
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
@@ -217,18 +218,22 @@ class MoreFlowTest {
         waitForText("Categorias e subcategorias")
         // Sem os rádios soltos de antes: a seção "Lançamentos" saiu e o valor atual vive no subtítulo da linha.
         assert(compose.onAllNodesWithText("Critério:", substring = true).fetchSemanticsNodes().isEmpty())
-        scrollTo("Data nos lançamentos")
-        compose.onNode(hasText("Data nos lançamentos") and hasText("Data da compra")).assertIsDisplayed()
+        scrollTo("Datas e receitas")
+        compose.onNode(hasText("Datas e receitas") and hasText("Data da compra", substring = true)).assertIsDisplayed()
 
-        tap("Data nos lançamentos")
+        tap("Datas e receitas")
         waitForText("Mostra as parcelas que vencem no período.")
         // As duas opções são rádios; a atual vem marcada.
         compose.onNode(hasText("Data da compra") and androidx.compose.ui.test.isSelectable() and androidx.compose.ui.test.isSelected()).assertExists()
         compose.onNode(hasText("Mês do orçamento") and androidx.compose.ui.test.isSelectable()).performClick()
 
         compose.waitUntil(5_000) { container.theme.entriesDateCriterion.value == DateCriterion.BudgetMonth }
-        waitGone("Mostra as parcelas que vencem no período.") // a folha fecha ao escolher
-        compose.onNode(hasText("Data nos lançamentos") and hasText("Mês do orçamento")).assertExists()
+        compose.onNodeWithText("Contar receitas previstas como recebidas").assertExists() // a folha segue aberta
+        // A folha é um diálogo: o Voltar da Activity sairia da tela, então usa a ação de dispensar dela.
+        compose.onAllNodes(SemanticsMatcher.keyIsDefined(SemanticsActions.Dismiss)).onFirst().performSemanticsAction(SemanticsActions.Dismiss)
+        waitGone("Mostra as parcelas que vencem no período.")
+        scrollTo("Datas e receitas")
+        compose.onNode(hasText("Datas e receitas") and hasText("Mês do orçamento", substring = true)).assertExists()
         assertEquals(DateCriterion.BudgetMonth, ThemeStore(ApplicationProvider.getApplicationContext()).entriesDateCriterion.value)
     }
 
