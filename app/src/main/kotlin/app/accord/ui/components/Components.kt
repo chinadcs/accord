@@ -34,6 +34,16 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
@@ -80,7 +90,12 @@ fun MonthSelector(
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
     onCurrent: (() -> Unit)? = null, // não nulo = mês diferente do atual: mostra o atalho para voltar a ele
+    onPick: ((YearMonth) -> Unit)? = null, // não nulo = tocar no mês abre a grade dos 12 meses do ano exibido
+    currentMonth: YearMonth = YearMonth.now(),
 ) {
+    var picking by remember { mutableStateOf(false) }
+    val labelFocus = remember { FocusRequester() }
+    if (picking && onPick != null) MonthGrid(month, currentMonth, onPick = { picking = false; onPick(it) }, onDismiss = { picking = false; labelFocus.requestFocus() })
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -98,7 +113,13 @@ fun MonthSelector(
                 month.label(),
                 style = MaterialTheme.typography.titleMedium,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.weight(1f).semantics { liveRegion = LiveRegionMode.Polite },
+                modifier = Modifier.weight(1f).semantics { liveRegion = LiveRegionMode.Polite }
+                    .then(
+                        if (onPick == null) Modifier else Modifier
+                            .focusRequester(labelFocus).focusable()
+                            .heightIn(min = AccordSpacing.touchMin).wrapContentHeight(Alignment.CenterVertically)
+                            .clickable(role = Role.Button, onClickLabel = stringResource(R.string.month_pick)) { picking = true },
+                    ),
             )
             onCurrent?.let {
                 TextButton(onClick = it, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
@@ -110,6 +131,46 @@ fun MonthSelector(
             }
         }
     }
+}
+
+/** Os 12 meses do ano do mês exibido; outros anos ficam nas setas. Mês atual e selecionado são ditos em texto, não só em cor. */
+@Composable
+private fun MonthGrid(shown: YearMonth, current: YearMonth, onPick: (YearMonth) -> Unit, onDismiss: () -> Unit) {
+    val short = java.util.Locale.forLanguageTag("pt-BR")
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = { TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.action_back)) } },
+        title = { Text(stringResource(R.string.month_pick_title, shown.year), modifier = Modifier.semantics { heading() }) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+                for (row in 0 until 4) Row(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+                    for (col in 0 until 3) {
+                        val m = YearMonth.of(shown.year, row * 3 + col + 1)
+                        val isSelected = m == shown
+                        val state = when {
+                            isSelected -> stringResource(R.string.month_selected)
+                            m == current -> stringResource(R.string.month_current_state)
+                            else -> null
+                        }
+                        val name = m.month.getDisplayName(java.time.format.TextStyle.SHORT, short).replaceFirstChar { it.titlecase(short) }
+                        val container = if (isSelected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent
+                        Surface(
+                            color = container, shape = MaterialTheme.shapes.small,
+                            modifier = Modifier.weight(1f).heightIn(min = AccordSpacing.touchMin).semantics(mergeDescendants = true) {
+                                contentDescription = m.label(); selected = isSelected; state?.let { stateDescription = it }
+                            }.clickable(role = Role.Button) { onPick(m) },
+                        ) {
+                            Column(Modifier.padding(AccordSpacing.s2), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(name, style = MaterialTheme.typography.titleMedium)
+                                // Marca textual para "selecionado" e "atual", além da cor.
+                                Text(if (isSelected) "✓" else if (m == current) "•" else " ", style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                }
+            }
+        },
+    )
 }
 
 @Composable

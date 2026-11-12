@@ -11,11 +11,15 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasStateDescription
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.Density
 import app.accord.core.LimitSetting
 import app.accord.core.LimitView
 import app.accord.core.Money
+import app.accord.core.label
 import app.accord.core.space.CategoryBudget
 import app.accord.core.space.CategoryNode
 import app.accord.core.space.IncomeTotals
@@ -67,12 +71,12 @@ class BudgetUiTest {
         income = IncomeTotals(brl(6000), brl(500)), categories = categories,
     )
 
-    private fun show(state: BudgetUiState, fontScale: Float = 1f, onConfirmLinks: (java.time.YearMonth) -> Unit = {}) {
+    private fun show(state: BudgetUiState, fontScale: Float = 1f, onConfirmLinks: (java.time.YearMonth) -> Unit = {}, onPickMonth: ((java.time.YearMonth) -> Unit)? = null) {
         compose.setContent {
             val density = LocalDensity.current
             CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale)) {
                 AccordTheme {
-                    BudgetScreen(state, PaddingValues(), {}, {}, {}, { _, _ -> }, {}, {}, onConfirmLinks = onConfirmLinks)
+                    BudgetScreen(state, PaddingValues(), {}, {}, {}, { _, _ -> }, {}, {}, onConfirmLinks = onConfirmLinks, onPickMonth = onPickMonth)
                 }
             }
         }
@@ -168,6 +172,18 @@ class BudgetUiTest {
         show(ready(budget(listOf(category("food", 100, limit = 1200)), links = 2)), onConfirmLinks = { opened = it })
         text("Conferir").performClick()
         assertEquals(oct, opened)
+    }
+
+    @Test
+    fun tocarNoMesAbreGradeDe12MesesAnunciaSelecionadoEEscolheMes() {
+        var picked: java.time.YearMonth? = null
+        show(ready(budget(listOf(category("food", 100, limit = 1200)))), onPickMonth = { picked = it })
+        compose.onNodeWithText(oct.label()).performClick()
+        compose.onNodeWithText("Meses de ${oct.year}").assertIsDisplayed()
+        compose.onAllNodes(hasClickAction() and hasStateDescription("selecionado")).assertCountEquals(1)
+        compose.onNode(hasContentDescription(oct.plusMonths(1).label())).performClick()
+        compose.onNodeWithText("Meses de ${oct.year}").assertDoesNotExist()
+        assertEquals(oct.plusMonths(1), picked)
     }
 
     @Test

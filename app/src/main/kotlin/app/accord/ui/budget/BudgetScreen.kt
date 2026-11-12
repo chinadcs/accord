@@ -94,7 +94,7 @@ fun BudgetRoute(
         onOpenCategory = onOpenCategory, onClassify = onClassify, onRegister = onRegister,
         onOpenCommitments = onOpenCommitments, onOpenIncomes = onOpenIncomes, onOpenCard = onOpenCard,
         hasFloatingAction = true, onOpenForecasts = onOpenForecasts, countExpectedIncome = countExpectedIncome,
-        onEditLimits = onEditLimits, onConfirmLinks = onConfirmLinks,
+        onEditLimits = onEditLimits, onConfirmLinks = onConfirmLinks, onPickMonth = viewModel::selectMonth,
         onCurrentMonth = viewModel::goToCurrentMonth.takeIf { !viewModel.isCurrentMonth(state.month) },
     )
 }
@@ -119,6 +119,7 @@ fun BudgetScreen(
     countExpectedIncome: Boolean = false,
     onEditLimits: (YearMonth) -> Unit = {},
     onConfirmLinks: (YearMonth) -> Unit = {},
+    onPickMonth: ((YearMonth) -> Unit)? = null,
 ) {
     // A barra inferior sobrepõe o conteúdo do Scaffold. O espaço dela vai no recorte da lista (não em contentPadding):
     // assim a área visível termina onde a barra começa e um item levado à tela (rolagem por acessibilidade, foco,
@@ -143,7 +144,7 @@ fun BudgetScreen(
         item {
             Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
                 ScreenTitle(stringResource(R.string.tab_budget))
-                MonthSelector(state.month, onPrevious, onNext, onCurrent = onCurrentMonth)
+                MonthSelector(state.month, onPrevious, onNext, onCurrent = onCurrentMonth, onPick = onPickMonth)
             }
         }
         when (val content = state.content) {

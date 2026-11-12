@@ -103,6 +103,8 @@ class BudgetViewModel(
 
     fun nextMonth() = select(_state.value.month.plusMonths(1))
 
+    fun selectMonth(month: YearMonth) { if (month != _state.value.month) select(month) }
+
     fun goToCurrentMonth() = select(provider.clock.currentMonth())
 
     fun isCurrentMonth(month: YearMonth) = month == provider.clock.currentMonth()
