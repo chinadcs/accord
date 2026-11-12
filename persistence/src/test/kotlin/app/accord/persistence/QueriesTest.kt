@@ -780,6 +780,13 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
+    fun `isIncome marca só a entrada de dinheiro, para sinal e rótulo da lista`() = runBlocking<Unit> {
+        val h = open()
+        h.spec21()
+        assertEquals(setOf("Salário", "Bico"), h.rows(filter()).filter { it.isIncome }.map { it.description }.toSet())
+    }
+
+    @Test
     fun `categoria e categoria de receita - cada uma sozinha mostra só o seu lado e as duas juntas fazem a união`() = runBlocking<Unit> {
         val h = open()
         val fx = h.spec21()

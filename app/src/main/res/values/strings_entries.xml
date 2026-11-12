@@ -3,7 +3,7 @@
     <!-- Lançamentos (tela 07) -->
     <string name="entries_title">Lançamentos</string>
     <string name="entries_new">Novo</string>
-    <string name="entries_search_label">Buscar descrição ou estabelecimento</string>
+    <string name="entries_search_label">Buscar lançamentos</string>
     <string name="entries_search_clear">Limpar busca</string>
     <string name="entries_filters">Filtros</string>
     <string name="entries_pick_month">Escolher mês</string>
@@ -41,6 +41,19 @@
         <item quantity="one">%d despesa</item>
         <item quantity="other">%d despesas</item>
     </plurals>
+    <string name="entries_summary_incomes_label">Receitas</string>
+    <string name="entries_summary_expenses_label">Despesas</string>
+    <string name="entries_summary_result_label">Resultado</string>
+    <string name="entries_summary_to_receive">%s a receber</string>
+    <string name="entries_summary_note">Despesas da lista: valor bruto, sem abater estornos. No Início, a despesa é líquida.</string>
+    <string name="entries_day_today">Hoje</string>
+    <string name="entries_day_yesterday">Ontem</string>
+    <string name="entries_status_paid">Pago</string>
+    <string name="entries_status_to_pay">A pagar</string>
+    <string name="entries_status_received">Recebido</string>
+    <string name="entries_status_expected">Previsto</string>
+    <string name="entries_type_expense">Despesa</string>
+    <string name="entries_type_income">Receita</string>
     <string name="entries_balance_title">Saldo total</string>
     <string name="entries_balance_income">Receitas do mês</string>
     <string name="entries_balance_expense">Despesa do mês</string>
@@ -77,9 +90,9 @@
     <string name="kind_card_purchase">Compra no cartão</string>
     <string name="kind_card_installment">Parcela</string>
     <string name="kind_boleto">Boleto</string>
-    <string name="kind_income">Renda</string>
+    <string name="kind_income">Receita</string>
     <string name="kind_refund">Estorno</string>
-    <string name="kind_invoice_payment">Quitação de fatura</string>
+    <string name="kind_invoice_payment">Pagamento de fatura</string>
     <string name="kind_occurrence">Recorrente</string>
 
     <!-- Detalhe do lançamento (tela 08) -->

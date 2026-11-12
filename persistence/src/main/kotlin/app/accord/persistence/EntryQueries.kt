@@ -205,7 +205,7 @@ internal class EntryQueries(
                     amount = Money(i.receivedCents ?: i.expectedCents), date = date, dueDate = null, method = null,
                     installmentNumber = null, installmentCount = null,
                     situations = setOf(if (received != null) EntrySituation.Paid else EntrySituation.NotPaid),
-                    authorId = i.authorId, accountId = i.accountId,
+                    authorId = i.authorId, accountId = i.accountId, isIncome = true,
                 ),
                 Bucket.Income, YearMonth.from(date), null,
             )
@@ -271,7 +271,7 @@ internal class EntryQueries(
                             EntrySituation.Overdue.takeIf { !o.paid && !onCard && o.scheduledDate.isBefore(today()) },
                             EntrySituation.InvoiceLinkToConfirm.takeIf { o.assignment == AssignmentState.ToConfirm },
                         ),
-                        authorId = null, accountId = o.accountId.takeIf { !onCard },
+                        authorId = null, accountId = o.accountId.takeIf { !onCard }, isIncome = o.kind == RecurrenceKind.Income,
                     ),
                     if (o.kind == RecurrenceKind.Income) Bucket.Income else Bucket.Expense,
                     o.budgetMonth, null, incomeCategoryId = o.incomeCategoryId,

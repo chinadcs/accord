@@ -681,7 +681,8 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                     )
                     PullToRefresh(viewModel::reload) {
                         EntriesRoute(viewModel, padding, onOpenEntry = openEntry,
-                            onNew = if (largeFont) openEntriesRegistration else register)
+                            onNew = if (largeFont) openEntriesRegistration else register,
+                            onImport = { navController.navigate(ROUTE_IMPORT_HUB) })
                     }
                 }
             }
@@ -735,7 +736,8 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                         initializer { EntriesViewModel(container, createSavedStateHandle(), backStackEntry.initialFilter(container.clock.currentMonth())) }
                     },
                 )
-                EntriesRoute(viewModel, padding, onOpenEntry = openEntry, onNew = register, onBack = { navController.popBackStack() })
+                EntriesRoute(viewModel, padding, onOpenEntry = openEntry, onNew = register, onBack = { navController.popBackStack() },
+                    onImport = { navController.navigate(ROUTE_IMPORT_HUB) })
             }
             composable(
                 "$ROUTE_ENTRY/{${EntryDetailViewModel.ARG_ID}}",

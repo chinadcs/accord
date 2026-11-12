@@ -204,9 +204,9 @@ class CharcoalVisualReviewTest {
         // A lupa fica só no Chat (ADR 0086: a busca no Orçamento é a aba Lançamentos).
         tab("Chat")
         compose.onNodeWithContentDescription("Pesquisar lançamentos").performClick()
-        waitFor("Buscar descrição ou estabelecimento")
+        waitFor("Buscar lançamentos")
         compose.onNodeWithTag("root-register-fab", useUnmergedTree = true).assertIsDisplayed()
-        val search = compose.onNodeWithText("Buscar descrição ou estabelecimento")
+        val search = compose.onNodeWithText("Buscar lançamentos")
         search.performTextInput(unique)
         waitFor(spotify)
         waitFor(market)

@@ -62,7 +62,8 @@ class UiAuditLayoutRegressionTest {
         val buttonBounds = newButton.fetchSemanticsNode().boundsInRoot
         val navigationBounds = compose.onNodeWithTag("root-navigation", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         val labels = compose.onAllNodesWithText("Lançamentos", useUnmergedTree = true).fetchSemanticsNodes()
-        val titleBounds = labels.first { it.boundsInRoot.bottom <= navigationBounds.top }.boundsInRoot
+        // O mês é o título da tela (ADR 0089): o botão de registro fica depois dele e continua fora da barra inferior.
+        val titleBounds = compose.onNodeWithContentDescription("Escolher mês", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         assertTrue("Ação deve ficar depois do título", buttonBounds.top >= titleBounds.bottom)
         assertTrue("Ação não pode entrar na barra inferior", buttonBounds.bottom <= navigationBounds.top)
 
@@ -97,7 +98,7 @@ class UiAuditLayoutRegressionTest {
 
     @Test fun cancelarSeletorPreservaBuscaDosLancamentos() {
         compose.onAllNodes(hasText("Lançamentos") and hasClickAction()).onFirst().performClick()
-        compose.onNodeWithText("Buscar descrição ou estabelecimento").performTextInput("preservar")
+        compose.onNodeWithText("Buscar lançamentos").performTextInput("preservar")
         compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasTestTag("entries-inline-new"))
         compose.onNodeWithTag("entries-inline-new", useUnmergedTree = true).performClick()
         compose.onNodeWithTag("register-choice-card").assertIsDisplayed()

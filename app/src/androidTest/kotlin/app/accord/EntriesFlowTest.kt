@@ -115,11 +115,6 @@ class EntriesFlowTest {
         }.getOrDefault(false)
     }
 
-    /** Controles do cabeçalho saem da composição quando a lista lazy alcança os itens. */
-    private fun bringListHeader(matcher: androidx.compose.ui.test.SemanticsMatcher) {
-        compose.onNode(listScroll).performScrollToNode(matcher)
-    }
-
     private fun auditCapture(name: String) {
         if (UiAuditSyntheticEvidence.enabled) UiAuditSyntheticEvidence.capture(
             compose, name, UiAuditSyntheticEvidence.theme ?: ThemePreference.Light, "window",
@@ -132,7 +127,7 @@ class EntriesFlowTest {
     /** A lista do mês acumula registros de outros testes; a busca pela etiqueta isola os deste teste. */
     private fun openEntries() {
         compose.onNodeWithText("Lançamentos").performClick()
-        compose.onNodeWithText("Buscar descrição ou estabelecimento").performTextInput(tag)
+        compose.onNodeWithText("Buscar lançamentos").performTextInput(tag)
         auditCapture("07_busca_inicial")
         bringEntry(grocery)
     }
@@ -155,14 +150,12 @@ class EntriesFlowTest {
     fun buscaFiltraEAoVoltarDoDetalheABuscaEAListaSePreservam() {
         openEntries()
         if (UiAuditSyntheticEvidence.enabled) {
-            bringListHeader(hasContentDescription("Filtros"))
             compose.onNodeWithContentDescription("Filtros").performClick()
             waitForText("Período")
             auditCapture("07_filtros_modal")
             compose.onNodeWithText("Cancelar").performClick()
         }
-        bringListHeader(hasText("Buscar descrição ou estabelecimento", substring = true))
-        compose.onNodeWithText("Buscar descrição ou estabelecimento").performTextReplacement(gear.lowercase())
+        compose.onNodeWithText("Buscar lançamentos").performTextReplacement(gear.lowercase())
         waitGone(grocery)
         auditCapture("07_busca_resultado")
         bringEntry(gear)
@@ -174,7 +167,6 @@ class EntriesFlowTest {
         auditCapture("08_detalhe_parcela")
         compose.onNode(hasContentDescription("Voltar")).performScrollTo().performClick()
 
-        bringListHeader(hasText("Buscar descrição ou estabelecimento", substring = true))
         compose.onNodeWithText(gear.lowercase()).assertIsDisplayed() // o texto da busca continua no campo
         bringEntry(gear)
         assert(compose.onAllNodesWithText(grocery, substring = true).fetchSemanticsNodes().isEmpty())
@@ -191,7 +183,7 @@ class EntriesFlowTest {
         compose.onNodeWithText("Isso não é estorno nem cancelamento.", substring = true).assertIsDisplayed()
         // a tela e o diálogo têm um "Excluir" cada; o do diálogo vem por último na árvore
         compose.onAllNodes(hasText("Excluir") and androidx.compose.ui.test.hasClickAction()).onLast().performClick()
-        waitForText("Buscar descrição ou estabelecimento")
+        waitForText("Buscar lançamentos")
         waitGone(grocery)
     }
 
@@ -221,8 +213,7 @@ class EntriesFlowTest {
         waitForText(grocery)
         assert(compose.onAllNodesWithText(gear, substring = true).fetchSemanticsNodes().isEmpty())
 
-        // o cabeçalho com o Voltar é o primeiro item da lista e sai da composição ao rolar
-        compose.onNode(listScroll).performScrollToIndex(0)
+        // o topo (Voltar, mês, busca e filtros) é fixo: o Voltar fica à mão com a lista rolada
         compose.onNode(hasContentDescription("Voltar")).performClick()
         waitForText("Conferir lançamentos")
     }

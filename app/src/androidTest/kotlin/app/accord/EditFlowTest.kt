@@ -127,7 +127,7 @@ class EditFlowTest {
     /** Abre o lançamento pelo nome, na lista isolada pela etiqueta do teste, e entra na edição. */
     private fun openDetail(description: String) {
         compose.onNodeWithText("Lançamentos").performClick()
-        compose.onNodeWithText("Buscar descrição ou estabelecimento").performTextInput(tag)
+        compose.onNodeWithText("Buscar lançamentos").performTextInput(tag)
         waitForText(grocery) // a lista carregou; os outros itens podem estar abaixo e precisam de rolagem
         tap(description)
         waitForText("Detalhe do lançamento")

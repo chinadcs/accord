@@ -88,6 +88,7 @@ fun EntryIdentityIcon(
     allowVendor: Boolean = true,
     modifier: Modifier = Modifier,
     entryId: String? = null,
+    size: Dp = 48.dp,
     /** Abre a escolha de ícone; só vale onde a marca é permitida e a tela tem fachada ([LocalIconActions]). */
     onChange: (() -> Unit)? = null,
 ) {
@@ -109,10 +110,10 @@ fun EntryIdentityIcon(
     }
     Box(tapModifier) {
         if (ref != null && lib != null) {
-            IconRefLogo(ref, lib, modifier)
+            IconRefLogo(ref, lib, modifier, size)
         } else {
             Surface(
-                modifier = modifier.size(48.dp),
+                modifier = modifier.size(size),
                 color = MaterialTheme.colorScheme.surfaceContainerHighest,
                 shape = CircleShape,
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),

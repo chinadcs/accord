@@ -261,7 +261,7 @@ class AccessFlowTest {
 
         waitForText("Pede atenção")
         compose.onNodeWithText("Lançamentos").performClick()
-        waitForText("Buscar descrição ou estabelecimento")
+        waitForText("Buscar lançamentos")
         compose.onNodeWithText("Orçamento").performClick()
         waitForText("Quando houver registros, o orçamento aparece aqui.")
         assertTrue(compose.onAllNodesWithText("Saldo total").fetchSemanticsNodes().isEmpty())

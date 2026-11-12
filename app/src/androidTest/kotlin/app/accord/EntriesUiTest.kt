@@ -22,6 +22,7 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performTextInput
 import app.accord.core.Money
+import app.accord.core.analysis.formatSigned
 import app.accord.core.space.CategoryNode
 import app.accord.core.space.EntryKind
 import app.accord.core.space.EntryRow
@@ -118,27 +119,73 @@ class EntriesUiTest {
     fun linhaMostraDataDescricaoCategoriaParcelaFormaEValor() {
         show(state(sample))
         compose.onNodeWithText("Equipamento").assertIsDisplayed()
-        compose.onNodeWithText(brl(200).format()).assertIsDisplayed()
-        compose.onNodeWithText("25/09 · Parcela 1/6 · Cartão").assertIsDisplayed()
-        compose.onNodeWithText("Equipamentos").assertIsDisplayed()
-        compose.onNodeWithText("20/10 · Pix").assertIsDisplayed()
+        compose.onNodeWithText(Money(-20_000).format()).assertIsDisplayed() // despesa: valor neutro com sinal
+        compose.onNodeWithText("Equipamentos · Cartão · Parcela 1/6").assertIsDisplayed()
+        compose.onNodeWithText("Mercado · Pix").assertIsDisplayed()
+        compose.onNodeWithText("A pagar").assertIsDisplayed() // parcela: situação sob o valor
+    }
+
+    @Test
+    fun receitaTemSinalMaisESituacaoRecebidoEPagamentoDeFaturaNaoTemSinal() {
+        val income = EntryRow(
+            "i1", EntryKind.Income, "Salário", null, brl(500), LocalDate.of(2026, 10, 20), null, null, null, null,
+            setOf(EntrySituation.Paid), "dev-person", isIncome = true,
+        )
+        val payment = row("q1", "Pagamento da fatura de outubro", 300, EntryKind.InvoicePayment, null, null)
+        show(state(listOf(income, payment)))
+        compose.onNodeWithText("+" + brl(500).format()).assertIsDisplayed()
+        compose.onNodeWithText("Recebido").assertIsDisplayed()
+        compose.onNodeWithText(brl(300).format()).assertIsDisplayed()
+        compose.onNodeWithText("Pagamento de fatura").assertIsDisplayed()
+        compose.onNode(hasContentDescription("Receita. Salário", substring = true)).assertIsDisplayed()
+    }
+
+    @Test
+    fun cabecalhoDeDiaEhCurtoESemTotal() {
+        val today = LocalDate.now(app.accord.core.BudgetClock.ZONE)
+        show(state(listOf(row("a", "Hoje aqui", 10, date = today), row("b", "Ontem aqui", 20, date = today.minusDays(1)))))
+        compose.onNodeWithText("Hoje").assertIsDisplayed()
+        compose.onNodeWithText("Ontem").assertIsDisplayed()
+    }
+
+    @Test
+    fun carregandoSemLinhasMostraTracoNoResumoENuncaZero() {
+        show(state(emptyList(), status = EntriesStatus.Loading, summary = null))
+        compose.onNodeWithText("Resultado").assertIsDisplayed()
+        assertEquals(0, compose.onAllNodes(hasText("R\$", substring = true)).fetchSemanticsNodes().size)
+    }
+
+    @Test
+    fun buscaEFiltrosContinuamVisiveisComAListaRolada() {
+        val many = (1..40).map { row("m$it", "Item $it", it, date = LocalDate.of(2026, 10, 20).minusDays(it.toLong())) }
+        show(state(many))
+        compose.onNode(hasScrollAction() and androidx.compose.ui.test.SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsProperties.VerticalScrollAxisRange))
+            .performScrollToNode(hasText("Item 40"))
+        compose.onNodeWithText("Buscar lançamentos").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Filtros").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Escolher mês").assertIsDisplayed()
     }
 
     @Test
     fun resumoMostraContagemComReceitasEDespesasEOResultadoSemNota() {
         val summary = EntrySummary(brl(1200), brl(5000), Money.ZERO, Money.ZERO, incomeCount = 19, expenseCount = 3)
         show(state(sample, summary = summary))
-        compose.onNodeWithText("2 lançamentos (19/3)").assertIsDisplayed()
-        compose.onNodeWithText(brl(3800).format()).assertIsDisplayed() // 5000 − 1200
-        compose.onAllNodesWithText("Estes totais", substring = true).assertCountEquals(0)
-        compose.onAllNodesWithText("Despesas").assertCountEquals(0)
+        compose.onNodeWithText("2 lançamentos").assertIsDisplayed()
+        compose.onNodeWithText(brl(5000).formatSigned()).assertIsDisplayed()
+        compose.onNodeWithText(Money(-120_000).format()).assertIsDisplayed()
+        compose.onNodeWithText(brl(3800).formatSigned()).assertIsDisplayed() // 5000 − 1200, neutro com sinal
+        compose.onNodeWithText(brl(5000).format() + " a receber").assertIsDisplayed() // nada recebido ainda
+        compose.onNodeWithText("Receitas").assertIsDisplayed()
+        compose.onNodeWithText("Despesas").assertIsDisplayed()
+        compose.onNodeWithText("Resultado").assertIsDisplayed()
+        compose.onNodeWithText("sem abater estornos", substring = true).assertIsDisplayed()
     }
 
     @Test
     fun resultadoNegativoDoResumoMostraOSinal() {
         val summary = EntrySummary(brl(900), brl(400), Money.ZERO, Money.ZERO, incomeCount = 1, expenseCount = 4)
         show(state(sample, summary = summary))
-        compose.onNodeWithText("2 lançamentos (1/4)").assertIsDisplayed()
+        compose.onNodeWithText("2 lançamentos").assertIsDisplayed()
         compose.onNodeWithText(Money(-50_000).format()).assertIsDisplayed()
     }
 
@@ -225,7 +272,7 @@ class EntriesUiTest {
     fun buscaEnviaOTextoDigitadoELimparEstaDisponivel() {
         val typed = mutableListOf<String>()
         show(state(sample), onSearch = { typed += it })
-        compose.onNodeWithText("Buscar descrição ou estabelecimento").performTextInput("pão")
+        compose.onNodeWithText("Buscar lançamentos").performTextInput("pão")
         assertEquals("pão", typed.last())
         compose.onNode(hasContentDescription("Limpar busca")).performClick()
         assertEquals("", typed.last())
@@ -280,6 +327,16 @@ class EntriesUiTest {
         compose.onNodeWithText("Nenhum lançamento por aqui").assertIsDisplayed()
         compose.onNodeWithText("Registrar manualmente").performClick()
         assertEquals(1, new)
+    }
+
+    @Test
+    fun vazioSemFiltroOfereceImportarDoBanco() {
+        var imported = 0
+        compose.setContent {
+            AccordTheme { EntriesScreen(state(emptyList()), PaddingValues(), {}, {}, {}, {}, {}, {}, {}, onImport = { imported++ }) }
+        }
+        compose.onNodeWithText("Importar do banco").performClick()
+        assertEquals(1, imported)
     }
 
     @Test

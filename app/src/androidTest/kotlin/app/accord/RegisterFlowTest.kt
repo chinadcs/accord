@@ -6,14 +6,14 @@ import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.printToLog
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.onRoot
-import androidx.compose.ui.test.printToLog
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performSemanticsAction
@@ -110,7 +110,7 @@ class RegisterFlowTest {
 
     private fun openForm() {
         compose.onAllNodes(hasText("Lançamentos") and hasClickAction()).onFirst().performClick()
-        waitForText("Buscar descrição ou estabelecimento")
+        waitForText("Buscar lançamentos")
         val manual = compose.onAllNodes(hasText("Registrar manualmente") and hasClickAction())
         if (manual.fetchSemanticsNodes().isNotEmpty()) {
             manual.onFirst().performClick()
@@ -165,7 +165,7 @@ class RegisterFlowTest {
     private fun findInEntries(text: String) {
         waitForText("Lançamentos")
         compose.onNodeWithTag("tab-Entries").performClick()
-        compose.onNodeWithText("Buscar descrição ou estabelecimento").performTextReplacement(tag)
+        compose.onNodeWithText("Buscar lançamentos").performTextReplacement(tag)
         waitForText(text)
     }
 
@@ -235,7 +235,7 @@ class RegisterFlowTest {
         compose.onNode(hasContentDescription("Voltar")).performSemanticsAction(SemanticsActions.OnClick)
         waitForText("Sair sem salvar?")
         compose.onNodeWithText("Guardar rascunho").performClick()
-        waitForText("Buscar descrição ou estabelecimento")
+        waitForText("Buscar lançamentos")
 
         openForm()
         waitForText("Rascunho recuperado")
@@ -273,7 +273,7 @@ class RegisterFlowTest {
     fun saidaSemDigitarNadaNaoPerguntaNada() {
         openForm()
         compose.onNode(hasContentDescription("Voltar")).performClick()
-        waitForText("Buscar descrição ou estabelecimento")
+        waitForText("Buscar lançamentos")
         assert(compose.onAllNodesWithText("Sair sem salvar?").fetchSemanticsNodes().isEmpty())
     }
 
@@ -301,19 +301,19 @@ class RegisterFlowTest {
         waitForText("Salvo neste aparelho")
         // A lista mostra a compra parcelada por parcela, no mês da fatura (spec 07, ADR 0090): a 1ª cai no mês atual ou no seguinte, conforme o fechamento.
         compose.onNodeWithTag("tab-Entries").performClick()
-        compose.onNodeWithText("Buscar descrição ou estabelecimento").performTextInput(tag)
+        compose.onNodeWithText("Buscar lançamentos").performTextInput(tag)
         val inThisMonth = runCatching {
             compose.waitUntil(3_000) { compose.onAllNodesWithText("Equipamento $tag").fetchSemanticsNodes().isNotEmpty() }
         }.isSuccess
         if (!inThisMonth) compose.onNode(androidx.compose.ui.test.hasContentDescription("Próximo mês")).performClick()
         waitForText("Equipamento $tag")
-        compose.onAllNodesWithText("200,00", substring = true).onFirst().assertIsDisplayed()
+        // A lista mostra a parcela do mês, não o total (ADR 0090). O "200,00" que esta linha conferia vinha do antigo resumo, que somava a compra inteira.
         compose.onAllNodesWithText("Parcela", substring = true).onFirst().assertIsDisplayed()
     }
 
     @Test
     fun rendaNaoPedeCategoriaESalva() {
-        openFormFromPlus("Renda")
+        openFormFromPlus("Receita")
         fill("Descrição", "Salário $tag")
         fill("Valor (R$)", "6.000,00")
         saveAndLeave()

@@ -1323,6 +1323,8 @@ data class EntryRow(
     val installmentAmount: Money? = null,
     /** Conta da linha (spec 21); nula na compra e parcela no cartão e quando a origem não tem conta. */
     val accountId: String? = null,
+    /** Entrada de dinheiro: renda e ocorrência de receita recorrente (o estorno é identificado pelo [kind]). A lista usa para sinal e rótulo (spec 22). */
+    val isIncome: Boolean = false,
 )
 
 /**

@@ -114,7 +114,7 @@ class LinkedFlowTest {
 
     private fun openDetail(description: String) {
         compose.onNodeWithText("Lançamentos").performClick()
-        compose.onNodeWithText("Buscar descrição ou estabelecimento").performTextInput(tag)
+        compose.onNodeWithText("Buscar lançamentos").performTextInput(tag)
         waitForText(grocery)
         tap(description)
         waitForText("Detalhe do lançamento")
@@ -223,7 +223,7 @@ class LinkedFlowTest {
         }
         // Não usa openDetail: com mais uma linha, o Mercado sai da tela e a lista só mostra as de data mais recente.
         compose.onNodeWithText("Lançamentos").performClick()
-        compose.onNodeWithText("Buscar descrição ou estabelecimento").performTextInput(tag)
+        compose.onNodeWithText("Buscar lançamentos").performTextInput(tag)
         waitForText(gym)
         waitForText("A conferir") // a linha da lista mostra o selo antes da conferência
         tap(gym)

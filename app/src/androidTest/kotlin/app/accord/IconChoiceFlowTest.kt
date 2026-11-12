@@ -114,7 +114,7 @@ class IconChoiceFlowTest {
 
     private fun openList() {
         compose.onNodeWithText("Lançamentos").performClick()
-        compose.onNodeWithText("Buscar descrição ou estabelecimento").performTextInput(tag)
+        compose.onNodeWithText("Buscar lançamentos").performTextInput(tag)
         waitForText(grocery)
     }
 
