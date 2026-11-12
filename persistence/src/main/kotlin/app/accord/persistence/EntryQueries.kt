@@ -19,6 +19,7 @@ import app.accord.core.space.EntryPage
 import app.accord.core.space.EntryRow
 import app.accord.core.space.EntrySituation
 import app.accord.core.space.EntrySummary
+import app.accord.core.space.EntryTypeFilter
 import app.accord.core.space.MonthCommitments
 import app.accord.core.space.NameKey
 import app.accord.core.space.OccurrenceView
@@ -54,7 +55,11 @@ internal class EntryQueries(
 
     private enum class Bucket { Expense, Income, Credit, InvoicePayment }
 
-    private class Built(val row: EntryRow, val bucket: Bucket, val month: YearMonth, val spentBy: String?)
+    /** [method] e [incomeCategoryId] só servem aos filtros: o estorno herda a forma da origem e a ocorrência de receita traz a categoria de renda, sem mudar a linha exibida. */
+    private class Built(
+        val row: EntryRow, val bucket: Bucket, val month: YearMonth, val spentBy: String?,
+        val method: PaymentMethod? = row.method, val incomeCategoryId: String? = row.incomeCategoryId,
+    )
 
     private fun methodOf(kind: String) = when (DirectPaymentKind.valueOf(kind)) {
         DirectPaymentKind.Pix -> PaymentMethod.Pix
@@ -89,6 +94,9 @@ internal class EntryQueries(
         val fromDay = f.from.atDay(1).toEpochDay()
         val toDay = f.to.atEndOfMonth().toEpochDay()
         val built = mutableListOf<Built>()
+        // Dinheiro sem conta sai da Carteira, como no saldo (BalanceReader).
+        val walletId = dao.walletAccount()?.id
+        fun movementAccount(m: MovementEntity) = m.accountId ?: walletId.takeIf { m.kind == "Cash" }
 
         // Pix, débito e dinheiro: o mês da movimentação vale nos dois critérios.
         dao.movementsBetween(fromDay, toDay).forEach { m ->
@@ -99,7 +107,7 @@ internal class EntryQueries(
                     amount = Money(m.amountCents), date = date, dueDate = null, method = methodOf(m.kind),
                     installmentNumber = null, installmentCount = null,
                     situations = setOfNotNull(EntrySituation.Paid, EntrySituation.ToClassify.takeIf { m.classificationId == null }),
-                    authorId = m.authorId,
+                    authorId = m.authorId, accountId = movementAccount(m),
                 ),
                 Bucket.Expense, YearMonth.from(date), m.spentBy,
             )
@@ -182,7 +190,7 @@ internal class EntryQueries(
                         EntrySituation.Overdue.takeIf { paid == null && due.isBefore(today()) },
                         EntrySituation.ToClassify.takeIf { b.classificationId == null },
                     ),
-                    authorId = b.authorId,
+                    authorId = b.authorId, accountId = b.accountId,
                 ),
                 Bucket.Expense, YearMonth.from(date), null,
             )
@@ -197,7 +205,7 @@ internal class EntryQueries(
                     amount = Money(i.receivedCents ?: i.expectedCents), date = date, dueDate = null, method = null,
                     installmentNumber = null, installmentCount = null,
                     situations = setOf(if (received != null) EntrySituation.Paid else EntrySituation.NotPaid),
-                    authorId = i.authorId,
+                    authorId = i.authorId, accountId = i.accountId,
                 ),
                 Bucket.Income, YearMonth.from(date), null,
             )
@@ -227,7 +235,7 @@ internal class EntryQueries(
                     amount = Money(p.amountCents), date = date, dueDate = null, method = null,
                     installmentNumber = null, installmentCount = null,
                     situations = setOf(if (p.accepted) EntrySituation.Paid else EntrySituation.DivergentPayment),
-                    authorId = p.authorId,
+                    authorId = p.authorId, accountId = p.accountId,
                 ),
                 Bucket.InvoicePayment, YearMonth.from(date), null,
             )
@@ -263,10 +271,10 @@ internal class EntryQueries(
                             EntrySituation.Overdue.takeIf { !o.paid && !onCard && o.scheduledDate.isBefore(today()) },
                             EntrySituation.InvoiceLinkToConfirm.takeIf { o.assignment == AssignmentState.ToConfirm },
                         ),
-                        authorId = null,
+                        authorId = null, accountId = o.accountId.takeIf { !onCard },
                     ),
                     if (o.kind == RecurrenceKind.Income) Bucket.Income else Bucket.Expense,
-                    o.budgetMonth, null,
+                    o.budgetMonth, null, incomeCategoryId = o.incomeCategoryId,
                 )
             }
         }
@@ -279,7 +287,18 @@ internal class EntryQueries(
                 EntryKind.Refund -> dao.refund(row.id)?.let { dao.purchase(it.originId)?.cardId }
                 else -> null
             }
-            Built(row.copy(cardId = cardId), b.bucket, b.month, b.spentBy)
+            // Estorno: forma e conta vêm da origem, como a categoria; a compra no cartão não tem conta própria.
+            var method = b.method
+            var accountId = row.accountId
+            if (row.kind == EntryKind.Refund) {
+                val refund = dao.refund(row.id)
+                when (refund?.originType) {
+                    RefundPlanner.ORIGIN_PURCHASE -> method = PaymentMethod.Card
+                    RefundPlanner.ORIGIN_MOVEMENT -> dao.movement(refund.originId)?.let { method = methodOf(it.kind); accountId = movementAccount(it) }
+                    else -> dao.boleto(refund?.originId ?: "")?.let { method = PaymentMethod.Boleto; accountId = it.accountId }
+                }
+            }
+            Built(row.copy(cardId = cardId, accountId = accountId), b.bucket, b.month, b.spentBy, method, b.incomeCategoryId)
         }
     }
 
@@ -379,11 +398,16 @@ internal class EntryQueries(
     private fun matches(b: Built, f: EntryFilter, tree: CategoryTree): Boolean {
         val row = b.row
         if (f.cardId != null && row.cardId != f.cardId) return false
-        f.categoryId?.let { wanted ->
-            val classification = row.categoryId ?: return false
-            if (classification != wanted && tree.mainAt(classification, b.month) != wanted) return false
+        if (f.type == EntryTypeFilter.Expenses && b.bucket != Bucket.Expense) return false
+        if (f.type == EntryTypeFilter.Incomes && b.bucket != Bucket.Income) return false
+        if (f.accountId != null && row.accountId != f.accountId) return false
+        // Categoria de despesa e de receita: cada uma age no seu lado; com as duas, a linha fica se casar com qualquer uma (spec 21).
+        if (f.categoryId != null || f.incomeCategoryId != null) {
+            val expenseHit = f.categoryId != null && row.categoryId?.let { it == f.categoryId || tree.mainAt(it, b.month) == f.categoryId } == true
+            val incomeHit = f.incomeCategoryId != null && b.incomeCategoryId == f.incomeCategoryId
+            if (!expenseHit && !incomeHit) return false
         }
-        if (f.methods.isNotEmpty() && row.method !in f.methods) return false
+        if (f.methods.isNotEmpty() && b.method !in f.methods) return false
         if (f.situations.isNotEmpty() && row.situations.none { it in f.situations }) return false
         f.person?.let { if (row.authorId != it && b.spentBy != it) return false }
         f.search?.takeIf { it.isNotBlank() }?.let { if (NameKey.of(it) !in NameKey.of(row.description)) return false }

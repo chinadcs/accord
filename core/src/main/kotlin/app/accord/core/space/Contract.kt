@@ -1258,6 +1258,9 @@ enum class PaymentMethod { Pix, Debit, Cash, Card, Boleto }
 /** Mês do orçamento (parcela no mês de vencimento da fatura) ou data da compra (a compra uma vez, pelo total). */
 enum class DateCriterion { BudgetMonth, PurchaseDate }
 
+/** Filtro de tipo da lista: estorno e pagamento de fatura só aparecem em [All]. */
+enum class EntryTypeFilter { All, Expenses, Incomes }
+
 enum class EntrySituation {
     ToClassify,
     /** Atribuição de fatura "a conferir". */
@@ -1284,6 +1287,14 @@ data class EntryFilter(
     val person: String? = null,
     val search: String? = null,
     val cardId: String? = null,
+    val type: EntryTypeFilter = EntryTypeFilter.All,
+    /** Conta da própria linha; compra e parcela no cartão não casam pela conta vinculada ao cartão (ADR 0052). */
+    val accountId: String? = null,
+    /**
+     * Categoria de renda. Com [categoryId] também definido, vale a união: cada um restringe só o seu lado (despesas e estornos, receitas)
+     * e a linha fica se casar com qualquer um dos dois.
+     */
+    val incomeCategoryId: String? = null,
 )
 
 data class EntryRow(
@@ -1310,6 +1321,8 @@ data class EntryRow(
      * não exibir o total. [amount] segue sendo o total da compra, e é ele que as somas usam.
      */
     val installmentAmount: Money? = null,
+    /** Conta da linha (spec 21); nula na compra e parcela no cartão e quando a origem não tem conta. */
+    val accountId: String? = null,
 )
 
 /**

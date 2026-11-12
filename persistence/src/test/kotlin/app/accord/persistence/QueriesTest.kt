@@ -14,10 +14,13 @@ import app.accord.core.space.ConfirmNonCharge
 import app.accord.core.space.CreateRecurrence
 import app.accord.core.space.DateCriterion
 import app.accord.core.space.DeleteEntry
+import app.accord.core.space.DeterministicIds
 import app.accord.core.space.DirectPaymentKind
 import app.accord.core.space.EntryFilter
 import app.accord.core.space.EntryKind
 import app.accord.core.space.EntrySituation
+import app.accord.core.space.EntryTypeFilter
+import app.accord.core.space.CreateIncomeCategory
 import app.accord.core.space.ItemSync
 import app.accord.core.space.PayInvoice
 import app.accord.core.space.PaymentMethod
@@ -725,5 +728,107 @@ class QueriesTest : SpaceTestBase() {
         assertEquals(1, h.space.pendings().value().size)
         h.space.execute(h.env(), app.accord.core.space.CorrectInvoiceAssignment(id, 1, oct)).applied()
         assertEquals(emptyList(), h.space.pendings().value())
+    }
+
+    // ---- filtros por tipo, conta e categoria de receita (spec 21) ----
+
+    private class Fx(val accountA: String, val accountB: String, val wallet: String, val freelas: String)
+
+    /** Outubro/2026: Mercado (Pix, A), Farmácia (Pix, B), Dinheiro (Carteira), TV (cartão), Salário (A, Freelas), Bico (B), estorno do Mercado e quitação da fatura (A). */
+    private suspend fun Handle.spec21(): Fx {
+        val a = withDefaultAccount()
+        val b = space.execute(env(), AddAccount(BankRef.Other("Outro"), "Segunda")).applied().changes.single().id
+        val mercado = pix("Mercado", 50, category = "alimentacao.mercado")
+        space.execute(
+            env(),
+            RegisterDirectPayment(DirectPaymentKind.Pix, "Farmácia", Classification.Category(seed("pet")), d(2026, 10, 21), brl(30), accountId = b),
+        ).applied()
+        pix("Dinheiro", 20, category = "pet", kind = DirectPaymentKind.Cash)
+        card("TV", 100)
+        val freelas = space.execute(env(), CreateIncomeCategory("Freelas")).applied().changes.single().id
+        space.execute(
+            env(),
+            RegisterIncome("Salário", brl(500), d(2026, 10, 10), accountId = a, received = Settlement(d(2026, 10, 10), brl(500)), incomeCategoryId = freelas),
+        ).applied()
+        space.execute(env(), RegisterIncome("Bico", brl(80), d(2026, 10, 12), accountId = b)).applied()
+        space.execute(env(), RegisterRefund(mercado, brl(10), RefundStatus.Confirmed, d(2026, 10, 25))).applied()
+        space.execute(env(), RegisterInvoiceTotal(oct, brl(100))).applied()
+        space.execute(env(), PayInvoice(oct, brl(100), d(2026, 10, 15), a)).applied()
+        return Fx(a, b, DeterministicIds.wallet(spaceId), freelas)
+    }
+
+    private suspend fun Handle.names(filter: EntryFilter) = rows(filter).map {
+        if (it.kind == EntryKind.InvoicePayment) "quitação" else it.description
+    }.toSet()
+
+    private val all = setOf("Mercado", "Farmácia", "Dinheiro", "TV", "Salário", "Bico", "Estorno: Mercado", "quitação")
+
+    @Test
+    fun `sem filtros novos a consulta devolve tudo como antes`() = runBlocking<Unit> {
+        val h = open()
+        h.spec21()
+        assertEquals(all, h.names(filter()))
+    }
+
+    @Test
+    fun `filtro de tipo - despesas e receitas não trazem estorno nem quitação, todos traz`() = runBlocking<Unit> {
+        val h = open()
+        h.spec21()
+        assertEquals(setOf("Mercado", "Farmácia", "Dinheiro", "TV"), h.names(filter().copy(type = EntryTypeFilter.Expenses)))
+        assertEquals(setOf("Salário", "Bico"), h.names(filter().copy(type = EntryTypeFilter.Incomes)))
+        assertEquals(all, h.names(filter().copy(type = EntryTypeFilter.All)))
+    }
+
+    @Test
+    fun `categoria e categoria de receita - cada uma sozinha mostra só o seu lado e as duas juntas fazem a união`() = runBlocking<Unit> {
+        val h = open()
+        val fx = h.spec21()
+        val mercado = seed("alimentacao.mercado")
+        assertEquals(setOf("Mercado", "Estorno: Mercado"), h.names(filter().copy(categoryId = mercado)))
+        assertEquals(setOf("Salário"), h.names(filter().copy(incomeCategoryId = fx.freelas)))
+        assertEquals(setOf("Mercado", "Estorno: Mercado", "Salário"), h.names(filter().copy(categoryId = mercado, incomeCategoryId = fx.freelas)))
+    }
+
+    @Test
+    fun `forma de pagamento - o estorno herda a forma da origem e receita e quitação saem`() = runBlocking<Unit> {
+        val h = open()
+        h.spec21()
+        assertEquals(setOf("Mercado", "Farmácia", "Estorno: Mercado"), h.names(filter().copy(methods = setOf(PaymentMethod.Pix))))
+        assertEquals(setOf("TV"), h.names(filter().copy(methods = setOf(PaymentMethod.Card))))
+    }
+
+    @Test
+    fun `filtro de conta usa a conta da própria linha, a Carteira para dinheiro e não pega compra no cartão`() = runBlocking<Unit> {
+        val h = open()
+        val fx = h.spec21()
+        assertEquals(setOf("Mercado", "Salário", "Estorno: Mercado", "quitação"), h.names(filter().copy(accountId = fx.accountA)))
+        assertEquals(setOf("Farmácia", "Bico"), h.names(filter().copy(accountId = fx.accountB)))
+        assertEquals(setOf("Dinheiro"), h.names(filter().copy(accountId = fx.wallet)))
+        assertEquals(emptySet(), h.names(filter().copy(accountId = "inexistente")))
+    }
+
+    @Test
+    fun `filtros novos combinam com período, busca e situação`() = runBlocking<Unit> {
+        val h = open()
+        val fx = h.spec21()
+        assertEquals(setOf("Salário"), h.names(filter().copy(accountId = fx.accountA, type = EntryTypeFilter.Incomes)))
+        assertEquals(emptySet(), h.names(filter().copy(accountId = fx.accountA, type = EntryTypeFilter.Incomes, search = "bico")))
+        assertEquals(emptySet(), h.names(filter(from = nov, to = nov).copy(accountId = fx.accountA)))
+        assertEquals(setOf("Salário"), h.names(filter().copy(type = EntryTypeFilter.Incomes, situations = setOf(EntrySituation.Paid))))
+    }
+
+    @Test
+    fun `total, resumo e próxima página refletem o filtro`() = runBlocking<Unit> {
+        val h = open()
+        h.spec21()
+        val f = filter().copy(type = EntryTypeFilter.Expenses)
+        val first = h.space.entries(f, 0, 3).value()
+        assertEquals(4, first.total)
+        assertEquals(3, first.rows.size)
+        assertEquals(3, first.nextCursor)
+        assertEquals(Money(20_000), first.summary.expenses)
+        val last = h.space.entries(f, 3, 3).value()
+        assertEquals(1, last.rows.size)
+        assertNull(last.nextCursor)
     }
 }
