@@ -76,12 +76,9 @@ class FlowBarTest {
     }
 
     @Test fun `barra de uso e excesso tem contraste de grafico contra trilho e cartao`() {
-        val resources = File("src/main/res/values").listFiles()!!
-            .filter { it.name.startsWith("themes_") && it.extension == "xml" }
-            .flatMap { file -> Regex("""<color name="([^"]+)">#([0-9A-Fa-f]{6,8})</color>""")
-                .findAll(file.readText()).map { it.groupValues[1] to Color(0xFF000000 or it.groupValues[2].takeLast(6).toLong(16)) }.toList() }.toMap()
+        val resources = PaletteFixtures.resources
         val failures = mutableListOf<String>()
-        for (palette in listOf("accord", "catppuccin", "midnightdusk", "nord", "tako", "tidalwave", "tokyonight")) {
+        for (palette in listOf("accord", "catppuccin", "midnightdusk")) {
             for (dark in listOf(false, true)) {
                 val prefix = "${palette}_${if (dark) "dark" else "light"}_"
                 val scheme = if (dark) DarkColorScheme else LightColorScheme

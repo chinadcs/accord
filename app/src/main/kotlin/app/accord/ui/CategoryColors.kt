@@ -3,7 +3,7 @@ package app.accord.ui
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
+import app.accord.ui.theme.Accord
 import app.accord.core.space.CategoryNode
 import app.accord.core.space.IncomeCategoryNode
 
@@ -15,12 +15,13 @@ import app.accord.core.space.IncomeCategoryNode
  * A pessoa pode escolher a cor da categoria principal entre estas 12 (ADR 0039; índice salvo e sincronizado). Sem escolha, vale
  * a cor derivada: as sementes têm cor fixa e a categoria criada pelo casal usa um índice estável calculado do identificador.
  */
-private val LightColors = listOf(
-    0xFFC62828, 0xFFC25E00, 0xFF946A00, 0xFF2E7D32, 0xFF00796B, 0xFF00758F,
+/** Laranja `#B85600` (antes `#C25E00`) para alcançar 3:1 no trilho; o índice 1 e a ordem ficam (ADR 0039, 0085). */
+internal val CategoryLightColors = listOf(
+    0xFFC62828, 0xFFB85600, 0xFF946A00, 0xFF2E7D32, 0xFF00796B, 0xFF00758F,
     0xFF1E63C6, 0xFF4F46C8, 0xFF8E3FB5, 0xFFC2185B, 0xFF7A5448, 0xFF54677A,
 ).map { Color(it) }
 
-private val DarkColors = listOf(
+internal val CategoryDarkColors = listOf(
     0xFFFF8A80, 0xFFFFAB66, 0xFFE6C04A, 0xFF7FD28A, 0xFF4DD0BD, 0xFF4FC3DE,
     0xFF78AEFF, 0xFFA5A0FF, 0xFFD39BEF, 0xFFFF8FB8, 0xFFC9A294, 0xFF9FB3C8,
 ).map { Color(it) }
@@ -57,21 +58,21 @@ fun CategoryNode.colorKey(categories: Map<String, CategoryNode>): String {
 }
 
 fun categoryColorIndex(key: String): Int =
-    if (key.startsWith(CHOSEN_PREFIX)) key.removePrefix(CHOSEN_PREFIX).toIntOrNull()?.coerceIn(0, LightColors.size - 1) ?: 0
-    else SeedIndex[key] ?: Math.floorMod(key.hashCode(), LightColors.size)
+    if (key.startsWith(CHOSEN_PREFIX)) key.removePrefix(CHOSEN_PREFIX).toIntOrNull()?.coerceIn(0, CategoryLightColors.size - 1) ?: 0
+    else SeedIndex[key] ?: Math.floorMod(key.hashCode(), CategoryLightColors.size)
 
 /** Cor [index] da paleta no tema atual, para o seletor de cor. */
 @Composable
 fun categoryPaletteColor(index: Int): Color {
-    val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
-    return if (dark) DarkColors[index] else LightColors[index]
+    val dark = Accord.dark
+    return if (dark) CategoryDarkColors[index] else CategoryLightColors[index]
 }
 
 @Composable
 fun categoryColor(colorKey: String): Color {
-    val dark = MaterialTheme.colorScheme.surface.luminance() < 0.5f
+    val dark = Accord.dark
     val index = categoryColorIndex(colorKey)
-    return if (dark) DarkColors[index] else LightColors[index]
+    return if (dark) CategoryDarkColors[index] else CategoryLightColors[index]
 }
 
 /** Chave estável da cor de uma categoria de renda: a da principal, seja a categoria principal ou subcategoria (ADR 0082). */

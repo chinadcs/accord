@@ -22,13 +22,8 @@ import kotlin.test.assertTrue
  * comunitárias herdam `success` de `secondary`, como em [PaletteSemanticContrastTest].
  */
 class HomeContrastTest {
-    private val palettes = listOf("accord", "catppuccin", "midnightdusk", "nord", "tako", "tidalwave", "tokyonight")
-    private val resources: Map<String, Color> = File("src/main/res/values").listFiles()!!
-        .filter { it.name.startsWith("themes_") && it.extension == "xml" }
-        .flatMap { file ->
-            Regex("""<color name="([^"]+)">#([0-9A-Fa-f]{6,8})</color>""").findAll(file.readText())
-                .map { it.groupValues[1] to Color(0xFF000000 or it.groupValues[2].takeLast(6).toLong(16)) }.toList()
-        }.toMap()
+    private val palettes = listOf("accord", "catppuccin", "midnightdusk")
+    private val resources: Map<String, Color> = PaletteFixtures.resources
 
     private class Variant(val name: String, val c: (String, Color) -> Color, val success: Color, val onSurface: Color)
 
@@ -38,9 +33,7 @@ class HomeContrastTest {
             val scheme = if (dark) DarkColorScheme else LightColorScheme
             val original = if (dark) DarkAccordColors else LightAccordColors
             val color = { role: String, fallback: Color -> resources[prefix + role] ?: fallback }
-            val secondary = color("secondary", scheme.secondary)
-            val success = resources[prefix + "success"] ?: if (palette == "accord") original.success else secondary
-            Variant(prefix.trimEnd('_'), color, success, color("on_surface", scheme.onSurface))
+            Variant(prefix.trimEnd('_'), color, original.success, color("on_surface", scheme.onSurface))
         }
     }
 
@@ -69,7 +62,7 @@ class HomeContrastTest {
             for (v in variants()) {
                 val s = scheme(v)
                 val card = v.c("surface_container_low", s.surfaceContainerLow)
-                val attention = resources[v.name + "_attention"] ?: v.c("tertiary", s.tertiary)
+                val attention = (if (v.name.endsWith("dark")) DarkAccordColors else LightAccordColors).attention
                 // Cor efetiva: como em ForecastSummary e CashFlowBody, o ícone recua para o texto do tema abaixo de 3:1.
                 for ((name, preferred) in mapOf("success" to v.success, "attention" to attention, "error" to v.c("error", s.error))) {
                     val ratio = chartContrast(chartInk(preferred, card, v.onSurface), card)

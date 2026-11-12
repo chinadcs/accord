@@ -59,7 +59,7 @@ class ThemeStore(context: Context) {
     }
 
     private fun readPalette(): ThemePalette =
-        runCatching { ThemePalette.valueOf(prefs.getString(KEY_PALETTE, null) ?: "") }.getOrDefault(ThemePalette.Accord)
+        ThemePalette.fromStored(prefs.getString(KEY_PALETTE, null))
 
     fun setPalette(value: ThemePalette) {
         prefs.edit().putString(KEY_PALETTE, value.name).apply()

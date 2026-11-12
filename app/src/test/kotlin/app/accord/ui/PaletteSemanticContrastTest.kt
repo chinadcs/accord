@@ -15,15 +15,8 @@ import kotlin.test.assertTrue
 
 /** Verifica os papéis de texto reais, inclusive defaults e aliases usados por contentColorFor. */
 class PaletteSemanticContrastTest {
-    private val palettes = listOf("accord", "catppuccin", "midnightdusk", "nord", "tako", "tidalwave", "tokyonight")
-    private val resourceColors = File("src/main/res/values")
-        .listFiles { file -> file.name.startsWith("themes_") && file.extension == "xml" }!!
-        .flatMap { file ->
-            Regex("""<color name="([^"]+)">#([0-9A-Fa-f]{6,8})</color>""")
-                .findAll(file.readText())
-                .map { it.groupValues[1] to it.groupValues[2].takeLast(6).toInt(16) }
-                .toList()
-        }.toMap()
+    private val palettes = listOf("accord", "catppuccin", "midnightdusk")
+    private val resourceColors = PaletteFixtures.resourcesRgb
 
     private data class Pairing(val role: String, val background: Int, val foreground: Int)
 
@@ -66,41 +59,26 @@ class PaletteSemanticContrastTest {
         ) + surfaces
     }
 
-    private fun derivedPairs(prefix: String, palette: String, material: List<Pairing>): List<Pairing> {
-        fun role(name: String) = material.single { it.role == name }
-        val dark = prefix.endsWith("dark_")
-        val original = if (dark) DarkAccordColors else LightAccordColors
-        val financeDefault = if (palette == "accord") original.financeSurface.toArgb() and 0xFFFFFF else if (dark) {
-            resolve(prefix, "surface_container_high", DarkColorScheme.surfaceContainerHigh)
-        } else role("primary").background
-        val financeOnDefault = if (palette == "accord") original.onFinanceSurface.toArgb() and 0xFFFFFF
-            else if (dark) role("surface").foreground else role("primary").foreground
-        val finance = Pairing(
-            "finance_surface",
-            resolve(prefix, "finance_surface", financeDefault),
-            resolve(prefix, "on_finance_surface", financeOnDefault),
+    /** Papéis constantes de [AccordColors]: iguais nas três paletas, então só mudam as superfícies onde ficam. */
+    private fun derivedPairs(prefix: String): List<Pairing> {
+        val c = if (prefix.endsWith("dark_")) DarkAccordColors else LightAccordColors
+        fun rgb(color: Color) = color.toArgb() and 0xFFFFFF
+        return listOf(
+            Pairing("finance_surface", rgb(c.financeSurface), rgb(c.onFinanceSurface)),
+            Pairing("finance_surface_variant", rgb(c.financeSurface), rgb(c.onFinanceSurfaceVariant)),
+            Pairing("income_on_finance", rgb(c.financeSurface), rgb(c.incomeOnFinance)),
+            Pairing("expense_on_finance", rgb(c.financeSurface), rgb(c.expenseOnFinance)),
+            Pairing("attention", rgb(c.attention), rgb(c.onAttention)),
+            Pairing("attention_container", rgb(c.attentionContainer), rgb(c.onAttentionContainer)),
+            Pairing("success", rgb(c.success), rgb(c.onSuccess)),
+            Pairing("success_container", rgb(c.successContainer), rgb(c.onSuccessContainer)),
+            Pairing("info", rgb(c.info), rgb(c.onInfo)),
+            Pairing("info_container", rgb(c.infoContainer), rgb(c.onInfoContainer)),
+            Pairing("income", rgb(c.income), rgb(c.onIncome)),
+            Pairing("income_container", rgb(c.incomeContainer), rgb(c.onIncomeContainer)),
+            Pairing("expense", rgb(c.expense), rgb(c.onExpense)),
+            Pairing("expense_container", rgb(c.expenseContainer), rgb(c.onExpenseContainer)),
         )
-        val attention = Pairing(
-            "attention",
-            resolve(prefix, "attention", if (palette == "accord") original.attention.toArgb() and 0xFFFFFF else role("tertiary").background),
-            resolve(prefix, "on_attention", if (palette == "accord") original.onAttention.toArgb() and 0xFFFFFF else role("tertiary").foreground),
-        )
-        val attentionContainer = Pairing(
-            "attention_container",
-            resolve(prefix, "attention_container", if (palette == "accord") original.attentionContainer.toArgb() and 0xFFFFFF else role("tertiary_container").background),
-            resolve(prefix, "on_attention_container", if (palette == "accord") original.onAttentionContainer.toArgb() and 0xFFFFFF else role("tertiary_container").foreground),
-        )
-        val success = Pairing(
-            "success",
-            resolve(prefix, "success", if (palette == "accord") original.success.toArgb() and 0xFFFFFF else role("secondary").background),
-            resolve(prefix, "on_success", if (palette == "accord") original.onSuccess.toArgb() and 0xFFFFFF else role("secondary").foreground),
-        )
-        val successContainer = Pairing(
-            "success_container",
-            resolve(prefix, "success_container", if (palette == "accord") original.successContainer.toArgb() and 0xFFFFFF else role("secondary_container").background),
-            resolve(prefix, "on_success_container", if (palette == "accord") original.onSuccessContainer.toArgb() and 0xFFFFFF else role("secondary_container").foreground),
-        )
-        return listOf(finance, attention, attentionContainer, success, successContainer)
     }
 
     private fun luminance(color: Int): Double {
@@ -124,7 +102,7 @@ class PaletteSemanticContrastTest {
                 val prefix = "${palette}_${mode}_"
                 val base = if (mode == "dark") DarkColorScheme else LightColorScheme
                 val material = materialPairs(prefix, base)
-                val pairs = material + derivedPairs(prefix, palette, material)
+                val pairs = material + derivedPairs(prefix)
                 // Fundos idênticos podem receber contentColorFor de outro papel Material.
                 for ((background, aliases) in pairs.groupBy { it.background }) {
                     for (pair in aliases) {

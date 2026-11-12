@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Verde floresta do logo 02 Encontro (docs/branding/logo-options). -->
-    <color name="ic_launcher_background">#146C45</color>
+    <!-- Marca azul da paleta Accord (primary do tema claro, ADR 0085); o primeiro plano #FAF9F7 tem 7,2:1 sobre ela. -->
+    <color name="ic_launcher_background">#144FC2</color>
 </resources>

@@ -17,7 +17,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -40,7 +39,6 @@ import com.composables.icons.lucide.R as Lucide
 /** Só para o teste achar os ícones decorativos (sem texto): o sufixo é o recurso do ícone. */
 const val BALANCE_ICON_TAG_PREFIX = "balance-icon-"
 private const val ABSENT = "—"
-private const val MIN_TEXT_CONTRAST = 4.5f
 
 /**
  * Saldo total acumulado até o fim do mês (renda recebida menos despesa comprometida), com Receita e Despesa só desse
@@ -59,13 +57,8 @@ fun TotalBalanceCard(
 ) {
     val panel = Accord.colors.financeSurface
     val onPanel = Accord.colors.onFinanceSurface
-    val incomeColor = readableOn(
-        panel, onPanel, listOf(Accord.colors.success, Accord.colors.successContainer, Accord.colors.onSuccessContainer),
-    )
-    val expenseColor = readableOn(
-        panel, onPanel,
-        listOf(MaterialTheme.colorScheme.error, MaterialTheme.colorScheme.errorContainer, MaterialTheme.colorScheme.onErrorContainer),
-    )
+    val incomeColor = Accord.colors.incomeOnFinance
+    val expenseColor = Accord.colors.expenseOnFinance
     val title = stringResource(R.string.entries_balance_title)
     val expenseLabel = stringResource(R.string.entries_balance_expense)
     val incomeLabel = stringResource(R.string.entries_balance_income)
@@ -141,13 +134,3 @@ private fun TotalLine(label: String, amount: Money?, color: Color, @DrawableRes 
 }
 
 private fun Money?.formatOrAbsent(): String = this?.format() ?: ABSENT
-
-/** Primeira cor com contraste de texto sobre o painel; o painel é carvão nos dois temas, então o tom claro do tema escuro nem sempre existe no claro. */
-private fun readableOn(background: Color, fallback: Color, candidates: List<Color>): Color =
-    candidates.firstOrNull { contrast(it, background) >= MIN_TEXT_CONTRAST } ?: fallback
-
-private fun contrast(a: Color, b: Color): Float {
-    val hi = maxOf(a.luminance(), b.luminance())
-    val lo = minOf(a.luminance(), b.luminance())
-    return (hi + 0.05f) / (lo + 0.05f)
-}

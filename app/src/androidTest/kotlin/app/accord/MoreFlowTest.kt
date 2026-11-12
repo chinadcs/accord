@@ -236,11 +236,11 @@ class MoreFlowTest {
     fun aparenciaMostraModoEPaletaAtuaisNoSubtitulo() {
         val container = (ApplicationProvider.getApplicationContext<AccordApplication>()).container
         container.theme.set(ThemePreference.Dark)
-        container.theme.setPalette(ThemePalette.Nord)
+        container.theme.setPalette(ThemePalette.Catppuccin)
         compose.onNodeWithText("Mais").performClick()
         waitForText("Categorias e subcategorias")
         scrollTo("Aparência")
-        compose.onNode(hasText("Aparência") and hasText("Escuro · Nord")).assertExists()
+        compose.onNode(hasText("Aparência") and hasText("Escuro · Catppuccin")).assertExists()
     }
 
     @Test

@@ -3,7 +3,9 @@ package app.accord.ui
 import androidx.compose.ui.graphics.Color
 import app.accord.ui.components.chartContrast
 import app.accord.ui.components.textInk
+import app.accord.ui.theme.DarkAccordColors
 import app.accord.ui.theme.DarkColorScheme
+import app.accord.ui.theme.LightAccordColors
 import app.accord.ui.theme.LightColorScheme
 import java.io.File
 import kotlin.test.Test
@@ -15,13 +17,8 @@ import kotlin.test.assertTrue
  * recurso da paleta ou o padrão do esquema.
  */
 class BudgetContrastTest {
-    private val palettes = listOf("accord", "catppuccin", "midnightdusk", "nord", "tako", "tidalwave", "tokyonight")
-    private val resources: Map<String, Color> = File("src/main/res/values").listFiles()!!
-        .filter { it.name.startsWith("themes_") && it.extension == "xml" }
-        .flatMap { file ->
-            Regex("""<color name="([^"]+)">#([0-9A-Fa-f]{6,8})</color>""").findAll(file.readText())
-                .map { it.groupValues[1] to Color(0xFF000000 or it.groupValues[2].takeLast(6).toLong(16)) }.toList()
-        }.toMap()
+    private val palettes = listOf("accord", "catppuccin", "midnightdusk")
+    private val resources: Map<String, Color> = PaletteFixtures.resources
 
     private fun forEachVariant(check: (name: String, c: (String, Color) -> Color) -> Unit) {
         for (palette in palettes) for (dark in listOf(false, true)) {
@@ -47,7 +44,7 @@ class BudgetContrastTest {
                 val s = if (name.endsWith("dark")) DarkColorScheme else LightColorScheme
                 val surface = c("surface", s.surface)
                 val onSurface = c("on_surface", s.onSurface)
-                for ((role, preferred) in mapOf("error" to c("error", s.error), "attention" to c("attention", s.tertiary))) {
+                for ((role, preferred) in mapOf("error" to c("error", s.error), "attention" to (if (name.endsWith("dark")) DarkAccordColors else LightAccordColors).attention)) {
                     val ratio = chartContrast(textInk(preferred, surface, onSurface), surface)
                     if (ratio < 4.5f) add("$name $role: %.2f".format(ratio))
                 }

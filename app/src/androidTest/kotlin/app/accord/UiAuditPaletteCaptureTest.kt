@@ -3,11 +3,9 @@ package app.accord
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
@@ -29,7 +27,6 @@ import app.accord.core.Money
 import app.accord.core.TotalChange
 import app.accord.core.chat.ChatMessage
 import app.accord.core.chat.ChatPayment
-import app.accord.core.chat.ChatReceiptRecord
 import app.accord.core.chat.MessageState
 import app.accord.core.chat.Nature
 import app.accord.core.chat.ReceiptKind
@@ -46,12 +43,8 @@ import app.accord.core.space.QueryResult
 import app.accord.core.space.RegisterDirectPayment
 import app.accord.ui.access.MessageKind
 import app.accord.ui.access.ScreenMessage
-import app.accord.ui.chat.ChatActions
-import app.accord.ui.chat.ChatItem
-import app.accord.ui.chat.ChatScreen
 import app.accord.ui.chat.ChatUiState
 import app.accord.ui.chat.ModelBadge
-import app.accord.ui.components.MessageBanner
 import app.accord.ui.theme.AccordSpacing
 import app.accord.ui.theme.AccordTheme
 import app.accord.ui.theme.ThemePalette
@@ -64,7 +57,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.UUID
 
-/** Matriz das sete paletas: Orçamento real com dinheiro sintético e tela Aparência em cada tema. */
+/** Matriz das três paletas: Orçamento real com dinheiro sintético e tela Aparência em cada tema. */
 @RunWith(AndroidJUnit4::class)
 class UiAuditPaletteCaptureTest {
     @get:Rule val compose = createEmptyComposeRule()
@@ -105,7 +98,7 @@ class UiAuditPaletteCaptureTest {
         compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty()
     }
 
-    @Test fun setePaletasComDadosEControlesReais() {
+    @Test fun tresPaletasComDadosEControlesReais() {
         val container = app.container
         for (palette in ThemePalette.values()) {
             container.theme.set(theme)
@@ -123,49 +116,5 @@ class UiAuditPaletteCaptureTest {
             scenario?.close()
             scenario = null
         }
-    }
-
-    /** Amostra sintética dos dois consumidores de onSurface em Tokyo Night claro, não um fluxo do Chat. */
-    @Test fun tokyoNightClaroCartaoDoChatEMensagemNeutra() {
-        if (theme != ThemePreference.Light) return
-        app.container.theme.set(ThemePreference.Light)
-        app.container.theme.setPalette(ThemePalette.TokyoNight)
-        val message = ChatMessage("tokyo-msg", "mercado 35 no Pix", 1L, MessageState.Applied)
-        val receipt = ChatReceiptRecord(
-            "tokyo-receipt", message.id, "tokyo-op", "tokyo-entry",
-            ReceiptSummary(
-                nature = Nature.Expense, description = "Mercado", totalCents = 3_500,
-                categoryName = "Mercado", parentName = "Alimentação", payment = ChatPayment.Pix,
-                dateIso = app.container.clock.today().toString(),
-            ),
-            ReceiptKind.Registered, ReceiptState.Active, false, null, 1,
-        )
-        val state = ChatUiState(
-            loaded = true, badge = ModelBadge.Installed,
-            items = listOf(ChatItem.User(message), ChatItem.Receipt(receipt, undoAvailable = false, question = null)),
-        )
-        val actions = ChatActions({}, {}, {}, {}, {}, {}, {})
-        scenario = ActivityScenario.launch(MainActivity::class.java)
-        scenario!!.onActivity { activity ->
-            activity.setContent {
-                AccordTheme(ThemePreference.Light, palette = ThemePalette.TokyoNight) {
-                    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
-                        Column(Modifier.statusBarsPadding().navigationBarsPadding()) {
-                            MessageBanner(
-                                ScreenMessage(MessageKind.Neutral, R.string.access_msg_cancelled),
-                                Modifier.padding(AccordSpacing.s4),
-                            )
-                            Box(Modifier.weight(1f)) {
-                                ChatScreen(
-                                    state, app.container.clock.today(), PaddingValues(), actions,
-                                    {}, {}, {}, {}, { _, _ -> }, { _, _, _ -> }, {}, {}, {}, {},
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        UiAuditSyntheticEvidence.capture(compose, "palette_tokyonight_chat_cartao_banner_neutro", ThemePreference.Light)
     }
 }

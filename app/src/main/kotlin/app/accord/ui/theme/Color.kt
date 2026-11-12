@@ -8,7 +8,9 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
+/** Accord vem de `themes_accord.xml`; Catppuccin e Midnight Dusk, da regra em [derivePalette] (sem XML à mão). */
 internal fun loadPalette(context: Context, palette: ThemePalette, dark: Boolean): ColorScheme {
+    palette.seed()?.let { return derivePalette(it, dark) }
     val base = if (dark) DarkColorScheme else LightColorScheme
     val prefix = "${palette.key}_${if (dark) "dark" else "light"}"
     fun color(role: String, fallback: Color): Color {
@@ -27,9 +29,7 @@ internal fun loadPalette(context: Context, palette: ThemePalette, dark: Boolean)
         onBackground = color("onBackground", base.onBackground), surface = color("surface", base.surface), onSurface = color("onSurface", base.onSurface),
         surfaceVariant = color("surfaceVariant", base.surfaceVariant), onSurfaceVariant = color("onSurfaceVariant", base.onSurfaceVariant),
         surfaceTint = color("surfaceTint", base.surfaceTint), inverseSurface = color("inverseSurface", base.inverseSurface),
-        inverseOnSurface = color("inverseOnSurface", base.inverseOnSurface), error = color("error", base.error),
-        onError = color("onError", base.onError), errorContainer = color("errorContainer", base.errorContainer),
-        onErrorContainer = color("onErrorContainer", base.onErrorContainer), outline = color("outline", base.outline),
+        inverseOnSurface = color("inverseOnSurface", base.inverseOnSurface), outline = color("outline", base.outline),
         outlineVariant = color("outlineVariant", base.outlineVariant), scrim = color("scrim", base.scrim),
         surfaceBright = color("surfaceBright", base.surfaceBright), surfaceDim = color("surfaceDim", base.surfaceDim),
         surfaceContainerLowest = color("surfaceContainerLowest", base.surfaceContainerLowest),
@@ -39,87 +39,9 @@ internal fun loadPalette(context: Context, palette: ThemePalette, dark: Boolean)
     )
 }
 
-internal fun paletteAccordColors(context: Context, palette: ThemePalette, scheme: ColorScheme, dark: Boolean): AccordColors {
-    val original = if (dark) DarkAccordColors else LightAccordColors
-    fun color(role: String, fallback: Color): Color {
-        val prefix = "${palette.key}_${if (dark) "dark" else "light"}"
-        val id = context.resources.getIdentifier("${prefix}_${role}", "color", context.packageName)
-        return if (id == 0) fallback else Color(context.getColor(id))
-    }
-    val proposed = if (palette == ThemePalette.Accord) original else AccordColors(
-        financeSurface = if (dark) scheme.surfaceContainerHigh else scheme.primary,
-        onFinanceSurface = if (dark) scheme.onSurface else scheme.onPrimary,
-        attention = scheme.tertiary, onAttention = scheme.onTertiary,
-        attentionContainer = scheme.tertiaryContainer, onAttentionContainer = scheme.onTertiaryContainer,
-        attentionFill = scheme.tertiary, success = scheme.secondary, onSuccess = scheme.onSecondary,
-        successContainer = scheme.secondaryContainer, onSuccessContainer = scheme.onSecondaryContainer,
-        dataNeutral = scheme.onSurfaceVariant,
-    )
-    return proposed.copy(
-        financeSurface = color("finance_surface", proposed.financeSurface),
-        onFinanceSurface = color("on_finance_surface", proposed.onFinanceSurface),
-        attention = color("attention", proposed.attention), onAttention = color("on_attention", proposed.onAttention),
-        attentionContainer = color("attention_container", proposed.attentionContainer),
-        onAttentionContainer = color("on_attention_container", proposed.onAttentionContainer),
-        attentionFill = color("attention_fill", proposed.attentionFill), success = color("success", proposed.success),
-        onSuccess = color("on_success", proposed.onSuccess), successContainer = color("success_container", proposed.successContainer),
-        onSuccessContainer = color("on_success_container", proposed.onSuccessContainer), dataNeutral = color("data_neutral", proposed.dataNeutral),
-    )
-}
-
-/**
- * Primitivos de cor (docs/design-tokens.md §1). O número identifica a etapa da escala. Telas e
- * componentes usam só os papéis semânticos de [AccordColors] e do `ColorScheme`.
- */
-private object Primitive {
-    val neutral100 = Color(0xFFFFFFFF)
-    val neutral98 = Color(0xFFF8F8F1)
-    val neutral96 = Color(0xFFF2F2E9)
-    val neutral94 = Color(0xFFEBECE2)
-    val neutral92 = Color(0xFFE1E3D8)
-    val neutral90 = Color(0xFFD7DACE)
-    val neutral83 = Color(0xFFC6C9BB)
-    val neutral78 = Color(0xFFB6BAAC)
-    val neutral57 = Color(0xFF888D7F)
-    val neutral49 = Color(0xFF73796B)
-    val neutral35 = Color(0xFF505747)
-    val neutral28 = Color(0xFF3A3E35)
-    val neutral21 = Color(0xFF32342E)
-    val neutral18 = Color(0xFF292B26)
-    val neutral12 = Color(0xFF22231F)
-    val neutral9 = Color(0xFF1D1E1B)
-    val neutral6 = Color(0xFF171815)
-    val neutral4 = Color(0xFF11120F)
-
-    val lime95 = Color(0xFFF5F5BD)
-    val lime87 = Color(0xFFE7EDA6)
-    val lime80 = Color(0xFFDCE69A)
-    val lime38 = Color(0xFF535B1B)
-    val lime30 = Color(0xFF3F4719)
-
-    val green91 = Color(0xFFD2EDDE)
-    val green83 = Color(0xFFA6DBBE)
-    val green73 = Color(0xFF79CBA4)
-    val green40 = Color(0xFF176C4D)
-    val green35 = Color(0xFF115B40)
-    val green28 = Color(0xFF104B31)
-    val green20 = Color(0xFF0B3628)
-
-    val amber94 = Color(0xFFFDEBC4)
-    val amber80 = Color(0xFFF5BC4E)
-    val amber71 = Color(0xFFE9A02A)
-    val amber49 = Color(0xFFA0670E)
-    val amber38 = Color(0xFF7D500C)
-    val amber28 = Color(0xFF5E3C0A)
-    val amber19 = Color(0xFF402907)
-
-    val red88 = Color(0xFFF9D6D2)
-    val red77 = Color(0xFFF2ADA5)
-    val red38 = Color(0xFFA32F24)
-    val red30 = Color(0xFF84261D)
-    val red23 = Color(0xFF651D17)
-    val red15 = Color(0xFF461410)
-}
+/** Estados, receita/despesa e painel financeiro são iguais nas três paletas (ADR 0085); só o neutro de dados segue a paleta. */
+internal fun paletteAccordColors(scheme: ColorScheme, dark: Boolean): AccordColors =
+    (if (dark) DarkAccordColors else LightAccordColors).copy(dataNeutral = scheme.outline)
 
 /**
  * Placa clara dos logos de bancos e estabelecimentos: preserva as cores e a proporção das marcas nos
@@ -132,86 +54,156 @@ object AccordLogoPlate {
     val glyph = Color(0xFF444444)
 }
 
-/** Papéis sem equivalente no Material 3 (§2.2): atenção, sucesso e dado neutro. */
+/**
+ * Papéis sem equivalente no Material 3: estados com container e borda, receita/despesa, painel financeiro e dado
+ * neutro. Valem iguais em todas as paletas (ADR 0085); `error` mora no `ColorScheme`, com [errorBorder] aqui.
+ */
 @Immutable
 data class AccordColors(
     val financeSurface: Color,
     val onFinanceSurface: Color,
+    val onFinanceSurfaceVariant: Color,
+    val incomeOnFinance: Color,
+    val expenseOnFinance: Color,
     val attention: Color,
     val onAttention: Color,
     val attentionContainer: Color,
     val onAttentionContainer: Color,
+    val attentionBorder: Color,
     val attentionFill: Color,
     val success: Color,
     val onSuccess: Color,
     val successContainer: Color,
     val onSuccessContainer: Color,
+    val successBorder: Color,
+    val errorBorder: Color,
+    val info: Color,
+    val onInfo: Color,
+    val infoContainer: Color,
+    val onInfoContainer: Color,
+    val infoBorder: Color,
+    val income: Color,
+    val onIncome: Color,
+    val incomeContainer: Color,
+    val onIncomeContainer: Color,
+    val expense: Color,
+    val onExpense: Color,
+    val expenseContainer: Color,
+    val onExpenseContainer: Color,
     val dataNeutral: Color,
 )
 
 val LocalAccordColors = staticCompositionLocalOf<AccordColors> { error("AccordTheme ausente") }
 
-internal val LightColorScheme: ColorScheme = with(Primitive) {
+internal val LightColorScheme: ColorScheme = run {
     lightColorScheme(
-        primary = lime38, onPrimary = neutral100,
-        primaryContainer = lime87, onPrimaryContainer = neutral9,
-        secondary = neutral35, onSecondary = neutral100,
-        secondaryContainer = neutral92, onSecondaryContainer = neutral9,
-        tertiary = amber38, onTertiary = neutral100,
-        tertiaryContainer = amber94, onTertiaryContainer = amber19,
-        background = neutral98, onBackground = neutral9,
-        surface = neutral98, onSurface = neutral9,
-        surfaceVariant = neutral90, onSurfaceVariant = neutral35,
-        surfaceTint = lime38,
-        inverseSurface = neutral18, inverseOnSurface = neutral96, inversePrimary = lime87,
-        error = red38, onError = neutral100, errorContainer = red88, onErrorContainer = red15,
-        outline = neutral49, outlineVariant = neutral83,
-        scrim = neutral4,
-        surfaceBright = neutral98, surfaceDim = neutral90,
-        surfaceContainerLowest = neutral100, surfaceContainerLow = neutral96, surfaceContainer = neutral94,
-        surfaceContainerHigh = neutral92, surfaceContainerHighest = neutral90,
+        primary = Color(0xFF144FC2), onPrimary = Color(0xFFFFFFFF),
+        primaryContainer = Color(0xFFD0E1FE), onPrimaryContainer = Color(0xFF0C1C39),
+        secondary = Color(0xFF53585E), onSecondary = Color(0xFFFFFFFF),
+        secondaryContainer = Color(0xFFE2E5E8), onSecondaryContainer = Color(0xFF1A1D20),
+        tertiary = Color(0xFF745401), onTertiary = Color(0xFFFFFFFF),
+        tertiaryContainer = Color(0xFFFFE4B4), onTertiaryContainer = Color(0xFF2D1F01),
+        background = Color(0xFFECEFF2), onBackground = Color(0xFF1A1D20),
+        surface = Color(0xFFECEFF2), onSurface = Color(0xFF1A1D20),
+        surfaceVariant = Color(0xFFCFD1D5), onSurfaceVariant = Color(0xFF53585E),
+        surfaceTint = Color(0xFF144FC2),
+        inverseSurface = Color(0xFF2F3133), inverseOnSurface = Color(0xFFF1F4F7), inversePrimary = Color(0xFF7BAAFF),
+        error = Color(0xFFA41B3C), onError = Color(0xFFFFFFFF), errorContainer = Color(0xFFFFE0E1), onErrorContainer = Color(0xFF37171B),
+        outline = Color(0xFF7E8388), outlineVariant = Color(0xFFC2C4C8),
+        scrim = Color(0xFF11120F),
+        surfaceBright = Color(0xFFECEFF2), surfaceDim = Color(0xFFD8DBDE),
+        surfaceContainerLowest = Color(0xFFFFFFFF), surfaceContainerLow = Color(0xFFFFFFFF),
+        surfaceContainer = Color(0xFFE2E5E8), surfaceContainerHigh = Color(0xFFD8DBDE),
+        surfaceContainerHighest = Color(0xFFCFD1D5),
     )
 }
 
-internal val DarkColorScheme: ColorScheme = with(Primitive) {
+internal val DarkColorScheme: ColorScheme = run {
     darkColorScheme(
-        primary = lime95, onPrimary = neutral6,
-        primaryContainer = lime30, onPrimaryContainer = lime95,
-        secondary = neutral78, onSecondary = neutral18,
-        secondaryContainer = neutral21, onSecondaryContainer = neutral92,
-        tertiary = amber80, tertiaryContainer = amber28, onTertiary = amber19, onTertiaryContainer = amber94,
-        background = neutral6, onBackground = neutral92,
-        surface = neutral6, onSurface = neutral92,
-        surfaceVariant = neutral21, onSurfaceVariant = neutral78,
-        surfaceTint = lime95,
-        inverseSurface = neutral92, inverseOnSurface = neutral18, inversePrimary = lime38,
-        error = red77, onError = red23, errorContainer = red30, onErrorContainer = red88,
-        outline = neutral57, outlineVariant = neutral28,
-        scrim = neutral4,
-        surfaceBright = neutral21, surfaceDim = neutral6,
-        surfaceContainerLowest = neutral4, surfaceContainerLow = neutral9, surfaceContainer = neutral12,
-        surfaceContainerHigh = neutral18, surfaceContainerHighest = neutral21,
+        primary = Color(0xFF7BAAFF), onPrimary = Color(0xFF132139),
+        primaryContainer = Color(0xFF283F6A), onPrimaryContainer = Color(0xFFD1E2FF),
+        secondary = Color(0xFFBEC2C8), onSecondary = Color(0xFF232527),
+        secondaryContainer = Color(0xFF343638), onSecondaryContainer = Color(0xFFE4E8ED),
+        tertiary = Color(0xFFFFD486), tertiaryContainer = Color(0xFF634601), onTertiary = Color(0xFF2B1F08), onTertiaryContainer = Color(0xFFFEECCA),
+        background = Color(0xFF141518), onBackground = Color(0xFFE4E8ED),
+        surface = Color(0xFF141518), onSurface = Color(0xFFE4E8ED),
+        surfaceVariant = Color(0xFF3C3E40), onSurfaceVariant = Color(0xFFBEC2C8),
+        surfaceTint = Color(0xFF7BAAFF),
+        inverseSurface = Color(0xFFE5E8EB), inverseOnSurface = Color(0xFF252729), inversePrimary = Color(0xFF144FC2),
+        error = Color(0xFFFFBABF), onError = Color(0xFF331A1C), errorContainer = Color(0xFF753940), onErrorContainer = Color(0xFFFEE9EA),
+        outline = Color(0xFF868B90), outlineVariant = Color(0xFF484B4F),
+        scrim = Color(0xFF11120F),
+        surfaceBright = Color(0xFF343638), surfaceDim = Color(0xFF141518),
+        surfaceContainerLowest = Color(0xFF0A0C0D), surfaceContainerLow = Color(0xFF232527),
+        surfaceContainer = Color(0xFF2C2E30), surfaceContainerHigh = Color(0xFF343638),
+        surfaceContainerHighest = Color(0xFF3C3E40),
     )
 }
 
-internal val LightAccordColors: AccordColors = with(Primitive) {
-    AccordColors(
-        financeSurface = neutral18, onFinanceSurface = neutral98,
-        attention = amber38, onAttention = neutral100,
-        attentionContainer = amber94, onAttentionContainer = amber19, attentionFill = amber49,
-        success = green35, onSuccess = neutral100,
-        successContainer = green91, onSuccessContainer = green20,
-        dataNeutral = neutral49,
+internal val LightAccordColors: AccordColors = AccordColors(
+        financeSurface = Color(0xFF1B2941),
+        onFinanceSurface = Color(0xFFF3F7FC),
+        onFinanceSurfaceVariant = Color(0xFFC7CCD4),
+        incomeOnFinance = Color(0xFF8CE99A),
+        expenseOnFinance = Color(0xFFFFA99C),
+        attention = Color(0xFF745401),
+        onAttention = Color(0xFFFFFFFF),
+        attentionContainer = Color(0xFFFFE4B4),
+        onAttentionContainer = Color(0xFF2D1F01),
+        attentionBorder = Color(0xFFA07505),
+        attentionFill = Color(0xFF946C02),
+        success = Color(0xFF01605A),
+        onSuccess = Color(0xFFFFFFFF),
+        successContainer = Color(0xFFAFF5ED),
+        onSuccessContainer = Color(0xFF002623),
+        successBorder = Color(0xFF0A8B83),
+        errorBorder = Color(0xFFC15C69),
+        info = Color(0xFF2451A8),
+        onInfo = Color(0xFFFFFFFF),
+        infoContainer = Color(0xFFDCE8FE),
+        onInfoContainer = Color(0xFF132139),
+        infoBorder = Color(0xFF517BC9),
+        income = Color(0xFF006826),
+        onIncome = Color(0xFFFFFFFF),
+        incomeContainer = Color(0xFFC6F3CB),
+        onIncomeContainer = Color(0xFF0C2611),
+        expense = Color(0xFF910202),
+        onExpense = Color(0xFFFFFFFF),
+        expenseContainer = Color(0xFFFEE1DB),
+        onExpenseContainer = Color(0xFF371813),
+        dataNeutral = Color(0xFF7E8388),
     )
-}
 
-internal val DarkAccordColors: AccordColors = with(Primitive) {
-    AccordColors(
-        financeSurface = neutral18, onFinanceSurface = neutral98,
-        attention = amber80, onAttention = amber19,
-        attentionContainer = amber28, onAttentionContainer = amber94, attentionFill = amber71,
-        success = green83, onSuccess = green20,
-        successContainer = green28, onSuccessContainer = green91,
-        dataNeutral = neutral57,
+internal val DarkAccordColors: AccordColors = AccordColors(
+        financeSurface = Color(0xFF2E3C57),
+        onFinanceSurface = Color(0xFFF3F7FC),
+        onFinanceSurfaceVariant = Color(0xFFC7CCD4),
+        incomeOnFinance = Color(0xFF8CE99A),
+        expenseOnFinance = Color(0xFFFFA99C),
+        attention = Color(0xFFFFD486),
+        onAttention = Color(0xFF2B1F08),
+        attentionContainer = Color(0xFF634601),
+        onAttentionContainer = Color(0xFFFEECCA),
+        attentionBorder = Color(0xFFCDA453),
+        attentionFill = Color(0xFFE1AA38),
+        success = Color(0xFF65DFD5),
+        onSuccess = Color(0xFF022623),
+        successContainer = Color(0xFF045550),
+        onSuccessContainer = Color(0xFFC7F7F2),
+        successBorder = Color(0xFF3CBCB2),
+        errorBorder = Color(0xFFEB9199),
+        info = Color(0xFFB1CDFE),
+        onInfo = Color(0xFF162134),
+        infoContainer = Color(0xFF314B7A),
+        onInfoContainer = Color(0xFFE5EEFF),
+        infoBorder = Color(0xFF84ABF0),
+        income = Color(0xFF8CE99A),
+        onIncome = Color(0xFF122515),
+        incomeContainer = Color(0xFF23552D),
+        onIncomeContainer = Color(0xFFD6F6D9),
+        expense = Color(0xFFFFA99C),
+        onExpense = Color(0xFF331A16),
+        expenseContainer = Color(0xFF753A31),
+        onExpenseContainer = Color(0xFFFEE9E5),
+        dataNeutral = Color(0xFF868B90),
     )
-}

@@ -26,11 +26,12 @@ enum class ThemePreference { System, Light, Dark }
 enum class ThemePalette(val key: String, @StringRes val labelRes: Int) {
     Accord("accord", R.string.palette_accord),
     Catppuccin("catppuccin", R.string.palette_catppuccin),
-    MidnightDusk("midnightdusk", R.string.palette_midnight_dusk),
-    Nord("nord", R.string.palette_nord),
-    Tako("tako", R.string.palette_tako),
-    TidalWave("tidalwave", R.string.palette_tidal_wave),
-    TokyoNight("tokyonight", R.string.palette_tokyo_night),
+    MidnightDusk("midnightdusk", R.string.palette_midnight_dusk);
+
+    companion object {
+        /** Nome gravado desconhecido (paleta removida, como Nord) volta à Accord. */
+        fun fromStored(name: String?): ThemePalette = entries.firstOrNull { it.name == name } ?: Accord
+    }
 }
 
 enum class CornerStyle { Rounded, Straight }
@@ -83,11 +84,15 @@ data class AccordMotion(val reduced: Boolean) {
 
 private val LocalAccordTypography = staticCompositionLocalOf<AccordTypography> { error("AccordTheme ausente") }
 private val LocalAccordMotion = staticCompositionLocalOf { AccordMotion(reduced = false) }
+private val LocalAccordDark = staticCompositionLocalOf { false }
 
 object Accord {
     val colors: AccordColors @Composable @ReadOnlyComposable get() = LocalAccordColors.current
     val typography: AccordTypography @Composable @ReadOnlyComposable get() = LocalAccordTypography.current
     val motion: AccordMotion @Composable @ReadOnlyComposable get() = LocalAccordMotion.current
+
+    /** Modo do tema em uso (não a luminosidade da cor): decide, por exemplo, a cor de dialogs e sheets. */
+    val dark: Boolean @Composable @ReadOnlyComposable get() = LocalAccordDark.current
 }
 
 private val RoundedShapes = Shapes(
@@ -192,7 +197,7 @@ fun AccordTheme(
     val context = LocalContext.current
     val colorScheme = remember(context, palette, dark) { loadPalette(context, palette, dark) }
     val accordColors = remember(palette, dark, colorScheme) {
-        paletteAccordColors(context, palette, colorScheme, dark)
+        paletteAccordColors(colorScheme, dark)
     }
     val accordTypography = AccordTypography(
         amountRow = typography.bodyLarge.copy(fontWeight = FontWeight.SemiBold, fontFeatureSettings = TABULAR_FIGURES),
@@ -204,6 +209,7 @@ fun AccordTheme(
         LocalAccordColors provides accordColors,
         LocalAccordTypography provides accordTypography,
         LocalAccordMotion provides AccordMotion(rememberReducedMotion()),
+        LocalAccordDark provides dark,
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
