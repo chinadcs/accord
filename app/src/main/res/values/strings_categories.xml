@@ -61,7 +61,7 @@
     <string name="categories_parts_custom">Informar outro valor</string>
     <string name="categories_parts_value">Valor no destino (R$)</string>
     <string name="categories_parts_missing">Escolha uma opção para cada mês.</string>
-    <string name="categories_parts_confirm">Mover e aplicar</string>
+    <string name="categories_parts_confirm">Passar e aplicar</string>
     <string name="categories_parts_invalid">Informe um valor válido para %1$s.</string>
     <string name="categories_decision_needed">Falta uma decisão para concluir.</string>
     <string name="categories_stale_edit">Esta categoria mudou em outro lugar. Feche e abra a edição de novo para ver a versão atual.</string>

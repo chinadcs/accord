@@ -320,16 +320,16 @@ class MoreFlowTest {
 
         // a parte de limite da subcategoria nunca é transferida sem uma escolha explícita
         waitForText("Decida, mês a mês")
-        dialogButton("Mover e aplicar")
+        dialogButton("Passar e aplicar")
         waitForText("Escolha uma opção para cada mês.")
 
         // levar a parte para um destino sem limite principal é recusado pelo serviço, com o motivo na tela
         compose.onAllNodes(hasText("Levar", substring = true) and hasClickAction()).onFirst().performSemanticsAction(SemanticsActions.OnClick)
-        dialogButton("Mover e aplicar")
+        dialogButton("Passar e aplicar")
         waitForText("Defina o limite da categoria antes de dividi-lo")
 
         compose.onAllNodes(hasText("Não levar", substring = true) and hasClickAction()).onFirst().performSemanticsAction(SemanticsActions.OnClick)
-        dialogButton("Mover e aplicar")
+        dialogButton("Passar e aplicar")
         waitForText("Subcategoria movida daqui para frente.")
     }
 
