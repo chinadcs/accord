@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.graphics.graphicsLayer
@@ -72,6 +73,7 @@ import app.accord.core.space.CategoryNode
 import app.accord.core.space.IncomeCategoryNode
 import app.accord.ui.components.RefreshOnResume
 import app.accord.ui.components.SkeletonBlock
+import app.accord.ui.sync.LocalSyncStatus
 import app.accord.ui.components.DecorativeIcon
 import app.accord.ui.components.lucideRes
 import app.accord.ui.theme.AccordSpacing
@@ -91,6 +93,7 @@ fun CategoriesRoute(
     val reordering by viewModel.reordering.collectAsStateWithLifecycle()
     val tab by viewModel.tab.collectAsStateWithLifecycle()
     RefreshOnResume(viewModel::refresh)
+    val awaitingSync = (LocalSyncStatus.current?.summary?.awaitingCategoryOperations ?: 0) > 0
     CategoriesScreen(
         content, rows, dialog, reordering, tab, padding, onBack, onRetry = { viewModel.load() },
         onTab = viewModel::selectTab,
@@ -103,6 +106,7 @@ fun CategoriesRoute(
         onSubmit = viewModel::submit, onClose = viewModel::close,
         onMoveEntries = { id -> viewModel.close(); onMoveEntries(id) },
         onRemove = { id -> viewModel.close(); onRemove(id) },
+        awaitingSync = awaitingSync,
     )
 }
 
@@ -141,6 +145,7 @@ fun CategoriesScreen(
     onClose: () -> Unit,
     onMoveEntries: (String) -> Unit,
     onRemove: (String) -> Unit,
+    awaitingSync: Boolean = false,
 ) {
     Column(
         Modifier.fillMaxSize().padding(padding).padding(horizontal = AccordSpacing.s4).padding(top = AccordSpacing.s4),
@@ -168,6 +173,13 @@ fun CategoriesScreen(
                     )
                 }
             }
+        }
+        // Só alteração de categoria ainda não reconhecida pelo serviço; sem estado por linha (ADR 0084).
+        if (awaitingSync) {
+            Text(
+                stringResource(R.string.categories_pending_sync), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainerLow, MaterialTheme.shapes.medium).padding(AccordSpacing.s3),
+            )
         }
         when (content) {
             CategoriesContent.Loading -> {

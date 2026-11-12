@@ -105,6 +105,8 @@ interface SyncDao {
     )
     suspend fun rewriteChange(operationId: String, type: String, entityId: String, state: String, refs: String, revision: Long)
     @Query("SELECT COUNT(*) FROM operation WHERE syncState IN (:states)") suspend fun countIn(states: List<String>): Int
+    @Query("SELECT COUNT(DISTINCT o.operationId) FROM operation o JOIN operation_change c ON c.operationId = o.operationId WHERE o.syncState IN (:states) AND c.entityType IN (:types)")
+    suspend fun countWithChangesOf(states: List<String>, types: List<String>): Int
     @Query("SELECT * FROM operation ORDER BY sequence DESC LIMIT :limit") suspend fun recentOperations(limit: Int): List<OperationRow>
 
     /** Operações ainda abertas que alteram a entidade, da mais antiga para a mais nova. */

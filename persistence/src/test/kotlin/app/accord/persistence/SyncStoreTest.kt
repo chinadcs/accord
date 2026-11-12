@@ -102,6 +102,18 @@ class SyncStoreTest : SpaceTestBase() {
     }
 
     @Test
+    fun `o resumo conta à parte as operações por enviar que alteram categorias`() = runBlocking<Unit> {
+        val h = open()
+        h.account()
+        h.pix()
+        assertEquals(0, store(h).summary().awaitingCategoryOperations)
+        h.space.execute(h.env(), app.accord.core.space.CreateCategory("Pets")).applied()
+        val summary = store(h).summary()
+        assertEquals(1, summary.awaitingCategoryOperations)
+        assertTrue(summary.awaitingOperations > 1)
+    }
+
+    @Test
     fun `rascunho local nunca vira operação nem entra na fila`() = runBlocking<Unit> {
         val h = open()
         h.space.saveDraft(LocalDraft(source = DraftSource.Chat, fields = mapOf("description" to "Mercado"), missing = listOf("amount"))).value()

@@ -25,13 +25,13 @@ class CategoriesStatesUiTest {
     private var creates = 0
     private var retries = 0
 
-    private fun show(content: CategoriesContent, tab: CategoryTab = CategoryTab.Expense) = compose.setContent {
+    private fun show(content: CategoriesContent, tab: CategoryTab = CategoryTab.Expense, awaiting: Boolean = false) = compose.setContent {
         AccordTheme {
             CategoriesScreen(
                 content, buildRows(content, tab, emptySet()), null, false, tab, PaddingValues(), onBack = {}, onRetry = { retries++ }, onTab = {},
                 onToggle = {}, onToggleReorder = {}, onMove = { _, _ -> }, onDragStart = {}, onDragTo = { _, _ -> }, onDragEnd = {}, onDragCancel = {},
                 onCreate = { creates++ }, onEdit = {}, onEditIncome = {}, onMoveSub = {}, onName = {}, onIcon = {}, onColor = {}, onDestination = {},
-                onAnswer = { _, _, _ -> }, onSubmit = {}, onClose = {}, onMoveEntries = {}, onRemove = {},
+                onAnswer = { _, _, _ -> }, onSubmit = {}, onClose = {}, onMoveEntries = {}, onRemove = {}, awaitingSync = awaiting,
             )
         }
     }
@@ -57,6 +57,18 @@ class CategoriesStatesUiTest {
         compose.onNodeWithText("Ainda não há categorias de despesa").assertExists()
         compose.onNodeWithText("Nova categoria").performClick()
         assertEquals(1, creates)
+    }
+
+    @Test
+    fun faixaAguardandoEnvioSoApareceComAlteracaoDeCategoriaPendente() {
+        show(CategoriesContent.Ready(emptyList(), emptyList()), awaiting = true)
+        compose.onNodeWithText("Salvo neste aparelho. Aguardando envio.").assertExists()
+    }
+
+    @Test
+    fun semPendenciaNaoHaFaixa() {
+        show(CategoriesContent.Ready(emptyList(), emptyList()))
+        compose.onNodeWithText("Salvo neste aparelho. Aguardando envio.").assertDoesNotExist()
     }
 
     @Test

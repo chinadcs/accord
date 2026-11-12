@@ -83,6 +83,7 @@ class SyncStore(
             rejectedOperations = sync.countIn(listOf(OpState.REJECTED)),
             lastSyncMillis = state?.lastSyncMillis,
             cursor = state?.cursor ?: 0,
+            awaitingCategoryOperations = sync.countWithChangesOf(listOf(OpState.PENDING, OpState.HELD), listOf(EntityType.Category.name, EntityType.IncomeCategory.name)),
         )
     }
 

@@ -15,6 +15,8 @@ data class SyncSummary(
     /** Último ciclo concluído por completo, no relógio do aparelho (só exibição). */
     val lastSyncMillis: Long?,
     val cursor: Long,
+    /** Operações por enviar que alteram categorias (despesa ou renda); alimenta a faixa da tela Categorias. */
+    val awaitingCategoryOperations: Int = 0,
 )
 
 /** Uma das duas versões de uma entidade em conflito. */

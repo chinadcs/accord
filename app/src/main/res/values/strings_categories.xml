@@ -5,6 +5,7 @@
     <string name="categories_new">Nova</string>
     <string name="categories_new_label">Nova categoria</string>
     <string name="categories_new_income_label">Nova categoria de renda</string>
+    <string name="categories_pending_sync">Salvo neste aparelho. Aguardando envio.</string>
     <string name="categories_loading">Carregando categorias</string>
     <string name="categories_error">Não conseguimos carregar as categorias agora. O que já está salvo neste aparelho não foi perdido.</string>
     <string name="categories_empty_expense_title">Ainda não há categorias de despesa</string>
