@@ -1,5 +1,6 @@
 package app.accord.ui.forecast
 
+import app.accord.ui.components.AccordCard
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -188,7 +189,7 @@ private fun EventBanner(event: AlertEventView, currentTotalCents: Long) {
 @Composable
 private fun Summary(detail: ForecastDetail) {
     val f = detail.forecast
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+    AccordCard {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             Amount(stringResource(R.string.forecast_detail_known), Money(f.knownCents).format())
             Amount(

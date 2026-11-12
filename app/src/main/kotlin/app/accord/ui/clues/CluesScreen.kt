@@ -1,5 +1,6 @@
 package app.accord.ui.clues
 
+import app.accord.ui.components.AccordCard
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -55,8 +56,7 @@ fun CluesScreen(state: CluesUiState, padding: PaddingValues, onBack: () -> Unit,
         val items = state.items.filter { it.evaluated == evaluated }
         if (!state.loading && items.isEmpty()) item { Text(stringResource(if (evaluated) R.string.clues_no_reviewed else R.string.clues_no_unreviewed)) }
         items(items, key = { it.key }) { item ->
-            Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerLow,
-                modifier = Modifier.fillMaxWidth().clickable(role = Role.Button) { onOpen(item.key, state.reference) }) {
+            AccordCard(shape = MaterialTheme.shapes.large, modifier = Modifier.fillMaxWidth().clickable(role = Role.Button) { onOpen(item.key, state.reference) }) {
                 Column(Modifier.padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
                     Text(clueTitle(item.snapshot, state), style = MaterialTheme.typography.titleMedium)
                     Text(periodLabel(item.snapshot), style = MaterialTheme.typography.bodyMedium)
@@ -119,7 +119,7 @@ fun ClueDetailScreen(state: CluesUiState, padding: PaddingValues, onBack: () -> 
                 OutlinedButton({ comparing = !comparing }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(if (comparing) R.string.clues_hide_origins else R.string.clues_compare_origins)) }
             }
             items(snapshot.evidence, key = { it.id }) { evidence ->
-                Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainerLow) {
+                AccordCard(shape = MaterialTheme.shapes.large) {
                     Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
                         Text(evidence.description, style = MaterialTheme.typography.titleMedium)
                         Text(Money(evidence.cents).format())

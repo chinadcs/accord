@@ -1,5 +1,6 @@
 package app.accord.ui.subscriptions
 
+import app.accord.ui.components.AccordCard
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -132,12 +133,10 @@ private fun ReadyDetail(content: SubscriptionDetailContent.Ready, onOpenEntry: (
 @Composable
 private fun ChargeLine(charge: SubscriptionCharge, onOpen: () -> Unit) {
     val description = stringResource(R.string.subscription_charge_see_description, charge.date.fullLabel(), charge.amount.format())
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium,
+    AccordCard(
         modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)
             .clickable(role = Role.Button, onClick = onOpen)
-            .semantics { contentDescription = description },
-    ) {
+            .semantics { contentDescription = description },) {
         AdaptiveRow(
             modifier = Modifier.padding(AccordSpacing.s3),
             start = { Text(charge.date.fullLabel(), style = MaterialTheme.typography.bodyLarge) },

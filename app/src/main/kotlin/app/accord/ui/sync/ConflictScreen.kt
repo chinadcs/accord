@@ -168,7 +168,7 @@ private fun EntityBlock(entity: ConflictEntity, version: ConflictVersion?, looku
             val value = fieldText(line.value, lookup)
             val differs = stringResource(R.string.conflict_differs)
             Surface(
-                color = if (line.differs) Accord.colors.attentionContainer else MaterialTheme.colorScheme.surfaceContainerLow,
+                color = if (line.differs) Accord.colors.attentionContainer else MaterialTheme.colorScheme.surfaceContainer,
                 contentColor = if (line.differs) Accord.colors.onAttentionContainer else MaterialTheme.colorScheme.onSurface,
                 shape = MaterialTheme.shapes.small,
                 modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {

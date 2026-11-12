@@ -1,5 +1,6 @@
 package app.accord.ui.more
 
+import app.accord.ui.components.AccordCard
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -166,7 +167,7 @@ private fun BalanceDialog(vm: AccountsViewModel, content: AccountsContent) {
 
 @Composable
 private fun AccountRow(account: AccountInfo, isDefault: Boolean, onEdit: () -> Unit, onSetDefault: () -> Unit) {
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+    AccordCard {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
                 BankLogo(account.bank.takeIf { it is BankRef.Catalog })
@@ -212,7 +213,7 @@ private fun AccountRow(account: AccountInfo, isDefault: Boolean, onEdit: () -> U
 @Composable
 private fun AccountEditor(form: AccountForm, onChange: (BankRef?, String?) -> Unit, onSave: () -> Unit, onCancel: () -> Unit) {
     var pickingBank by remember { mutableStateOf(false) }
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+    AccordCard {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
             Text(
                 stringResource(if (form.editingId == null) R.string.accounts_add_title else R.string.accounts_edit_title),

@@ -1,5 +1,6 @@
 package app.accord.ui.home
 
+import app.accord.ui.components.AccordCard
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -49,7 +50,7 @@ fun AttentionStrip(
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
         Text(stringResource(R.string.home_attention_title), style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.semantics { heading() })
-        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+        AccordCard(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2)) {
                 var describedLoading = false
                 plan.lines.forEachIndexed { index, line ->

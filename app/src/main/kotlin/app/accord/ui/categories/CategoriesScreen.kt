@@ -1,5 +1,8 @@
 package app.accord.ui.categories
 
+import app.accord.ui.components.AccordCard
+import app.accord.ui.components.accordDialogColor
+import app.accord.ui.components.accordMenuColor
 import app.accord.ui.categoryColor
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -176,10 +179,12 @@ fun CategoriesScreen(
         }
         // Só alteração de categoria ainda não reconhecida pelo serviço; sem estado por linha (ADR 0084).
         if (awaitingSync) {
-            Text(
-                stringResource(R.string.categories_pending_sync), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surfaceContainerLow, MaterialTheme.shapes.medium).padding(AccordSpacing.s3),
-            )
+            AccordCard(Modifier.fillMaxWidth()) {
+                Text(
+                    stringResource(R.string.categories_pending_sync), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(AccordSpacing.s3),
+                )
+            }
         }
         when (content) {
             CategoriesContent.Loading -> {
@@ -333,7 +338,7 @@ private fun CategoryListRow(
         color = MaterialTheme.colorScheme.surfaceContainerLow, shape = shape,
         // Borda de 2 dp e elevação tonal identificam o item arrastado, sem escala nem depender de cor.
         tonalElevation = if (drag.active) 8.dp else 0.dp,
-        border = if (drag.active) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else null,
+        border = BorderStroke(if (drag.active) 2.dp else 1.dp, if (drag.active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant),
         modifier = Modifier.fillMaxWidth().graphicsLayer {
             // Mantém a linha sob o dedo mesmo quando a lista a realoca ao trocar de lugar.
             if (drag.active) {
@@ -479,7 +484,7 @@ private fun RowMenu(name: String, items: @Composable (close: () -> Unit) -> Unit
         IconButton(onClick = { open = true }, modifier = Modifier.size(AccordSpacing.touchMin)) {
             Icon(painterResource(Lucide.drawable.lucide_ic_ellipsis_vertical), contentDescription = stringResource(R.string.categories_menu_more, name))
         }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }) { items { open = false } }
+        DropdownMenu(containerColor = accordMenuColor(), expanded = open, onDismissRequest = { open = false }) { items { open = false } }
     }
 }
 
@@ -530,6 +535,7 @@ private fun CategoryDialogs(
             onName, onIcon, onColor, onSave = onSubmit, onClose = onClose,
         )
         is CategoryDialog.Move -> AlertDialog(
+            containerColor = accordDialogColor(),
             onDismissRequest = onClose,
             title = { Text(stringResource(R.string.categories_move_title, dialog.sub.name)) },
             text = {
@@ -558,6 +564,7 @@ private fun CategoryDialogs(
             dismissButton = { TextButton(onClick = onClose, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.edit_cancel)) } },
         )
         is CategoryDialog.ReviewParts -> AlertDialog(
+            containerColor = accordDialogColor(),
             onDismissRequest = onClose,
             title = { Text(stringResource(R.string.categories_parts_title, dialog.sub.name)) },
             text = {

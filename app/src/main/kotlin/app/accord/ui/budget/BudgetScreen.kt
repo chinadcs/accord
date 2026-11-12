@@ -1,5 +1,6 @@
 package app.accord.ui.budget
 
+import app.accord.ui.components.AccordCard
 import androidx.compose.ui.graphics.Color
 import app.accord.ui.categoryColor
 import androidx.compose.foundation.clickable
@@ -55,6 +56,7 @@ import app.accord.ui.components.SkeletonLines
 import app.accord.ui.components.chartInk
 import app.accord.ui.components.textInk
 import app.accord.ui.components.BudgetBar
+import app.accord.ui.components.StateBadge
 import app.accord.ui.components.DecorativeIcon
 import app.accord.ui.home.AllowanceMethodText
 import app.accord.ui.home.CashFlowBody
@@ -444,7 +446,7 @@ private fun GeneralBudgetCard(general: GeneralBudgetView) {
     val status = if (excess != null) stringResource(R.string.general_budget_excess, excess.format())
     else stringResource(R.string.general_budget_remaining, (general.view.remaining ?: Money.ZERO).format())
     val description = stringResource(R.string.general_budget_description, general.spent.format(), total.format(), status)
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+    AccordCard {
         Column(
             Modifier.fillMaxWidth().padding(AccordSpacing.s4).semantics(mergeDescendants = true) { contentDescription = description },
             verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
@@ -537,13 +539,8 @@ private fun CategoryRow(category: CategoryBudget, name: String, iconKey: String,
         BarState.Excess -> stringResource(R.string.category_excess, money(limit.excess ?: Money.ZERO))
         else -> stringResource(R.string.category_remaining, money(limit.remaining ?: Money.ZERO))
     }
-    // Atenção e excesso: texto na cor semântica só se alcança 4,5:1 sobre a superfície; o ícone e a palavra seguem dizendo o estado.
-    val statusColor = when {
-        netCredit != null -> textInk(Accord.colors.success, surface, onSurface)
-        state == BarState.Excess -> textInk(MaterialTheme.colorScheme.error, surface, onSurface)
-        state == BarState.Attention -> textInk(Accord.colors.attention, surface, onSurface)
-        else -> MaterialTheme.colorScheme.onSurfaceVariant
-    }
+    // O estado vai para o selo (atenção e excesso); o texto de "Faltam" fica neutro e o crédito líquido segue em `success`.
+    val statusColor = if (netCredit != null) textInk(Accord.colors.success, surface, onSurface) else MaterialTheme.colorScheme.onSurfaceVariant
     val barLabel = when (state) {
         BarState.WithinLimit -> stringResource(R.string.bar_within)
         BarState.Attention -> stringResource(R.string.bar_attention)
@@ -588,17 +585,21 @@ private fun CategoryRow(category: CategoryBudget, name: String, iconKey: String,
                 }
             }
             // Linha 2: barra. Sem limite definido não há barra: "Limite não definido" é o estado.
-            if (state != BarState.NoLimit) BudgetBar(barFill(limit), state, excessMarker(limit, category.net))
+            if (state != BarState.NoLimit) BudgetBar(barFill(limit), state, excessMarker(limit, category.net), categoryColor = tint)
             // Linha 3: estado (ícone e texto), "de R$ limite" e percentual.
             AdaptiveRow(
                 start = {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
                         when {
-                            netCredit != null -> Unit
-                            state == BarState.Attention -> DecorativeIcon(Lucide.drawable.lucide_ic_triangle_alert, tint = chartInk(Accord.colors.attention, surface, onSurface))
-                            state == BarState.Excess -> DecorativeIcon(Lucide.drawable.lucide_ic_circle_alert, tint = chartInk(MaterialTheme.colorScheme.error, surface, onSurface))
+                            netCredit != null -> Text(status, style = MaterialTheme.typography.bodyMedium, color = statusColor)
+                            // Atenção: selo "perto do limite" e, ao lado, quanto falta; excesso: o selo já diz quanto passou.
+                            state == BarState.Attention -> {
+                                StateBadge(state, stringResource(R.string.bar_attention))
+                                Text(status, style = MaterialTheme.typography.bodyMedium, color = statusColor)
+                            }
+                            state == BarState.Excess -> StateBadge(state, status)
+                            else -> Text(status, style = MaterialTheme.typography.bodyMedium, color = statusColor)
                         }
-                        Text(status, style = MaterialTheme.typography.bodyMedium, color = statusColor)
                     }
                 },
                 end = {

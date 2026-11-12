@@ -71,13 +71,10 @@ fun HomeSectionCard(
     val actionable = sectionIsActionable(status, onClick != null)
     val action = headerAction.takeIf { status == SectionStatus.Ready }
     Box(modifier.fillMaxWidth()) {
-        Surface(
-            color = MaterialTheme.colorScheme.surfaceContainerLow,
-            shape = MaterialTheme.shapes.medium,
+        AccordCard(
             modifier = Modifier.fillMaxWidth()
                 .heightIn(min = if (status == SectionStatus.Loading) maxOf(minHeight, loadingMinHeight * LocalDensity.current.fontScale) else minHeight)
-                .let { if (actionable) it.clickable(onClickLabel = onClickLabel, role = Role.Button, onClick = onClick!!) else it },
-        ) {
+                .let { if (actionable) it.clickable(onClickLabel = onClickLabel, role = Role.Button, onClick = onClick!!) else it },) {
             Column(
                 Modifier.fillMaxWidth().padding(AccordSpacing.s4),
                 verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),

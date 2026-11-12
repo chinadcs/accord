@@ -1,5 +1,7 @@
 package app.accord.ui.model
 
+import app.accord.ui.components.AccordCard
+import app.accord.ui.components.accordDialogColor
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -97,7 +99,7 @@ fun ModelScreen(
             style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
         )
-        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+        AccordCard(modifier = Modifier.fillMaxWidth()) {
             Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
                 when (install) {
                     ModelInstall.Checking -> Row(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalAlignment = Alignment.CenterVertically) {
@@ -198,6 +200,7 @@ fun ModelScreen(
     when (state.dialog) {
         ModelDialog.None -> Unit
         ModelDialog.MeteredChoice -> AlertDialog(
+            containerColor = accordDialogColor(),
             onDismissRequest = onDismissDialog,
             title = { Text(stringResource(R.string.model_metered_title)) },
             text = { Text(stringResource(R.string.model_metered_body, formatBytes(pendingBytes ?: 0))) },
@@ -205,6 +208,7 @@ fun ModelScreen(
             dismissButton = { TextButton(onClick = onWaitForWifi, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.model_wait_wifi)) } },
         )
         ModelDialog.ConfirmRemove -> AlertDialog(
+            containerColor = accordDialogColor(),
             onDismissRequest = onDismissDialog,
             title = { Text(stringResource(R.string.model_remove_title)) },
             text = { Text(stringResource(R.string.model_remove_body, formatBytes(status.active?.installedBytes ?: 0))) },
@@ -212,6 +216,7 @@ fun ModelScreen(
             dismissButton = { TextButton(onClick = onDismissDialog, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.model_dialog_cancel)) } },
         )
         ModelDialog.ConfirmRemoveAndInstall -> AlertDialog(
+            containerColor = accordDialogColor(),
             onDismissRequest = onDismissDialog,
             title = { Text(stringResource(R.string.model_remove_install_title)) },
             text = { Text(stringResource(R.string.model_remove_install_body)) },

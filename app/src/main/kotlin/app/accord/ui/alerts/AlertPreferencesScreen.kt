@@ -1,5 +1,6 @@
 package app.accord.ui.alerts
 
+import app.accord.ui.components.AccordCard
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -95,7 +96,7 @@ fun AlertPreferencesScreen(
 private fun PreferenceSwitch(enabled: Boolean, onToggle: (Boolean) -> Unit) {
     val label = stringResource(R.string.alert_prefs_switch)
     val value = stringResource(if (enabled) R.string.alert_prefs_on else R.string.alert_prefs_off)
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+    AccordCard {
         Row(
             Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).toggleable(value = enabled, role = Role.Switch, onValueChange = onToggle).padding(AccordSpacing.s4),
             verticalAlignment = Alignment.CenterVertically,

@@ -1,5 +1,6 @@
 package app.accord.updates
 
+import app.accord.ui.components.accordDialogColor
 import android.text.format.Formatter
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -110,6 +111,7 @@ fun UpdateNotice(state: UpdateState, install: InstallState, actions: UpdateActio
     val release = state.available ?: return
     if (!state.showNotice) return
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.updates_available)) },
         text = { Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
@@ -125,6 +127,7 @@ fun UpdateNotice(state: UpdateState, install: InstallState, actions: UpdateActio
 @Composable
 fun WhatsNewDialog(release: AppRelease, onDismiss: () -> Unit) {
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.updates_whats_new_title, release.version)) },
         text = {

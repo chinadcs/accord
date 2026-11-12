@@ -1,5 +1,6 @@
 package app.accord.ui.imports
 
+import app.accord.ui.components.AccordCard
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -189,12 +190,10 @@ private val ENTRY_TYPES = setOf(EntityType.Movement, EntityType.CardPurchase, En
 private fun ItemRow(item: ResultItem, expanded: Boolean, onToggle: (Int) -> Unit, onOpenEntry: (String) -> Unit, card: Boolean = false) {
     val amount = movementAmount(item.cents, item.currency) ?: stringResource(R.string.import_amount_unknown)
     val resolution = item.resolution.label()
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium,
+    AccordCard(
         modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)
             .semantics(mergeDescendants = true) { contentDescription = "${item.description}, $amount, $resolution" }
-            .clickable(role = Role.Button) { onToggle(item.ordinal) },
-    ) {
+            .clickable(role = Role.Button) { onToggle(item.ordinal) },) {
         Column(Modifier.padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
             AdaptiveRow(
                 start = { Text(item.description.ifBlank { stringResource(R.string.import_no_description) }, style = MaterialTheme.typography.titleSmall) },

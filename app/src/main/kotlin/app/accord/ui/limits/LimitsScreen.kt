@@ -1,5 +1,7 @@
 package app.accord.ui.limits
 
+import app.accord.ui.components.AccordCard
+import app.accord.ui.components.accordDialogColor
 import app.accord.ui.categoryColor
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
@@ -170,6 +172,7 @@ fun LimitsScreen(
     }
     if (state.askDiscard) {
         AlertDialog(
+            containerColor = accordDialogColor(),
             onDismissRequest = onKeepEditing,
             title = { Text(stringResource(R.string.limits_back_title)) },
             text = { Text(stringResource(R.string.limits_discard_body)) },
@@ -212,7 +215,7 @@ private fun CategoryLimit(row: LimitRow, state: LimitsUiState, onTotal: (String,
     val totalText = state.draft.totals[row.categoryId].orEmpty()
     val parts = state.draft.splits[row.categoryId].orEmpty()
     val totalError = state.errors[LimitKey(row.categoryId)]
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+    AccordCard {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
                 Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = CircleShape) {

@@ -1,5 +1,8 @@
 package app.accord.ui.register
 
+import app.accord.ui.components.accordSheetColor
+import app.accord.ui.components.AccordCard
+import app.accord.ui.components.accordDialogColor
 import app.accord.ui.colorKey
 import app.accord.ui.categoryColor
 import app.accord.ui.incomeCategoryLabel
@@ -308,6 +311,7 @@ fun RegisterScreen(
 
     if (state.askKeepOrDiscard) {
         AlertDialog(
+            containerColor = accordDialogColor(),
             onDismissRequest = onKeepEditing,
             title = { Text(stringResource(R.string.register_back_title)) },
             text = { Text(stringResource(R.string.register_back_body)) },
@@ -359,13 +363,10 @@ private fun expenseFormIcon(form: ExpenseForm): Int = when (form) {
 
 @Composable
 private fun MoreOptionsToggle(expanded: Boolean, onClick: () -> Unit) {
-    Surface(
+    AccordCard(
         onClick = onClick,
         modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.rowTall),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = MaterialTheme.shapes.large,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
-    ) {
+        shape = MaterialTheme.shapes.large,) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2),
             verticalAlignment = Alignment.Top,
@@ -583,7 +584,7 @@ private fun MoreOptions(
     onPick: (Picker) -> Unit,
 ) {
     val form = state.form
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+    AccordCard {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
             // "Alguém me deve isso": só em Pix e débito (o cartão e o dinheiro não têm conta que receba); ligar leva ao valor a receber.
             if (onSomeoneOwesMe != null && form.kind == FormKind.Expense && (form.form == ExpenseForm.Pix || form.form == ExpenseForm.Debit)) {
@@ -743,7 +744,7 @@ private fun ConversionBanner(origin: ConversionOrigin, assignedInvoice: java.tim
 private fun InvoiceAndSchedule(state: RegisterUiState, onCorrectInvoice: () -> Unit, onUseEstimate: () -> Unit) {
     val first = state.preview.firstOrNull() ?: return
     val form = state.form
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+    AccordCard {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             if (form.invoice != null) {
                 Text(stringResource(R.string.register_invoice_informed, first.invoiceMonth.label()), style = MaterialTheme.typography.bodyLarge)
@@ -830,7 +831,7 @@ internal fun CategoryDialog(categories: Map<String, CategoryNode>, selected: Str
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         dragHandle = { BottomSheetDefaults.DragHandle() },
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        containerColor = accordSheetColor(),
     ) {
         Column(
             Modifier.fillMaxWidth().heightIn(max = 620.dp).padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2),
@@ -950,6 +951,7 @@ internal fun CategoryTile(
 @Composable
 internal fun AccountDialog(accounts: List<AccountInfo>, selected: String?, onPick: (String) -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.register_account)) },
         text = {
@@ -982,6 +984,7 @@ internal fun AccountDialog(accounts: List<AccountInfo>, selected: String?, onPic
 private fun InvoiceDialog(initial: YearMonth, onPick: (YearMonth) -> Unit, onDismiss: () -> Unit) {
     var month by remember { mutableStateOf(initial) }
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.register_invoice_title)) },
         text = {

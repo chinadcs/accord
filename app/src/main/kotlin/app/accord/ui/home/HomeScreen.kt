@@ -1,5 +1,6 @@
 package app.accord.ui.home
 
+import app.accord.ui.components.AccordCard
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
@@ -156,7 +157,7 @@ private fun BalanceCard(state: HomeBalanceState, month: YearMonth?, includeExpec
                 }
             }
         }
-        HomeBalanceState.Failed -> Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+        HomeBalanceState.Failed -> AccordCard(modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(R.string.balance_failed), Modifier.fillMaxWidth().padding(AccordSpacing.s4))
         }
         is HomeBalanceState.Ready -> TotalBalanceCard(

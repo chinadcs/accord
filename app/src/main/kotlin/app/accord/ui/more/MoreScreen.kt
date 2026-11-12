@@ -1,5 +1,7 @@
 package app.accord.ui.more
 
+import app.accord.ui.components.AccordCard
+import app.accord.ui.components.accordSheetColor
 import androidx.compose.foundation.clickable
 import app.accord.ui.alerts.AlertPreferencesUiState
 import app.accord.ui.alerts.menuStatus
@@ -258,7 +260,7 @@ fun MoreScreen(
         )
     }
     if (showUpdates && updates != null) {
-        ModalBottomSheet(onDismissRequest = { showUpdates = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        ModalBottomSheet(containerColor = accordSheetColor(), onDismissRequest = { showUpdates = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 app.accord.updates.UpdatePanel(updates, installState, onCheckUpdates, updateActions)
             }
@@ -301,7 +303,7 @@ private fun ThemePreference.shortLabelRes(): Int = when (this) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun EntriesDateSheet(current: DateCriterion, onSelect: (DateCriterion) -> Unit, onDismiss: () -> Unit) {
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ModalBottomSheet(containerColor = accordSheetColor(), onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(
             Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = AccordSpacing.s4).padding(bottom = AccordSpacing.s4),
             verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
@@ -330,7 +332,7 @@ private fun EntriesDateSheet(current: DateCriterion, onSelect: (DateCriterion) -
 @Composable
 private fun MoreHeader(header: MoreHeaderState, onOpen: () -> Unit) {
     val openLabel = stringResource(R.string.more_header_open)
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+    AccordCard(modifier = Modifier.fillMaxWidth()) {
         Row(
             Modifier.fillMaxWidth().heightIn(min = AccordSpacing.rowMedium)
                 .clickable(onClickLabel = openLabel, role = Role.Button, onClick = onOpen)
@@ -382,7 +384,7 @@ private fun Section(title: Int, modifier: Modifier = Modifier, content: @Composa
             stringResource(title), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = AccordSpacing.s1).semantics { heading() },
         )
-        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+        AccordCard {
             Column { content() }
         }
     }

@@ -1,5 +1,6 @@
 package app.accord.ui.sync
 
+import app.accord.ui.components.AccordCard
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -48,7 +49,7 @@ fun SyncIndicator(modifier: Modifier = Modifier) {
     val openLabel = stringResource(R.string.indicator_open)
     val interactive = open != null && status != null
     val clickable = if (open != null && status != null) Modifier.clickable(onClickLabel = openLabel, role = Role.Button, onClick = open) else Modifier
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = modifier.fillMaxWidth()) {
+    AccordCard(modifier = modifier.fillMaxWidth()) {
         Row(
             Modifier.fillMaxWidth().testTag("more-sync").then(clickable).heightIn(min = AccordSpacing.rowMedium)
                 .padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2),

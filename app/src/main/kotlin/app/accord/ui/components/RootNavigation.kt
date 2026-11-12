@@ -1,6 +1,8 @@
 package app.accord.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -71,6 +73,9 @@ fun RootNavigationBar(selected: Root?, onSelect: (Root) -> Unit, hasPending: Boo
             Surface(
                 color = colors.surfaceContainerLow,
                 shape = MaterialTheme.shapes.large,
+                // Borda de 1 dp e sombra de 2 dp: a barra não depende só do tom contra o fundo (ADR 0085).
+                border = BorderStroke(1.dp, colors.outlineVariant),
+                shadowElevation = 2.dp,
                 modifier = Modifier.fillMaxWidth().align(Alignment.BottomCenter),
             ) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s1, vertical = AccordSpacing.s1)) {
@@ -127,8 +132,10 @@ fun RootNavigationBar(selected: Root?, onSelect: (Root) -> Unit, hasPending: Boo
                     }
                 }
             }
+            // Recorte do FAB na cor do fundo; o anel mantém a borda da barra ao redor dele.
             Box(
-                Modifier.align(Alignment.TopCenter).size(72.dp).background(colors.background, CircleShape),
+                Modifier.align(Alignment.TopCenter).size(72.dp).background(colors.background, CircleShape)
+                    .border(1.dp, colors.outlineVariant, CircleShape),
             )
             val chatLabel = stringResource(Root.Chat.label)
             FloatingActionButton(
@@ -139,8 +146,8 @@ fun RootNavigationBar(selected: Root?, onSelect: (Root) -> Unit, hasPending: Boo
                         contentDescription = chatLabel
                     },
                 shape = CircleShape,
-                containerColor = if (selected == Root.Chat) colors.primary else colors.secondaryContainer,
-                contentColor = if (selected == Root.Chat) colors.onPrimary else colors.onSecondaryContainer,
+                containerColor = if (selected == Root.Chat) colors.primary else colors.primaryContainer,
+                contentColor = if (selected == Root.Chat) colors.onPrimary else colors.onPrimaryContainer,
             ) {
                 Icon(painterResource(Root.Chat.icon), contentDescription = null)
             }

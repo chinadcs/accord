@@ -1,5 +1,6 @@
 package app.accord.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
@@ -96,11 +97,8 @@ fun MonthSelector(
     var picking by remember { mutableStateOf(false) }
     val labelFocus = remember { FocusRequester() }
     if (picking && onPick != null) MonthGrid(month, currentMonth, onPick = { picking = false; onPick(it) }, onDismiss = { picking = false; labelFocus.requestFocus() })
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = MaterialTheme.shapes.medium,
-    ) {
+    AccordCard(
+        modifier = modifier.fillMaxWidth(),) {
         Row(
             Modifier.padding(AccordSpacing.s1),
             verticalAlignment = Alignment.CenterVertically,
@@ -138,6 +136,7 @@ fun MonthSelector(
 private fun MonthGrid(shown: YearMonth, current: YearMonth, onPick: (YearMonth) -> Unit, onDismiss: () -> Unit) {
     val short = java.util.Locale.forLanguageTag("pt-BR")
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = onDismiss,
         confirmButton = { TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.action_back)) } },
         title = { Text(stringResource(R.string.month_pick_title, shown.year), modifier = Modifier.semantics { heading() }) },
@@ -179,18 +178,21 @@ fun ScreenTitle(text: String, modifier: Modifier = Modifier) {
 }
 
 /**
- * Barra de categoria (tokens §7). O preenchimento nunca é o único sinal: o texto ao lado diz o
- * estado, e a barra é oculta do TalkBack porque a linha inteira traz o equivalente textual.
+ * Barra de limite (tokens §7). O preenchimento nunca é o único sinal: o texto ao lado diz o estado, e a barra é oculta do
+ * TalkBack porque a linha inteira traz o equivalente textual. Com [categoryColor] a barra é sempre da cor da categoria, em
+ * qualquer estado (o estado vai para o selo e o marcador, ADR 0085); sem ela (Orçamento geral, Margem para gastar) a cor
+ * segue o estado: `primary`, `attentionFill` e `error`.
  */
 @Composable
-fun BudgetBar(fill: Float, state: BarState, marker: Float?, modifier: Modifier = Modifier) {
+fun BudgetBar(fill: Float, state: BarState, marker: Float?, modifier: Modifier = Modifier, categoryColor: Color? = null) {
     val track = MaterialTheme.colorScheme.surfaceContainerHighest
-    val fillColor = when (state) {
+    val card = MaterialTheme.colorScheme.surfaceContainerLow
+    val fillColor = categoryColor ?: when (state) {
         BarState.Excess -> MaterialTheme.colorScheme.error
         BarState.Attention -> Accord.colors.attentionFill
         else -> MaterialTheme.colorScheme.primary
     }
-    val markerColor = if (state == BarState.Excess) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onSurface
+    val markerColor = if (state == BarState.Excess && categoryColor == null) MaterialTheme.colorScheme.onError else MaterialTheme.colorScheme.onSurface
     Canvas(modifier.fillMaxWidth().height(8.dp).clearAndSetSemantics { }) {
         val radius = CornerRadius(4.dp.toPx())
         drawRoundRect(track, size = size, cornerRadius = radius)
@@ -201,7 +203,36 @@ fun BudgetBar(fill: Float, state: BarState, marker: Float?, modifier: Modifier =
             // Mantém a marca do limite dentro da barra e com contraste próprio do estado de excesso.
             val markerWidth = 2.dp.toPx()
             val markerX = (size.width * marker - markerWidth / 2f).coerceIn(markerWidth, size.width - markerWidth * 2f)
+            // Com a cor da categoria o marcador precisa se separar de qualquer tom: halo da cor do cartão de cada lado.
+            if (categoryColor != null) drawRect(card, topLeft = Offset(markerX - 1.dp.toPx(), 0f), size = Size(markerWidth + 2.dp.toPx(), size.height))
             drawRect(markerColor, topLeft = Offset(markerX, 0f), size = Size(markerWidth, size.height))
+        }
+    }
+}
+
+/**
+ * Selo de estado de uma categoria (ADR 0085): container, borda, ícone de forma própria e texto, nunca só cor. Atenção usa o
+ * triângulo e o âmbar; excesso, o octógono e o carmim. O ícone é decorativo e o texto é lido com a linha.
+ */
+@Composable
+fun StateBadge(state: BarState, text: String, modifier: Modifier = Modifier) {
+    val colors = Accord.colors
+    val scheme = MaterialTheme.colorScheme
+    val excess = state == BarState.Excess
+    val container = if (excess) scheme.errorContainer else colors.attentionContainer
+    val content = if (excess) scheme.onErrorContainer else colors.onAttentionContainer
+    val border = if (excess) colors.errorBorder else colors.attentionBorder
+    val icon = if (excess) Lucide.drawable.lucide_ic_octagon_alert else Lucide.drawable.lucide_ic_triangle_alert
+    Surface(
+        color = container, contentColor = content, shape = MaterialTheme.shapes.small,
+        border = BorderStroke(1.dp, border), modifier = modifier,
+    ) {
+        Row(
+            Modifier.padding(horizontal = AccordSpacing.s2, vertical = AccordSpacing.s1),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
+        ) {
+            DecorativeIcon(icon, tint = content)
+            Text(text, style = MaterialTheme.typography.labelLarge)
         }
     }
 }

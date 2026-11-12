@@ -84,7 +84,7 @@ private fun ValueRow(label: String, amount: String, note: String? = null) {
 
 /**
  * Resultado com ícone e palavra: "sobra" (check), "falta" (alerta) ou "fica em" quando é exatamente zero. O valor da
- * falta aparece sem sinal, porque a palavra já o diz; a cor `error` nunca é o único sinal.
+ * falta aparece sem sinal, porque a palavra já o diz. O resultado é neutro: sem verde nem vermelho (ADR 0085).
  */
 @Composable
 private fun ResultRow(label: String, cents: Long) {
@@ -94,9 +94,6 @@ private fun ResultRow(label: String, cents: Long) {
         cents < 0 -> stringResource(R.string.cashflow_outcome_shortfall, amount)
         else -> stringResource(R.string.cashflow_outcome_even, amount)
     }
-    val card = MaterialTheme.colorScheme.surfaceContainerLow
-    val onSurface = MaterialTheme.colorScheme.onSurface
-    val color = if (cents < 0) textInk(MaterialTheme.colorScheme.error, card, onSurface) else Color.Unspecified
     Row(
         Modifier.semantics(mergeDescendants = true) {},
         verticalAlignment = Alignment.Top,
@@ -104,8 +101,8 @@ private fun ResultRow(label: String, cents: Long) {
     ) {
         DecorativeIcon(
             if (cents < 0) Lucide.drawable.lucide_ic_circle_alert else Lucide.drawable.lucide_ic_circle_check,
-            tint = if (cents < 0) chartInk(MaterialTheme.colorScheme.error, card, onSurface) else chartInk(Accord.colors.success, card, onSurface),
+            tint = MaterialTheme.colorScheme.onSurface,
         )
-        Text(stringResource(R.string.cashflow_result_line, label, outcome), style = MaterialTheme.typography.titleMedium, color = color)
+        Text(stringResource(R.string.cashflow_result_line, label, outcome), style = MaterialTheme.typography.titleMedium)
     }
 }

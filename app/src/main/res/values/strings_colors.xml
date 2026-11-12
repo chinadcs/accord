@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Texto de abertura dos banners de estado (ADR 0085): o tipo da mensagem nunca fica só na cor. -->
+    <string name="banner_label_error">Erro</string>
+    <string name="banner_label_attention">Atenção</string>
+    <string name="banner_label_success">Tudo certo</string>
+    <string name="banner_label_info">Aviso</string>
+</resources>

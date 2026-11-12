@@ -1,5 +1,6 @@
 package app.accord.ui.more
 
+import app.accord.ui.components.AccordCard
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -94,13 +95,13 @@ fun NotificationsScreen(
             }
             else -> {
                 state.message?.let { MessageBanner(it) }
-                Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+                AccordCard {
                     Column { AlertsSwitch(state, onToggle, onAllow) }
                 }
             }
         }
         // As entradas ficam sempre à mão: a leitura da preferência falhar não impede abrir as outras telas.
-        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+        AccordCard {
             Column {
                 MoreRow(R.string.notifications_row_alerts, Lucide.drawable.lucide_ic_sliders_horizontal, onAlertPreferences)
                 MoreRow(R.string.bank_notifications_title, Lucide.drawable.lucide_ic_bell, onBankNotifications)

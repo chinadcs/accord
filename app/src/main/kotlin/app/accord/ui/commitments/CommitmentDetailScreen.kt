@@ -1,5 +1,6 @@
 package app.accord.ui.commitments
 
+import app.accord.ui.components.AccordCard
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -128,10 +129,8 @@ private fun InstallmentsDetail(
 
 @Composable
 private fun ScheduleLine(row: ScheduleRow, count: Int, onOpen: () -> Unit) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).clickable(role = Role.Button, onClick = onOpen),
-    ) {
+    AccordCard(
+        modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).clickable(role = Role.Button, onClick = onOpen),) {
         Column(Modifier.padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
             AdaptiveRow(
                 start = { Text(stringResource(R.string.commitment_schedule_line, row.number, count, row.dueDate.fullLabel()), style = MaterialTheme.typography.bodyLarge) },

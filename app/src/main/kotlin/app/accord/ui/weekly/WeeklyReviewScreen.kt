@@ -1,5 +1,6 @@
 package app.accord.ui.weekly
 
+import app.accord.ui.components.AccordCard
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -151,7 +152,7 @@ private fun OfferCard(stored: ReviewPeriod, fresh: ReviewPeriod, controls: Weekl
 @Composable
 private fun PeriodRow(state: WeeklyReviewUiState, controls: WeeklyReviewControls) {
     val period = state.session.period
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+    AccordCard(modifier = Modifier.fillMaxWidth()) {
         Row(Modifier.padding(AccordSpacing.s1), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             IconButton(onClick = controls.onPrevious, modifier = Modifier.size(AccordSpacing.touchMin)) {
                 Icon(painterResource(Lucide.drawable.lucide_ic_chevron_left), contentDescription = stringResource(R.string.weekly_previous))
@@ -235,7 +236,7 @@ private fun openPoint(point: ReviewPoint, summary: WeeklyReviewSummary, actions:
 
 @Composable
 private fun BlockCard(title: Int, reference: String, content: @Composable () -> Unit) {
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+    AccordCard(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             Text(stringResource(title), style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
             // Cada bloco diz a própria referência temporal, para os recortes nunca se confundirem.

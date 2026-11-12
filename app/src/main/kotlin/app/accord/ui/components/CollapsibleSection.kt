@@ -41,7 +41,7 @@ fun CollapsibleSection(
     content: @Composable () -> Unit,
 ) {
     val state = stringResource(if (expanded) R.string.collapsible_open else R.string.collapsible_closed)
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = modifier.fillMaxWidth()) {
+    AccordCard(modifier = modifier.fillMaxWidth()) {
         Column {
             Row(
                 Modifier.fillMaxWidth().heightIn(min = CollapsibleHeaderMinHeight)

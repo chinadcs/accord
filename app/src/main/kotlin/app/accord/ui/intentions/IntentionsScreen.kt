@@ -1,5 +1,6 @@
 package app.accord.ui.intentions
 
+import app.accord.ui.components.AccordCard
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -164,11 +165,9 @@ private fun IntentionRow(item: IntentionView, currentPersonId: String, onOpen: (
     val who = personName(item.updatedBy, currentPersonId)
     val converted = if (item.conversion != null) stringResource(R.string.intentions_converted_tag) + ". " else ""
     val spoken = stringResource(R.string.intentions_row_a11y, item.name, value, converted + stringResource(R.string.intentions_by_updated, who) + ". " + sync)
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium,
+    AccordCard(
         modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).clickable(role = Role.Button) { onOpen(item.id) }
-            .semantics(mergeDescendants = true) { contentDescription = spoken },
-    ) {
+            .semantics(mergeDescendants = true) { contentDescription = spoken },) {
         Column(Modifier.padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
             AdaptiveRow(
                 start = { Text(item.name, style = MaterialTheme.typography.titleSmall) },

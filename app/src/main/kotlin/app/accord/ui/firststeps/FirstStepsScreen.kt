@@ -1,5 +1,6 @@
 package app.accord.ui.firststeps
 
+import app.accord.ui.components.AccordCard
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -84,7 +85,7 @@ fun FirstStepsScreen(content: StepsContent, padding: PaddingValues, actions: Ste
         )
         when (content) {
             StepsContent.Loading -> Text(stringResource(R.string.state_loading), style = MaterialTheme.typography.bodyLarge)
-            is StepsContent.Ready -> Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+            is StepsContent.Ready -> AccordCard {
                 Column {
                     content.rows.forEachIndexed { index, row ->
                         if (index > 0) HorizontalDivider(modifier = Modifier.padding(horizontal = AccordSpacing.s4),
@@ -111,7 +112,7 @@ fun FirstStepsScreen(content: StepsContent, padding: PaddingValues, actions: Ste
 /** "Você entrou em [espaço]" e o que já existe: quem entra por convite não refaz categorias, cartão nem limites. */
 @Composable
 private fun GuestSummaryCard(guest: StepsContent.Guest) {
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+    AccordCard {
         Column(
             Modifier.fillMaxWidth().padding(AccordSpacing.s4).testTag("guest-summary"),
             verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2),

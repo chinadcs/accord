@@ -1,5 +1,6 @@
 package app.accord.ui.activity
 
+import app.accord.ui.components.AccordCard
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -239,7 +240,7 @@ private fun LineRow(
 ) {
     val modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)
         .let { if (onClick != null) it.clickable(role = Role.Button, onClick = onClick) else it }
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = modifier) {
+    AccordCard(modifier = modifier) {
         Column(Modifier.padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
             AdaptiveRow(
                 start = { Text(title, style = MaterialTheme.typography.titleSmall) },

@@ -1,5 +1,6 @@
 package app.accord.ui.imports
 
+import app.accord.ui.components.AccordCard
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -45,7 +46,7 @@ fun ImportHub(
     showTitle: Boolean = true,
 ) {
     var confirmingDiscard by rememberSaveable { mutableStateOf(false) }
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.large, modifier = Modifier.fillMaxWidth()) {
+    AccordCard(modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large) {
         Column(Modifier.padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
             if (showTitle) Text(stringResource(R.string.import_hub_title), style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
             if (state.failed) Text(stringResource(R.string.state_error), style = MaterialTheme.typography.bodyMedium)

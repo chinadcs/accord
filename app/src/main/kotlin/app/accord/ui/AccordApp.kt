@@ -1,5 +1,6 @@
 package app.accord.ui
 
+import app.accord.ui.components.accordDialogColor
 import android.net.Uri
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -1393,6 +1394,7 @@ private fun RegisterTypeChooser(
     onDismiss: () -> Unit,
 ) {
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.action_register_manually)) },
         text = {

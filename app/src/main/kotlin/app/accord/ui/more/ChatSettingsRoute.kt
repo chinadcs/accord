@@ -1,5 +1,7 @@
 package app.accord.ui.more
 
+import app.accord.ui.components.AccordCard
+import app.accord.ui.components.accordDialogColor
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -83,7 +85,7 @@ internal fun ChatSettingsRoute(
         verticalArrangement = Arrangement.spacedBy(AccordSpacing.s4),
     ) {
         DetailHeader(stringResource(R.string.chat_settings_title), onBack)
-        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+        AccordCard {
             Column {
                 MoreRow(R.string.more_chat_model, Lucide.drawable.lucide_ic_cpu, onModel)
                 MoreRow(R.string.more_chat_export, Lucide.drawable.lucide_ic_download, { chatDialog = ChatHistoryDialog.Export })
@@ -121,6 +123,7 @@ internal enum class ChatHistoryDialog { Export, Clear }
 private fun ChatHistoryDialogView(dialog: ChatHistoryDialog, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     val export = dialog == ChatHistoryDialog.Export
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = onDismiss,
         title = { Text(stringResource(if (export) R.string.chat_export_title else R.string.chat_clear_title)) },
         text = { Text(stringResource(if (export) R.string.chat_export_body else R.string.chat_clear_body)) },

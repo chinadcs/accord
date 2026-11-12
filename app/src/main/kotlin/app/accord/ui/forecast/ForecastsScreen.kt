@@ -1,5 +1,6 @@
 package app.accord.ui.forecast
 
+import app.accord.ui.components.AccordCard
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -136,7 +137,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.forecastContent(data:
 @Composable
 private fun ToClassifyRow(amount: String, count: Int, onClick: () -> Unit) {
     val text = pluralStringResource(R.plurals.forecast_to_classify, count, amount, count)
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+    AccordCard {
         Row(
             Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).clickable(role = Role.Button, onClickLabel = text, onClick = onClick).padding(AccordSpacing.s3),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
@@ -157,7 +158,7 @@ private fun ForecastCard(category: CategoryForecast, name: String, alert: app.ac
     val confidence = category.confidence.text()
     val alertText = alert.text()
     val spoken = stringResource(R.string.forecast_card_description, name, state, "$composition. $total", confidence)
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+    AccordCard {
         Column(
             Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)
                 .semantics(mergeDescendants = true) { contentDescription = spoken }

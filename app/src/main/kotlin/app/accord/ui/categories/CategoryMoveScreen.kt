@@ -1,5 +1,6 @@
 package app.accord.ui.categories
 
+import app.accord.ui.components.AccordCard
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -149,7 +150,7 @@ private fun Impact(s: CategoryMoveContent.Ready) {
     } else {
         pluralStringResource(R.plurals.category_move_impact, impact.entries, impact.entries, impact.months.joinToString(", ") { it.label() })
     }
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+    AccordCard(modifier = Modifier.fillMaxWidth()) {
         Text(text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(AccordSpacing.s3))
     }
 }

@@ -1,5 +1,7 @@
 package app.accord.ui.receivables
 
+import app.accord.ui.components.AccordCard
+import app.accord.ui.components.accordDialogColor
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -148,7 +150,7 @@ private fun agreedLabel(next: LocalDate?): String =
 private fun DebtorRow(summary: DebtorSummary, onOpen: (String) -> Unit) {
     val agreed = agreedLabel(summary.nextDate)
     val description = "${summary.debtor.name}. ${stringResource(R.string.receivables_open_label)} ${summary.open.format()}. $agreed"
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+    AccordCard {
         Row(
             Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)
                 .semantics(mergeDescendants = true) { contentDescription = description }
@@ -193,7 +195,7 @@ private fun DebtorDetail(summary: DebtorSummary, state: ReceivablesUiState, vm: 
 @Composable
 private fun ReceivableCard(debtorName: String, r: ReceivableView, state: ReceivablesUiState, vm: ReceivablesViewModel) {
     Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
-        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.large) {
+        AccordCard(shape = MaterialTheme.shapes.large) {
             Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
                 AdaptiveRow(
                     start = {
@@ -212,10 +214,10 @@ private fun ReceivableCard(debtorName: String, r: ReceivableView, state: Receiva
                 LinearProgressIndicator(
                     progress = { if (r.total.cents == 0L) 0f else (r.resolved.cents.toDouble() / r.total.cents).coerceIn(0.0, 1.0).toFloat() },
                     modifier = Modifier.fillMaxWidth().semantics { contentDescription = progressText },
-                    color = Accord.colors.success,
+                    color = Accord.colors.income,
                 )
                 AdaptiveRow(
-                    start = { Text(stringResource(R.string.receivables_resolved_of, r.resolved.format()), style = MaterialTheme.typography.bodyMedium, color = Accord.colors.success) },
+                    start = { Text(stringResource(R.string.receivables_resolved_of, r.resolved.format()), style = MaterialTheme.typography.bodyMedium, color = Accord.colors.income) },
                     end = { Text(stringResource(R.string.receivables_of_total, r.total.format()), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) },
                 )
                 if (r.countsInBudget) {
@@ -248,7 +250,7 @@ private fun ReceivableCard(debtorName: String, r: ReceivableView, state: Receiva
 
 @Composable
 private fun ScheduleCard(r: ReceivableView, vm: ReceivablesViewModel) {
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.large) {
+    AccordCard(shape = MaterialTheme.shapes.large) {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             AdaptiveRow(
                 start = { Text(stringResource(R.string.receivables_schedule_title), style = MaterialTheme.typography.titleMedium) },
@@ -262,7 +264,7 @@ private fun ScheduleCard(r: ReceivableView, vm: ReceivablesViewModel) {
             r.scheduled.forEachIndexed { index, slot ->
                 AdaptiveRow(
                     start = { Text("${index + 1}   ${slot.expectedDate.full()}", style = MaterialTheme.typography.bodyLarge) },
-                    end = { Text(slot.expectedAmount.format(), style = Accord.typography.amountRow, color = Accord.colors.success, textAlign = TextAlign.End) },
+                    end = { Text(slot.expectedAmount.format(), style = Accord.typography.amountRow, color = Accord.colors.income, textAlign = TextAlign.End) },
                 )
             }
             if (r.unscheduled.cents > 0 && r.scheduled.isNotEmpty()) {
@@ -278,31 +280,31 @@ private fun EntriesSection(debtorName: String, r: ReceivableView, state: Receiva
     Text(stringResource(R.string.receivables_entries_title), style = MaterialTheme.typography.titleMedium)
     val account = state.accountName(r.accountId)
     if (r.outflow) {
-        EntryLine(stringResource(R.string.receivables_entry_lent, debtorName), stringResource(R.string.receivables_entry_lent_sub, account), r.registeredDate, r.total.format(), MaterialTheme.colorScheme.error)
+        EntryLine(stringResource(R.string.receivables_entry_lent, debtorName), stringResource(R.string.receivables_entry_lent_sub, account), r.registeredDate, r.total.format(), Accord.colors.expense, "arrow-up-right")
     }
     r.receipts.forEach {
         EntryLine(
             stringResource(R.string.receivables_entry_receipt, debtorName), stringResource(R.string.receivables_entry_receipt_sub, account),
-            it.receivedDate ?: it.expectedDate, (it.receivedAmount ?: it.expectedAmount).format(), Accord.colors.success,
+            it.receivedDate ?: it.expectedDate, (it.receivedAmount ?: it.expectedAmount).format(), Accord.colors.income, "arrow-down-left",
         )
     }
     r.scheduled.forEach {
         EntryLine(
             stringResource(R.string.receivables_entry_receipt, debtorName), stringResource(R.string.receivables_entry_agreed_sub, account),
-            it.expectedDate, it.expectedAmount.format(), Accord.colors.success,
+            it.expectedDate, it.expectedAmount.format(), Accord.colors.income, "arrow-down-left",
         )
     }
 }
 
 @Composable
-private fun EntryLine(title: String, subtitle: String, date: LocalDate, amount: String, amountColor: androidx.compose.ui.graphics.Color) {
+private fun EntryLine(title: String, subtitle: String, date: LocalDate, amount: String, amountColor: androidx.compose.ui.graphics.Color, direction: String) {
     val description = "$title. $subtitle. ${date.full()}. $amount"
     Row(
         Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).semantics(mergeDescendants = true) { contentDescription = description },
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
     ) {
         Surface(color = MaterialTheme.colorScheme.surfaceVariant, shape = MaterialTheme.shapes.medium) {
-            Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) { DecorativeIcon(lucideRes("hand-coins")) }
+            Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) { DecorativeIcon(lucideRes(direction), tint = amountColor) }
         }
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.titleSmall)
@@ -318,7 +320,7 @@ private fun EntryLine(title: String, subtitle: String, date: LocalDate, amount: 
 
 @Composable
 private fun HistorySection(r: ReceivableView, vm: ReceivablesViewModel) {
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.large) {
+    AccordCard(shape = MaterialTheme.shapes.large) {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             Text(stringResource(R.string.receivables_history_title), style = MaterialTheme.typography.titleMedium)
             if (r.receipts.isEmpty()) Text(stringResource(R.string.receivables_history_empty), style = MaterialTheme.typography.bodyMedium)
@@ -342,7 +344,7 @@ private fun HistoryLine(income: IncomeView, after: Money, vm: ReceivablesViewMod
             Text(stringResource(R.string.receivables_history_line, date), style = MaterialTheme.typography.bodyLarge)
             Text(stringResource(R.string.receivables_history_after, after.format()), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Text((income.receivedAmount ?: income.expectedAmount).format(), style = Accord.typography.amountRow, color = Accord.colors.success)
+        Text((income.receivedAmount ?: income.expectedAmount).format(), style = Accord.typography.amountRow, color = Accord.colors.income)
         IconButton(onClick = { vm.openRemoveReceipt(income) }, modifier = Modifier.size(AccordSpacing.touchMin)) {
             Icon(painterResource(lucideRes("trash-2")), contentDescription = removeLabel)
         }
@@ -370,6 +372,7 @@ private fun ReceivableDialogs(dialog: ReceivableDialog, vm: ReceivablesViewModel
             confirm = R.string.receivables_confirm_cancel, dialog = dialog, vm = vm,
         )
         is ReceivableDialog.Rename -> AlertDialog(
+            containerColor = accordDialogColor(),
             onDismissRequest = vm::close,
             title = { Text(stringResource(R.string.receivables_rename_title)) },
             text = {
@@ -390,6 +393,7 @@ private fun ReceivableDialogs(dialog: ReceivableDialog, vm: ReceivablesViewModel
 @Composable
 private fun ConfirmDialog(title: Int, body: String, confirm: Int, dialog: ReceivableDialog, vm: ReceivablesViewModel) {
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = vm::close,
         title = { Text(stringResource(title)) },
         text = {
@@ -407,6 +411,7 @@ private fun ConfirmDialog(title: Int, body: String, confirm: Int, dialog: Receiv
 private fun ReceiveDialog(d: ReceivableDialog.Receive, vm: ReceivablesViewModel) {
     var pickingDate by remember { mutableStateOf(false) }
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = vm::close,
         title = { Text(stringResource(R.string.receivables_receive_title)) },
         text = {
@@ -441,6 +446,7 @@ private fun DateButton(label: String, date: LocalDate, onClick: () -> Unit) {
 private fun RescheduleDialog(d: ReceivableDialog.Reschedule, vm: ReceivablesViewModel) {
     var pickingDate by remember { mutableStateOf(false) }
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = vm::close,
         title = { Text(stringResource(R.string.receivables_reschedule_title)) },
         text = {
@@ -490,6 +496,7 @@ private fun RescheduleDialog(d: ReceivableDialog.Reschedule, vm: ReceivablesView
 private fun EditScheduleDialog(d: ReceivableDialog.EditSchedule, vm: ReceivablesViewModel) {
     var pickingIndex by remember { mutableStateOf<Int?>(null) }
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = vm::close,
         title = { Text(stringResource(R.string.receivables_edit_title)) },
         text = {

@@ -1,5 +1,7 @@
 package app.accord.ui.chat
 
+import app.accord.ui.components.AccordCard
+import app.accord.ui.components.accordDialogColor
 import app.accord.ui.register.CategoryTile
 import app.accord.ui.register.CategoryDialog
 import app.accord.ui.colorKey
@@ -286,6 +288,7 @@ private fun ModelBadgeButton(badge: ModelBadge, onClick: () -> Unit, wrap: Boole
     var showPilot by rememberSaveable { mutableStateOf(false) }
     if (showPilot) {
         androidx.compose.material3.AlertDialog(
+            containerColor = accordDialogColor(),
             onDismissRequest = { showPilot = false },
             title = { Text(stringResource(R.string.chat_fake_pilot)) },
             text = { Text(stringResource(R.string.chat_fake_pilot_help), Modifier.verticalScroll(rememberScrollState())) },
@@ -320,7 +323,7 @@ private fun EmptyChat(onExample: (String) -> Unit, modifier: Modifier = Modifier
                 else listOf(R.string.chat_example_expense, R.string.chat_example_pix, R.string.chat_example_income)
             examples.forEach { res ->
                 val example = stringResource(res)
-                Surface(onClick = { onExample(example) }, color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.small) {
+                AccordCard(onClick = { onExample(example) }, shape = MaterialTheme.shapes.small) {
                     Row(Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).padding(horizontal = AccordSpacing.s3, vertical = AccordSpacing.s2),
                         horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalAlignment = Alignment.CenterVertically) {
                         Text(example, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
@@ -410,10 +413,7 @@ private fun UserBubble(text: String) {
 
 @Composable
 internal fun CardSurface(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow, contentColor = MaterialTheme.colorScheme.onSurface,
-        shape = MaterialTheme.shapes.medium, modifier = modifier.fillMaxWidth(),
-    ) { content() }
+    AccordCard(modifier = modifier.fillMaxWidth()) { content() }
 }
 
 @Composable
@@ -742,6 +742,7 @@ private fun CategoryChoices(
             )
         } else {
             androidx.compose.material3.AlertDialog(
+                containerColor = accordDialogColor(),
                 onDismissRequest = { showAll = false },
                 title = { Text(stringResource(R.string.chat_categories_all)) },
                 text = {

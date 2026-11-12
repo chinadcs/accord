@@ -1,5 +1,7 @@
 package app.accord.ui.space
 
+import app.accord.ui.components.AccordCard
+import app.accord.ui.components.accordDialogColor
 import android.content.ClipData
 import android.content.ClipDescription
 import android.os.Build
@@ -164,6 +166,7 @@ fun SpaceScreen(
     }
     if (showCameraGuide) {
         AlertDialog(
+            containerColor = accordDialogColor(),
             onDismissRequest = { showCameraGuide = false },
             title = { Text(stringResource(R.string.space_camera_guide_title)) },
             text = {
@@ -259,7 +262,7 @@ private fun ManageContent(
     onRevoke: () -> Unit,
 ) {
     val space = checkNotNull(access.space)
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+    AccordCard(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             Text(stringResource(R.string.space_section_space), style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)

@@ -1,5 +1,6 @@
 package app.accord.ui.vendors
 
+import app.accord.ui.components.accordDialogColor
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -199,6 +200,7 @@ fun ChooseIconFlow(entryId: String, description: String, onDone: () -> Unit) {
         )
     } else {
         AlertDialog(
+            containerColor = accordDialogColor(),
             onDismissRequest = { picked = null },
             title = { Text(stringResource(R.string.icon_scope_title)) },
             text = { Text(stringResource(R.string.icon_scope_body, description)) },

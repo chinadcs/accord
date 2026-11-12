@@ -1,5 +1,6 @@
 package app.accord.ui.savings
 
+import app.accord.ui.components.AccordCard
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -54,7 +55,7 @@ fun SavingsRoute(vm: SavingsViewModel, padding: PaddingValues, onBack: () -> Uni
                 Text(stringResource(R.string.savings_history), style = MaterialTheme.typography.titleMedium)
                 Text(stringResource(R.string.savings_initial_history, pocket.initialBalance.format(), pocket.cutoff.toString(), memberNames[pocket.createdBy] ?: stringResource(R.string.savings_member)))
                 state.moves.forEach { move ->
-                    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+                    AccordCard {
                         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s3)) {
                             Text(stringResource(if (move.direction == SavingsDirection.Deposit) R.string.savings_deposited else R.string.savings_withdrawn, move.amount.format()))
                             Text("${move.date} · ${memberNames[move.authorId] ?: stringResource(R.string.savings_member)}")
@@ -74,7 +75,7 @@ fun SavingsRoute(vm: SavingsViewModel, padding: PaddingValues, onBack: () -> Uni
                 val pockets = state.pockets.filter { state.accountFilter == null || it.accountId == state.accountFilter }
                 if (pockets.isEmpty()) Text(stringResource(R.string.savings_empty))
                 pockets.forEach { item ->
-                    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+                    AccordCard {
                         Column(Modifier.fillMaxWidth().clickable(role = Role.Button) { vm.select(item.id) }.padding(AccordSpacing.s3)) {
                             Text(item.name, style = MaterialTheme.typography.titleMedium)
                             Text(item.balance.format(), style = MaterialTheme.typography.titleLarge)

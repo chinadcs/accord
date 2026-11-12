@@ -1,5 +1,7 @@
 package app.accord.ui.pending
 
+import app.accord.ui.components.AccordCard
+import app.accord.ui.components.accordDialogColor
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -91,13 +93,13 @@ fun PendingQueueRoute(
         onOpenChat = onOpenChat,
     )
     discarding?.let { item ->
-        AlertDialog(onDismissRequest = { discarding = null }, title = { Text(stringResource(R.string.pending_notification_discard_title)) },
+        AlertDialog(containerColor = accordDialogColor(), onDismissRequest = { discarding = null }, title = { Text(stringResource(R.string.pending_notification_discard_title)) },
             text = { Text(stringResource(R.string.pending_notification_discard_body)) },
             confirmButton = { TextButton(onClick = { viewModel.discardNotification(item); discarding = null }) { Text(stringResource(R.string.pending_notification_discard)) } },
             dismissButton = { TextButton(onClick = { discarding = null }) { Text(stringResource(R.string.action_cancel)) } })
     }
     correction?.let { item ->
-        AlertDialog(onDismissRequest = { correction = null }, title = { Text(stringResource(R.string.pending_correction)) },
+        AlertDialog(containerColor = accordDialogColor(), onDismissRequest = { correction = null }, title = { Text(stringResource(R.string.pending_correction)) },
             text = { Column {
                 Text(stringResource(R.string.pending_correction_body))
                 item.targets.forEach { (id, label) -> TextButton(onClick = { correction = null; onOpenEntry(id) }) { Text(label) } }
@@ -213,12 +215,10 @@ private fun QueueRow(
 ) {
     val (reason, subject, icon) = describe(item)
     val summary = "$reason. $subject"
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium,
+    AccordCard(
         modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)
             .semantics(mergeDescendants = true) { contentDescription = summary }
-            .clickable(role = Role.Button) { onOpen(item) },
-    ) {
+            .clickable(role = Role.Button) { onOpen(item) },) {
         Column(Modifier.padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
                 DecorativeIcon(icon)

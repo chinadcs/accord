@@ -1,5 +1,7 @@
 package app.accord.ui.categories
 
+import app.accord.ui.components.accordSheetColor
+import app.accord.ui.components.accordDialogColor
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -102,12 +104,13 @@ internal fun CategoryEditSheet(
         onDismissRequest = requestClose,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true, confirmValueChange = { it != SheetValue.Hidden || !state.changed }),
         dragHandle = { BottomSheetDefaults.DragHandle() },
-        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        containerColor = accordSheetColor(),
     ) {
         EditSheetBody(state, onName, onIcon, onColor, onSave, requestClose)
     }
     if (asking) {
         AlertDialog(
+            containerColor = accordDialogColor(),
             onDismissRequest = { asking = false },
             title = { Text(stringResource(R.string.categories_discard_title)) },
             confirmButton = { TextButton(onClick = onClose, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.categories_discard_confirm)) } },

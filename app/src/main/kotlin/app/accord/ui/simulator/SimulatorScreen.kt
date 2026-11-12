@@ -1,5 +1,6 @@
 package app.accord.ui.simulator
 
+import app.accord.ui.components.AccordCard
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -239,7 +240,7 @@ private fun MonthCard(month: SimulatedMonth, count: Int, state: SimulatorUiState
         }
     }
     val spoken = listOfNotNull(base, limitSpoken).joinToString(" ")
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+    AccordCard(modifier = Modifier.fillMaxWidth()) {
         Column(
             Modifier.padding(AccordSpacing.s3).semantics(mergeDescendants = true) { contentDescription = spoken },
             verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1),

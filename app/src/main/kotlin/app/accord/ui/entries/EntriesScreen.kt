@@ -1,5 +1,7 @@
 package app.accord.ui.entries
 
+import app.accord.ui.components.AccordCard
+import app.accord.ui.components.accordSheetColor
 import app.accord.ui.categoryColor
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.clickable
@@ -231,7 +233,7 @@ fun EntriesScreen(
     }
 
     if (showFilters) {
-        ModalBottomSheet(onDismissRequest = { showFilters = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        ModalBottomSheet(containerColor = accordSheetColor(), onDismissRequest = { showFilters = false }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
             FilterPanel(
                 initial = state.filter,
                 categories = state.categories,
@@ -270,12 +272,10 @@ private fun FilterBar(
             IconButton(onClick = { onChangeMonth(-1) }, modifier = Modifier.size(AccordSpacing.touchMin)) {
                 Icon(painterResource(Lucide.drawable.lucide_ic_chevron_left), contentDescription = stringResource(R.string.entries_previous_month))
             }
-            Surface(
+            AccordCard(
                 modifier = Modifier.weight(1f).clickable(role = Role.Button, onClick = onPickMonth)
                     .semantics { contentDescription = monthPickerDescription },
-                color = MaterialTheme.colorScheme.surfaceContainerLow,
-                shape = MaterialTheme.shapes.small,
-            ) {
+                shape = MaterialTheme.shapes.small,) {
                 Row(
                     Modifier.heightIn(min = AccordSpacing.touchMin).padding(horizontal = AccordSpacing.s2),
                     verticalAlignment = Alignment.CenterVertically,
@@ -304,7 +304,7 @@ private fun FilterBar(
 @Composable
 private fun MonthPickerSheet(selected: YearMonth, onSelect: (YearMonth) -> Unit, onDismiss: () -> Unit) {
     var year by rememberSaveable { mutableStateOf(selected.year) }
-    ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+    ModalBottomSheet(containerColor = accordSheetColor(), onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                 IconButton(onClick = { year-- }, modifier = Modifier.size(AccordSpacing.touchMin)) {
@@ -379,8 +379,8 @@ private fun EmptyState(filtered: Boolean, onClear: () -> Unit, onNew: () -> Unit
 
 @Composable
 private fun SummaryBlock(summary: EntrySummary, total: Int) {
-    val incomeColor = Accord.colors.success
-    val expenseColor = MaterialTheme.colorScheme.error
+    val incomeColor = Accord.colors.income
+    val expenseColor = Accord.colors.expense
     val result = summary.listResult
     val resultColor = when {
         result.cents > 0 -> incomeColor
@@ -391,7 +391,7 @@ private fun SummaryBlock(summary: EntrySummary, total: Int) {
     val description = pluralStringResource(R.plurals.entries_total, total, total) + ", " +
         pluralStringResource(R.plurals.entries_summary_incomes, summary.incomeCount, summary.incomeCount) + " e " +
         pluralStringResource(R.plurals.entries_summary_expenses, summary.expenseCount, summary.expenseCount)
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+    AccordCard {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             Text(
                 buildAnnotatedString {

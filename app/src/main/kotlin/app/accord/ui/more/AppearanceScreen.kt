@@ -1,6 +1,10 @@
 package app.accord.ui.more
 
+import app.accord.ui.components.AccordCard
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -8,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
@@ -18,8 +24,12 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
@@ -28,7 +38,9 @@ import androidx.compose.ui.unit.dp
 import app.accord.R
 import app.accord.ui.components.DetailHeader
 import app.accord.ui.components.DecorativeIcon
+import app.accord.ui.theme.Accord
 import app.accord.ui.theme.AccordSpacing
+import app.accord.ui.theme.loadPalette
 import app.accord.ui.theme.CornerStyle
 import app.accord.ui.theme.ThemePreference
 import app.accord.ui.theme.ThemePalette
@@ -53,7 +65,7 @@ fun AppearanceScreen(
         Text(stringResource(R.string.appearance_intro), style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(stringResource(R.string.more_theme), style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
-        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+        AccordCard {
             Column(Modifier.selectableGroup().padding(horizontal = AccordSpacing.s4)) {
                 listOf(
                 ThemePreference.System to R.string.more_theme_system,
@@ -66,16 +78,16 @@ fun AppearanceScreen(
             }
         }
         Text(stringResource(R.string.appearance_palette), style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
-        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+        AccordCard {
             Column(Modifier.selectableGroup().padding(horizontal = AccordSpacing.s4)) {
                 ThemePalette.values().forEachIndexed { index, value ->
                     if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                    AppearanceOption(stringResource(value.labelRes), palette == value) { onPalette(value) }
+                    AppearanceOption(stringResource(value.labelRes), palette == value, swatches = paletteSwatches(value)) { onPalette(value) }
                 }
             }
         }
         Text(stringResource(R.string.appearance_corners), style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
-        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+        AccordCard {
             Column(Modifier.selectableGroup().padding(horizontal = AccordSpacing.s4)) {
                 listOf(CornerStyle.Rounded to R.string.appearance_rounded, CornerStyle.Straight to R.string.appearance_straight)
                     .forEachIndexed { index, (value, label) ->
@@ -100,13 +112,33 @@ fun AppearanceScreen(
 }
 
 @Composable
-private fun AppearanceOption(label: String, selected: Boolean, onClick: () -> Unit) {
+private fun AppearanceOption(label: String, selected: Boolean, swatches: List<Color> = emptyList(), onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().heightIn(min = AccordSpacing.rowMedium).selectable(selected, role = Role.RadioButton, onClick = onClick),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
     ) {
         RadioButton(selected = selected, onClick = null)
-        Text(label, style = MaterialTheme.typography.bodyLarge)
+        Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        // Amostra decorativa (fundo, cartão, container e marca da paleta no modo em uso): o nome continua o rótulo falado.
+        if (swatches.isNotEmpty()) Row(
+            Modifier.clearAndSetSemantics { },
+            horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
+        ) {
+            swatches.forEach {
+                Box(Modifier.size(20.dp).background(it, CircleShape).border(1.dp, MaterialTheme.colorScheme.outline, CircleShape))
+            }
+        }
+    }
+}
+
+/** Cores da paleta no modo em uso, lidas sem trocar a preferência salva: fundo, cartão, container e marca. */
+@Composable
+private fun paletteSwatches(palette: ThemePalette): List<Color> {
+    val context = LocalContext.current
+    val dark = Accord.dark
+    return remember(palette, dark) {
+        val scheme = loadPalette(context, palette, dark)
+        listOf(scheme.background, scheme.surfaceContainerLow, scheme.surfaceContainerHighest, scheme.primary)
     }
 }

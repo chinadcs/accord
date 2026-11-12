@@ -1,5 +1,7 @@
 package app.accord.ui.detail
 
+import app.accord.ui.components.AccordCard
+import app.accord.ui.components.accordDialogColor
 import app.accord.ui.categoryColor
 import app.accord.ui.colorKey
 import app.accord.ui.incomeCategoryLabel
@@ -187,7 +189,7 @@ private fun ReadyDetail(
             }
         }
     }
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+    AccordCard {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             DatesAndAmounts(d)
 
@@ -365,7 +367,7 @@ private fun InvoiceIndicator(month: YearMonth) {
 
 @Composable
 private fun RefundsBlock(refunds: List<RefundView>) {
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+    AccordCard {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             Text(stringResource(R.string.detail_refunds), style = MaterialTheme.typography.titleMedium)
             refunds.forEach { r ->
@@ -396,6 +398,7 @@ private fun DeleteDialogs(
         DeletePhase.Idle -> Unit
         DeletePhase.ChoosingScope -> OccurrenceScopeDialog(onConfirmOccurrence, onCancel)
         is DeletePhase.ConfirmingRealized -> AlertDialog(
+            containerColor = accordDialogColor(),
             onDismissRequest = onCancel,
             title = { Text(stringResource(R.string.edit_realized_title)) },
             text = { Text(stringResource(R.string.edit_realized_body, phase.numbers.joinToString(", "))) },
@@ -411,6 +414,7 @@ private fun DeleteDialogs(
             },
         )
         DeletePhase.Confirming, DeletePhase.Working -> AlertDialog(
+            containerColor = accordDialogColor(),
             onDismissRequest = onCancel,
             title = { Text(stringResource(R.string.delete_title)) },
             text = {
@@ -437,6 +441,7 @@ private fun DeleteDialogs(
             },
         )
         is DeletePhase.ConfirmingExtra -> AlertDialog(
+            containerColor = accordDialogColor(),
             onDismissRequest = onCancel,
             title = { Text(stringResource(R.string.delete_extra_title)) },
             text = {
@@ -471,6 +476,7 @@ private fun DeleteDialogs(
 private fun OccurrenceScopeDialog(onConfirm: (RecurrenceScope) -> Unit, onCancel: () -> Unit) {
     var chosen by remember { mutableStateOf<RecurrenceScope?>(null) }
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = onCancel,
         title = { Text(stringResource(R.string.edit_delete_title)) },
         text = {
@@ -510,6 +516,7 @@ private fun OccurrenceScopeDialog(onConfirm: (RecurrenceScope) -> Unit, onCancel
 @Composable
 private fun MessageDialog(message: String, onDismiss: () -> Unit) {
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = onDismiss,
         text = { Text(message) },
         confirmButton = {

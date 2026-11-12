@@ -1,5 +1,6 @@
 package app.accord.ui.category
 
+import app.accord.ui.components.AccordCard
 import app.accord.ui.categoryColor
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -158,7 +159,7 @@ private fun CategorySummary(category: CategoryBudget, iconKey: String, tint: and
         limit.remaining != null -> stringResource(R.string.category_remaining_paid, limit.remaining!!.format(), paid)
         else -> stringResource(R.string.category_paid_only, paid)
     }
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+    AccordCard {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
                 Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = MaterialTheme.shapes.medium) {
@@ -168,7 +169,7 @@ private fun CategorySummary(category: CategoryBudget, iconKey: String, tint: and
                 }
                 Text(headline, style = Accord.typography.amountRow)
             }
-            BudgetBar(barFill(limit), state, excessMarker(limit, category.net))
+            BudgetBar(barFill(limit), state, excessMarker(limit, category.net), categoryColor = tint)
             Text(detail, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (category.credits.cents != 0L) {
                 Text(
@@ -206,12 +207,9 @@ private fun SubcategoryRow(value: CategoryData, id: String?, onClick: () -> Unit
         }
     }
     val description = (listOf(name) + lines).joinToString(". ")
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow,
-        shape = MaterialTheme.shapes.medium,
+    AccordCard(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = description },
-    ) {
+        modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = description },) {
         Row(
             Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).padding(AccordSpacing.s4),
             verticalAlignment = Alignment.Top,

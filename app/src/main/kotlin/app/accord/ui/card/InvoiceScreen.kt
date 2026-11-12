@@ -1,5 +1,7 @@
 package app.accord.ui.card
 
+import app.accord.ui.components.AccordCard
+import app.accord.ui.components.accordDialogColor
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -135,7 +137,7 @@ private fun InvoiceBody(
         }
     }
 
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+    AccordCard {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             Text(stringResource(R.string.invoice_composition), style = MaterialTheme.typography.titleMedium)
             Line(R.string.invoice_purchases, invoice.purchases.format())
@@ -206,6 +208,7 @@ private fun InvoiceDialogs(
     val paying = state.dialog != InvoiceDialog.Total
     val settled = state.dialog == InvoiceDialog.Settled
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = onClose,
         title = { Text(stringResource(if (settled) R.string.invoice_already_settled_title else if (paying) R.string.invoice_pay_title else R.string.invoice_total_title)) },
         text = {

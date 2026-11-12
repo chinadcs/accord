@@ -1,5 +1,6 @@
 package app.accord.privacy
 
+import app.accord.ui.components.accordDialogColor
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -74,6 +75,7 @@ fun PrivacyContent(viewModel: PrivacyViewModel, modifier: Modifier = Modifier) {
     if (report != null) {
         val context = LocalContext.current
         AlertDialog(
+            containerColor = accordDialogColor(),
             onDismissRequest = viewModel::closeUsageReport,
             title = { Text(stringResource(R.string.privacy_usage_title)) },
             text = { Text(report.lines().joinToString("\n") { it.trimStart('#').trimStart() }, modifier = Modifier.verticalScroll(rememberScrollState())) },
@@ -90,6 +92,7 @@ fun PrivacyContent(viewModel: PrivacyViewModel, modifier: Modifier = Modifier) {
     val bundle = state.bundle
     if (bundle != null && !state.busy) {
         AlertDialog(
+            containerColor = accordDialogColor(),
             onDismissRequest = viewModel::cancel,
             title = { Text(stringResource(if (state.confirmLocalOnly) R.string.privacy_export_local_title else R.string.privacy_export_confirm_title)) },
             text = { Text(stringResource(if (state.confirmLocalOnly) R.string.privacy_export_local_body else R.string.privacy_export_warning)) },

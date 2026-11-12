@@ -1,5 +1,7 @@
 package app.accord.ui.pending
 
+import app.accord.ui.components.AccordCard
+import app.accord.ui.components.accordDialogColor
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -182,7 +184,7 @@ private fun Plain(onBack: () -> Unit, content: @Composable () -> Unit) {
 @Composable
 private fun Evidence(detail: PendingDetail, showOriginal: Boolean, onToggle: () -> Unit) {
     val m = detail.reconciled.movement
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+    AccordCard(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
             Text(stringResource(R.string.pending_imported), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(m.description.ifBlank { stringResource(R.string.import_no_description) }, style = MaterialTheme.typography.titleMedium)
@@ -338,6 +340,7 @@ private fun InstallmentPurchaseDialog(number: Int, count: Int, lineCents: Long, 
     val installment = parsed?.takeIf { it >= count }?.let { Installments.splitTotal(Money(it), count)[number - 1].cents }
     val valid = parsed != null && Installments.lineFits(parsed, count, number, lineCents)
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.pending_purchase_dialog_title, number, count)) },
         text = {
@@ -370,6 +373,7 @@ private fun refundLine(candidate: RefundCandidate): String = stringResource(
 @Composable
 private fun RefundChoiceDialog(candidates: List<RefundCandidate>, onPick: (String) -> Unit, onNewPurchase: (() -> Unit)?, onDismiss: () -> Unit) {
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.pending_refund_pick)) },
         text = {
@@ -404,6 +408,7 @@ private fun entryLine(entry: LinkableEntry): String =
 @Composable
 private fun IncomeChoiceDialog(categories: List<IncomeCategoryNode>, onPick: (String) -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.pending_income_pick)) },
         text = {

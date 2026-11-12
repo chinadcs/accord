@@ -1,5 +1,6 @@
 package app.accord.ui.edit
 
+import app.accord.ui.components.accordDialogColor
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
@@ -335,6 +336,7 @@ private fun ConfirmDialog(
     dismiss: Int = R.string.edit_cancel,
 ) {
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = onDismiss,
         title = { Text(stringResource(title)) },
         text = { Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) { body() } },

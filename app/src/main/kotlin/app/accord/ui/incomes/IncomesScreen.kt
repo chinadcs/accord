@@ -1,5 +1,6 @@
 package app.accord.ui.incomes
 
+import app.accord.ui.components.AccordCard
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -138,10 +139,8 @@ private fun IncomeRow(income: IncomeView, category: IncomeCategoryNode?, allCate
     } else {
         stringResource(R.string.incomes_line_expected, income.expectedDate.shortLabel())
     }
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).clickable(role = Role.Button) { onOpen(income.id) },
-    ) {
+    AccordCard(
+        modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).clickable(role = Role.Button) { onOpen(income.id) },) {
         Column(Modifier.padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
             AdaptiveRow(
                 start = { Text(income.description, style = MaterialTheme.typography.titleSmall) },

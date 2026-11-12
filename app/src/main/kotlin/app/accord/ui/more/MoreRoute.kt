@@ -1,5 +1,6 @@
 package app.accord.ui.more
 
+import app.accord.ui.components.accordDialogColor
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -158,6 +159,7 @@ internal fun AccessState.moreHeader(): MoreHeaderState? = account?.let {
 @Composable
 private fun SignOutDialog(pendingOperations: Int, onConfirm: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.signout_title)) },
         text = {

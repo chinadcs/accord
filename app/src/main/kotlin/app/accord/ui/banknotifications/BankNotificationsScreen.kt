@@ -1,5 +1,6 @@
 package app.accord.ui.banknotifications
 
+import app.accord.ui.components.AccordCard
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
@@ -74,7 +75,7 @@ fun BankNotificationsScreen(
             }
         }
         item {
-            Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+            AccordCard(modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
                     Text(stringResource(R.string.bank_notifications_access_title), style = MaterialTheme.typography.titleSmall, modifier = Modifier.semantics { heading() })
                     Text(

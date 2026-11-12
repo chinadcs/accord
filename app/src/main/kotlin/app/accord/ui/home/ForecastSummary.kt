@@ -112,36 +112,20 @@ private fun expectedText(cents: Long): String {
 }
 
 /**
- * Resultado principal em 24 sp semibold com algarismos tabulares. Sobra e zero levam o ícone de confirmação; a falta vai
- * sobre `errorContainer` com `onErrorContainer`, par com contraste garantido, e não em texto `error` solto.
+ * Resultado principal em 24 sp semibold com algarismos tabulares. Sobra e zero levam o ícone de confirmação e a falta o de alerta, todos
+ * na cor do texto: o resultado é neutro, sem verde nem vermelho.
  */
 @Composable
 private fun MainResult(cents: Long) {
     val style = Accord.typography.amountRow.copy(fontSize = 24.sp, lineHeight = 30.sp)
     val text = outcomeText(cents)
-    if (cents < 0) {
-        Surface(
-            color = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer,
-            shape = MaterialTheme.shapes.small,
-        ) {
-            Row(
-                Modifier.fillMaxWidth().padding(AccordSpacing.s3),
-                verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
-            ) {
-                ResultIcon(Lucide.drawable.lucide_ic_circle_alert, MaterialTheme.colorScheme.onErrorContainer)
-                Text(text, style = style)
-            }
-        }
-    } else {
-        Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-            // Ícone de gráfico: 3:1 sobre o cartão; em paletas claras o `success` fica abaixo e o ícone usa o texto do tema.
-            ResultIcon(
-                Lucide.drawable.lucide_ic_circle_check,
-                if (cents > 0) chartInk(Accord.colors.success, MaterialTheme.colorScheme.surfaceContainerLow, MaterialTheme.colorScheme.onSurface)
-                else MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(text, style = style)
-        }
+    // Resultado do mês neutro (ADR 0085): só ícone e palavra; sobra não é receita e falta não é despesa nem erro.
+    Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+        ResultIcon(
+            if (cents < 0) Lucide.drawable.lucide_ic_circle_alert else Lucide.drawable.lucide_ic_circle_check,
+            MaterialTheme.colorScheme.onSurface,
+        )
+        Text(text, style = style)
     }
 }
 
@@ -173,11 +157,11 @@ private fun Bars(value: MonthCashFlow) {
         ) {
             BarGroup(
                 stringResource(R.string.monthforecast_inflows_label), bars.inflowCents, bars.showInflow, inflows,
-                solid = value.receivedCents, dashed = value.toReceiveCents, scale = bars.scaleCents, color = Accord.colors.success,
+                solid = value.receivedCents, dashed = value.toReceiveCents, scale = bars.scaleCents, color = Accord.colors.income,
             )
             BarGroup(
                 stringResource(R.string.monthforecast_outflows_label), bars.outflowCents, bars.showOutflow, outflows,
-                solid = value.knownCents, dashed = value.estimatedCents, scale = bars.scaleCents, color = MaterialTheme.colorScheme.primary,
+                solid = value.knownCents, dashed = value.estimatedCents, scale = bars.scaleCents, color = Accord.colors.expense,
             )
         }
         Text(stringResource(R.string.monthforecast_legend), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)

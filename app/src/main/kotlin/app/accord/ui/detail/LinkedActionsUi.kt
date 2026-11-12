@@ -1,5 +1,7 @@
 package app.accord.ui.detail
 
+import app.accord.ui.components.AccordCard
+import app.accord.ui.components.accordDialogColor
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -106,6 +108,7 @@ fun LinkedActionDialog(
     val bodyTopPadding = if (LocalDensity.current.fontScale >= 1.5f) AccordSpacing.s4 else 0.dp
 
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = onClose,
         title = { Text(actionTitle(action)) },
         text = {
@@ -247,7 +250,7 @@ private fun ChoiceRow(label: String, selected: Boolean, onClick: () -> Unit) {
 @Composable
 fun SettleSwitchCard(settle: SettleSwitch, amount: Money, onToggle: (Boolean) -> Unit, onAdjust: () -> Unit) {
     val label = stringResource(if (settle.receiving) R.string.settle_switch_received else R.string.settle_switch_paid)
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+    AccordCard {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
             Row(
                 Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)

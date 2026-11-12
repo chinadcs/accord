@@ -1,5 +1,6 @@
 package app.accord.ui.imports
 
+import app.accord.ui.components.AccordCard
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -161,7 +162,7 @@ private fun Reading(onCancel: () -> Unit) {
 
 @Composable
 private fun FileCard(file: FileSummary) {
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+    AccordCard(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
             Text(file.name.ifBlank { stringResource(R.string.import_file_unnamed) }, style = MaterialTheme.typography.titleSmall)
             Text("${file.format.label()} · ${formatFileSize(file.sizeBytes)}", style = MaterialTheme.typography.bodyMedium)

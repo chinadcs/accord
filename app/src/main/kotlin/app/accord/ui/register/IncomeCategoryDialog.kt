@@ -1,5 +1,6 @@
 package app.accord.ui.register
 
+import app.accord.ui.components.accordDialogColor
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -58,6 +59,7 @@ internal fun IncomeCategoryDialog(
     var working by remember { mutableStateOf(false) }
 
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = onDismiss,
         title = { Text(stringResource(if (creating) R.string.register_income_category_new else R.string.register_income_category)) },
         text = {

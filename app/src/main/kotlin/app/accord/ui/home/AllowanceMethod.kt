@@ -1,5 +1,6 @@
 package app.accord.ui.home
 
+import app.accord.ui.components.accordDialogColor
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
@@ -40,6 +41,7 @@ fun AllowanceMethodText(value: SpendingAllowance?, modifier: Modifier = Modifier
 @Composable
 fun AllowanceMethodDialog(value: SpendingAllowance, onDismiss: () -> Unit) {
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.allowance_method_title)) },
         text = { AllowanceMethodText(value, Modifier.verticalScroll(rememberScrollState())) },

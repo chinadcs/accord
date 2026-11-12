@@ -1,5 +1,6 @@
 package app.accord.ui.review
 
+import app.accord.ui.components.AccordCard
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,7 +34,7 @@ fun ReviewCategories(
     onChoose: () -> Unit,
 ) {
     if (items.isEmpty()) return
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+    AccordCard(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
             Text(stringResource(R.string.review_categories_title), style = MaterialTheme.typography.titleSmall, modifier = Modifier.semantics { heading() })
             Text(stringResource(R.string.review_categories_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)

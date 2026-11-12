@@ -1,5 +1,6 @@
 package app.accord.ui.comparison
 
+import app.accord.ui.components.AccordCard
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -209,7 +210,7 @@ private fun androidx.compose.foundation.lazy.LazyListScope.comparisonItems(data:
 private fun LimitationsBlock(c: PeriodComparison, actions: ComparisonActions) {
     val a = stringResource(R.string.comparison_period_a)
     val b = stringResource(R.string.comparison_period_b)
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+    AccordCard(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
             Text(stringResource(R.string.comparison_before_title), style = MaterialTheme.typography.titleSmall, modifier = Modifier.semantics { heading() })
             Text(stringResource(R.string.comparison_duration, a, c.a.period.days, b, c.b.period.days), style = MaterialTheme.typography.bodyMedium)
@@ -245,7 +246,7 @@ private fun RowCard(
     val name = groupName(row.key, categories, c.grouping)
     val toClassify = row.key.categoryId == null
     val categoryId = row.key.subcategoryId ?: row.key.categoryId
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+    AccordCard(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
             Text(stringResource(R.string.comparison_row_values, name, cellText(row.a), cellText(row.b)), style = MaterialTheme.typography.titleSmall)
             Text(stringResource(R.string.comparison_change, changeText(row.change)), style = MaterialTheme.typography.bodyMedium)

@@ -1,5 +1,6 @@
 package app.accord.ui.commitments
 
+import app.accord.ui.components.AccordCard
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -196,10 +197,8 @@ private fun CommitmentRow(item: Commitment, data: CommitmentsData, onOpen: (Stri
         CommitmentNature.Bill -> stringResource(R.string.commitments_line_bill, item.dueDate.shortLabel())
     }
     val category = categoryPath(data.categories, item.categoryId)
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).clickable(role = Role.Button) { onOpen(item.id) },
-    ) {
+    AccordCard(
+        modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).clickable(role = Role.Button) { onOpen(item.id) },) {
         Column(Modifier.padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
             AdaptiveRow(
                 start = { Text(item.description, style = MaterialTheme.typography.titleSmall) },

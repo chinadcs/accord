@@ -1,5 +1,6 @@
 package app.accord.privacy
 
+import app.accord.ui.components.AccordCard
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -67,7 +68,7 @@ fun ArchivedChatsScreen(padding: PaddingValues, container: AppContainer, onBack:
             messages.groupBy { it["conversationId"]?.jsonPrimitive?.contentOrNull ?: "legacy" }.forEach { (conversationId, thread) ->
             Text(conversations.firstOrNull { it["id"]?.jsonPrimitive?.contentOrNull == conversationId }?.get("title")?.jsonPrimitive?.contentOrNull ?: "Histórico anterior", style = MaterialTheme.typography.titleMedium)
             thread.sortedBy { it["createdAtMillis"]?.jsonPrimitive?.longOrNull }.forEach { message ->
-                Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+                AccordCard {
                     Column(Modifier.fillMaxWidth().padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
                         Text(message["text"]?.jsonPrimitive?.contentOrNull.orEmpty())
                         val id = message["id"]?.jsonPrimitive?.contentOrNull

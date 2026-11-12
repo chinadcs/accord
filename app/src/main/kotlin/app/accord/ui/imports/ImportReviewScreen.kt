@@ -1,5 +1,7 @@
 package app.accord.ui.imports
 
+import app.accord.ui.components.AccordCard
+import app.accord.ui.components.accordDialogColor
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -342,12 +344,10 @@ private fun MovementRow(item: ReconciledMovement, categories: Map<String, Catego
     val m = item.movement
     val amount = movementAmount(m.amountCents, m.currency) ?: stringResource(R.string.import_amount_unknown)
     val state = item.classification.label()
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium,
+    AccordCard(
         modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)
             .semantics(mergeDescendants = true) { contentDescription = "${m.description}, $amount, $state" }
-            .clickable(role = Role.Button, onClick = onClick),
-    ) {
+            .clickable(role = Role.Button, onClick = onClick),) {
         Column(Modifier.padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
             AdaptiveRow(
                 start = { Text(m.description.ifBlank { stringResource(R.string.import_no_description) }, style = MaterialTheme.typography.titleSmall) },
@@ -447,6 +447,7 @@ private fun MovementDialog(
     val candidates = item.candidateEntryIds.mapNotNull { id -> review.linkableEntries.firstOrNull { it.id == id } }
     val editable = item.classification == Classification.New || item.classification == Classification.Doubt
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = onClose,
         title = { Text(m.description.ifBlank { stringResource(R.string.import_no_description) }) },
         text = {
@@ -519,6 +520,7 @@ private fun SourceDialog(
 ) {
     val enabled = !state.working
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = onClose,
         title = { Text(stringResource(R.string.import_source_title)) },
         text = {
@@ -556,6 +558,7 @@ private fun repeatCandidates(review: BatchReview, of: ReconciledMovement): List<
 @Composable
 private fun RepeatDialog(candidates: List<ReconciledMovement>, onPick: (Int) -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.import_repeat_pick_title)) },
         text = {
@@ -586,6 +589,7 @@ private fun entryLine(entry: LinkableEntry): String =
 private fun SummaryDialog(summary: ConfirmationSummary, working: Boolean, onConfirm: () -> Unit, onClose: () -> Unit, cardName: String?, token: String) {
     var cardConfirmed by remember(token) { mutableStateOf(false) }
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = onClose,
         title = { Text(stringResource(R.string.import_summary_title)) },
         text = {
@@ -629,6 +633,7 @@ private fun summaryLine(plural: Int, count: Int) {
 @Composable
 internal fun DiscardDialog(onDiscard: () -> Unit, onCancel: () -> Unit) {
     AlertDialog(
+        containerColor = accordDialogColor(),
         onDismissRequest = onCancel,
         title = { Text(stringResource(R.string.import_discard_title)) },
         text = { Text(stringResource(R.string.import_discard_body)) },

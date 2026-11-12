@@ -1,5 +1,6 @@
 package app.accord.ui.subscriptions
 
+import app.accord.ui.components.AccordCard
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -198,10 +199,8 @@ private fun SubscriptionLine(row: SubscriptionRow, data: SubscriptionsData, onOp
         stringResource(R.string.subscriptions_row_ended, row.frequency.adjective())
     }
     val observed = (row.comparison as? ChargeComparison.Observed)?.difference?.takeIf { it.cents != 0L }
-    Surface(
-        color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium,
-        modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).clickable(role = Role.Button) { onOpen(row.recurrenceId) },
-    ) {
+    AccordCard(
+        modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).clickable(role = Role.Button) { onOpen(row.recurrenceId) },) {
         Column(Modifier.padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
             AdaptiveRow(
                 start = { Text(row.description, style = MaterialTheme.typography.titleSmall) },

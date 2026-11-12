@@ -1,5 +1,7 @@
 package app.accord.ui.sync
 
+import app.accord.ui.components.AccordCard
+import app.accord.ui.components.accordDialogColor
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -152,6 +154,7 @@ fun SyncScreen(
     }
     if (ui.confirmDiscard != null) {
         AlertDialog(
+            containerColor = accordDialogColor(),
             onDismissRequest = onCancelDiscard,
             title = { Text(stringResource(R.string.sync_op_discard_title)) },
             text = { Text(stringResource(R.string.sync_op_discard_body)) },
@@ -184,7 +187,7 @@ private fun NoticeCard(notice: SyncNotice, onRenew: (() -> Unit)?) {
 @Composable
 private fun SummaryCard(status: SyncStatus, nowMillis: Long) {
     val summary = status.summary
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+    AccordCard(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
             Text(
                 summary.lastSyncMillis?.let { stringResource(R.string.sync_last_done, syncTimeLabel(it)) } ?: stringResource(R.string.sync_last_never),
@@ -290,7 +293,7 @@ private fun ConflictDescription(row: ConflictRowUi, modifier: Modifier = Modifie
 
 @Composable
 private fun AttentionCard(ui: SyncUi, onOpenEntry: (String) -> Unit, onRetry: (String) -> Unit, onAskDiscard: (String) -> Unit) {
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium, modifier = Modifier.fillMaxWidth()) {
+    AccordCard(modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
             Text(stringResource(R.string.sync_attention_title), style = MaterialTheme.typography.titleSmall, modifier = Modifier.semantics { heading() })
             ui.attention.forEach { row ->

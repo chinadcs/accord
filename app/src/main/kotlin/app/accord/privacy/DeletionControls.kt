@@ -1,5 +1,7 @@
 package app.accord.privacy
 
+import app.accord.ui.components.AccordCard
+import app.accord.ui.components.accordDialogColor
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -54,7 +56,7 @@ fun DeletionControls(viewModel: PrivacyViewModel) {
         enabled = state.available && !state.busy && viewModel.hasSpace && state.requests.none { it.status == "AwaitingApprovals" }, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.privacy_reset_space_request)) }
     TextButton(onClick = viewModel::refreshLifecycle, enabled = !state.busy) { Text(stringResource(R.string.privacy_refresh_requests)) }
     state.requests.forEach { request ->
-        Surface(color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+        AccordCard {
             Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
                 Text(stringResource(if (request.reset) R.string.privacy_reset_request_title else R.string.privacy_space_request_title), style = MaterialTheme.typography.titleSmall)
                 val label = when (request.status) {
@@ -86,6 +88,7 @@ fun DeletionControls(viewModel: PrivacyViewModel) {
     prompt?.let { chosen ->
         val account = chosen.action == PrivacyAction.PrepareAccountDeletion
         AlertDialog(
+            containerColor = accordDialogColor(),
             onDismissRequest = { prompt = null; password = "" },
             title = { Text(stringResource(if (account) R.string.privacy_delete_account else if (chosen.reset) R.string.privacy_reset_space_confirm else R.string.privacy_delete_space_confirm)) },
             text = {
