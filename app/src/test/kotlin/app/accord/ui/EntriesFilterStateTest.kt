@@ -3,6 +3,7 @@ package app.accord.ui
 import androidx.lifecycle.SavedStateHandle
 import app.accord.core.space.DateCriterion
 import app.accord.core.space.EntrySituation
+import app.accord.core.space.EntryTypeFilter
 import app.accord.core.space.PaymentMethod
 import app.accord.ui.entries.EntriesFilterState
 import java.time.YearMonth
@@ -71,5 +72,60 @@ class EntriesFilterStateTest {
     @Test
     fun `sem nada salvo usa o padrão`() {
         assertEquals(base, EntriesFilterState.restore(SavedStateHandle(), base))
+    }
+
+    @Test
+    fun `conta, categoria de receita, cada forma e cada situacao contam um a um`() {
+        val f = base.copy(
+            accountId = "a", incomeCategoryId = "ic", methods = setOf(PaymentMethod.Pix, PaymentMethod.Card),
+            situations = setOf(EntrySituation.Paid, EntrySituation.Overdue, EntrySituation.NotPaid),
+        )
+        assertEquals(7, f.activeCount)
+    }
+
+    @Test
+    fun `tipo restringe a lista mas nao conta como filtro do painel`() {
+        val f = base.copy(type = EntryTypeFilter.Expenses)
+        assertEquals(0, f.activeCount)
+        assertTrue(f.isFiltered)
+        assertEquals(EntryTypeFilter.Expenses, f.toQuery().type)
+    }
+
+    @Test
+    fun `a consulta leva conta e categoria de receita`() {
+        val q = base.copy(accountId = "a", incomeCategoryId = "ic").toQuery()
+        assertEquals("a", q.accountId)
+        assertEquals("ic", q.incomeCategoryId)
+    }
+
+    @Test
+    fun `limpar tira tipo, conta e categoria de receita e pode manter a busca`() {
+        val f = base.copy(
+            from = oct, to = oct.plusMonths(1), criterion = DateCriterion.PurchaseDate,
+            type = EntryTypeFilter.Incomes, accountId = "a", incomeCategoryId = "ic", search = "luz",
+        )
+        val cleared = f.cleared(keepSearch = true)
+        assertEquals(EntryTypeFilter.All, cleared.type)
+        assertNull(cleared.accountId)
+        assertNull(cleared.incomeCategoryId)
+        assertEquals("luz", cleared.search)
+        assertEquals(oct.plusMonths(1), cleared.to)
+        assertEquals(DateCriterion.PurchaseDate, cleared.criterion)
+        assertEquals("", f.cleared().search)
+    }
+
+    @Test
+    fun `campos novos sobrevivem a recriacao e o formato antigo continua valido`() {
+        val handle = SavedStateHandle()
+        val saved = base.copy(type = EntryTypeFilter.Expenses, accountId = "a", incomeCategoryId = "ic")
+        saved.saveTo(handle)
+        assertEquals(saved, EntriesFilterState.restore(handle, base))
+
+        val old = SavedStateHandle(mapOf("from" to "2026-10", "to" to "2026-10", "categoryId" to "c"))
+        val restored = EntriesFilterState.restore(old, base)
+        assertEquals("c", restored.categoryId)
+        assertEquals(EntryTypeFilter.All, restored.type)
+        assertNull(restored.accountId)
+        assertNull(restored.incomeCategoryId)
     }
 }

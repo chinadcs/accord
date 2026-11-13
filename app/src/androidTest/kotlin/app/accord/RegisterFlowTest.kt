@@ -3,7 +3,6 @@ package app.accord
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasContentDescription
-import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.onRoot
@@ -99,7 +98,7 @@ class RegisterFlowTest {
     }
 
     private fun scrollTo(text: String) {
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText(text, substring = true))
+        compose.onNode(hasVerticalScroll).performScrollToNode(hasText(text, substring = true))
     }
 
     /** Toque de acessibilidade depois de rolar até o item: não depende de onde ele ficou na janela. */

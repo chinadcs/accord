@@ -4,7 +4,6 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.hasClickAction
-import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -99,7 +98,7 @@ class LinkedFlowTest {
         compose.waitUntil(8_000) { compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isEmpty() }
 
     private fun scrollTo(text: String) {
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText(text, substring = true))
+        compose.onNode(hasVerticalScroll).performScrollToNode(hasText(text, substring = true))
     }
 
     private fun tap(text: String) {

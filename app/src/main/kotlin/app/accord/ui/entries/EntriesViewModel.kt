@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import app.accord.SpaceProvider
 import app.accord.core.BudgetClock
+import app.accord.core.space.AccountInfo
+import app.accord.core.space.CardInfo
 import app.accord.core.space.CategoryNode
 import app.accord.core.space.IncomeCategoryNode
 import app.accord.core.space.EntryPage
@@ -38,6 +40,9 @@ data class EntriesUiState(
     val loadMoreFailed: Boolean = false,
     val categories: Map<String, CategoryNode> = emptyMap(),
     val incomeCategories: Map<String, IncomeCategoryNode> = emptyMap(),
+    /** Cartões e contas (a Carteira por último) para os filtros; vazios até a primeira leitura. */
+    val cards: List<CardInfo> = emptyList(),
+    val accounts: List<AccountInfo> = emptyList(),
     /** O resultado mostrado vem de uma consulta anterior (carregando ou falha). */
     val stale: Boolean = false,
 )
@@ -67,6 +72,10 @@ class EntriesViewModel(
     fun applyFilter(filter: EntriesFilterState) = apply(filter.copy(search = _state.value.filter.search), debounce = false)
 
     fun clearFilters() = apply(_state.value.filter.cleared(), debounce = false)
+
+    /** Quantos lançamentos [filter] devolveria (para "Ver N lançamentos"); nulo se a consulta falhar. */
+    suspend fun count(filter: EntriesFilterState): Int? =
+        (provider.space().entries(filter.toQuery(), 0, 1) as? QueryResult.Data)?.value?.total
 
     fun retry() {
         refresh()
@@ -114,11 +123,14 @@ class EntriesViewModel(
             val space = provider.space()
             val categories = (space.categories() as? QueryResult.Data)?.value?.associateBy { it.id }
             val incomeCategories = (space.incomeCategories() as? QueryResult.Data)?.value?.associateBy { it.id }
+            val cards = (space.cards() as? QueryResult.Data)?.value
+            val accounts = (space.accounts() as? QueryResult.Data)?.value?.let { it.accounts + listOfNotNull(it.wallet) }
             when (val result = space.entries(filter.toQuery(), 0, PAGE_SIZE)) {
                 is QueryResult.Data -> _state.value = merge(
                     _state.value.copy(
                         filter = filter, categories = categories ?: _state.value.categories,
                         incomeCategories = incomeCategories ?: _state.value.incomeCategories,
+                        cards = cards ?: _state.value.cards, accounts = accounts ?: _state.value.accounts,
                     ),
                     result.value, append = false,
                 )
@@ -126,6 +138,7 @@ class EntriesViewModel(
                     status = EntriesStatus.Failed, stale = _state.value.rows.isNotEmpty(),
                     categories = categories ?: _state.value.categories,
                     incomeCategories = incomeCategories ?: _state.value.incomeCategories,
+                    cards = cards ?: _state.value.cards, accounts = accounts ?: _state.value.accounts,
                 )
             }
         }

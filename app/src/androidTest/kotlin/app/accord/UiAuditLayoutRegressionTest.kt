@@ -99,12 +99,12 @@ class UiAuditLayoutRegressionTest {
     @Test fun cancelarSeletorPreservaBuscaDosLancamentos() {
         compose.onAllNodes(hasText("Lançamentos") and hasClickAction()).onFirst().performClick()
         compose.onNodeWithText("Buscar lançamentos").performTextInput("preservar")
-        compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasTestTag("entries-inline-new"))
+        compose.onAllNodes(hasVerticalScroll).onFirst().performScrollToNode(hasTestTag("entries-inline-new"))
         compose.onNodeWithTag("entries-inline-new", useUnmergedTree = true).performClick()
         compose.onNodeWithTag("register-choice-card").assertIsDisplayed()
         compose.onNodeWithText("Cancelar").performClick()
         compose.onNodeWithTag("register-choice-card").assertDoesNotExist()
-        compose.onAllNodes(hasScrollAction()).onFirst().performScrollToNode(hasText("preservar"))
+        compose.onAllNodes(hasVerticalScroll).onFirst().performScrollToNode(hasText("preservar"))
         compose.onNodeWithText("preservar").assertExists()
     }
 

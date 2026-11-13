@@ -153,7 +153,7 @@ class EntriesFlowTest {
             compose.onNodeWithContentDescription("Filtros").performClick()
             waitForText("Período")
             auditCapture("07_filtros_modal")
-            compose.onNodeWithText("Cancelar").performClick()
+            compose.onNodeWithContentDescription("Fechar").performClick()
         }
         compose.onNodeWithText("Buscar lançamentos").performTextReplacement(gear.lowercase())
         waitGone(grocery)

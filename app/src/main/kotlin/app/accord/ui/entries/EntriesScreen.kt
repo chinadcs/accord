@@ -20,11 +20,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import app.accord.ui.components.AccordButton as Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -40,6 +42,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -77,7 +80,10 @@ import app.accord.core.space.DateCriterion
 import app.accord.core.space.EntryKind
 import app.accord.core.space.EntryRow
 import app.accord.core.space.EntrySituation
+import app.accord.core.space.AccountInfo
+import app.accord.core.space.CardInfo
 import app.accord.core.space.EntrySummary
+import app.accord.core.space.EntryTypeFilter
 import app.accord.core.space.IncomeCategoryNode
 import app.accord.ui.colorKey
 import app.accord.ui.incomeCategoryLabel
@@ -86,6 +92,10 @@ import app.accord.ui.categoryPath
 import app.accord.ui.components.AdaptiveRow
 import app.accord.ui.components.DecorativeIcon
 import app.accord.ui.components.RefreshOnResume
+import app.accord.ui.components.RemovableChip
+import app.accord.ui.register.CategoryDialog
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withTimeoutOrNull
 import app.accord.ui.components.ScreenTitle
 import app.accord.ui.components.lucideRes
 import app.accord.core.label
@@ -115,7 +125,7 @@ fun EntriesRoute(
         state, padding,
         onSearch = viewModel::setSearch, onApplyFilter = viewModel::applyFilter, onClear = viewModel::clearFilters,
         onRetry = viewModel::retry, onLoadMore = viewModel::loadMore, onOpenEntry = onOpenEntry, onNew = onNew, onBack = onBack,
-        onImport = onImport,
+        onImport = onImport, countFor = viewModel::count,
         showInlineNew = onBack != null || LocalDensity.current.fontScale >= 1.5f || isCompactHeight(),
     )
 }
@@ -136,6 +146,7 @@ fun EntriesScreen(
     listState: LazyListState = rememberLazyListState(),
     showInlineNew: Boolean = true,
     onImport: (() -> Unit)? = null,
+    countFor: suspend (EntriesFilterState) -> Int? = { null },
 ) {
     val fontScale = LocalDensity.current.fontScale
     val enlarged = fontScale >= 1.5f
@@ -143,6 +154,7 @@ fun EntriesScreen(
     val fixedSearch = fontScale < 1.3f && !isCompactHeight()
     var showFilters by rememberSaveable { mutableStateOf(false) }
     var showMonthPicker by rememberSaveable { mutableStateOf(false) }
+    var showCriterion by rememberSaveable { mutableStateOf(false) }
     var searchText by rememberSaveable(state.filter.search) { mutableStateOf(state.filter.search) }
     val today = remember { LocalDate.now(BudgetClock.ZONE) }
 
@@ -151,6 +163,9 @@ fun EntriesScreen(
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0 }.collect { last ->
             if (state.nextCursor != null && last >= listState.layoutInfo.totalItemsCount - LOAD_MORE_DISTANCE) onLoadMore()
         }
+    }
+    val chips: @Composable () -> Unit = {
+        EntriesChips(state, onApplyFilter, onCriterion = { showCriterion = true })
     }
     val search: @Composable (Modifier) -> Unit = { modifier ->
         SearchField(searchText, onChange = { searchText = it; onSearch(it) }, onClear = { searchText = ""; onSearch("") }, modifier)
@@ -191,6 +206,7 @@ fun EntriesScreen(
                     search(Modifier.weight(1f))
                     EntriesFiltersButton(state.filter, onClick = { showFilters = true })
                 }
+                chips()
             }
         }
 
@@ -213,6 +229,7 @@ fun EntriesScreen(
             if (!fixedSearch) {
                 item { search(Modifier.fillMaxWidth()) }
                 item { EntriesFiltersButton(state.filter, onClick = { showFilters = true }, modifier = Modifier.fillMaxWidth()) }
+                item { chips() }
             }
 
             when {
@@ -254,8 +271,16 @@ fun EntriesScreen(
                 categories = state.categories,
                 onApply = { onApplyFilter(it); showFilters = false },
                 onCancel = { showFilters = false },
+                incomeCategories = state.incomeCategories, cards = state.cards, accounts = state.accounts, countFor = countFor,
             )
         }
+    }
+    if (showCriterion) {
+        CriterionSheet(
+            selected = state.filter.criterion,
+            onPick = { onApplyFilter(state.filter.copy(criterion = it)); showCriterion = false },
+            onDismiss = { showCriterion = false },
+        )
     }
     if (showMonthPicker) {
         MonthPickerSheet(
@@ -369,6 +394,98 @@ private fun MonthPickerSheet(selected: YearMonth, onSelect: (YearMonth) -> Unit,
                         label = { Text(month.format(DateTimeFormatter.ofPattern("MMM", Locale.forLanguageTag("pt-BR"))).replaceFirstChar(Char::uppercase)) },
                         modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
                     )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EntryTypeFilter.chipLabel(): String = stringResource(
+    when (this) {
+        EntryTypeFilter.All -> R.string.entries_chip_type_all
+        EntryTypeFilter.Expenses -> R.string.entries_chip_type_expenses
+        EntryTypeFilter.Incomes -> R.string.entries_chip_type_incomes
+    },
+)
+
+@Composable
+private fun DateCriterion.chipLabel(): String = stringResource(
+    if (this == DateCriterion.PurchaseDate) R.string.entries_chip_criterion_purchase else R.string.entries_chip_criterion_budget,
+)
+
+/**
+ * Filtro rápido de tipo, critério de data (só desta lista) e um chip removível por filtro ativo, com "Limpar" (spec 23). Remover um chip
+ * não abre o painel; a busca não vira chip, e período e critério sobrevivem ao "Limpar".
+ */
+@Composable
+private fun EntriesChips(state: EntriesUiState, onApply: (EntriesFilterState) -> Unit, onCriterion: () -> Unit) {
+    val f = state.filter
+    val incomeList = remember(state.incomeCategories) { state.incomeCategories.values.toList() }
+    val active = buildList<Pair<String, EntriesFilterState>> {
+        f.categoryId?.let { add((categoryPath(state.categories, it) ?: stringResource(R.string.filter_category)) to f.copy(categoryId = null)) }
+        f.incomeCategoryId?.let { id ->
+            add((state.incomeCategories[id]?.let { incomeCategoryLabel(it, incomeList) } ?: stringResource(R.string.filter_income_category)) to f.copy(incomeCategoryId = null))
+        }
+        f.methods.sortedBy { it.ordinal }.forEach { add(it.label() to f.copy(methods = f.methods - it)) }
+        f.cardId?.let { id -> add((state.cards.firstOrNull { it.id == id }?.nickname ?: stringResource(R.string.filter_card)) to f.copy(cardId = null)) }
+        f.accountId?.let { id -> add((state.accounts.firstOrNull { it.id == id }?.nickname ?: stringResource(R.string.filter_account)) to f.copy(accountId = null)) }
+        f.situations.sortedBy { it.ordinal }.forEach { add(it.label() to f.copy(situations = f.situations - it)) }
+    }
+    val criterionLabel = f.criterion.chipLabel()
+    val criterionDescription = stringResource(R.string.entries_chip_criterion_description, criterionLabel)
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalAlignment = Alignment.CenterVertically) {
+            EntryTypeFilter.entries.forEach { type ->
+                FilterChip(
+                    selected = f.type == type,
+                    onClick = { onApply(f.copy(type = type)) },
+                    label = { Text(type.chipLabel()) },
+                    modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
+                )
+            }
+            AssistChip(
+                onClick = onCriterion,
+                label = { Text(criterionLabel) },
+                trailingIcon = { DecorativeIcon(Lucide.drawable.lucide_ic_chevron_down, modifier = Modifier.size(18.dp)) },
+                modifier = Modifier.heightIn(min = AccordSpacing.touchMin).semantics { contentDescription = criterionDescription },
+            )
+        }
+        if (active.isNotEmpty()) {
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalAlignment = Alignment.CenterVertically) {
+                active.forEach { (text, next) -> RemovableChip(text, onRemove = { onApply(next) }) }
+                TextButton(onClick = { onApply(f.cleared(keepSearch = true)) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                    Text(stringResource(R.string.entries_chips_clear))
+                }
+            }
+        }
+    }
+}
+
+/** Troca o critério só desta lista; o padrão continua em Mais e o Início não muda (ADR 0089, item 5). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CriterionSheet(selected: DateCriterion, onPick: (DateCriterion) -> Unit, onDismiss: () -> Unit) {
+    ModalBottomSheet(containerColor = accordSheetColor(), onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s4).padding(bottom = AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+            Text(stringResource(R.string.entries_criterion_sheet_title), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.semantics { heading() })
+            Text(stringResource(R.string.entries_criterion_sheet_note), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            DateCriterion.entries.forEach { criterion ->
+                val purchase = criterion == DateCriterion.PurchaseDate
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)
+                        .selectable(selected = criterion == selected, onClick = { onPick(criterion) }, role = Role.RadioButton)
+                        .padding(vertical = AccordSpacing.s1),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(selected = criterion == selected, onClick = null)
+                    Column(Modifier.padding(start = AccordSpacing.s2)) {
+                        Text(criterion.chipLabel(), style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            stringResource(if (purchase) R.string.entries_criterion_purchase_hint else R.string.entries_criterion_budget_hint),
+                            style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }
@@ -625,10 +742,17 @@ fun SituationTags(situations: List<EntrySituation>, neutral: List<String> = empt
     }
 }
 
-private val ALL_SITUATIONS = EntrySituation.entries
 private val ALL_METHODS = PaymentMethod.entries
+private val ATTENTION_SITUATIONS = listOf(
+    EntrySituation.ToClassify, EntrySituation.InvoiceLinkToConfirm, EntrySituation.Overdue,
+    EntrySituation.CancelRequested, EntrySituation.DivergentPayment,
+)
+private val PAYMENT_SITUATIONS = listOf(EntrySituation.Paid, EntrySituation.NotPaid, EntrySituation.Cancelled)
 
-/** Painel de filtros: o que se escolhe aqui só vale ao Aplicar; Cancelar não muda nada. */
+/**
+ * Painel de filtros: o que se escolhe aqui só vale ao aplicar; ✕ e arrastar para baixo descartam o rascunho. "Ver N lançamentos" mostra a
+ * contagem do rascunho e vira "Aplicar" se [countFor] falhar ou demorar.
+ */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun FilterPanel(
@@ -636,28 +760,79 @@ fun FilterPanel(
     categories: Map<String, CategoryNode>,
     onApply: (EntriesFilterState) -> Unit,
     onCancel: () -> Unit,
+    incomeCategories: Map<String, IncomeCategoryNode> = emptyMap(),
+    cards: List<CardInfo> = emptyList(),
+    accounts: List<AccountInfo> = emptyList(),
+    countFor: suspend (EntriesFilterState) -> Int? = { null },
 ) {
     var draft by remember { mutableStateOf(initial) }
-    val mains = categories.values.filter { it.parentId == null }.sortedBy { it.order }
+    var range by remember { mutableStateOf(initial.from != initial.to) }
+    var pickingCategory by remember { mutableStateOf(false) }
+    var count by remember { mutableStateOf<Int?>(null) }
+    val currentCount by rememberUpdatedState(countFor)
+    LaunchedEffect(draft) {
+        count = null
+        delay(COUNT_DEBOUNCE_MS)
+        count = withTimeoutOrNull(COUNT_TIMEOUT_MS) { currentCount(draft) }
+    }
+    val incomeList = remember(incomeCategories) { incomeCategories.values.sortedBy { it.order } }
 
     Column(Modifier.fillMaxWidth().padding(horizontal = AccordSpacing.s4).padding(bottom = AccordSpacing.s4)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(R.string.filter_title), style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f).semantics { heading() })
+            IconButton(onClick = onCancel, modifier = Modifier.size(AccordSpacing.touchMin)) {
+                Icon(painterResource(Lucide.drawable.lucide_ic_x), contentDescription = stringResource(R.string.register_picker_close))
+            }
+        }
         Column(
             Modifier.weight(1f, fill = false).verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
         ) {
-            ScreenTitle(stringResource(R.string.filter_title))
-
             Text(stringResource(R.string.filter_period), style = MaterialTheme.typography.titleMedium)
-            MonthStepper(stringResource(R.string.filter_from), draft.from) { draft = draft.copy(from = it, to = maxOf(draft.to, it)) }
-            MonthStepper(stringResource(R.string.filter_to), draft.to) { draft = draft.copy(to = it, from = minOf(draft.from, it)) }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                FilterChip(
+                    selected = !range,
+                    onClick = { range = false; draft = draft.copy(to = draft.from) },
+                    label = { Text(stringResource(R.string.filter_period_month)) },
+                    modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
+                )
+                FilterChip(
+                    selected = range,
+                    onClick = { range = true },
+                    label = { Text(stringResource(R.string.filter_period_range)) },
+                    modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
+                )
+            }
+            if (range) {
+                MonthStepper(stringResource(R.string.filter_from), draft.from) { draft = draft.copy(from = it, to = maxOf(draft.to, it)) }
+                MonthStepper(stringResource(R.string.filter_to), draft.to) { draft = draft.copy(to = it, from = minOf(draft.from, it)) }
+            } else {
+                MonthStepper(stringResource(R.string.filter_month), draft.from) { draft = draft.copy(from = it, to = it) }
+            }
 
             Text(stringResource(R.string.filter_category), style = MaterialTheme.typography.titleMedium)
-            CategoryChoice(stringResource(R.string.filter_category_all), draft.categoryId == null, indent = false) { draft = draft.copy(categoryId = null) }
-            mains.forEach { main ->
-                CategoryChoice(main.name, draft.categoryId == main.id, indent = false) { draft = draft.copy(categoryId = main.id) }
-                categories.values.filter { it.parentId == main.id }.sortedBy { it.order }.forEach { sub ->
-                    CategoryChoice(sub.name, draft.categoryId == sub.id, indent = true) { draft = draft.copy(categoryId = sub.id) }
-                }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+                FilterChip(
+                    selected = draft.categoryId == null,
+                    onClick = { draft = draft.copy(categoryId = null) },
+                    label = { Text(stringResource(R.string.filter_category_all)) },
+                    modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
+                )
+                FilterChip(
+                    selected = draft.categoryId != null,
+                    onClick = { pickingCategory = true },
+                    label = { Text(categoryPath(categories, draft.categoryId) ?: stringResource(R.string.filter_category_pick)) },
+                    trailingIcon = { DecorativeIcon(Lucide.drawable.lucide_ic_chevron_down, modifier = Modifier.size(18.dp)) },
+                    modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
+                )
+            }
+
+            if (incomeList.isNotEmpty()) {
+                Text(stringResource(R.string.filter_income_category), style = MaterialTheme.typography.titleMedium)
+                ChoiceChips(
+                    options = incomeList.map { it.id to incomeCategoryLabel(it, incomeList) },
+                    selected = draft.incomeCategoryId, allLabel = stringResource(R.string.filter_income_category_all),
+                ) { draft = draft.copy(incomeCategoryId = it) }
             }
 
             Text(stringResource(R.string.filter_method), style = MaterialTheme.typography.titleMedium)
@@ -676,21 +851,20 @@ fun FilterPanel(
                 }
             }
 
-            Text(stringResource(R.string.filter_situation), style = MaterialTheme.typography.titleMedium)
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
-                verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
-            ) {
-                ALL_SITUATIONS.forEach { situation ->
-                    val on = situation in draft.situations
-                    FilterChip(
-                        selected = on,
-                        onClick = { draft = draft.copy(situations = if (on) draft.situations - situation else draft.situations + situation) },
-                        label = { Text(situation.label()) },
-                        modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
-                    )
-                }
+            // Um cartão só não precisa de filtro: todo cartão é ele.
+            if (cards.size >= 2) {
+                Text(stringResource(R.string.filter_card), style = MaterialTheme.typography.titleMedium)
+                ChoiceChips(cards.map { it.id to it.nickname }, draft.cardId, allLabel = null) { draft = draft.copy(cardId = it) }
             }
+
+            if (accounts.isNotEmpty()) {
+                Text(stringResource(R.string.filter_account), style = MaterialTheme.typography.titleMedium)
+                ChoiceChips(accounts.map { it.id to it.nickname }, draft.accountId, allLabel = null) { draft = draft.copy(accountId = it) }
+            }
+
+            Text(stringResource(R.string.filter_situation), style = MaterialTheme.typography.titleMedium)
+            SituationGroup(stringResource(R.string.filter_situation_attention), ATTENTION_SITUATIONS, draft.situations) { draft = draft.copy(situations = it) }
+            SituationGroup(stringResource(R.string.filter_situation_payment), PAYMENT_SITUATIONS, draft.situations) { draft = draft.copy(situations = it) }
         }
 
         // Ações fixas: nunca ficam escondidas sob a rolagem nem sob o teclado.
@@ -698,15 +872,57 @@ fun FilterPanel(
             horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
             modifier = Modifier.fillMaxWidth().padding(top = AccordSpacing.s3),
         ) {
-            OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f).heightIn(min = AccordSpacing.touchMin)) {
-                Text(stringResource(R.string.filter_cancel))
+            OutlinedButton(onClick = { draft = draft.cleared(keepSearch = true) }, modifier = Modifier.weight(1f).heightIn(min = AccordSpacing.touchMin)) {
+                Text(stringResource(R.string.filter_clear))
             }
-            Button(onClick = { onApply(draft) }, modifier = Modifier.weight(1f).heightIn(min = AccordSpacing.touchMin)) {
-                Text(stringResource(R.string.filter_apply))
+            Button(onClick = { onApply(draft) }, modifier = Modifier.weight(2f).heightIn(min = AccordSpacing.touchMin)) {
+                Text(count?.let { pluralStringResource(R.plurals.filter_see_count, it, it) } ?: stringResource(R.string.filter_apply))
             }
         }
     }
+    if (pickingCategory) {
+        CategoryDialog(categories, draft.categoryId, onPick = { draft = draft.copy(categoryId = it); pickingCategory = false }, onDismiss = { pickingCategory = false })
+    }
 }
+
+/** Escolha única entre [options] (id, rótulo); tocar de novo na escolhida a remove. [allLabel] vira a opção "todas", marcada sem escolha. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ChoiceChips(options: List<Pair<String, String>>, selected: String?, allLabel: String?, onSelect: (String?) -> Unit) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+        if (allLabel != null) {
+            FilterChip(selected = selected == null, onClick = { onSelect(null) }, label = { Text(allLabel) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin))
+        }
+        options.forEach { (id, label) ->
+            FilterChip(
+                selected = selected == id,
+                onClick = { onSelect(if (selected == id) null else id) },
+                label = { Text(label) },
+                modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SituationGroup(title: String, items: List<EntrySituation>, selected: Set<EntrySituation>, onChange: (Set<EntrySituation>) -> Unit) {
+    Text(title, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+        items.forEach { situation ->
+            val on = situation in selected
+            FilterChip(
+                selected = on,
+                onClick = { onChange(if (on) selected - situation else selected + situation) },
+                label = { Text(situation.label()) },
+                modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
+            )
+        }
+    }
+}
+
+private const val COUNT_DEBOUNCE_MS = 200L
+private const val COUNT_TIMEOUT_MS = 2_000L
 
 @Composable
 private fun MonthStepper(label: String, month: YearMonth, onChange: (YearMonth) -> Unit) {

@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
@@ -23,7 +24,13 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performTextInput
 import app.accord.core.Money
 import app.accord.core.analysis.formatSigned
+import app.accord.core.space.AccountInfo
+import app.accord.core.space.BankRef
+import app.accord.core.space.CardInfo
 import app.accord.core.space.CategoryNode
+import app.accord.core.space.DateCriterion
+import app.accord.core.space.EntryTypeFilter
+import app.accord.core.space.IncomeCategoryNode
 import app.accord.core.space.EntryKind
 import app.accord.core.space.EntryRow
 import app.accord.core.space.EntrySituation
@@ -49,6 +56,8 @@ class EntriesUiTest {
     private val oct = YearMonth.of(2026, 10)
     private fun brl(reais: Int) = Money(reais * 100L)
     private val filter = EntriesFilterState(oct, oct)
+    /** Só a rolagem vertical da lista: a linha de chips também rola, na horizontal. */
+    private val listScroll = hasScrollAction() and androidx.compose.ui.test.SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsProperties.VerticalScrollAxisRange)
 
     private val categories = listOf(
         CategoryNode("elec", null, "Eletrônicos", 0, "monitor-smartphone", null),
@@ -72,11 +81,14 @@ class EntriesUiTest {
         loadMoreFailed: Boolean = false,
         summary: EntrySummary? = EntrySummary(brl(250), Money.ZERO, Money.ZERO, Money.ZERO),
         currentMonth: YearMonth = oct,
+        cards: List<CardInfo> = emptyList(),
+        accounts: List<AccountInfo> = emptyList(),
+        incomeCategories: Map<String, IncomeCategoryNode> = emptyMap(),
     ) = EntriesUiState(
         filter = filter, rows = rows, total = rows.size,
         summary = summary,
         nextCursor = next, status = status, loadMoreFailed = loadMoreFailed, categories = categories, stale = stale,
-        currentMonth = currentMonth,
+        currentMonth = currentMonth, cards = cards, accounts = accounts, incomeCategories = incomeCategories,
     )
 
     private fun show(
@@ -88,10 +100,11 @@ class EntriesUiTest {
         onLoadMore: () -> Unit = {},
         onOpen: (String) -> Unit = {},
         onNew: () -> Unit = {},
+        countFor: suspend (EntriesFilterState) -> Int? = { null },
     ) {
         compose.setContent {
             AccordTheme {
-                EntriesScreen(state, PaddingValues(), onSearch, onApply, onClear, onRetry, onLoadMore, onOpen, onNew)
+                EntriesScreen(state, PaddingValues(), onSearch, onApply, onClear, onRetry, onLoadMore, onOpen, onNew, countFor = countFor)
             }
         }
     }
@@ -159,7 +172,7 @@ class EntriesUiTest {
     fun buscaEFiltrosContinuamVisiveisComAListaRolada() {
         val many = (1..40).map { row("m$it", "Item $it", it, date = LocalDate.of(2026, 10, 20).minusDays(it.toLong())) }
         show(state(many))
-        compose.onNode(hasScrollAction() and androidx.compose.ui.test.SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsProperties.VerticalScrollAxisRange))
+        compose.onNode(hasVerticalScroll)
             .performScrollToNode(hasText("Item 40"))
         compose.onNodeWithText("Buscar lançamentos").assertIsDisplayed()
         compose.onNodeWithContentDescription("Filtros").assertIsDisplayed()
@@ -175,8 +188,9 @@ class EntriesUiTest {
         compose.onNodeWithText(Money(-120_000).format()).assertIsDisplayed()
         compose.onNodeWithText(brl(3800).formatSigned()).assertIsDisplayed() // 5000 − 1200, neutro com sinal
         compose.onNodeWithText(brl(5000).format() + " a receber").assertIsDisplayed() // nada recebido ainda
-        compose.onNodeWithText("Receitas").assertIsDisplayed()
-        compose.onNodeWithText("Despesas").assertIsDisplayed()
+        // "Receitas" e "Despesas" também são chips de tipo (clicáveis); o resumo é o que não clica.
+        compose.onNode(hasText("Receitas") and !hasClickAction()).assertIsDisplayed()
+        compose.onNode(hasText("Despesas") and !hasClickAction()).assertIsDisplayed()
         compose.onNodeWithText("Resultado").assertIsDisplayed()
         compose.onNodeWithText("sem abater estornos", substring = true).assertIsDisplayed()
     }
@@ -297,7 +311,7 @@ class EntriesUiTest {
         show(state(sample), onApply = { applied = it })
         compose.onNodeWithContentDescription("Filtros").performClick()
         compose.onNodeWithText("Pix").performClick()
-        compose.onNodeWithText("Cancelar").performClick()
+        compose.onNodeWithContentDescription("Fechar").performClick()
         assertEquals(null, applied)
     }
 
@@ -306,12 +320,123 @@ class EntriesUiTest {
         var applied: EntriesFilterState? = null
         show(state(sample), onApply = { applied = it })
         compose.onNodeWithContentDescription("Filtros").performClick()
-        // há duas áreas rolantes (lista e painel); o painel é a última da árvore
-        compose.onAllNodes(hasScrollAction()).onLast().performScrollToNode(hasText("Equipamentos"))
-        // a lista também mostra o nome da categoria; o painel vem depois na árvore
-        compose.onAllNodesWithText("Equipamentos").onLast().performSemanticsAction(SemanticsActions.OnClick)
+        // a categoria abre a grade do registro: principal e depois a subcategoria
+        compose.onNodeWithText("Escolher categoria").performClick()
+        compose.onNodeWithText("Eletrônicos").performClick()
+        compose.onNodeWithText("Equipamentos").performClick()
         compose.onNodeWithText("Aplicar").performClick()
         assertEquals("equip", applied!!.categoryId)
+    }
+
+    @Test
+    fun chipRemovivelTiraSoEsseFiltroSemAbrirOPainel() {
+        var applied: EntriesFilterState? = null
+        show(state(sample, filter = filter.copy(methods = setOf(PaymentMethod.Pix), situations = setOf(EntrySituation.Paid), categoryId = "market")), onApply = { applied = it })
+        compose.onNodeWithContentDescription("Remover filtro: Pix").performClick()
+        assertEquals(emptySet<PaymentMethod>(), applied!!.methods)
+        assertEquals(setOf(EntrySituation.Paid), applied.situations)
+        assertEquals("market", applied.categoryId)
+        compose.onNodeWithText("Aplicar").assertDoesNotExist()
+    }
+
+    @Test
+    fun chipDeCategoriaMostraOCaminhoELimparMantemPeriodoECriterio() {
+        var applied: EntriesFilterState? = null
+        val start = filter.copy(
+            to = oct.plusMonths(1), criterion = DateCriterion.BudgetMonth, categoryId = "market", methods = setOf(PaymentMethod.Card),
+            type = EntryTypeFilter.Expenses,
+        )
+        show(state(sample, filter = start), onApply = { applied = it })
+        compose.onNodeWithContentDescription("Remover filtro: Alimentação > Mercado").assertIsDisplayed()
+        compose.onNodeWithText("Limpar").performClick()
+        val result = applied!!
+        assertEquals(oct.plusMonths(1), result.to)
+        assertEquals(DateCriterion.BudgetMonth, result.criterion)
+        assertEquals(null, result.categoryId)
+        assertEquals(emptySet<PaymentMethod>(), result.methods)
+        assertEquals(EntryTypeFilter.All, result.type)
+    }
+
+    @Test
+    fun chipsDeTipoFiltramEOFiltroNaoContaNoBotao() {
+        var applied: EntriesFilterState? = null
+        show(state(sample), onApply = { applied = it })
+        compose.onNode(hasText("Despesas") and hasClickAction()).performClick()
+        assertEquals(EntryTypeFilter.Expenses, applied!!.type)
+        compose.onNode(hasText("Receitas") and hasClickAction()).performClick()
+        assertEquals(EntryTypeFilter.Incomes, applied.type)
+        compose.onNodeWithContentDescription("Filtros").assertIsDisplayed()
+    }
+
+    @Test
+    fun chipDeCriterioTrocaSoOCriterioDaLista() {
+        var applied: EntriesFilterState? = null
+        show(state(sample, filter = filter.copy(criterion = DateCriterion.PurchaseDate)), onApply = { applied = it })
+        compose.onNodeWithContentDescription("Critério de data: Por data da compra. Alterar").performClick()
+        compose.onNodeWithText("Vale só para esta lista", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Por mês do orçamento").performClick()
+        assertEquals(DateCriterion.BudgetMonth, applied!!.criterion)
+        assertEquals(filter.from, applied.from)
+    }
+
+    @Test
+    fun painelMostraVerNELimparZeraTudoMenosOPeriodo() {
+        var applied: EntriesFilterState? = null
+        val start = filter.copy(methods = setOf(PaymentMethod.Pix), situations = setOf(EntrySituation.Paid))
+        show(state(sample, filter = start), onApply = { applied = it }, countFor = { 7 })
+        compose.onNodeWithContentDescription("Filtros (2)").performClick()
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Ver 7 lançamentos").fetchSemanticsNodes().isNotEmpty() }
+        compose.onAllNodesWithText("Limpar").onLast().performClick() // o do rodapé do painel; o da linha de chips fica atrás
+        // o rascunho mudou: o botão volta a "Aplicar" até a nova contagem chegar
+        compose.waitUntil(5_000) { compose.onAllNodesWithText("Ver 7 lançamentos").fetchSemanticsNodes().isNotEmpty() }
+        compose.onNodeWithText("Ver 7 lançamentos").performClick()
+        assertEquals(emptySet<PaymentMethod>(), applied!!.methods)
+        assertEquals(emptySet<EntrySituation>(), applied.situations)
+        assertEquals(oct, applied.from)
+    }
+
+    @Test
+    fun semContagemOBotaoDoPainelContinuaAplicar() {
+        show(state(sample), countFor = { null })
+        compose.onNodeWithContentDescription("Filtros").performClick()
+        compose.waitForIdle()
+        compose.onNodeWithText("Aplicar").assertIsDisplayed()
+    }
+
+    private val bank = BankRef.Other("Banco")
+
+    @Test
+    fun painelOferecaCartaoSoComDoisCartoesEContaECategoriaDeReceita() {
+        var applied: EntriesFilterState? = null
+        val cards = listOf(CardInfo("c1", null, "Roxinho", 8, 15), CardInfo("c2", null, "Laranja", 8, 15))
+        val accounts = listOf(AccountInfo("a1", bank, "Conta principal"), AccountInfo("w", bank, "Carteira", isWallet = true))
+        val incomes = listOf(IncomeCategoryNode("sal", "Salário", 0, "briefcase", null)).associateBy { it.id }
+        show(state(sample, cards = cards, accounts = accounts, incomeCategories = incomes), onApply = { applied = it })
+        compose.onNodeWithContentDescription("Filtros").performClick()
+        compose.onNodeWithText("Laranja").performClick()
+        compose.onNodeWithText("Carteira").performClick()
+        compose.onNodeWithText("Salário").performClick()
+        compose.onNodeWithText("Aplicar").performClick()
+        assertEquals("c2", applied!!.cardId)
+        assertEquals("w", applied.accountId)
+        assertEquals("sal", applied.incomeCategoryId)
+    }
+
+    @Test
+    fun comUmCartaoSoOPainelNaoOfereceFiltroDeCartao() {
+        val cards = listOf(CardInfo("c1", null, "Roxinho", 8, 15))
+        show(state(sample, cards = cards))
+        compose.onNodeWithContentDescription("Filtros").performClick()
+        compose.onNodeWithText("Roxinho").assertDoesNotExist()
+    }
+
+    @Test
+    fun situacaoTemDoisGruposENaoHaFiltroPorPessoa() {
+        show(state(sample))
+        compose.onNodeWithContentDescription("Filtros").performClick()
+        compose.onNodeWithText("Pedem atenção").assertExists()
+        compose.onNodeWithText("Pagamento e cancelamento").assertExists()
+        compose.onAllNodesWithText("Pessoa", substring = true).assertCountEquals(0)
     }
 
     @Test
@@ -354,7 +479,7 @@ class EntriesUiTest {
         show(state(sample, status = EntriesStatus.Failed, stale = true), onRetry = { retries++ })
         compose.onNodeWithText("Não foi possível buscar os lançamentos deste aparelho.").assertIsDisplayed()
         compose.onNodeWithText("Mostrando o resultado anterior.").assertIsDisplayed()
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Mercado"))
+        compose.onNode(hasVerticalScroll).performScrollToNode(hasText("Mercado"))
         compose.onNodeWithText("Mercado").assertIsDisplayed()
         compose.onNodeWithText("Tentar de novo").performClick()
         assertEquals(1, retries)
@@ -370,7 +495,7 @@ class EntriesUiTest {
     @Test
     fun carregandoPreservaAsLinhasAnteriores() {
         show(state(sample, status = EntriesStatus.Loading, stale = true))
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Mercado"))
+        compose.onNode(hasVerticalScroll).performScrollToNode(hasText("Mercado"))
         compose.onNodeWithText("Mercado").assertIsDisplayed()
     }
 
@@ -379,7 +504,7 @@ class EntriesUiTest {
         var loadMore = 0
         val many = (1..40).map { row("m$it", "Item $it", it, date = LocalDate.of(2026, 10, 20).minusDays(it.toLong())) }
         show(state(many, next = 40), onLoadMore = { loadMore++ })
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Item 40"))
+        compose.onNode(hasVerticalScroll).performScrollToNode(hasText("Item 40"))
         compose.waitForIdle()
         assertTrue("devia pedir mais linhas", loadMore > 0)
     }

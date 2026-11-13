@@ -306,7 +306,9 @@ internal class EntryQueries(
         require(cursor >= 0 && pageSize > 0) { "Cursor e tamanho da página precisam ser positivos" }
         val tree = tree()
         val built = build(f, installmentRows = true)
-        val matching = built.filter { matches(it, f, tree) }
+        // Uma categoria de receita principal inclui as suas subcategorias (ADR 0082), como a de despesa.
+        val incomeScope = f.incomeCategoryId?.let { id -> dao.incomeCategories().filter { it.parentId == id }.map { it.id }.toSet() + id }.orEmpty()
+        val matching = built.filter { matches(it, f, tree, incomeScope) }
             .sortedWith(compareByDescending<Built> { it.row.date }.thenBy { it.row.id })
         val page = matching.drop(cursor).take(pageSize)
         val next = (cursor + pageSize).takeIf { it < matching.size }
@@ -395,7 +397,7 @@ internal class EntryQueries(
         else -> dao.boleto(r.originId)?.takeIf { !it.voided }?.let { it.description to it.classificationId }
     }
 
-    private fun matches(b: Built, f: EntryFilter, tree: CategoryTree): Boolean {
+    private fun matches(b: Built, f: EntryFilter, tree: CategoryTree, incomeScope: Set<String> = emptySet()): Boolean {
         val row = b.row
         if (f.cardId != null && row.cardId != f.cardId) return false
         if (f.type == EntryTypeFilter.Expenses && b.bucket != Bucket.Expense) return false
@@ -404,7 +406,7 @@ internal class EntryQueries(
         // Categoria de despesa e de receita: cada uma age no seu lado; com as duas, a linha fica se casar com qualquer uma (spec 21).
         if (f.categoryId != null || f.incomeCategoryId != null) {
             val expenseHit = f.categoryId != null && row.categoryId?.let { it == f.categoryId || tree.mainAt(it, b.month) == f.categoryId } == true
-            val incomeHit = f.incomeCategoryId != null && b.incomeCategoryId == f.incomeCategoryId
+            val incomeHit = b.incomeCategoryId != null && b.incomeCategoryId in incomeScope
             if (!expenseHit && !incomeHit) return false
         }
         if (f.methods.isNotEmpty() && b.method !in f.methods) return false

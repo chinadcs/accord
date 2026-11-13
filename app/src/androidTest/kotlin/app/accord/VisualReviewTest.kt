@@ -11,7 +11,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.test.captureToImage
-import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.junit4.v2.createComposeRule
@@ -112,7 +111,7 @@ class VisualReviewTest {
         }
         compose.waitForIdle()
         if (scrollTo != null) {
-            compose.onNode(hasScrollAction()).performScrollToNode(hasText(scrollTo, substring = true))
+            compose.onNode(hasVerticalScroll).performScrollToNode(hasText(scrollTo, substring = true))
             compose.waitForIdle()
         }
         if (UiAuditSyntheticEvidence.enabled) UiAuditSyntheticEvidence.capture(compose, name, UiAuditSyntheticEvidence.theme ?: theme)

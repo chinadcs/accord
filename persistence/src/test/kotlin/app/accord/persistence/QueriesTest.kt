@@ -797,6 +797,16 @@ class QueriesTest : SpaceTestBase() {
     }
 
     @Test
+    fun `categoria de receita principal inclui as suas subcategorias`() = runBlocking<Unit> {
+        val h = open()
+        val fx = h.spec21()
+        val sub = h.space.execute(h.env(), CreateIncomeCategory("Comissão", parentId = fx.freelas)).applied().changes.single().id
+        h.space.execute(h.env(), RegisterIncome("Venda", brl(40), d(2026, 10, 13), incomeCategoryId = sub)).applied()
+        assertEquals(setOf("Salário", "Venda"), h.names(filter().copy(incomeCategoryId = fx.freelas)))
+        assertEquals(setOf("Venda"), h.names(filter().copy(incomeCategoryId = sub)))
+    }
+
+    @Test
     fun `forma de pagamento - o estorno herda a forma da origem e receita e quitação saem`() = runBlocking<Unit> {
         val h = open()
         h.spec21()

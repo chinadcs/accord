@@ -68,7 +68,30 @@
     <string name="filter_method">Forma de pagamento</string>
     <string name="filter_situation">Situação</string>
     <string name="filter_apply">Aplicar</string>
-    <string name="filter_cancel">Cancelar</string>
+    <string name="filter_period_month">Um mês</string>
+    <string name="filter_period_range">Intervalo</string>
+    <string name="filter_month">Mês</string>
+    <string name="filter_category_pick">Escolher categoria</string>
+    <string name="filter_income_category">Categoria de receita</string>
+    <string name="filter_income_category_all">Todas as categorias de receita</string>
+    <string name="filter_card">Cartão</string>
+    <string name="filter_account">Conta</string>
+    <string name="filter_situation_attention">Pedem atenção</string>
+    <string name="filter_situation_payment">Pagamento e cancelamento</string>
+    <string name="filter_clear">Limpar</string>
+    <plurals name="filter_see_count">
+        <item quantity="one">Ver %d lançamento</item>
+        <item quantity="other">Ver %d lançamentos</item>
+    </plurals>
+    <string name="entries_chip_type_all">Todos</string>
+    <string name="entries_chip_type_expenses">Despesas</string>
+    <string name="entries_chip_type_incomes">Receitas</string>
+    <string name="entries_chip_criterion_purchase">Por data da compra</string>
+    <string name="entries_chip_criterion_budget">Por mês do orçamento</string>
+    <string name="entries_chip_criterion_description">Critério de data: %1$s. Alterar</string>
+    <string name="entries_criterion_sheet_title">Critério de data</string>
+    <string name="entries_criterion_sheet_note">Vale só para esta lista. O padrão fica em Mais, Data nos lançamentos.</string>
+    <string name="entries_chips_clear">Limpar</string>
 
     <!-- Formas de pagamento e situações -->
     <string name="method_pix">Pix</string>
