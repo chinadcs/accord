@@ -147,7 +147,7 @@ fun EditEntryScreen(
                 is EditContent.Ready -> if (original != null && form != null) {
                     state.generalError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                     ContextNotice(original)
-                    Fields(state, original, form, onChange, focus, bring) { picking = it }
+                    Fields(state, original, form, onChange, focus, bring, picking) { picking = it }
                     Notes(state, original, form)
                     if (original.target == EditTarget.CardPurchase && original.installments > 1) ReRegister(onReRegister)
                 }
@@ -240,6 +240,7 @@ private fun Fields(
     onChange: ((EditForm) -> EditForm) -> Unit,
     focus: Map<EditField, FocusRequester>,
     bring: Map<EditField, BringIntoViewRequester>,
+    picking: Picker?,
     onPick: (Picker) -> Unit,
 ) {
     if (original.amountEditable) {
@@ -273,6 +274,7 @@ private fun Fields(
             leadingContent = form.categoryId?.let { state.categories[it]?.iconKey }?.let { key ->
                 { DecorativeIcon(lucideRes(key), tint = categoryColor(state.categories, form.categoryId)) }
             },
+            open = picking == Picker.Category,
         ) { onPick(Picker.Category) }
     }
     if (original.incomeCategoryEditable) {
@@ -282,6 +284,7 @@ private fun Fields(
             value = chosen?.let { incomeCategoryLabel(it, state.incomeCategories) } ?: stringResource(R.string.register_income_category_pick),
             error = state.errors[EditField.IncomeCategory], bring = bring.getValue(EditField.IncomeCategory),
             leadingContent = chosen?.let { node -> { DecorativeIcon(lucideRes(node.iconKey), tint = categoryColor(node.colorKey(state.incomeCategories))) } },
+            open = picking == Picker.IncomeCategory,
         ) { onPick(Picker.IncomeCategory) }
     }
     if (original.dateEditable) {
@@ -332,6 +335,7 @@ private fun Fields(
             value = account?.let { accountLabel(it) } ?: stringResource(R.string.register_account_pick),
             error = state.errors[EditField.Account], bring = bring.getValue(EditField.Account),
             leadingContent = account?.let { selected -> { BankLogo(selected.bank, size = 32.dp) } },
+            open = picking == Picker.Account,
         ) { onPick(Picker.Account) }
     }
 }

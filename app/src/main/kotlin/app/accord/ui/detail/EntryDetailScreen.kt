@@ -1,6 +1,8 @@
 package app.accord.ui.detail
 
 import app.accord.ui.components.AccordCard
+import app.accord.ui.components.AccordSheet
+import app.accord.ui.components.returnsFocus
 import app.accord.ui.components.accordDialogColor
 import app.accord.ui.categoryColor
 import app.accord.ui.colorKey
@@ -19,6 +21,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import app.accord.ui.components.AccordButton as Button
 import androidx.compose.material3.MaterialTheme
 import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
@@ -183,7 +186,7 @@ fun EntryDetailScreen(
                     app.accord.ui.intentions.OriginIntentionLink(content.data.origin, onOpenIntention)
                     ReadyDetail(
                         content.data, menu, if (canChangeIcon) ({ choosingIcon = true }) else null,
-                        onOpenAction, onOpenCommitment, onToggleSettle, onAdjustSettle,
+                        onOpenAction, onOpenCommitment, onToggleSettle, onAdjustSettle, linked?.action,
                     )
                 }
             }
@@ -257,6 +260,8 @@ private fun ReadyDetail(
     onOpenCommitment: (String) -> Unit,
     onToggleSettle: (Boolean) -> Unit,
     onAdjustSettle: () -> Unit,
+    /** A ação vinculada com painel aberto: ao fechar, o foco volta ao botão que a abriu (spec 26). */
+    openAction: LinkedAction? = null,
 ) {
     val d = data.detail
     Hero(data, menu, onChangeIcon)
@@ -272,7 +277,7 @@ private fun ReadyDetail(
     // Ação do momento, sob o herói: o interruptor, o que resta de pagamento, a fatura a conferir e a confirmação de não cobrança.
     data.settleSwitch?.let { SettleSwitchCard(it, d.amount, onToggleSettle, onAdjustSettle) }
     data.actions.filterIsInstance<LinkedAction.Settle>().forEach { action ->
-        OutlinedButton(onClick = { onOpenAction(action) }, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+        OutlinedButton(onClick = { onOpenAction(action) }, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).returnsFocus(openAction == action)) {
             Text(actionLabel(action))
         }
     }
@@ -283,14 +288,14 @@ private fun ReadyDetail(
                     stringResource(R.string.detail_invoice_estimated, action.estimated.format(DETAIL_INVOICE_MONTH)),
                     style = MaterialTheme.typography.bodyLarge, color = Accord.colors.onAttentionContainer,
                 )
-                TextButton(onClick = { onOpenAction(action) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                TextButton(onClick = { onOpenAction(action) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin).returnsFocus(openAction == action)) {
                     Text(actionLabel(action))
                 }
             }
         }
     }
     data.actions.filterIsInstance<LinkedAction.Cancellation>().filter { it.nonCharge }.forEach { action ->
-        OutlinedButton(onClick = { onOpenAction(action) }, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+        OutlinedButton(onClick = { onOpenAction(action) }, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin).returnsFocus(openAction == action)) {
             Text(actionLabel(action))
         }
     }
@@ -639,46 +644,45 @@ private fun DeleteDialogs(
     }
 }
 
-/** Exclusão de ocorrência de série: o alcance é obrigatório e o botão só vale depois de escolhê-lo. */
+/** Exclusão de ocorrência de série: o alcance é obrigatório e o botão só vale depois de escolhê-lo (painel inferior, spec 26). */
 @Composable
 private fun OccurrenceScopeDialog(onConfirm: (RecurrenceScope) -> Unit, onCancel: () -> Unit) {
     var chosen by remember { mutableStateOf<RecurrenceScope?>(null) }
-    AlertDialog(
-        containerColor = accordDialogColor(),
-        onDismissRequest = onCancel,
-        title = { Text(stringResource(R.string.edit_delete_title)) },
-        text = {
-            Column {
-                listOf(
-                    RecurrenceScope.OnlyThis to R.string.edit_scope_only_this,
-                    RecurrenceScope.ThisAndNext to R.string.edit_scope_this_and_next,
-                ).forEach { (value, label) ->
-                    Row(
-                        Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)
-                            .selectable(selected = chosen == value, onClick = { chosen = value }, role = Role.RadioButton),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        RadioButton(selected = chosen == value, onClick = null)
-                        Text(stringResource(label), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = AccordSpacing.s2))
-                    }
+    AccordSheet(
+        title = stringResource(R.string.edit_delete_title), onRequestClose = onCancel,
+        footer = {
+            Row(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f).heightIn(min = AccordSpacing.touchMin)) {
+                    Text(stringResource(R.string.delete_keep))
                 }
-                chosen?.let {
-                    Text(
-                        stringResource(if (it == RecurrenceScope.OnlyThis) R.string.edit_delete_note_only_this else R.string.edit_delete_note_next),
-                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                androidx.compose.material3.Button(
+                    onClick = { chosen?.let(onConfirm) }, enabled = chosen != null,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error, contentColor = MaterialTheme.colorScheme.onError),
+                    modifier = Modifier.weight(1f).heightIn(min = AccordSpacing.touchMin),
+                ) { Text(stringResource(R.string.edit_delete_confirm)) }
             }
         },
-        confirmButton = {
-            TextButton(onClick = { chosen?.let(onConfirm) }, enabled = chosen != null, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                Text(stringResource(R.string.edit_delete_confirm), color = MaterialTheme.colorScheme.error)
+    ) {
+        listOf(
+            RecurrenceScope.OnlyThis to R.string.edit_scope_only_this,
+            RecurrenceScope.ThisAndNext to R.string.edit_scope_this_and_next,
+        ).forEach { (value, label) ->
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)
+                    .selectable(selected = chosen == value, onClick = { chosen = value }, role = Role.RadioButton),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = chosen == value, onClick = null)
+                Text(stringResource(label), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(start = AccordSpacing.s2))
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onCancel, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.delete_keep)) }
-        },
-    )
+        }
+        chosen?.let {
+            Text(
+                stringResource(if (it == RecurrenceScope.OnlyThis) R.string.edit_delete_note_only_this else R.string.edit_delete_note_next),
+                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
 }
 
 @Composable

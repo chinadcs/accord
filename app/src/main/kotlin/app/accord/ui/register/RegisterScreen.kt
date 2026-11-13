@@ -2,6 +2,7 @@ package app.accord.ui.register
 
 import app.accord.ui.components.accordSheetColor
 import app.accord.ui.components.AccordCard
+import app.accord.ui.components.AccordSheet
 import app.accord.ui.components.accordDialogColor
 import app.accord.ui.colorKey
 import app.accord.ui.categoryColor
@@ -219,6 +220,7 @@ fun RegisterScreen(
                     value = categoryPath(state.categories, form.categoryId) ?: stringResource(R.string.register_category_pick),
                     error = state.errors[FormField.Category], bring = bring.getValue(FormField.Category),
                     leadingContent = selectedCategoryIcon?.let { icon -> { DecorativeIcon(icon, tint = selectedCategoryColor) } },
+                    open = picking == Picker.Category,
                 ) { keyboard?.hide(); picking = Picker.Category }
             }
 
@@ -229,6 +231,7 @@ fun RegisterScreen(
                     value = chosen?.let { incomeCategoryLabel(it, state.incomeCategories) } ?: stringResource(R.string.register_income_category_pick),
                     error = null, bring = remember { BringIntoViewRequester() },
                     leadingContent = chosen?.let { node -> { DecorativeIcon(lucideRes(node.iconKey), tint = categoryColor(node.colorKey(state.incomeCategories))) } },
+                    open = picking == Picker.IncomeCategory,
                 ) { keyboard?.hide(); picking = Picker.IncomeCategory }
             }
 
@@ -281,6 +284,7 @@ fun RegisterScreen(
                         ?: stringResource(if (state.accounts.isEmpty()) R.string.register_account_none else R.string.register_account_pick),
                     error = state.errors[FormField.Account], bring = bring.getValue(FormField.Account),
                     leadingContent = accountLogo,
+                    open = picking == Picker.Account,
                 ) { picking = Picker.Account }
             }
 
@@ -819,65 +823,50 @@ internal fun CategoryTile(
 
 @Composable
 internal fun AccountDialog(accounts: List<AccountInfo>, selected: String?, onPick: (String) -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        containerColor = accordDialogColor(),
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.register_account)) },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
-                if (accounts.isEmpty()) Text(stringResource(R.string.register_account_none))
-                accounts.forEach { account ->
-                    Row(
-                        Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)
-                            .selectable(selected = selected == account.id, onClick = { onPick(account.id) }, role = Role.RadioButton),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
-                    ) {
-                        RadioButton(selected = selected == account.id, onClick = null)
-                        BankLogo(account.bank, size = 32.dp)
-                        Text(accountLabel(account), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge, maxLines = 2)
-                    }
-                }
+    AccordSheet(title = stringResource(R.string.register_account), onRequestClose = onDismiss, footer = {}) {
+        if (accounts.isEmpty()) Text(stringResource(R.string.register_account_none))
+        accounts.forEach { account ->
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)
+                    .selectable(selected = selected == account.id, onClick = { onPick(account.id) }, role = Role.RadioButton),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+            ) {
+                RadioButton(selected = selected == account.id, onClick = null)
+                BankLogo(account.bank, size = 32.dp)
+                Text(accountLabel(account), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge, maxLines = 2)
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                Text(stringResource(R.string.register_picker_close))
-            }
-        },
-    )
+        }
+    }
 }
 
 /** Escolhe o mês de vencimento da fatura, quando a estimada não é a certa. */
 @Composable
 private fun InvoiceDialog(initial: YearMonth, onPick: (YearMonth) -> Unit, onDismiss: () -> Unit) {
     var month by remember { mutableStateOf(initial) }
-    AlertDialog(
-        containerColor = accordDialogColor(),
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.register_invoice_title)) },
-        text = {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                IconButton(onClick = { month = month.minusMonths(1) }, modifier = Modifier.size(AccordSpacing.touchMin)) {
-                    Icon(painterResource(Lucide.drawable.lucide_ic_chevron_left), contentDescription = stringResource(R.string.month_previous))
+    AccordSheet(
+        title = stringResource(R.string.register_invoice_title), onRequestClose = onDismiss,
+        footer = {
+            Row(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f).heightIn(min = AccordSpacing.touchMin)) {
+                    Text(stringResource(R.string.register_date_pick_cancel))
                 }
-                Text(month.label(), style = MaterialTheme.typography.titleMedium)
-                IconButton(onClick = { month = month.plusMonths(1) }, modifier = Modifier.size(AccordSpacing.touchMin)) {
-                    Icon(painterResource(Lucide.drawable.lucide_ic_chevron_right), contentDescription = stringResource(R.string.month_next))
+                Button(onClick = { onPick(month) }, modifier = Modifier.weight(1f).heightIn(min = AccordSpacing.touchMin)) {
+                    Text(stringResource(R.string.register_date_pick_ok))
                 }
             }
         },
-        confirmButton = {
-            TextButton(onClick = { onPick(month) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                Text(stringResource(R.string.register_date_pick_ok))
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+            IconButton(onClick = { month = month.minusMonths(1) }, modifier = Modifier.size(AccordSpacing.touchMin)) {
+                Icon(painterResource(Lucide.drawable.lucide_ic_chevron_left), contentDescription = stringResource(R.string.month_previous))
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                Text(stringResource(R.string.register_date_pick_cancel))
+            Text(month.label(), style = MaterialTheme.typography.titleMedium)
+            IconButton(onClick = { month = month.plusMonths(1) }, modifier = Modifier.size(AccordSpacing.touchMin)) {
+                Icon(painterResource(Lucide.drawable.lucide_ic_chevron_right), contentDescription = stringResource(R.string.month_next))
             }
-        },
-    )
+        }
+    }
 }
 
 @Composable

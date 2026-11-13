@@ -1,16 +1,15 @@
 package app.accord.ui.register
 
-import app.accord.ui.components.accordDialogColor
+import app.accord.ui.components.AccordButton as Button
+import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
+import app.accord.ui.components.AccordSheet
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -40,7 +39,7 @@ import app.accord.ui.theme.AccordSpacing
  * Escolha da categoria de renda (ADR 0038, ADR 0082): a principal e, recuadas abaixo dela, as subcategorias, todas escolhíveis
  * (a principal vale sozinha), com "Sem categoria" e a opção de criar outra, que já fica escolhida no formulário. Ao criar, a pessoa
  * escolhe se é principal ou subcategoria de qual principal. A recusa do nome (vazio ou repetido entre irmãos) volta em português
- * da fachada e o diálogo continua aberto.
+ * da fachada e o painel continua aberto. Painel inferior (spec 26); o nome "Dialog" fica para não mudar as assinaturas.
  */
 @Composable
 internal fun IncomeCategoryDialog(
@@ -58,80 +57,63 @@ internal fun IncomeCategoryDialog(
     var error by remember { mutableStateOf<String?>(null) }
     var working by remember { mutableStateOf(false) }
 
-    AlertDialog(
-        containerColor = accordDialogColor(),
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(if (creating) R.string.register_income_category_new else R.string.register_income_category)) },
-        text = {
-            val mains = categories.filter { it.parentId == null }
+    val mains = categories.filter { it.parentId == null }
+    AccordSheet(
+        title = stringResource(if (creating) R.string.register_income_category_new else R.string.register_income_category),
+        onRequestClose = onDismiss,
+        footer = {
             if (creating) {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    OutlinedTextField(
-                        value = name, onValueChange = { name = it; error = null },
-                        label = { Text(stringResource(R.string.register_income_category_name)) },
-                        singleLine = true, isError = error != null,
-                        supportingText = error?.let { message -> { Text(message) } },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Text(
-                        stringResource(R.string.register_income_category_parent),
-                        style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.padding(top = AccordSpacing.s2),
-                    )
-                    IncomeCategoryRow(stringResource(R.string.register_income_category_parent_none), parentId == null, null, null) { parentId = null; error = null }
-                    mains.forEach { main ->
-                        IncomeCategoryRow(main.name, parentId == main.id, main.iconKey, categoryColor(main.ownColorKey())) { parentId = main.id; error = null }
-                    }
-                }
-            } else {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    if (allowNone) IncomeCategoryRow(stringResource(R.string.register_income_category_none), selected == null, null, null) { onPick(null) }
-                    mains.forEach { main ->
-                        val color = categoryColor(main.ownColorKey())
-                        IncomeCategoryRow(main.name, selected == main.id, main.iconKey, color) { onPick(main.id) }
-                        categories.filter { it.parentId == main.id }.sortedBy { it.order }.forEach { sub ->
-                            IncomeCategoryRow(
-                                sub.name, selected == sub.id, sub.iconKey, color,
-                                modifier = Modifier.padding(start = AccordSpacing.s4),
-                                description = main.name + " › " + sub.name,
-                            ) { onPick(sub.id) }
-                        }
-                    }
-                    TextButton(onClick = { creating = true }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                        Text(stringResource(R.string.register_income_category_new))
-                    }
+                Row(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), modifier = Modifier.fillMaxWidth()) {
+                    OutlinedButton(
+                        onClick = { creating = false; error = null },
+                        modifier = Modifier.weight(1f).heightIn(min = AccordSpacing.touchMin),
+                    ) { Text(stringResource(R.string.register_income_category_cancel)) }
+                    Button(
+                        enabled = !working,
+                        onClick = {
+                            working = true
+                            onCreate(name, parentId) { message ->
+                                working = false
+                                if (message == null) onDismiss() else error = message
+                            }
+                        },
+                        modifier = Modifier.weight(1f).heightIn(min = AccordSpacing.touchMin),
+                    ) { Text(stringResource(R.string.register_income_category_create)) }
                 }
             }
         },
-        confirmButton = {
-            if (creating) {
-                TextButton(
-                    enabled = !working,
-                    onClick = {
-                        working = true
-                        onCreate(name, parentId) { message ->
-                            working = false
-                            if (message == null) onDismiss() else error = message
-                        }
-                    },
-                    modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
-                ) { Text(stringResource(R.string.register_income_category_create)) }
-            } else {
-                TextButton(onClick = onDismiss, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                    Text(stringResource(R.string.register_picker_close))
-                }
-            }
-        },
-        dismissButton = if (creating) {
-            {
-                TextButton(onClick = { creating = false; error = null }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                    Text(stringResource(R.string.register_income_category_cancel))
-                }
+    ) {
+        if (creating) {
+            OutlinedTextField(
+                value = name, onValueChange = { name = it; error = null },
+                label = { Text(stringResource(R.string.register_income_category_name)) },
+                singleLine = true, isError = error != null,
+                supportingText = error?.let { message -> { Text(message) } },
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Text(stringResource(R.string.register_income_category_parent), style = MaterialTheme.typography.labelLarge)
+            IncomeCategoryRow(stringResource(R.string.register_income_category_parent_none), parentId == null, null, null) { parentId = null; error = null }
+            mains.forEach { main ->
+                IncomeCategoryRow(main.name, parentId == main.id, main.iconKey, categoryColor(main.ownColorKey())) { parentId = main.id; error = null }
             }
         } else {
-            null
-        },
-    )
+            if (allowNone) IncomeCategoryRow(stringResource(R.string.register_income_category_none), selected == null, null, null) { onPick(null) }
+            mains.forEach { main ->
+                val color = categoryColor(main.ownColorKey())
+                IncomeCategoryRow(main.name, selected == main.id, main.iconKey, color) { onPick(main.id) }
+                categories.filter { it.parentId == main.id }.sortedBy { it.order }.forEach { sub ->
+                    IncomeCategoryRow(
+                        sub.name, selected == sub.id, sub.iconKey, color,
+                        modifier = Modifier.padding(start = AccordSpacing.s4),
+                        description = main.name + " › " + sub.name,
+                    ) { onPick(sub.id) }
+                }
+            }
+            TextButton(onClick = { creating = true }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                Text(stringResource(R.string.register_income_category_new))
+            }
+        }
+    }
 }
 
 @Composable

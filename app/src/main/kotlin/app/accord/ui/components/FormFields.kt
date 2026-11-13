@@ -111,6 +111,8 @@ internal fun PickerField(
     error: FormError?,
     bring: BringIntoViewRequester,
     leadingContent: (@Composable () -> Unit)? = null,
+    /** Verdadeiro enquanto o seletor aberto por este campo está na tela: ao fechar, o foco volta aqui. */
+    open: Boolean = false,
     onClick: () -> Unit,
 ) {
     val message = errorText(error)
@@ -124,6 +126,7 @@ internal fun PickerField(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(min = AccordSpacing.control)
+                .returnsFocus(open)
                 .clickable(role = Role.Button, onClick = onClick)
                 .semantics(mergeDescendants = true) { contentDescription = listOfNotNull(label, value, message).joinToString(". ") },
         ) {

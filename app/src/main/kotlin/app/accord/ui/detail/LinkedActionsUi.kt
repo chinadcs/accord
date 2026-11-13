@@ -1,7 +1,8 @@
 package app.accord.ui.detail
 
 import app.accord.ui.components.AccordCard
-import app.accord.ui.components.accordDialogColor
+import app.accord.ui.components.AccordButton
+import app.accord.ui.components.AccordSheet
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -105,108 +106,101 @@ fun LinkedActionDialog(
     val form = state.form
     var pickingDate by remember { mutableStateOf(false) }
     val bring = remember { BringIntoViewRequester() }
-    val bodyTopPadding = if (LocalDensity.current.fontScale >= 1.5f) AccordSpacing.s4 else 0.dp
 
-    AlertDialog(
-        containerColor = accordDialogColor(),
-        onDismissRequest = onClose,
-        title = { Text(actionTitle(action)) },
-        text = {
-            Column(
-                Modifier.verticalScroll(rememberScrollState()).padding(top = bodyTopPadding),
-                verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
-            ) {
-                when (action) {
-                    is LinkedAction.Settle -> {
-                        DateField(
-                            if (action.receiving) R.string.linked_date_received else R.string.linked_date_paid, form, bring,
-                        ) { pickingDate = true }
-                        AmountField(
-                            label = stringResource(R.string.linked_amount_effective),
-                            hint = stringResource(R.string.linked_amount_effective_hint, action.expectedAmount.format()),
-                            value = form.amountText, error = errorText(state.errors[LinkedField.Amount]),
-                        ) { v -> onChange { it.copy(amountText = v) } }
+    AccordSheet(
+        title = actionTitle(action), onRequestClose = onClose,
+        footer = {
+            Row(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = onClose, modifier = Modifier.weight(1f).heightIn(min = AccordSpacing.touchMin)) {
+                    Text(stringResource(R.string.edit_cancel))
+                }
+                AccordButton(onClick = onSubmit, enabled = !state.working, modifier = Modifier.weight(1f).heightIn(min = AccordSpacing.touchMin)) {
+                    Text(stringResource(if (state.working) R.string.linked_working else R.string.linked_confirm))
+                }
+            }
+        },
+    ) {
+        when (action) {
+            is LinkedAction.Settle -> {
+                DateField(
+                    if (action.receiving) R.string.linked_date_received else R.string.linked_date_paid, form, bring,
+                ) { pickingDate = true }
+                AmountField(
+                    label = stringResource(R.string.linked_amount_effective),
+                    hint = stringResource(R.string.linked_amount_effective_hint, action.expectedAmount.format()),
+                    value = form.amountText, error = errorText(state.errors[LinkedField.Amount]),
+                ) { v -> onChange { it.copy(amountText = v) } }
+            }
+            is LinkedAction.NewRefund -> {
+                AmountField(
+                    label = stringResource(R.string.linked_amount_refund), hint = null, value = form.amountText,
+                    error = errorText(state.errors[LinkedField.Amount]),
+                ) { v -> onChange { it.copy(amountText = v) } }
+                Text(stringResource(R.string.linked_refund_status), style = MaterialTheme.typography.titleMedium)
+                listOf(
+                    RefundStatus.Confirmed to R.string.linked_refund_status_confirmed,
+                    RefundStatus.Requested to R.string.linked_refund_status_requested,
+                ).forEach { (status, label) ->
+                    ChoiceRow(stringResource(label), form.refundStatus == status) { onChange { it.copy(refundStatus = status) } }
+                }
+                errorText(state.errors[LinkedField.Status])?.let {
+                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+                if (form.refundStatus == RefundStatus.Confirmed) DateField(R.string.linked_date_refund, form, bring) { pickingDate = true }
+                Text(stringResource(R.string.linked_refund_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            is LinkedAction.ConfirmRefundOf -> {
+                AmountField(
+                    label = stringResource(R.string.linked_amount_returned), hint = null, value = form.amountText,
+                    error = errorText(state.errors[LinkedField.Amount]),
+                ) { v -> onChange { it.copy(amountText = v) } }
+                DateField(R.string.linked_date_refund, form, bring) { pickingDate = true }
+            }
+            is LinkedAction.OccurrenceInvoice -> {
+                Text(stringResource(R.string.linked_invoice_pick), style = MaterialTheme.typography.titleMedium)
+                action.options.forEach { month ->
+                    val label = when (month) {
+                        action.estimated -> stringResource(R.string.linked_invoice_option_estimated, month.label())
+                        else -> month.label()
                     }
-                    is LinkedAction.NewRefund -> {
-                        AmountField(
-                            label = stringResource(R.string.linked_amount_refund), hint = null, value = form.amountText,
-                            error = errorText(state.errors[LinkedField.Amount]),
-                        ) { v -> onChange { it.copy(amountText = v) } }
-                        Text(stringResource(R.string.linked_refund_status), style = MaterialTheme.typography.titleMedium)
-                        listOf(
-                            RefundStatus.Confirmed to R.string.linked_refund_status_confirmed,
-                            RefundStatus.Requested to R.string.linked_refund_status_requested,
-                        ).forEach { (status, label) ->
-                            ChoiceRow(stringResource(label), form.refundStatus == status) { onChange { it.copy(refundStatus = status) } }
-                        }
-                        errorText(state.errors[LinkedField.Status])?.let {
-                            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                        }
-                        if (form.refundStatus == RefundStatus.Confirmed) DateField(R.string.linked_date_refund, form, bring) { pickingDate = true }
-                        Text(stringResource(R.string.linked_refund_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                    is LinkedAction.ConfirmRefundOf -> {
-                        AmountField(
-                            label = stringResource(R.string.linked_amount_returned), hint = null, value = form.amountText,
-                            error = errorText(state.errors[LinkedField.Amount]),
-                        ) { v -> onChange { it.copy(amountText = v) } }
-                        DateField(R.string.linked_date_refund, form, bring) { pickingDate = true }
-                    }
-                    is LinkedAction.OccurrenceInvoice -> {
-                        Text(stringResource(R.string.linked_invoice_pick), style = MaterialTheme.typography.titleMedium)
-                        action.options.forEach { month ->
-                            val label = when (month) {
-                                action.estimated -> stringResource(R.string.linked_invoice_option_estimated, month.label())
-                                else -> month.label()
-                            }
-                            ChoiceRow(label, form.invoice == month) { onChange { it.copy(invoice = month) } }
-                        }
-                        errorText(state.errors[LinkedField.Invoice])?.let {
-                            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                        }
-                        Text(
-                            stringResource(R.string.linked_invoice_note), style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    is LinkedAction.Cancellation -> {
-                        Text(stringResource(R.string.linked_cancel_pick), style = MaterialTheme.typography.titleMedium)
-                        action.candidates.forEach { number ->
-                            val checked = number in form.selected
-                            Row(
-                                Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)
-                                    .toggleable(value = checked, role = Role.Checkbox) { on ->
-                                        onChange { it.copy(selected = if (on) it.selected + number else it.selected - number) }
-                                    },
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
-                                Checkbox(checked = checked, onCheckedChange = null)
-                                Text(stringResource(R.string.linked_installment_line, number), modifier = Modifier.padding(start = AccordSpacing.s2))
-                            }
-                        }
-                        errorText(state.errors[LinkedField.Installments])?.let {
-                            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                        }
-                        Text(
-                            stringResource(if (action.nonCharge) R.string.linked_non_charge_note else R.string.linked_cancel_note),
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                    ChoiceRow(label, form.invoice == month) { onChange { it.copy(invoice = month) } }
+                }
+                errorText(state.errors[LinkedField.Invoice])?.let {
+                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+                Text(
+                    stringResource(R.string.linked_invoice_note), style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            is LinkedAction.Cancellation -> {
+                Text(stringResource(R.string.linked_cancel_pick), style = MaterialTheme.typography.titleMedium)
+                action.candidates.forEach { number ->
+                    val checked = number in form.selected
+                    Row(
+                        Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)
+                            .toggleable(value = checked, role = Role.Checkbox) { on ->
+                                onChange { it.copy(selected = if (on) it.selected + number else it.selected - number) }
+                            },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(checked = checked, onCheckedChange = null)
+                        Text(stringResource(R.string.linked_installment_line, number), modifier = Modifier.padding(start = AccordSpacing.s2))
                     }
                 }
-                state.message?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
-                if (state.stale) Text(stringResource(R.string.linked_stale), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
-                if (state.failed) Text(stringResource(R.string.linked_failed), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                errorText(state.errors[LinkedField.Installments])?.let {
+                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                }
+                Text(
+                    stringResource(if (action.nonCharge) R.string.linked_non_charge_note else R.string.linked_cancel_note),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onSubmit, enabled = !state.working, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                Text(stringResource(if (state.working) R.string.linked_working else R.string.linked_confirm))
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onClose, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) { Text(stringResource(R.string.edit_cancel)) }
-        },
-    )
+        }
+        state.message?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
+        if (state.stale) Text(stringResource(R.string.linked_stale), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+        if (state.failed) Text(stringResource(R.string.linked_failed), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+    }
 
     if (pickingDate) {
         DatePickerSheet(
