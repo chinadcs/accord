@@ -158,6 +158,10 @@ class EntriesFlowTest {
         compose.onNodeWithText("Buscar lançamentos").performTextReplacement(gear.lowercase())
         waitGone(grocery)
         auditCapture("07_busca_resultado")
+        compose.onNodeWithText("Buscar lançamentos").performTextReplacement("zzzz-sem-resultado-$tag")
+        waitGone(gear)
+        auditCapture("07_busca_sem_resultado")
+        compose.onNodeWithText("Buscar lançamentos").performTextReplacement(gear.lowercase())
         bringEntry(gear)
         compose.onNodeWithText(gear).assertIsDisplayed()
         auditCapture("07_busca_teclado")
@@ -165,6 +169,13 @@ class EntriesFlowTest {
         tap(gear)
         waitForText("Parcela 1 de 6")
         auditCapture("08_detalhe_parcela")
+        compose.onNode(hasContentDescription("Mais ações de", substring = true)).performClick()
+        waitForText("Excluir a compra")
+        auditCapture("08_menu_acoes_parcela")
+        compose.onNodeWithText("Excluir a compra", substring = true).performClick()
+        waitForText("Excluir este lançamento?")
+        auditCapture("08_exclusao_confirmacao_parcela")
+        compose.onNodeWithText("Manter").performClick()
         compose.onNode(hasContentDescription("Voltar")).performClick() // a barra superior é fixa
 
         compose.onNodeWithText(gear.lowercase()).assertIsDisplayed() // o texto da busca continua no campo
@@ -183,6 +194,7 @@ class EntriesFlowTest {
         openEntries()
         tap(grocery)
         waitForText("Situação:")
+        auditCapture("08_detalhe_pix")
         deleteFromMenu()
         waitForText("Excluir este lançamento?")
         compose.onNodeWithText("Isso não é estorno nem cancelamento.", substring = true).assertIsDisplayed()
@@ -214,6 +226,7 @@ class EntriesFlowTest {
         // a categoria acumula lançamentos de outros testes; o item deste pode estar abaixo da dobra
         compose.waitUntil(8_000) { compose.onAllNodes(hasContentDescription("Filtros (1)")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNode(hasContentDescription("Filtros (1)")).assertIsDisplayed()
+        auditCapture("07_filtro_ativo")
         compose.onNode(listScroll).performScrollToNode(hasText(grocery))
         waitForText(grocery)
         assert(compose.onAllNodesWithText(gear, substring = true).fetchSemanticsNodes().isEmpty())
@@ -221,5 +234,20 @@ class EntriesFlowTest {
         // o topo (Voltar, mês, busca e filtros) é fixo: o Voltar fica à mão com a lista rolada
         compose.onNode(hasContentDescription("Voltar")).performClick()
         waitForText("Conferir lançamentos")
+    }
+
+    /** Capturas da rodada `after` (F7): formulário de edição e painel de conta. Sem a auditoria ligada, só confere que abrem. */
+    @Test
+    fun edicaoEPainelDeContaAbremDoDetalhe() {
+        openEntries()
+        tap(grocery)
+        waitForText("Situação:")
+        compose.onNodeWithText("Editar").performClick()
+        waitForText("Salvar")
+        auditCapture("09_edicao_pix")
+        compose.onNode(hasContentDescription("Conta", substring = true) and androidx.compose.ui.test.hasClickAction()).performClick()
+        compose.waitUntil(8_000) { compose.onAllNodes(hasContentDescription("Fechar")).fetchSemanticsNodes().isNotEmpty() } // o ✕ do painel
+        auditCapture("09_painel_conta")
+        compose.onNodeWithContentDescription("Fechar").performClick()
     }
 }
