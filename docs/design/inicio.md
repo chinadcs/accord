@@ -1,10 +1,10 @@
 # Início — abertura do aplicativo
 
-> **Implementada — fatias B a H (`accord-vm79`…`accord-qjlo`, 10/11/2026), [ADR 0078](../adr/0078-remodelagem-da-tela-inicio.md):** esta spec descreve a Início como está no código: banner único de falha, Saldo total, “Pede atenção”, Margem para gastar, Previsão até o fim do mês e rodapé único. Validação feita só no emulador (AVD Accord_Rapido_API_33); Galaxy S20 FE, S23 FE, TalkBack real e movimento reduzido real seguem em `accord-4uu2`. Divergências do texto aceito: o subtítulo do Saldo é “acumulado até o fim do mês” (e não “até hoje”); após “Tentar de novo” o banner fica em “Atualizando…” até a leitura terminar; os cartões Margem e Previsão reservam altura na carga; o foco ao voltar de um destino não é devolvido por código (ver §7).
+> **Implementada — fatias B a H (`accord-vm79`…`accord-qjlo`, 10/11/2026), [ADR 0078](../adr/0078-remodelagem-da-tela-inicio.md):** esta spec descreve a Início como está no código: banner único de falha, Saldo total, “Pede atenção”, Margem para gastar, Previsão até o fim do mês e rodapé único. Validação feita só no emulador (AVD Accord_Rapido_API_33); Galaxy S20 FE, S23 FE, TalkBack real e movimento reduzido real seguem em `accord-4uu2`. Divergências do texto aceito: o subtítulo do Saldo é “acumulado até o fim do mês” (e não “até hoje”); após “Tentar de novo” o banner fica em “Atualizando…” até a leitura terminar; os cartões Margem e Previsão reservam altura na carga; o foco ao voltar de um destino não é devolvido por código (ver §7). **Ver alvo/ADR 0091 (aceito em 13/11/2026, não implementado, `accord-5vzf`): o saldo passa a ser previsto/atual e a opção de receitas previstas é removida (seção “Alvo — remodelagem” no fim).**
 
 > **Base vigente — 09/11/2026 (`accord-wecg`, [ADR 0071](../adr/0071-ordem-das-abas-saldo-e-botao-de-registro-no-inicio.md)):** o Início traz o card Saldo total (movido de Lançamentos), usa esqueleto (skeleton) enquanto qualquer painel carrega, tem o botão flutuante de registro no lugar do botão “Registrar manualmente” e não mostra a situação de sincronização, que fica só em Mais.
 
-> **Complemento — 11/11/2026 (`accord-t1pi`, `accord-imj1`):** a opção local “Contar receitas previstas como recebidas” (Mais → Neste aparelho) vem **ligada por padrão**. Ligada, Receitas do mês, Saldo total (acumulado até o fim do mês exibido) e a Previsão até o fim do mês somam renda recebida e prevista; o rótulo é sempre “Receitas do mês”. Desligada, valem as regras anteriores (só recebida).
+> **Complemento — 11/11/2026 (`accord-t1pi`, `accord-imj1`):** a opção local “Contar receitas previstas como recebidas” (Mais → Neste aparelho) vem **ligada por padrão**. Ligada, Receitas do mês, Saldo total (acumulado até o fim do mês exibido) e a Previsão até o fim do mês somam renda recebida e prevista; o rótulo é sempre “Receitas do mês”. Desligada, valem as regras anteriores (só recebida). **Ver alvo/ADR 0091 (aceito em 13/11/2026, não implementado, `accord-5vzf`): o saldo passa a ser previsto/atual e a opção de receitas previstas é removida (seção “Alvo — remodelagem” no fim).**
 
 Prioridade: **P1** · Revisão: **10/11/2026** · `accord-b6og`, `accord-4d5m`, `accord-qjlo`.
 Decisão de navegação aceita pelo usuário em 09/11/2026; [ADR 0067](../adr/0067-inicio-como-abertura-e-revisar-em-mais.md).
@@ -75,7 +75,7 @@ Início | Lançamentos | (Astroid) | Orçamento | Mais
 Cabeçalhos (semântica `heading`): título Início, Saldo total, Pede atenção, Margem para gastar e Previsão até o fim do
 mês. Alvos de toque mínimos de 48 dp; linhas da faixa com 60 dp. Rodapé único de 14 sp no lugar das notas repetidas.
 
-- **Saldo total.** Valor em destaque, subtítulo “acumulado até o fim do mês”, Receitas e Despesas do mês com ícone. Receitas e saldo contam a renda prevista junto da recebida enquanto a opção “Contar receitas previstas como recebidas” estiver ligada (padrão); desligada, só a recebida. Regras do
+- **Saldo total.** Valor em destaque, subtítulo “acumulado até o fim do mês”, Receitas e Despesas do mês com ícone. Receitas e saldo contam a renda prevista junto da recebida enquanto a opção “Contar receitas previstas como recebidas” estiver ligada (padrão); desligada, só a recebida. Regras do **Ver alvo/ADR 0091 (aceito em 13/11/2026, não implementado, `accord-5vzf`): o saldo passa a ser previsto/atual e a opção de receitas previstas é removida (seção “Alvo — remodelagem” no fim).**
   ADR 0051/0071 inalteradas. Saldo negativo é lido como “saldo negativo de R$ …” pelo leitor de tela.
 - **Pede atenção.** Ordem fixa: Revisar, datas, estouro; as duas últimas só aparecem se houver dado. Cada linha tem
   ícone decorativo, título, apoio e seta; a linha inteira abre o destino. Revisar usa a fila única
@@ -181,3 +181,47 @@ o dia em primeiro plano. Chat: “quanto posso gastar hoje?” e “quanto posso
 atualizar com data atual e atalho Orçamento. Aceite: centavos, excesso, zero/ausência, estorno, compromisso sem dupla
 contagem, fim de mês, bissexto, domingo, coerência Room/Chat/painel e estados Compose no emulador. Galaxy/TalkBack manual
 registrados separadamente. [ADR 0068](../adr/0068-margem-diaria-e-semanal-do-orcamento.md).
+
+## Alvo — remodelagem (aceita em 13/11/2026, `accord-5vzf`)
+
+> **Aceita, ainda não implementada (ADR 0091/0092 `accepted` em 13/11/2026): descreve o alvo, não o que está implementado.** Decisão do usuário em 12/11/2026 (`accord-5vzf`); [ADR 0091](../adr/0091-saldo-atual-e-saldo-previsto-no-modelo-de-contas.md) (nova regra do saldo) e [ADR 0092](../adr/0092-hub-meu-dinheiro-e-padronizacao-das-telas-de-dinheiro.md); hub em [40 — Meu dinheiro](40-meu-dinheiro.md). Substitui, quando aceita, o card "Saldo total" descrito acima e o "Complemento de 11/11/2026" sobre a opção de receitas previstas. Margem para gastar, Pede atenção e Previsão do mês não mudam.
+
+### Card de saldo
+
+```text
+┌ Saldo previsto em dezembro            (olho) ┐
+│ R$ 5.950,00                                  │
+│ Saldo atual R$ 1.450,00                      │
+│ dos quais R$ 500,00 em cofrinhos             │
+│ ─────────────────────────────────────────    │
+│ ↙ Receitas do mês   + R$ 6.000,00            │
+│ ↗ Despesas do mês   − R$ 3.200,00            │
+│                          Ver Meu dinheiro  › │
+└──────────────────────────────────────────────┘
+```
+
+- O **card inteiro é clicável** (`Role.Button`, `onClickLabel` "abrir Meu dinheiro") e abre o hub; chevron e texto "Ver Meu dinheiro". O olho de ocultar valores (preferência por aparelho; TalkBack lê "valor oculto") tem alvo próprio de 48 dp, irmão da área clicável. O seletor de mês continua fora do card.
+- **Principal:** Saldo previsto do mês navegado. **Secundárias:** Saldo atual, "dos quais R$ x em cofrinhos" e Receitas/Despesas do mês como hoje (mês do orçamento, receita sempre recebida + prevista).
+- **Regra resumida:** o saldo atual é o saldo inicial de cada conta mais os eventos realizados até hoje, mais cofrinhos; o previsto soma o que ainda deve entrar e sair até o fim do mês, acumulando mês a mês. Conta sem saldo inicial conta como R$ 0. A fatura do cartão entra no vencimento; compras no cartão não somam sozinhas. Detalhes e tabela no ADR 0091.
+- "Despesas do mês" conta a **parcela** (orçamento); o saldo conta a **fatura** (caixa). Texto de ajuda no card ou no hub.
+- Sai a dependência do critério de data e da opção "Contar receitas previstas como recebidas".
+
+### Estados
+
+Esqueleto como hoje; falha no bloco do saldo: "—" e o banner único de falha existente; com valores ocultos, "••••" no card e nenhum valor na descrição de acessibilidade; "inclui R$ x atrasados" quando houver. Sem conta com saldo inicial: valor calculado com R$ 0, sem "—".
+
+### Aceite do alvo
+
+- Exemplo do ADR 0091: atual R$ 1.450 (Conta A R$ 1.000 + Carteira −R$ 50 + cofrinho R$ 500); previsto de dezembro R$ 5.950.
+- Tocar em qualquer parte do card, menos no olho, abre o hub; o olho não navega.
+- Com o olho ativo, nenhum valor do card aparece e o foco e o layout não mudam.
+- Trocar o critério de data em Lançamentos ou em Mais não altera o card.
+
+### Divergências que este alvo resolve
+
+- Título e subtítulo "Saldo total · acumulado até o fim do mês" (§3, §4) e a dependência do critério de data (`HomeBalanceViewModel.kt`).
+- Complemento de 11/11/2026: a opção "Contar receitas previstas como recebidas" deixa de existir.
+
+### Não feito
+
+Sem código, build ou validação em emulador, Galaxy ou TalkBack.

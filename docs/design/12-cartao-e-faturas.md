@@ -167,3 +167,39 @@ Aceite: dois cartões com compras no mesmo mês mantêm faturas e quitações in
 ## Compra no dia do fechamento — 10/11/2026 (ADR 0079, `accord-teib`)
 
 Com fechamento no dia 8 e vencimento no 15, a compra de 08/10 entra na fatura que vence em 15/10; só a de 09/10 em diante vai para a que vence em 15/11 (antes, o dia 8 ia para a seguinte). O dia 31 ajustado em mês sem esse dia segue a mesma regra sobre a data ajustada. A janela "a conferir" não muda: véspera, dia e dia seguinte ao fechamento continuam marcados e geram a pendência de vínculo, que é onde a pessoa **muda a compra para a outra fatura**; não há tela nova. A fatura está "em aberto" até o dia do fechamento, inclusive, e "fechada (estimada)" depois; o período de exposição do cartão na previsão vai do dia seguinte ao fechamento anterior até o dia do fechamento, inclusive. Fechamento e vencimento continuam sendo configuração do usuário, sem garantir a atribuição do emissor. Testado no JVM; sem validação nos aparelhos.
+
+## Alvo — remodelagem (aceita em 13/11/2026, `accord-5vzf`)
+
+> **Aceita, ainda não implementada (ADR 0091/0092 `accepted` em 13/11/2026): descreve o alvo, não o que está implementado.** **Variante escolhida pelo usuário em 12/11/2026 (`accord-5vzf`):** A, com o seletor de cartão da B (o carrossel sai). Hub e padrão comum em [40 — Meu dinheiro](40-meu-dinheiro.md); [ADR 0092](../adr/0092-hub-meu-dinheiro-e-padronizacao-das-telas-de-dinheiro.md). Regras de cartão, fatura e limite das seções anteriores não mudam, salvo o cálculo do limite abaixo. Entrada: hub Meu dinheiro (a linha "Cartões e faturas" de Mais deixa de existir); o link do Orçamento "Do mês" e os Primeiros passos continuam diretos. O nome da tela continua "Cartão e faturas" ([ADR 0086](../adr/0086-remodelagem-da-tela-orcamento.md)).
+
+### Layout
+
+**Alvo (A com o seletor da B):** seletor suspenso "Cartão: Nubank ▾", com "Novo cartão" dentro; o carrossel e a lista vertical de cartões saem. O seletor anuncia o cartão selecionado ("Cartão: Nubank, selecionado; toque para trocar") e cada opção anuncia o nome do cartão e se está selecionada. Abaixo, resumo do cartão selecionado: fatura atual em destaque, barra de limite com texto, fechamento e vencimento, conta vinculada, selo "Seu cartão padrão" e ⋮ (Editar cartão · Usar como meu padrão). Depois, `MessageBanner` "acima do limite" (se houver), `MessageBanner` com ação "N compras com fatura a conferir · Conferir" e lista curta de faturas.
+
+**Alternativa não escolhida (B):** limite só em texto e tabela Mês · Conhecido · Cobrado · Situação; de B só entra o seletor suspenso.
+
+`initialSetup` (primeiro cartão) segue igual nas duas.
+
+### Limite livre estimado
+
+**Limite livre estimado** = limite − soma das faturas não pagas conhecidas, com a nota "pelo que o Accord conhece" (a ressalva desta spec continua: total conhecido não é o disponível no emissor). Quando o usado passa do limite, não mostrar valor negativo: "Acima do limite em R$ x", com ícone e palavra; só alerta ([ADR 0031](../adr/0031-limite-de-credito-com-alerta.md)). O cálculo sai da UI (`CardScreen.kt:178`) para uma função pura no core, sem varrer N meses por cartão.
+
+### Estados
+
+Esqueleto no carregamento; erro em `MessageBanner` com "Tentar de novo"; sem cartão: convite "Novo cartão"; um só cartão: sem carrossel nem seletor. Título do editor: "Editar cartão" ao editar e "Novo cartão" ao criar (hoje `card_edit_title` diz "Cartão padrão" para qualquer cartão). Valores ocultos como no hub.
+
+### Aceite do alvo
+
+- Limite R$ 8.000 e faturas não pagas conhecidas de R$ 3.200: "livre estimado R$ 4.800", com a nota "pelo que o Accord conhece". Usado R$ 8.500: "Acima do limite em R$ 500", sem número negativo.
+- Cada ação rara (editar, usar como padrão) está no ⋮ com descrição TalkBack que inclui o nome do cartão; os cartões são alcançáveis sem deslizar (semântica de seleção).
+- Com fonte ≥ 130% a seleção de cartões é uma lista vertical.
+
+### Divergências que este alvo resolve
+
+- `card_edit_title` mostra "Cartão padrão" ao editar qualquer cartão.
+- O limite usado é calculado na tela, sem função testável.
+- Falta ação direta para "compras com fatura a conferir".
+
+### Não feito
+
+Sem código, build ou validação em aparelho, TalkBack ou emulador. Variante escolhida em 12/11/2026.

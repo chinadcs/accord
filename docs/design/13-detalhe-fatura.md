@@ -153,3 +153,47 @@ Aceite: dois cartões com compras no mesmo mês mantêm faturas e quitações in
 ## Compra no dia do fechamento — 10/11/2026 (ADR 0079)
 
 Uma fatura com fechamento no dia 8 recebe as compras até o dia 8, inclusive, e aparece "em aberto" até esse dia e "fechada (estimada)" depois. Compras da véspera, do dia e do dia seguinte ao fechamento seguem marcadas "a conferir", e a correção de fatura da compra continua sendo a ação para mover o lançamento. Regra completa em [12](12-cartao-e-faturas.md).
+
+## Alvo — remodelagem (aceita em 13/11/2026, `accord-5vzf`)
+
+> **Aceita, ainda não implementada (ADR 0091/0092 `accepted` em 13/11/2026): descreve o alvo, não o que está implementado.** **Variante escolhida pelo usuário em 12/11/2026 (`accord-5vzf`):** A, com o seletor de mês da B (as abas saem). Padrão comum em [40 — Meu dinheiro](40-meu-dinheiro.md); [ADR 0092](../adr/0092-hub-meu-dinheiro-e-padronizacao-das-telas-de-dinheiro.md). As regras de quitação integral e conferência ([ADR 0009](../adr/0009-quitacao-integral-conferida.md)) não mudam.
+
+### Blocos comuns
+
+"Fatura de {mês}" com o apelido do cartão como subtítulo; selo de situação com ícone; herói "Total conferido R$ x" com a fonte, ou "Total conhecido R$ x · ainda não conferido"; `MessageBanner` de diferença; ação principal por estado (abaixo); composição com crédito "− R$ x" (U+2212), neutro, que some se for zero; banner de vínculos com ação "Conferir"; banners de divergência; link "Ver lançamentos desta fatura"; ⋮ com **"Já estava paga (antes do app)"**. Diálogo de pagamento: conta por rádio, botão "Registrar pagamento".
+
+### Ação principal por situação
+
+| Situação | Principal | Secundário |
+|---|---|---|
+| Antes de conferir | Informar total cobrado | Registrar pagamento (ativo; pagamento sem total conferido segue "em revisão", ADR 0009) |
+| Conferida e não paga | Registrar quitação integral | Corrigir total cobrado |
+| Paga | nenhum; mostra "Paga em {data}" | — |
+
+**Exceção ao ADR 0009:** "Já estava paga (antes do app)" (`invoice_already_settled`, `accord-gm3n`, commit 5243934) fica no ⋮ e é documentada como exceção: quita uma fatura anterior ao uso do app sem total conferido.
+
+### Layout
+
+**Alvo (A com o seletor de mês da B):** setas ‹ mês › acima do selo, no lugar das abas por mês; cada seta anuncia o mês de destino e a situação da fatura ("Fatura de novembro, paga"), e fica desativada, com a palavra, quando não há fatura naquele sentido; o deslize pode existir, mas não é a única navegação. O herói "Total conferido/conhecido" da A permanece. **Alternativa não escolhida (B):** grade Conhecido / Cobrado / Pago; não entra.
+
+### Estados
+
+Esqueleto; erro em `MessageBanner` com "Tentar de novo"; com `cardId` nulo e sem cartão padrão, cair no primeiro cartão (hoje falha, `CardViewModels.kt:238`); sem cartão: volta a Cartão e faturas com o convite "Novo cartão". Valores ocultos como no hub.
+
+### Aceite do alvo
+
+- Fatura não conferida: o botão principal é "Informar total cobrado" e "Registrar pagamento" continua disponível.
+- Fatura conferida e não paga: o principal é "Registrar quitação integral"; "Corrigir total cobrado" é secundário.
+- Fatura paga: sem ação principal e com "Paga em …".
+- "Já estava paga (antes do app)" só no ⋮, com descrição TalkBack que inclui o nome da fatura.
+- Crédito aparece com "−" e some se for zero.
+
+### Divergências que este alvo resolve
+
+- A ação principal não acompanhava a situação da fatura.
+- Abrir sem `cardId` e sem cartão padrão falha.
+- "Já estava paga" não tinha registro como exceção ao ADR 0009 na spec.
+
+### Não feito
+
+Sem código, build ou validação em aparelho, TalkBack ou emulador. Variante escolhida em 12/11/2026.

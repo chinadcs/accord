@@ -57,3 +57,33 @@ Alvos de 48 × 48 dp; progresso e valores com rótulo falado ("R$ 333,33 resolvi
 
 ADR 0083 aceito em 10/11/2026. Implementado e testado só no emulador: lista, detalhe, Recebi, Remarcar, editar cronograma, remover recebimento, cancelar, renomear, formulário Novo valor a receber e o switch "Alguém me deve isso" no Registrar despesa (Pix e débito). Fora desta entrega: a saída que só reduz o saldo ainda **não aparece como linha em Lançamentos** (só no detalhe do devedor, onde o valor sai); os previstos de devedores **não entram na previsão do Início** (ficam fora da renda do mês, e o fluxo de caixa ainda não os soma);
 validação nos Galaxy S20 FE e S23 FE e com TalkBack; mudança da opção de contar depois de criado; unir devedores duplicados; compra no cartão para outra pessoa; migração ainda não aplicada ao serviço hospedado.
+
+## Alvo — remodelagem (aceita em 13/11/2026, `accord-5vzf`)
+
+> **Aceita, ainda não implementada (ADR 0091/0092 `accepted` em 13/11/2026): descreve o alvo, não o que está implementado.** Variantes A e B eram iguais nesta tela; o alvo é o descrito abaixo (registro de 12/11/2026). Padrão comum em [40 — Meu dinheiro](40-meu-dinheiro.md); [ADR 0092](../adr/0092-hub-meu-dinheiro-e-padronizacao-das-telas-de-dinheiro.md). Regras do [ADR 0083](../adr/0083-quem-me-deve.md) não mudam. A tela continua em Planejar; o hub mostra o resumo "A receber + R$ x · N pessoas". O recebimento de um valor a receber entra no saldo previsto mesmo fora da Renda do mês; valor "quando der" (sem renda prevista) fica fora ([ADR 0091](../adr/0091-saldo-atual-e-saldo-previsto-no-modelo-de-contas.md)).
+
+### Layout
+
+Quase igual ao atual. Mudanças comuns: esqueleto no carregamento; "Resolvidos" recolhido; detalhe do devedor em rota própria; ⋮ com **Renomear** e **Cancelar valor a receber** (destrutivo, só sem recebimentos); datas por extenso no formato do app; iniciais do avatar decorativas (fora da leitura do TalkBack). Mantidos: Recebi, Remarcar, Editar cronograma e Remover recebimento.
+
+Lista como hoje, com o valor em aberto à direita. A coluna "Recebido / Total" da variante B não foi adotada.
+
+### Estados
+
+Esqueleto; erro em `MessageBanner` com "Tentar de novo"; vazio com o convite para registrar o primeiro valor a receber; cancelamento bloqueado com motivo visível quando há recebimentos; valores ocultos como no hub.
+
+### Aceite do alvo
+
+- Renomear e Cancelar só aparecem no ⋮, com descrição TalkBack que inclui o nome do devedor.
+- Cancelar exige confirmação e fica indisponível, com o motivo, se houver recebimento.
+- "Resolvidos" começa recolhido e informa a contagem.
+- Em aberto = total − recebido (exemplo existente de R$ 333,33 sobre R$ 1.000,00 continua valendo).
+
+### Divergências que este alvo resolve
+
+- Renomear e Cancelar não tinham lugar padrão para ações raras.
+- Datas e carregamento fora do padrão das outras telas.
+
+### Não feito
+
+Sem código, build ou validação em aparelho, TalkBack ou emulador. Sem pendência de variante.

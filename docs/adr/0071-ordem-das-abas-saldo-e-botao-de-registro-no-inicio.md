@@ -6,6 +6,8 @@ decision_date: 2026-11-09
 
 # ADR 0071 — Ordem das abas, saldo e botão de registro no Início
 
+> Emendado por [0091](0091-saldo-atual-e-saldo-previsto-no-modelo-de-contas.md) (accepted em 13/11/2026; não implementado), só na extensão descrita lá; o texto desta decisão não foi alterado.
+
 ## Contexto
 
 O [ADR 0067](0067-inicio-como-abertura-e-revisar-em-mais.md) fixou a barra em Lançamentos, Orçamento, Chat, Início e Mais.

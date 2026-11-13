@@ -6,6 +6,8 @@ decision_date: 2026-11-10
 
 # ADR 0077 — Reagrupamento da aba Mais
 
+> Emendado por [0092](0092-hub-meu-dinheiro-e-padronizacao-das-telas-de-dinheiro.md) (accepted em 13/11/2026; não implementado), só no grupo "Orçamento e contas"; o texto desta decisão não foi alterado.
+
 ## Contexto
 
 A aba Mais cresceu por acréscimo e hoje reúne cerca de 35 linhas em 9 seções numa só rolagem

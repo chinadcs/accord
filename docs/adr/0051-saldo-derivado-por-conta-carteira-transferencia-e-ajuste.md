@@ -6,6 +6,8 @@ decision_date: 2026-11-08
 
 # ADR 0051 — Saldo derivado por conta, Carteira, transferência e ajuste
 
+> Emendado por [0091](0091-saldo-atual-e-saldo-previsto-no-modelo-de-contas.md) (accepted em 13/11/2026; não implementado), só na extensão descrita lá; o texto desta decisão não foi alterado.
+
 ## Contexto
 
 Hoje as contas são só rótulos (banco e apelido) e o dinheiro em espécie é um pagamento "sem conta"

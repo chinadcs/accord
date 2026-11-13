@@ -79,8 +79,8 @@ flowchart TD
 | Lançamentos | [07 — Lançamentos](07-lancamentos.md) | Busca e filtros, detalhe 08 e novo/edição 09. |
 | Orçamento | [05 — Orçamento mensal](05-orcamento-mensal.md) | Categoria 06, próximos meses 10, cartão 12, previsões 20 e rendas 28. Compromisso 11 e fatura 13 aprofundam a composição. Remodelagem (resumo enxuto, categorias primeiro, detalhes recolhidos, "Editar limites" no Orçamento e na categoria): [ADR 0086](../adr/0086-remodelagem-da-tela-orcamento.md), aceita em 10/11/2026, ainda não implementada. |
 | Chat | [04 — Chat](04-chat.md) | Registro por conversa; ícone Astroid sem rótulo visual; recibos em 08; formulário em 09; modelo em 25; sincronização em 26. |
-| Início | [Início](inicio.md) | Abertura: Saldo total, faixa “Pede atenção” (Revisar, datas dos próximos 7 dias, estouro), margem para gastar e previsão do mês; registro manual pelo botão flutuante. **Remodelagem aceita e implementada em 10/11/2026 ([ADR 0078](../adr/0078-remodelagem-da-tela-inicio.md)), validada só no emulador; Galaxy e TalkBack em `accord-4uu2`.** Revisar fica em Mais: pendências 18–19 e pistas 37–38/P2. A importação 15–17 abre por "Importar do banco", outra linha de Mais. |
-| Mais | [22 — Mais e configurações](22-mais-e-configuracoes.md) | Espaço/checklist 02–03, painel Gerenciar contas com banco/apelido/padrão, configurações 23–27 e recursos de análise/planejamento da fase disponível. Cabeçalho + grupos (Revisar e importar, Orçamento e contas, Planejar com Quem me deve, Acompanhar, Neste aparelho, Aplicativo, Conta): [ADR 0077](../adr/0077-reagrupamento-da-aba-mais.md), aceito e implementado em 10/11/2026 (fatias A–E), validação visual e TalkBack em `accord-khux`. |
+| Início | [Início](inicio.md) | Abertura: Saldo total, faixa “Pede atenção” (Revisar, datas dos próximos 7 dias, estouro), margem para gastar e previsão do mês; registro manual pelo botão flutuante. **Remodelagem aceita e implementada em 10/11/2026 ([ADR 0078](../adr/0078-remodelagem-da-tela-inicio.md)), validada só no emulador; Galaxy e TalkBack em `accord-4uu2`.** Revisar fica em Mais: pendências 18–19 e pistas 37–38/P2. A importação 15–17 abre por "Importar do banco", outra linha de Mais. **Remodelagem aceita em 13/11/2026 (`accord-5vzf`, [ADR 0091](../adr/0091-saldo-atual-e-saldo-previsto-no-modelo-de-contas.md)/[0092](../adr/0092-hub-meu-dinheiro-e-padronizacao-das-telas-de-dinheiro.md) `accepted`), não implementada: card de saldo com previsto/atual, clicável, abre Meu dinheiro.** |
+| Mais | [22 — Mais e configurações](22-mais-e-configuracoes.md) | Espaço/checklist 02–03, painel Gerenciar contas com banco/apelido/padrão, configurações 23–27 e recursos de análise/planejamento da fase disponível. Cabeçalho + grupos (Revisar e importar, Orçamento e contas, Planejar com Quem me deve, Acompanhar, Neste aparelho, Aplicativo, Conta): [ADR 0077](../adr/0077-reagrupamento-da-aba-mais.md), aceito e implementado em 10/11/2026 (fatias A–E), validação visual e TalkBack em `accord-khux`. **Proposta (`accord-5vzf`, não implementada): linha "Meu dinheiro" no lugar de Rendas, Cartões e faturas, Contas e Cofrinhos; "Datas e receitas" vira "Data nos lançamentos".** |
 
 A barra inferior aparece nas cinco raízes, nesta ordem: Início, Lançamentos, Chat, Orçamento e Mais (ADR 0071). Chat usa o ícone Astroid em um FAB encaixado no centro da barra, sem texto visível, mas mantém seu nome acessível. Fluxos e detalhes usam voltar com preservação de contexto; formulários podem priorizar teclado e ação fixa sem uma segunda navegação principal. Links de notificação abrem o detalhe correspondente, com caminho de volta ao grupo de origem. Fases futuras não aparecem como controles funcionais antes de disponíveis.
 
@@ -104,10 +104,10 @@ Evidência e limites: [validação do piloto no emulador](../poc/ui-classificaca
 | 07 | P0 | [Lançamentos](07-lancamentos.md) (remodelagem aceita, não implementada: [ADR 0089](../adr/0089-remodelagem-das-telas-de-lancamentos.md)) |
 | 08 | P0 | [Detalhe do lançamento](08-detalhe-lancamento.md) (remodelagem aceita, não implementada: [ADR 0089](../adr/0089-remodelagem-das-telas-de-lancamentos.md)) |
 | 09 | P0 | [Registro manual e edição](09-registro-manual.md) (remodelagem aceita, não implementada: [ADR 0089](../adr/0089-remodelagem-das-telas-de-lancamentos.md)) |
-| 10 | P0 | [Compromissos futuros](10-compromissos-futuros.md) |
+| 10 | P0 | [Compromissos futuros](10-compromissos-futuros.md) (remodelagem aceita em 13/11/2026, não implementada: [ADR 0092](../adr/0092-hub-meu-dinheiro-e-padronizacao-das-telas-de-dinheiro.md), variantes escolhidas em 12/11/2026) |
 | 11 | P0 | [Detalhe do compromisso](11-detalhe-compromisso.md) |
-| 12 | P0 | [Cartão e faturas](12-cartao-e-faturas.md) |
-| 13 | P0 | [Detalhe da fatura](13-detalhe-fatura.md) |
+| 12 | P0 | [Cartão e faturas](12-cartao-e-faturas.md) (remodelagem aceita em 13/11/2026, não implementada: [ADR 0092](../adr/0092-hub-meu-dinheiro-e-padronizacao-das-telas-de-dinheiro.md), variantes escolhidas em 12/11/2026) |
+| 13 | P0 | [Detalhe da fatura](13-detalhe-fatura.md) (remodelagem aceita em 13/11/2026, não implementada: [ADR 0092](../adr/0092-hub-meu-dinheiro-e-padronizacao-das-telas-de-dinheiro.md), variantes escolhidas em 12/11/2026) |
 | 14 | P0 | [Retomar o controle](14-retomar-controle.md) |
 | 15 | P0 | [Importar arquivo](15-importar-arquivo.md) |
 | 16 | P0 | [Revisar importação](16-revisar-importacao.md) |
@@ -116,13 +116,13 @@ Evidência e limites: [validação do piloto no emulador](../poc/ui-classificaca
 | 19 | P0 | [Resolver pendência](19-resolver-pendencia.md) |
 | 20 | P0 | [Previsões e alertas](20-previsoes-e-alertas.md) |
 | 21 | P0 | [Detalhe da previsão](21-detalhe-previsao.md) |
-| 22 | P0 | [Mais e configurações](22-mais-e-configuracoes.md) |
+| 22 | P0 | [Mais e configurações](22-mais-e-configuracoes.md) (remodelagem aceita em 13/11/2026, não implementada: [ADR 0092](../adr/0092-hub-meu-dinheiro-e-padronizacao-das-telas-de-dinheiro.md), variantes escolhidas em 12/11/2026) |
 | 23 | P0 | [Categorias e subcategorias](23-categorias-e-subcategorias.md) (remodelagem aceita, não implementada: [ADR 0084](../adr/0084-remodelagem-da-tela-categorias.md)) |
 | 24 | P0 | [Limites do orçamento](24-limites-do-orcamento.md) |
 | 25 | P0 | [Modelo no aparelho](25-modelo-no-aparelho.md) |
 | 26 | P0 | [Sincronização](26-sincronizacao.md) |
 | 27 | P0 | [Preferências de alertas](27-preferencias-de-alertas.md) |
-| 28 | P0 | [Rendas](28-rendas.md) |
+| 28 | P0 | [Rendas](28-rendas.md) (remodelagem aceita em 13/11/2026, não implementada: [ADR 0092](../adr/0092-hub-meu-dinheiro-e-padronizacao-das-telas-de-dinheiro.md), variantes escolhidas em 12/11/2026) |
 | 29 | P1 | [Revisão semanal](29-revisao-semanal.md) |
 | 30 | P1 | [Atividade de compras](30-atividade-de-compras.md) |
 | 31 | P1 | [Assinaturas](31-assinaturas.md) |
@@ -133,7 +133,8 @@ Evidência e limites: [validação do piloto no emulador](../poc/ui-classificaca
 | 36 | P2 | [Simulador de compra](36-simulador-de-compra.md) |
 | 37 | P2 | [Pistas de revisão](37-pistas-de-revisao.md) |
 | 38 | P2 | [Detalhe da pista](38-detalhe-pista.md) |
-| 39 | fora da numeração P0/P1/P2; [ADR 0083](../adr/0083-quem-me-deve.md) aceito em 10/11/2026, implementada e testada só no emulador (`accord-oldt.6` pendente) | [Quem me deve](39-quem-me-deve.md) |
+| 39 | fora da numeração P0/P1/P2; [ADR 0083](../adr/0083-quem-me-deve.md) aceito em 10/11/2026, implementada e testada só no emulador (`accord-oldt.6` pendente) | [Quem me deve](39-quem-me-deve.md) (remodelagem aceita em 13/11/2026, não implementada: [ADR 0092](../adr/0092-hub-meu-dinheiro-e-padronizacao-das-telas-de-dinheiro.md), variantes escolhidas em 12/11/2026) |
+| 40 | fora da numeração P0/P1/P2; **aceita em 13/11/2026, não implementada** (`accord-5vzf`, [ADR 0091](../adr/0091-saldo-atual-e-saldo-previsto-no-modelo-de-contas.md) e [ADR 0092](../adr/0092-hub-meu-dinheiro-e-padronizacao-das-telas-de-dinheiro.md) `accepted`) | [Meu dinheiro](40-meu-dinheiro.md) (hub, Contas e Cofrinhos) |
 
 ## 5. Fluxos principais e resultados esperados
 

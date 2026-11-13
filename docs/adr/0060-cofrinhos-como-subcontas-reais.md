@@ -6,6 +6,8 @@ decision_date: 2026-11-08
 
 # ADR 0060 — Cofrinhos como subcontas reais
 
+> Emendado por [0091](0091-saldo-atual-e-saldo-previsto-no-modelo-de-contas.md) (accepted em 13/11/2026; não implementado), só na extensão descrita lá; o texto desta decisão não foi alterado.
+
 ## Contexto
 
 O usuário definiu cofrinho como subconta vinculada a uma conta, com saldo próprio. Na conta,

@@ -131,3 +131,37 @@ As escolhas de navegação, divisão em arquivos, Chat inicial e direção simpl
 Aplicam-se a [ordem de especificação antes da alteração e os critérios comuns](auditoria-ui-2026-11.md).
 Este complemento modifica apenas a apresentação indicada; preserva regras financeiras e
 prioridades desta spec. Execução e pendências ficam em `accord-foxp`; documentação em `accord-foxp.4`.
+
+## Alvo — remodelagem (aceita em 13/11/2026, `accord-5vzf`)
+
+> **Aceita, ainda não implementada (ADR 0091/0092 `accepted` em 13/11/2026): descreve o alvo, não o que está implementado.** **Variante escolhida pelo usuário em 12/11/2026 (`accord-5vzf`):** A. Padrão comum em [40 — Meu dinheiro](40-meu-dinheiro.md); [ADR 0092](../adr/0092-hub-meu-dinheiro-e-padronizacao-das-telas-de-dinheiro.md). Regras de renda recebida e prevista não mudam; a opção "Contar receitas previstas como recebidas" é removida e Orçamento, Fluxo do mês e Previsão ficam sempre com receita do mês = recebida + prevista ([ADR 0091](../adr/0091-saldo-atual-e-saldo-previsto-no-modelo-de-contas.md)). Entrada: hub Meu dinheiro (bloco "Este mês") e o link do Orçamento "Do mês", que continua.
+
+### Layout
+
+Um só "+" **Adicionar renda** no cabeçalho (`DetailHeader`, slot `action`); a tela vazia mostra só o "Adicionar renda" do estado vazio. Seletor de mês. Resumo em verde, com sinal, ícone e rótulo. Linha "De quem me deve (fora do total)" com link para [39](39-quem-me-deve.md). Nota no rodapé: "Renda prevista não é saldo…". O ícone da tela não é `wallet` (é da aba Orçamento).
+
+**Alvo (A, escolhida):** herói "Recebido + R$ x", barra "de R$ y esperados" e "A receber"; lista cronológica. Alternativa não escolhida (B): colunas Previsto | Recebido e grupos "A receber"/"Recebidas" com subtotal.
+
+O botão "Recebi" é **irmão** da área de texto da linha (não aninhado), com alvo de 48 dp.
+
+### Estados
+
+Esqueleto no carregamento; erro em `MessageBanner` com "Tentar de novo"; vazio com "Adicionar renda"; valores ocultos como no hub (o sinal e o ícone continuam, o valor vira "••••").
+
+### Aceite do alvo
+
+- Há um único "Adicionar renda" visível por vez.
+- Com R$ 6.000 previstos e R$ 0 recebidos: "Recebido + R$ 0,00 de R$ 6.000,00 esperados" e "A receber + R$ 6.000,00"; ao marcar "Recebi", o valor passa a recebido e a barra acompanha.
+- Recebimento de Quem me deve não entra no total desta tela ("fora do total"), mas entra no saldo previsto (ADR 0091).
+- Sem a opção de receitas previstas, nenhuma chave em Mais altera esta tela; o resumo é sempre recebida + prevista.
+
+### Divergências que este alvo resolve
+
+- Dois pontos de "Adicionar renda" na mesma tela.
+- Carregamento sem esqueleto.
+- "Recebi" aninhado na área de toque da linha.
+- Texto da spec que depende da opção de receitas previstas.
+
+### Não feito
+
+Sem código, build ou validação em aparelho, TalkBack ou emulador. Variante A escolhida em 12/11/2026.

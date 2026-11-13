@@ -154,3 +154,34 @@ prioridades desta spec. Execução e pendências ficam em `accord-foxp`; documen
 - **Convivência com mês, filtro e cenário:** a seção não usa `ARG_MONTH`, filtro nem `ARG_SCENARIO`. Os eventos são do calendário real a partir de hoje, então seguem corretos em qualquer mês; esconder ou trocar por nota faria sumirem vencimentos reais e moveria o layout. O rótulo “De hoje (dd/MM) até dd/MM. Vale para a data de hoje, seja qual for o mês escolhido acima.” evita a leitura errada. Sem rota nova e sem argumento novo.
 - **Leitura:** a mesma da Início (`loadUpcomingEvents`: cartões e compromissos dos meses que a janela toca, `upcomingWeek`), lida na abertura, na volta à tela e no “Tentar de novo”, em job próprio; trocar de mês ou filtro não a relê.
 - **Toque:** boleto e recorrência abrem o detalhe do compromisso; fechamento e vencimento abrem Cartão e faturas. Evento sem destino real não existe nesta lista.
+
+## Alvo — remodelagem (aceita em 13/11/2026, `accord-5vzf`)
+
+> **Aceita, ainda não implementada (ADR 0091/0092 `accepted` em 13/11/2026): descreve o alvo, não o que está implementado.** **Variante escolhida pelo usuário em 12/11/2026 (`accord-5vzf`):** A. Padrão comum em [40 — Meu dinheiro](40-meu-dinheiro.md); [ADR 0092](../adr/0092-hub-meu-dinheiro-e-padronizacao-das-telas-de-dinheiro.md). Filtros, cenário, "Próximos 7 dias", "Registrar compromisso" e a nota atuais são mantidos. Entrada continua em Mais > Planejar; o hub mostra o total do mês.
+
+### Layout
+
+Header, seletor de mês, herói **"Conhecidos em {mês}" como despesa** (vermelho, sinal "−", ícone e rótulo; hoje sem esse tratamento), chips, cenário, lista, "Registrar compromisso" único, "Próximos 7 dias", bloco "Veja também" (Ver parcelas em Cartão e faturas · Ver assinaturas) e nota.
+
+**Alvo (A, escolhida):** lista por data de vencimento. Alternativa não escolhida (B): lista por tipo, com subtotal e pago/a pagar.
+
+### Estados
+
+Esqueleto no carregamento; erro em `MessageBanner` com ação "Tentar de novo"; vazio com "Registrar compromisso"; valores ocultos como no hub.
+
+### Aceite do alvo
+
+- O total do mês aparece como "− R$ x" em vermelho, com ícone e rótulo (nunca só cor), igual ao atalho "Compromissos" do hub.
+- Compromisso é uma visão (parcelas, recorrências, boletos): **não é somado de novo** ao saldo, que já conta a fatura, o boleto e a recorrência por conta própria ([ADR 0091](../adr/0091-saldo-atual-e-saldo-previsto-no-modelo-de-contas.md)).
+- Há um só "Registrar compromisso" visível por vez.
+- Os links "Ver parcelas" e "Ver assinaturas" estão sob "Veja também".
+
+### Divergências que este alvo resolve
+
+- Total do mês sem a semântica de despesa.
+- Links para cartão e assinaturas espalhados pela tela.
+- Erro sem ação e carregamento sem esqueleto.
+
+### Não feito
+
+Sem código, build ou validação em aparelho, TalkBack ou emulador. Variante A escolhida em 12/11/2026.

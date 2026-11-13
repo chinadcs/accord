@@ -104,7 +104,7 @@ Manter uma ação principal por estado. Explicações e opções avançadas fica
 - **Neste aparelho:**
   - **Notificações** (fusão): a linha só navega e mostra o estado real do sistema; a tela tem a chave, o botão Permitir e duas entradas, [27 — Preferências de alertas](27-preferencias-de-alertas.md) ("Alertas de excesso") e **Notificações de bancos** (ADR 0069, `accord-bced`: escolha, app a app e sem nenhum por padrão, dos apps cujas notificações o Accord lê para propor lançamentos em Revisar; mostra se o acesso do Android está concedido e abre os ajustes do sistema; o texto lido nunca é guardado).
   - **Data nos lançamentos:** linha com o valor atual (Data da compra / Mês do orçamento) que abre uma folha de seleção; preferência local.
-  - **Contar receitas previstas como recebidas** (`accord-t1pi`, ampliada em `accord-imj1`): opção local, **ligada por padrão** (decisão do usuário em 11/11/2026), com apoio “Receitas do mês, Saldo total, Orçamento e a previsão somam o que está previsto junto do que já foi recebido.” Ligada, o Saldo total e Receitas do mês da Início somam renda recebida e prevista; o bloco de renda e o Fluxo do mês do Orçamento mostram uma linha “Receitas do mês” e um só resultado; a previsão da Início usa o mesmo total. Desligada, valem as leituras separadas (só recebida; “se a prevista chegar”). A margem para gastar não usa renda e não muda. É por aparelho: não sincroniza nem altera dados compartilhados, e duas pessoas do espaço podem ver totais diferentes.
+  - **Contar receitas previstas como recebidas** (`accord-t1pi`, ampliada em `accord-imj1`): opção local, **ligada por padrão** (decisão do usuário em 11/11/2026), com apoio “Receitas do mês, Saldo total, Orçamento e a previsão somam o que está previsto junto do que já foi recebido.” Ligada, o Saldo total e Receitas do mês da Início somam renda recebida e prevista; o bloco de renda e o Fluxo do mês do Orçamento mostram uma linha “Receitas do mês” e um só resultado; a previsão da Início usa o mesmo total. Desligada, valem as leituras separadas (só recebida; “se a prevista chegar”). A margem para gastar não usa renda e não muda. É por aparelho: não sincroniza nem altera dados compartilhados, e duas pessoas do espaço podem ver totais diferentes. **Ver alvo/ADR 0091 (aceito em 13/11/2026, não implementado, `accord-5vzf`): o saldo passa a ser previsto/atual e a opção de receitas previstas é removida (seção “Alvo — remodelagem” no fim).**
   - **Aparência:** modo Sistema/Claro/Escuro, paletas Accord, Catppuccin, Midnight Dusk, Nord, Tako, Tidal Wave e Tokyo Night e cantos Arredondados/Discretos, salvos só neste aparelho.
   - **Ajustes do Chat** (fusão, com rota própria): modelo [25 — Modelo no aparelho](25-modelo-no-aparelho.md), exportar, importar e limpar histórico e, quando houver, chats de espaços encerrados.
   - **Privacidade e segurança** (fusão): bloqueio local e Privacidade e dados na mesma tela, em duas seções; a coleta opcional do Chat é por pessoa e revogável aqui (ADR 0054). Segurança tem a chave **Permitir prints de tela** (desligada por padrão; ligada, prints, gravações e a prévia em apps recentes mostram valores; vale só neste celular). Privacidade e dados mostra o **uso do Chat nos últimos 7 dias**, a exportação e, no bloco "Excluir conta, excluir ou zerar o espaço", o **reset do espaço** (ADR 0088, abaixo).
@@ -281,3 +281,42 @@ registros ainda não enviados de qualquer aparelho serão descartados quando ele
 pode baixar seus dados antes de aprovar. Cada aparelho limpa banco e fila locais ao ver a época nova, antes de
 sincronizar. **Estado:** implementado e testado localmente (JVM e pgTAP); a migração `20261110020000` **não foi aplicada
 ao serviço hospedado**, e não há validação nos aparelhos.
+
+## Alvo — remodelagem (aceita em 13/11/2026, `accord-5vzf`)
+
+> **Aceita, ainda não implementada (ADR 0091/0092 `accepted` em 13/11/2026): descreve o alvo, não o que está implementado.** Hub em [40 — Meu dinheiro](40-meu-dinheiro.md); [ADR 0091](../adr/0091-saldo-atual-e-saldo-previsto-no-modelo-de-contas.md) e [ADR 0092](../adr/0092-hub-meu-dinheiro-e-padronizacao-das-telas-de-dinheiro.md). Não altera o agrupamento aceito do [ADR 0077](../adr/0077-reagrupamento-da-aba-mais.md) além do descrito aqui.
+
+### Layout
+
+```text
+Orçamento e contas
+  Limites do orçamento                                 [>]
+  Categorias e subcategorias                           [>]
+  Meu dinheiro                                         [>]
+Neste aparelho
+  Data nos lançamentos                                 [>]
+```
+
+- **Meu dinheiro** substitui as quatro linhas Rendas, Cartões e faturas, Contas e Cofrinhos; ícone que não seja `wallet` (candidatos `vault` ou `coins`, a confirmar no Lucide 2.2.1). Compromissos futuros e Quem me deve continuam em Planejar.
+- A folha **"Datas e receitas"** (`more_display`) vira **"Data nos lançamentos"** e mantém só a escolha do critério de data da lista. A opção **"Contar receitas previstas como recebidas"** é removida: Orçamento, Fluxo do mês e Previsão ficam sempre com receita do mês = recebida + prevista.
+- O painel "Gerenciar contas" e os Cofrinhos passam a viver no hub (Contas e Cofrinhos em [40](40-meu-dinheiro.md)).
+
+### Estados
+
+Sem mudança de estados de Mais. A linha "Meu dinheiro" não tem contador; sem erro próprio (o hub trata a falha por bloco).
+
+### Aceite do alvo
+
+- Mais mostra uma linha "Meu dinheiro" e nenhuma das quatro anteriores; todas as ações continuam alcançáveis pelo mapa de destino da spec 40 §10.
+- A folha chamada "Data nos lançamentos" não tem mais a chave de receitas previstas; quem a tinha desligada passa a ver a receita recebida + prevista (efeito a avisar no aceite; preferência antiga ignorada).
+- A linha tem alvo de 48 dp e nome acessível "Meu dinheiro".
+
+### Divergências que este alvo resolve
+
+- Quatro linhas para um mesmo assunto (§ "Orçamento e contas").
+- Texto da opção de receitas previstas (linhas sobre `accord-t1pi`/`accord-imj1`) e do rótulo "Datas e receitas".
+- "Cofrinhos também abrem na conta vinculada, com saldo próprio, Nos cofrinhos e Saldo total" passa a valer no detalhe da conta e do cofrinho do hub.
+
+### Não feito
+
+Sem código, build ou validação em emulador, Galaxy ou TalkBack. Ícone não conferido no AAR.
