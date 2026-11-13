@@ -163,22 +163,27 @@ class EntriesFlowTest {
         auditCapture("07_busca_teclado")
 
         tap(gear)
-        waitForText("Parcela neste mês: 1/6")
+        waitForText("Parcela 1 de 6")
         auditCapture("08_detalhe_parcela")
-        compose.onNode(hasContentDescription("Voltar")).performScrollTo().performClick()
+        compose.onNode(hasContentDescription("Voltar")).performClick() // a barra superior é fixa
 
         compose.onNodeWithText(gear.lowercase()).assertIsDisplayed() // o texto da busca continua no campo
         bringEntry(gear)
         assert(compose.onAllNodesWithText(grocery, substring = true).fetchSemanticsNodes().isEmpty())
     }
 
+    /** A exclusão fica por último no ⋮ da barra superior (spec 24). */
+    private fun deleteFromMenu() {
+        compose.onNode(hasContentDescription("Mais ações de", substring = true)).performClick()
+        compose.onNodeWithText("Excluir…").performClick()
+    }
+
     @Test
     fun excluirPeloDetalheComConfirmacaoRemoveDaLista() {
         openEntries()
         tap(grocery)
-        waitForText("Detalhe do lançamento")
-        waitForText("Movimentação em")
-        tap("Excluir")
+        waitForText("Situação:")
+        deleteFromMenu()
         waitForText("Excluir este lançamento?")
         compose.onNodeWithText("Isso não é estorno nem cancelamento.", substring = true).assertIsDisplayed()
         // a tela e o diálogo têm um "Excluir" cada; o do diálogo vem por último na árvore
@@ -191,11 +196,11 @@ class EntriesFlowTest {
     fun manterNaConfirmacaoNaoExcluiNada() {
         openEntries()
         tap(grocery)
-        waitForText("Movimentação em")
-        tap("Excluir")
+        waitForText("Situação:")
+        deleteFromMenu()
         waitForText("Excluir este lançamento?")
         compose.onNodeWithText("Manter").performClick()
-        compose.onNodeWithText("Movimentação em", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Situação:", substring = true).assertExists()
     }
 
     @Test

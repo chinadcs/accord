@@ -4,10 +4,10 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
-import androidx.compose.ui.test.hasScrollAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onLast
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
@@ -17,11 +17,14 @@ import app.accord.core.space.AssignmentState
 import app.accord.core.space.BankRef
 import app.accord.core.space.BoletoView
 import app.accord.core.space.CancelState
+import app.accord.core.space.CardInfo
 import app.accord.core.space.CategoryNode
 import app.accord.core.space.Classification
 import app.accord.core.space.EntryDetail
 import app.accord.core.space.EntryKind
 import app.accord.core.space.ExtraReason
+import app.accord.core.space.IncomeCategoryNode
+import app.accord.core.space.IncomeView
 import app.accord.core.space.InstallmentView
 import app.accord.core.space.ItemSync
 import app.accord.core.space.Origin
@@ -33,8 +36,10 @@ import app.accord.ui.detail.DeletePhase
 import app.accord.ui.detail.DetailContent
 import app.accord.ui.detail.DetailData
 import app.accord.ui.detail.EntryDetailScreen
+import app.accord.ui.detail.LinkedAction
 import app.accord.ui.theme.AccordTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import java.time.LocalDate
@@ -80,12 +85,27 @@ class EntryDetailUiTest {
         spentBy: String? = null,
         sync: ItemSync = ItemSync.SavedOnDevice,
         classification: Classification = Classification.Category("equip"),
+        cardId: String? = "card1",
     ) = EntryDetail(
         id, kind, "Equipamento", classification, amount, LocalDate.of(2026, 9, 25), LocalDate.of(2026, 10, 15), null,
-        PaymentMethod.Card, "acc", author, spentBy, origin, 3, voided, sync, purchase, boleto, null, null, refunds,
+        PaymentMethod.Card, "acc", author, spentBy, origin, 3, voided, sync, purchase, boleto, null, null, refunds, cardId,
     )
 
-    private fun ready(d: EntryDetail) = DetailContent.Ready(DetailData(d, categories, accounts, me))
+    private val cards = mapOf("card1" to CardInfo("card1", null, "Roxinho", 8, 15))
+
+    private fun ready(d: EntryDetail) = DetailContent.Ready(
+        DetailData(
+            d, categories, accounts, me, cards = cards,
+            incomeCategories = listOf(IncomeCategoryNode("sal", "Salário", 0, "briefcase", null)),
+        ),
+    )
+
+    /** O miolo rola; o par ou texto pode estar abaixo da dobra. */
+    private fun scrollTo(matcher: androidx.compose.ui.test.SemanticsMatcher) {
+        compose.onNode(hasVerticalScroll).performScrollToNode(matcher)
+    }
+
+    private fun openMenu(title: String) = compose.onNodeWithContentDescription("Mais ações de $title").performClick()
 
     private fun show(
         content: DetailContent,
@@ -105,33 +125,61 @@ class EntryDetailUiTest {
     }
 
     @Test
-    fun parcelaMostraTotalEParcelaEmPosicoesDistintas() {
+    fun parcelaMostraNoHeroiAParcelaEOTotalComRotulosDistintos() {
         show(ready(detail()))
-        compose.onNodeWithText("Compra em 25/09/2026 · 6x de ${brl(200).format()}").assertIsDisplayed()
-        compose.onNodeWithText("Total da compra: ${brl(1200).format()}").assertIsDisplayed()
-        compose.onNodeWithText("Parcela neste mês: 1/6 · ${brl(200).format()}").assertIsDisplayed()
-        compose.onNodeWithText("Fatura: 10/26").assertIsDisplayed()
-        compose.onNodeWithText("Equipamentos").assertIsDisplayed() // o detalhe mostra o nome da categoria, sem o caminho completo
+        compose.onNodeWithText("Parcela 1 de 6").assertIsDisplayed()
+        compose.onNodeWithText("Compra de ${brl(1200).format()} em 6×").assertIsDisplayed()
+        compose.onNodeWithText(Money(-20_000).format()).assertIsDisplayed() // o valor do herói é o da parcela, neutro com sinal
+        compose.onNodeWithText("Editar a compra").assertIsDisplayed()
+        compose.onNodeWithText("Parcela de compra").assertIsDisplayed() // título pelo tipo, na barra superior
+    }
+
+    @Test
+    fun parcelaMostraDataDaCompraFaturaCategoriaECartao() {
+        show(ready(detail()))
+        scrollTo(hasContentDescription("Cartão, Roxinho"))
+        compose.onNodeWithContentDescription("Data da compra, 25/09/2026").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Fatura, 10/26").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Categoria, Equipamentos").assertIsDisplayed() // só o nome da categoria
+        compose.onNodeWithContentDescription("Cartão, Roxinho").assertIsDisplayed()
+    }
+
+    @Test
+    fun secaoParcelasMarcaAAtualComTextoEOferecerVerTodas() {
+        var opened: String? = null
+        compose.setContent {
+            AccordTheme {
+                EntryDetailScreen(ready(detail()), DeletePhase.Idle, PaddingValues(), {}, {}, {}, {}, {}, {}, onOpenCommitment = { opened = it })
+            }
+        }
+        scrollTo(hasText("Ver todas as parcelas"))
+        compose.onNodeWithContentDescription("1/6 · fatura 10/26, ${brl(200).format()}, Esta", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Ver todas as parcelas").performClick()
+        assertEquals("p#1", opened)
+        assertEquals(0, compose.onAllNodes(hasText("Ver compromisso")).fetchSemanticsNodes().size)
     }
 
     @Test
     fun mostraContaComBancoEApelidoOrigemAutorESituacaoDePersistencia() {
         show(ready(detail()))
-        compose.onNodeWithText("Conta: Itaú Unibanco · Conta salário").assertIsDisplayed()
-        compose.onNodeWithText("Registrado por Você · Origem: manual").assertIsDisplayed()
+        scrollTo(hasText("Situação: salvo no aparelho"))
+        compose.onNodeWithContentDescription("Conta, Itaú Unibanco · Conta salário").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Registrado por, Você · manual").assertIsDisplayed()
         compose.onNodeWithText("Situação: salvo no aparelho").assertIsDisplayed()
     }
 
     @Test
     fun registroDaOutraPessoaEOrigemImportacao() {
         show(ready(detail(author = "outra", origin = Origin.Import, spentBy = "outra")))
-        compose.onNodeWithText("Registrado por Outra pessoa · Origem: importação").assertIsDisplayed()
-        compose.onNodeWithText("Quem gastou: Outra pessoa").assertIsDisplayed()
+        scrollTo(hasContentDescription("Quem gastou, Outra pessoa"))
+        compose.onNodeWithContentDescription("Registrado por, Outra pessoa · importação").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Quem gastou, Outra pessoa").assertIsDisplayed()
     }
 
     @Test
     fun situacaoNuncaDizSincronizadoSemReconhecimento() {
         show(ready(detail(sync = ItemSync.AwaitingSend)))
+        scrollTo(hasText("Situação: aguardando envio"))
         compose.onNodeWithText("Situação: aguardando envio").assertIsDisplayed()
     }
 
@@ -139,12 +187,14 @@ class EntryDetailUiTest {
     fun cancelamentoSolicitadoEConfirmadoSaoDistintos() {
         val requested = purchase.copy(installments = installments().mapIndexed { i, v -> if (i >= 4) v.copy(cancel = CancelState.CancelRequested) else v })
         show(ready(detail(purchase = requested)))
+        scrollTo(hasText("Cancelamento solicitado"))
         compose.onNodeWithText("Cancelamento solicitado").assertIsDisplayed()
     }
 
     @Test
     fun parcelasCanceladasAparecemComoCanceladas() {
         show(ready(detail(purchase = purchase.copy(installments = installments(cancelledFrom = 5)))))
+        scrollTo(hasText("Cancelada"))
         compose.onNodeWithText("Cancelada").assertIsDisplayed()
     }
 
@@ -155,10 +205,26 @@ class EntryDetailUiTest {
             RefundView("r2", "p", brl(60), RefundStatus.Requested, null, null, 1, false),
         )
         show(ready(detail(refunds = refunds)))
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Estornos"))
+        scrollTo(hasText("Solicitado (ainda sem efeito nos totais)"))
+        scrollTo(hasText("Confirmar") and hasClickAction()) // até o fim da seção: o título e as duas linhas ficam à vista
         compose.onNodeWithText("Estornos").assertIsDisplayed()
         compose.onNodeWithText("Confirmado em 05/11/2026").assertIsDisplayed()
         compose.onNodeWithText("Solicitado (ainda sem efeito nos totais)").assertIsDisplayed()
+    }
+
+    @Test
+    fun estornoPendenteTemConfirmarNaLinhaQueResolve() {
+        val pending = RefundView("r2", "p", brl(60), RefundStatus.Requested, null, null, 1, false)
+        var opened: LinkedAction? = null
+        val d = detail(refunds = listOf(pending))
+        compose.setContent {
+            AccordTheme {
+                EntryDetailScreen(ready(d), DeletePhase.Idle, PaddingValues(), {}, {}, {}, {}, {}, {}, onOpenAction = { opened = it })
+            }
+        }
+        scrollTo(hasText("Confirmar") and hasClickAction())
+        compose.onNode(hasText("Confirmar") and hasClickAction()).performClick()
+        assertEquals(LinkedAction.ConfirmRefundOf(pending), opened)
     }
 
     @Test
@@ -171,25 +237,54 @@ class EntryDetailUiTest {
             dueDate = LocalDate.of(2026, 10, 30), settledDate = LocalDate.of(2026, 11, 3), method = PaymentMethod.Boleto,
         )
         show(ready(d))
-        compose.onNodeWithText("Vencimento: 30/10/2026").assertIsDisplayed()
-        compose.onNodeWithText("Pagamento: 03/11/2026").assertIsDisplayed()
-        compose.onNodeWithText("Mês usado no orçamento: Novembro/2026").assertIsDisplayed()
-        compose.onNodeWithText("Valor previsto: ${brl(100).format()}").assertIsDisplayed()
-        compose.onNodeWithText("Valor efetivo: ${brl(104).format()}").assertIsDisplayed()
+        scrollTo(hasContentDescription("Valor efetivo, ${brl(104).format()}"))
+        compose.onNodeWithContentDescription("Vencimento, 30/10/2026").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Pagamento, 03/11/2026").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Mês do orçamento, Novembro/2026").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Valor previsto, ${brl(100).format()}").assertIsDisplayed()
+        compose.onNodeWithContentDescription("Valor efetivo, ${brl(104).format()}").assertIsDisplayed()
+        compose.onNodeWithText("Ver o boleto").assertExists()
+        compose.onNodeWithText("Pago em 03/11/2026").assertIsDisplayed()
     }
 
     @Test
     fun lancamentoAClassificarDizAClassificar() {
         show(ready(detail(classification = Classification.ToClassify).copy(purchase = purchase.copy(classification = Classification.ToClassify))))
-        compose.onNodeWithText("Categoria: a classificar").assertIsDisplayed()
+        scrollTo(hasContentDescription("Categoria, A classificar"))
+        compose.onNodeWithContentDescription("Categoria, A classificar").assertIsDisplayed()
+    }
+
+    @Test
+    fun receitaMostraACategoriaDeReceitaOuSemCategoriaNuncaAClassificar() {
+        val income = IncomeView(
+            "i", "Salário", brl(500), LocalDate.of(2026, 10, 5), null, null, "acc", YearMonth.of(2026, 10), 2, false, incomeCategoryId = "sal",
+        )
+        val base = detail(EntryKind.Income, "i", brl(500), purchase = null).copy(income = income, method = null, cardId = null)
+        show(ready(base))
+        scrollTo(hasContentDescription("Categoria, Salário"))
+        compose.onNodeWithContentDescription("Categoria, Salário").assertIsDisplayed()
+        compose.onNodeWithText("Receita").assertIsDisplayed()
+        compose.onNodeWithText("+" + brl(500).format()).assertIsDisplayed()
+        compose.onNodeWithText("A pagar").assertDoesNotExist()
+        assertEquals(0, compose.onAllNodes(hasText("a classificar", substring = true, ignoreCase = true)).fetchSemanticsNodes().size)
+    }
+
+    @Test
+    fun receitaSemCategoriaDizSemCategoria() {
+        val income = IncomeView("i", "Bico", brl(80), LocalDate.of(2026, 10, 5), null, null, "acc", YearMonth.of(2026, 10), 2, false)
+        val base = detail(EntryKind.Income, "i", brl(80), purchase = null, classification = Classification.ToClassify)
+            .copy(income = income, method = null, cardId = null)
+        show(ready(base))
+        scrollTo(hasContentDescription("Categoria, Sem categoria"))
+        compose.onNodeWithContentDescription("Categoria, Sem categoria").assertIsDisplayed()
     }
 
     @Test
     fun lancamentoExcluidoMostraAvisoENaoOfereceAcoes() {
         show(ready(detail(voided = true)))
         compose.onNodeWithText("Este lançamento foi excluído.").assertIsDisplayed()
-        assertEquals(0, compose.onAllNodes(hasText("Editar")).fetchSemanticsNodes().size)
-        assertEquals(0, compose.onAllNodes(hasText("Excluir")).fetchSemanticsNodes().size)
+        assertEquals(0, compose.onAllNodes(hasText("Editar", substring = true)).fetchSemanticsNodes().size)
+        assertEquals(0, compose.onAllNodes(hasContentDescription("Mais ações de", substring = true)).fetchSemanticsNodes().size)
     }
 
     @Test
@@ -221,10 +316,51 @@ class EntryDetailUiTest {
     fun editarEntregaOIdDoAlvo() {
         var edited: String? = null
         show(ready(detail()), onEdit = { edited = it })
-        // as ações vinculadas ocupam o alto da tela: o botão pode estar abaixo da dobra
-        compose.onNode(hasScrollAction()).performScrollToNode(hasText("Editar"))
-        compose.onNodeWithText("Editar").performClick()
+        // a barra inferior é fixa: não precisa rolar
+        compose.onNodeWithText("Editar a compra").performClick()
         assertEquals("p#1", edited)
+    }
+
+    @Test
+    fun menuDeUmaParcelaTemAcoesNaOrdemDoAlvoEExclusaoPorUltimoComTotalDeParcelas() {
+        var deletes = 0
+        compose.setContent {
+            AccordTheme { EntryDetailScreen(ready(detail()), DeletePhase.Idle, PaddingValues(), {}, {}, {}, { deletes++ }, {}, {}) }
+        }
+        openMenu("Parcela de compra")
+        compose.onNodeWithText("Registrar estorno").assertIsDisplayed()
+        compose.onNodeWithText("Pedir cancelamento de parcelas").assertIsDisplayed()
+        val estorno = compose.onNodeWithText("Registrar estorno").fetchSemanticsNode().boundsInRoot.top
+        val cancelamento = compose.onNodeWithText("Pedir cancelamento de parcelas").fetchSemanticsNode().boundsInRoot.top
+        val exclusao = compose.onNodeWithText("Excluir a compra (6 parcelas)…").fetchSemanticsNode().boundsInRoot.top
+        assertTrue(estorno < cancelamento && cancelamento < exclusao)
+        compose.onNodeWithText("Excluir a compra (6 parcelas)…").performClick()
+        assertEquals(1, deletes)
+    }
+
+    @Test
+    fun acoesDoMenuTambemSaoAcoesPersonalizadasDoHeroiParaOTalkBack() {
+        show(ready(detail()))
+        val customs = compose.onAllNodes(
+            androidx.compose.ui.test.SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsActions.CustomActions),
+        ).fetchSemanticsNodes().flatMap { it.config[androidx.compose.ui.semantics.SemanticsActions.CustomActions] }.map { it.label }
+        assertTrue("Registrar estorno" in customs)
+        assertTrue("Excluir a compra (6 parcelas)…" in customs)
+    }
+
+    @Test
+    fun estornoEPagamentoDeFaturaNaoTemEditar() {
+        show(ready(detail(EntryKind.Refund, "r", purchase = null)))
+        assertEquals(0, compose.onAllNodes(hasText("Editar", substring = true)).fetchSemanticsNodes().size)
+        compose.onNodeWithText("Estorno").assertIsDisplayed()
+    }
+
+    @Test
+    fun pagamentoDeFaturaTemTituloSemSinalESemCategoria() {
+        show(ready(detail(EntryKind.InvoicePayment, "q", brl(300), purchase = null)))
+        compose.onNodeWithText("Pagamento de fatura").assertIsDisplayed()
+        compose.onNodeWithText(brl(300).format()).assertIsDisplayed()
+        assertEquals(0, compose.onAllNodes(hasContentDescription("Categoria,", substring = true)).fetchSemanticsNodes().size)
     }
 
     @Test
@@ -280,6 +416,6 @@ class EntryDetailUiTest {
     fun descricaoDeTalkBackDoCabecalhoETituloSaoAnunciados() {
         show(ready(detail()))
         compose.onNode(hasContentDescription("Voltar")).assertIsDisplayed()
-        compose.onNodeWithText("Detalhe do lançamento").assertIsDisplayed()
+        compose.onNodeWithText("Parcela de compra").assertIsDisplayed()
     }
 }

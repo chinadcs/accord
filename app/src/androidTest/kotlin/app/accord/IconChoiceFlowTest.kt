@@ -121,7 +121,7 @@ class IconChoiceFlowTest {
         // A lista é preguiçosa: a padaria pode estar abaixo da dobra e só existe depois da rolagem.
         compose.onNode(hasVerticalScroll).performScrollToNode(hasText(bakery, substring = true))
         compose.onAllNodesWithText(bakery, substring = true).onFirst().performSemanticsAction(SemanticsActions.OnClick)
-        waitForText("Detalhe do lançamento")
+        waitForText("Situação:") // o título agora é o do tipo; o rodapé de situação só existe com o lançamento carregado
     }
 
     private fun chooseGeneric(key: String) {

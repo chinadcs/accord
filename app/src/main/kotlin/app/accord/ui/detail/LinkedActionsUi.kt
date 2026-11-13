@@ -63,7 +63,7 @@ fun LinkedActionsBlock(actions: List<LinkedAction>, onOpen: (LinkedAction) -> Un
 }
 
 @Composable
-private fun actionLabel(action: LinkedAction): String = when (action) {
+internal fun actionLabel(action: LinkedAction): String = when (action) {
     is LinkedAction.Settle -> stringResource(if (action.receiving) R.string.linked_receive else R.string.linked_pay)
     is LinkedAction.NewRefund -> stringResource(R.string.linked_refund)
     is LinkedAction.ConfirmRefundOf -> stringResource(R.string.linked_refund_confirm, action.refund.amount.format())

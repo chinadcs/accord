@@ -586,6 +586,7 @@ class RoomFinanceSpace private constructor(
                 accountId = occurrence.accountId, authorId = row.authorId, spentBy = null, origin = Origin.valueOf(row.origin),
                 revision = row.revision, voided = false, sync = sync(EntityType.Recurrence, recurrenceId),
                 purchase = null, boleto = null, income = null, occurrence = occurrence, refunds = emptyList(),
+                cardId = if (occurrence.form == RecurrenceForm.Card) row.cardId ?: cardIdOf(sessions.current().spaceId) else null,
             )
         }
         dao.movement(id)?.let { m ->

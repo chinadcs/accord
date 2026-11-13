@@ -36,9 +36,13 @@ fun RowMenu(name: String, items: @Composable (close: () -> Unit) -> Unit) {
 
 /** Item do [RowMenu]; [destructive] pinta o texto na cor de erro. */
 @Composable
-fun RowMenuItem(label: Int, destructive: Boolean = false, onClick: () -> Unit) {
+fun RowMenuItem(label: Int, destructive: Boolean = false, onClick: () -> Unit) = RowMenuItem(stringResource(label), destructive, onClick)
+
+/** Igual ao anterior, para rótulo já montado (com número, por exemplo). */
+@Composable
+fun RowMenuItem(label: String, destructive: Boolean = false, onClick: () -> Unit) {
     DropdownMenuItem(
-        text = { Text(stringResource(label), color = if (destructive) MaterialTheme.colorScheme.error else Color.Unspecified) },
+        text = { Text(label, color = if (destructive) MaterialTheme.colorScheme.error else Color.Unspecified) },
         onClick = onClick,
         modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
     )

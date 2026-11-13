@@ -4,6 +4,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.v2.createEmptyComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
@@ -116,7 +117,13 @@ class LinkedFlowTest {
         compose.onNodeWithText("Buscar lançamentos").performTextInput(tag)
         waitForText(grocery)
         tap(description)
-        waitForText("Detalhe do lançamento")
+        waitForText("Situação:") // o título agora é o do tipo; o rodapé de situação só existe com o lançamento carregado
+    }
+
+    /** O ⋮ do detalhe (a barra superior é fixa) e o item pelo nome; o menu é uma janela, fora da rolagem do miolo. */
+    private fun menuItem(text: String) {
+        compose.onNode(hasContentDescription("Mais ações de", substring = true)).performClick()
+        compose.onNodeWithText(text).performClick()
     }
 
     @Test
@@ -126,7 +133,6 @@ class LinkedFlowTest {
         compose.onNodeWithTag("settle-switch").performSemanticsAction(SemanticsActions.OnClick)
         waitForText("Pagamento registrado.")
         waitForText("Pago em")
-        waitForText("Pagamento: ")
         // pago: o resumo do que acontece ao ligar some e o botão de ajustar também
         waitGone("Ao ligar: hoje")
         waitGone("Ajustar")
@@ -160,7 +166,7 @@ class LinkedFlowTest {
     @Test
     fun estornoExigeEscolherSeJaVoltouDepoisSolicitadoPodeSerConfirmado() {
         openDetail(grocery)
-        tap("Registrar estorno")
+        menuItem("Registrar estorno")
         waitForText("Valor do estorno")
         compose.onNodeWithText("Valor do estorno (R$)").performTextInput("40,00")
         dialogButton("Confirmar")
@@ -169,20 +175,22 @@ class LinkedFlowTest {
         compose.onNodeWithText("Ainda aguardo a devolução").performSemanticsAction(SemanticsActions.OnClick)
         dialogButton("Confirmar")
         waitForText("Estorno registrado.")
-        waitForText("Confirmar estorno de")
+        waitForText("Solicitado (ainda sem efeito nos totais)")
 
-        tap("Confirmar estorno de")
+        // "Confirmar" na linha do estorno pendente (a seção Estornos), não no menu
+        compose.onNode(hasVerticalScroll).performScrollToNode(hasText("Confirmar") and hasClickAction())
+        compose.onAllNodes(hasText("Confirmar") and hasClickAction()).onFirst().performSemanticsAction(SemanticsActions.OnClick)
         waitForText("Valor devolvido")
         compose.onNodeWithText("Valor devolvido (R$)").assertExists()
         dialogButton("Confirmar")
         waitForText("Estorno confirmado.")
-        waitGone("Confirmar estorno de")
+        waitGone("Solicitado (ainda sem efeito nos totais)")
     }
 
     @Test
     fun estornoAcimaDoValorDaOrigemEExplicadoPelaFachadaDentroDoDialogo() {
         openDetail(grocery)
-        tap("Registrar estorno")
+        menuItem("Registrar estorno")
         waitForText("Valor do estorno")
         compose.onNodeWithText("Valor do estorno (R$)").performTextInput("150,00")
         compose.onNodeWithText("Ainda aguardo a devolução").performSemanticsAction(SemanticsActions.OnClick)
@@ -194,7 +202,7 @@ class LinkedFlowTest {
     @Test
     fun cancelarParcelasExigeMarcarEPedidoViraEtiquetaComSegundaConfirmacao() {
         openDetail(gear)
-        tap("Pedir cancelamento de parcelas")
+        menuItem("Pedir cancelamento de parcelas")
         waitForText("Quais parcelas?")
         dialogButton("Confirmar")
         waitForText("Marque ao menos uma parcela.")
@@ -226,7 +234,7 @@ class LinkedFlowTest {
         waitForText(gym)
         waitForText("A conferir") // a linha da lista mostra o selo antes da conferência
         tap(gym)
-        waitForText("Detalhe do lançamento")
+        waitForText("Situação:")
         tap("Conferir fatura")
         waitForText("Em qual fatura ela entra?")
         // sem opção pré-selecionada: confirmar sem escolher mostra o erro e mantém o diálogo
@@ -235,7 +243,8 @@ class LinkedFlowTest {
         compose.onAllNodes(hasText("(estimada pelo fechamento)", substring = true)).onLast().performSemanticsAction(SemanticsActions.OnClick)
         dialogButton("Confirmar")
         waitForText("Fatura da ocorrência atualizada.")
-        waitForText("Corrigir fatura")
-        waitGone("Conferir fatura")
+        waitGone("Conferir fatura") // o aviso sai de baixo do herói e "Corrigir fatura" passa ao ⋮
+        compose.onNode(hasContentDescription("Mais ações de", substring = true)).performClick()
+        compose.onNodeWithText("Corrigir fatura").assertExists()
     }
 }

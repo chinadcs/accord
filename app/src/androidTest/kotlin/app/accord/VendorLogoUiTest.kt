@@ -164,7 +164,7 @@ class VendorLogoUiTest {
         show(content = screen)
         assertEquals(1, logoCount("uber"))
         compose.onNodeWithText("corrida de Uber").assertIsDisplayed()
-        compose.onNodeWithText(Money(2_500).format()).assertIsDisplayed()
+        compose.onNodeWithText(Money(-2_500).format()).assertIsDisplayed() // despesa: valor neutro com sinal
         compose.onNodeWithText("Editar").performClick()
         assertEquals("entry-1", edited)
         capture("detalhe-claro")

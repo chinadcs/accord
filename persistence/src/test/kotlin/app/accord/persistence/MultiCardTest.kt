@@ -72,6 +72,17 @@ class MultiCardTest : SpaceTestBase() {
         assertEquals(brl(50), h.space.invoice(ym(2026, 10), b).value().knownTotal)
     }
 
+    @Test fun `o detalhe da ocorrencia no cartao diz qual cartao e fora do cartao nao diz`() = runBlocking<Unit> {
+        val h = open()
+        val b = h.card("Verde", fresh = true, closing = 20, due = 28)
+        val onCard = h.space.execute(h.env(), CreateRecurrence(RecurrenceKind.Expense, "No cartão", seed("assinaturas"), brl(20), RecurrenceForm.Card,
+            frequency = Frequency.Monthly, firstDate = d(2026, 10, 10), cardId = b)).applied().changes.single().id
+        val offCard = h.space.execute(h.env(), CreateRecurrence(RecurrenceKind.Expense, "Fora", seed("assinaturas"), brl(20), RecurrenceForm.OffCard,
+            frequency = Frequency.Monthly, firstDate = d(2026, 10, 10))).applied().changes.single().id
+        assertEquals(b, h.space.entry("$onCard:1").value()!!.cardId)
+        assertEquals(null, h.space.entry("$offCard:1").value()!!.cardId)
+    }
+
     @Test fun `criar cartao reaproveita conta e reenvio nao duplica`() = runBlocking<Unit> {
         val h = open()
         val a = h.card("Azul", "Banco")

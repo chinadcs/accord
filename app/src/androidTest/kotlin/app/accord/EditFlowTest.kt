@@ -129,13 +129,18 @@ class EditFlowTest {
         compose.onNodeWithText("Buscar lançamentos").performTextInput(tag)
         waitForText(grocery) // a lista carregou; os outros itens podem estar abaixo e precisam de rolagem
         tap(description)
-        waitForText("Detalhe do lançamento")
-        waitForText("Editar") // o detalhe mostra o título antes de carregar o conteúdo e as ações
+        waitForText("Situação:") // o título agora é o do tipo; o rodapé de situação só existe com o lançamento carregado
+        waitForText("Editar")
+    }
+
+    /** "Editar" fica na barra inferior fixa do detalhe, fora da rolagem do miolo. */
+    private fun tapEdit() {
+        compose.onAllNodes(hasText("Editar", substring = true) and androidx.compose.ui.test.hasClickAction()).onFirst().performSemanticsAction(SemanticsActions.OnClick)
     }
 
     private fun openEdit(description: String) {
         openDetail(description)
-        tap("Editar")
+        tapEdit()
         waitForText("Editar lançamento")
         waitForText("Descrição") // o título aparece antes do formulário carregar; sem isso a rolagem corre contra o carregamento
     }
@@ -189,10 +194,10 @@ class EditFlowTest {
     fun saidaComAlteracaoPedeConfirmacaoESemAlteracaoNaoPergunta() {
         openEdit(grocery)
         compose.onNode(hasContentDescription("Voltar")).performSemanticsAction(SemanticsActions.OnClick)
-        waitForText("Detalhe do lançamento")
+        waitForText("Situação:")
         assert(compose.onAllNodesWithText("Descartar alterações?").fetchSemanticsNodes().isEmpty())
 
-        tap("Editar")
+        tapEdit()
         waitForText("Editar lançamento")
         waitForText("Descrição")
         replace("Descrição", "Outra $tag")
@@ -204,7 +209,7 @@ class EditFlowTest {
         compose.onNode(hasContentDescription("Voltar")).performSemanticsAction(SemanticsActions.OnClick)
         waitForText("Descartar alterações?")
         compose.onAllNodes(hasText("Descartar")).onFirst().performSemanticsAction(SemanticsActions.OnClick)
-        waitForText("Detalhe do lançamento")
+        waitForText("Situação:")
         waitForText(grocery)
     }
 
@@ -223,7 +228,8 @@ class EditFlowTest {
     @Test
     fun excluirOcorrenciaFicaNoDetalheExigeAlcanceEMostraAvisoComDesfazer() {
         openDetail(gym)
-        tap("Excluir ocorrência")
+        compose.onNode(hasContentDescription("Mais ações de", substring = true)).performClick()
+        compose.onNodeWithText("Excluir ocorrência…").performClick()
         waitForText("Excluir quais ocorrências?")
         // o botão só vale depois de escolher o alcance
         compose.onNode(hasText("Excluir") and androidx.compose.ui.test.hasClickAction()).assertIsNotEnabled()

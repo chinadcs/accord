@@ -7,6 +7,7 @@ import app.accord.FeedbackEvent
 import app.accord.R
 import app.accord.SpaceProvider
 import app.accord.core.space.AccountInfo
+import app.accord.core.space.CardInfo
 import app.accord.core.space.CategoryNode
 import app.accord.core.space.CommandId
 import app.accord.core.space.CommandResult
@@ -36,7 +37,16 @@ data class DetailData(
     val origin: app.accord.core.space.IntentionView? = null,
     /** Categorias de renda: a renda guarda a sua em [EntryDetail.income], não em `classification`. */
     val incomeCategories: List<app.accord.core.space.IncomeCategoryNode> = emptyList(),
+    /** Cartões por id, para dizer qual foi usado; vazio se a leitura falhar (o par "Cartão" some, sem inventar). */
+    val cards: Map<String, CardInfo> = emptyMap(),
 ) {
+    /** Receita avulsa ou ocorrência de renda: valor com "+" e categoria de receita. */
+    val isIncome: Boolean
+        get() = detail.income != null || detail.occurrence?.kind == app.accord.core.space.RecurrenceKind.Income
+
+    /** Numa parcela ou compra no cartão, "Editar" abre a compra inteira (spec 24). */
+    val editsPurchase: Boolean get() = detail.kind == EntryKind.CardInstallment || detail.kind == EntryKind.CardPurchase
+
     /** Despesa e renda avulsas se excluem aqui; ocorrência de série tem o alcance próprio ([canDeleteOccurrence]); estorno e quitação, outros caminhos. */
     val canDelete: Boolean
         get() = !detail.voided && detail.kind in DELETABLE
@@ -134,7 +144,10 @@ class EntryDetailViewModel(
                 // A raiz do compromisso: a compra (antes do #) ou a série (antes do :); o lançamento avulso é a própria raiz.
                 val root = detail.id.substringBefore('#').substringBefore(':')
                 val incomeCategories = (space.incomeCategories() as? QueryResult.Data)?.value.orEmpty()
-                DetailContent.Ready(DetailData(detail, categories, accounts, currentPersonId, origin = provider.originIntention(root), incomeCategories = incomeCategories))
+                val cards = (space.cards() as? QueryResult.Data)?.value?.associateBy { it.id }.orEmpty()
+                DetailContent.Ready(
+                    DetailData(detail, categories, accounts, currentPersonId, origin = provider.originIntention(root), incomeCategories = incomeCategories, cards = cards),
+                )
             }
         }
     }

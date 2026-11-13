@@ -6,6 +6,7 @@ import app.accord.ui.categoryColor
 import app.accord.ui.colorKey
 import app.accord.ui.incomeCategoryLabel
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -53,6 +54,24 @@ import app.accord.core.space.EntryKind
 import app.accord.core.space.ExtraReason
 import app.accord.core.space.RefundStatus
 import app.accord.core.space.RefundView
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import app.accord.core.Money
+import app.accord.core.space.AssignmentState
+import app.accord.core.space.BankRef
+import app.accord.core.space.CancelState
+import app.accord.core.space.Classification
+import app.accord.core.space.EntrySituation
+import app.accord.core.space.PaymentMethod
+import app.accord.core.space.RecurrenceForm
+import app.accord.core.space.RecurrenceKind
+import app.accord.ui.components.LabelValue
+import app.accord.ui.components.RowMenu
+import app.accord.ui.components.RowMenuItem
+import app.accord.ui.components.SectionHeader
 import app.accord.ui.components.AdaptiveRow
 import app.accord.ui.components.DecorativeIcon
 import app.accord.ui.components.lucideRes
@@ -121,66 +140,126 @@ fun EntryDetailScreen(
     onLinkedSubmit: () -> Unit = {},
     onLinkedClose: () -> Unit = {},
 ) {
-    Column(
-        Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
-        verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
-    ) {
-        DetailHeader(stringResource(R.string.detail_title), onBack)
-        when (content) {
-            DetailContent.Loading -> Text(stringResource(R.string.state_loading), style = MaterialTheme.typography.bodyLarge)
-            DetailContent.Failed -> {
-                Text(stringResource(R.string.state_error), style = MaterialTheme.typography.bodyLarge)
-                OutlinedButton(onClick = onRetry, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                    Text(stringResource(R.string.action_retry))
+    val ready = (content as? DetailContent.Ready)?.data
+    var choosingIcon by remember { mutableStateOf(false) }
+    val canChangeIcon = ready != null && ready.detail.kind != EntryKind.Income && ready.detail.kind != EntryKind.InvoicePayment &&
+        LocalIconActions.current != null
+    val menu = ready?.let { menuEntries(it, canChangeIcon, { choosingIcon = true }, onOpenAction, onRequestDelete, onRequestDeleteOccurrence) }.orEmpty()
+    if (choosingIcon && ready != null) ChooseIconFlow(ready.detail.id, ready.detail.description) { choosingIcon = false }
+
+    // Barra superior e inferior fixas; só o miolo rola (ADR 0089, item 6).
+    Column(Modifier.fillMaxSize().padding(padding)) {
+        Box(Modifier.fillMaxWidth().padding(start = AccordSpacing.s4, end = AccordSpacing.s4, top = AccordSpacing.s4, bottom = AccordSpacing.s2)) {
+            val title = ready?.let { detailTitle(it.detail) } ?: stringResource(R.string.detail_title)
+            DetailHeader(
+                title, onBack,
+                action = if (menu.isEmpty()) null else ({
+                    RowMenu(title) { close ->
+                        menu.forEach { entry -> RowMenuItem(entry.label, entry.destructive) { close(); entry.onClick() } }
+                    }
+                }),
+            )
+        }
+        Column(
+            Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = AccordSpacing.s4, vertical = AccordSpacing.s2),
+            verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
+        ) {
+            when (content) {
+                DetailContent.Loading -> Text(stringResource(R.string.state_loading), style = MaterialTheme.typography.bodyLarge)
+                DetailContent.Failed -> {
+                    Text(stringResource(R.string.state_error), style = MaterialTheme.typography.bodyLarge)
+                    OutlinedButton(onClick = onRetry, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                        Text(stringResource(R.string.action_retry))
+                    }
+                }
+                DetailContent.NotFound -> {
+                    Text(stringResource(R.string.detail_not_found_title), style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(R.string.detail_not_found_body), style = MaterialTheme.typography.bodyLarge)
+                    OutlinedButton(onClick = onBack, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                        Text(stringResource(R.string.action_back))
+                    }
+                }
+                is DetailContent.Ready -> {
+                    app.accord.ui.intentions.OriginIntentionLink(content.data.origin, onOpenIntention)
+                    ReadyDetail(
+                        content.data, menu, if (canChangeIcon) ({ choosingIcon = true }) else null,
+                        onOpenAction, onOpenCommitment, onToggleSettle, onAdjustSettle,
+                    )
                 }
             }
-            DetailContent.NotFound -> {
-                Text(stringResource(R.string.detail_not_found_title), style = MaterialTheme.typography.titleMedium)
-                Text(stringResource(R.string.detail_not_found_body), style = MaterialTheme.typography.bodyLarge)
-                OutlinedButton(onClick = onBack, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
-                    Text(stringResource(R.string.action_back))
-                }
-            }
-            is DetailContent.Ready -> {
-                app.accord.ui.intentions.OriginIntentionLink(content.data.origin, onOpenIntention)
-                ReadyDetail(content.data, onEdit, onRequestDelete, onRequestDeleteOccurrence, onOpenAction, onOpenCommitment, onToggleSettle, onAdjustSettle)
+        }
+        if (ready != null && ready.canEdit) {
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Button(
+                onClick = { onEdit(ready.detail.id) },
+                modifier = Modifier.fillMaxWidth().padding(AccordSpacing.s4).heightIn(min = AccordSpacing.touchMin),
+            ) {
+                Text(stringResource(if (ready.editsPurchase) R.string.detail_edit_purchase else R.string.detail_edit))
             }
         }
     }
-    DeleteDialogs(delete, (content as? DetailContent.Ready)?.data, onCancelDelete, onConfirmDelete, onConfirmDeleteOccurrence, onConfirmDeleteRealized)
+    DeleteDialogs(delete, ready, onCancelDelete, onConfirmDelete, onConfirmDeleteOccurrence, onConfirmDeleteRealized)
     linked?.let { LinkedActionDialog(it, onLinkedChange, onLinkedSubmit, onLinkedClose) }
+}
+
+/** Título pelo tipo (spec 24); "Detalhe do lançamento" só enquanto não há lançamento (carregando, falha, não encontrado). */
+@Composable
+private fun detailTitle(d: EntryDetail): String = stringResource(
+    when (d.kind) {
+        EntryKind.DirectPayment -> R.string.detail_title_expense
+        EntryKind.CardInstallment -> if ((d.purchase?.installments?.size ?: 1) > 1) R.string.detail_title_installment else R.string.detail_title_card_purchase
+        EntryKind.CardPurchase -> R.string.detail_title_card_purchase
+        EntryKind.Boleto -> R.string.detail_title_boleto
+        EntryKind.Income -> R.string.detail_title_income
+        EntryKind.RecurrenceOccurrence ->
+            if (d.occurrence?.kind == RecurrenceKind.Income) R.string.detail_title_recurring_income else R.string.detail_title_recurring_expense
+        EntryKind.Refund -> R.string.detail_title_refund
+        EntryKind.InvoicePayment -> R.string.detail_title_invoice_payment
+    },
+)
+
+/** Item do ⋮; as mesmas ações vão como ações personalizadas do herói para o TalkBack. */
+private class MenuEntry(val label: String, val destructive: Boolean, val onClick: () -> Unit)
+
+/** Ordem do Alvo: Trocar ícone, Registrar estorno, Corrigir fatura, Pedir cancelamento e, por último, a exclusão. */
+@Composable
+private fun menuEntries(
+    data: DetailData,
+    canChangeIcon: Boolean,
+    onChangeIcon: () -> Unit,
+    onOpenAction: (LinkedAction) -> Unit,
+    onRequestDelete: () -> Unit,
+    onRequestDeleteOccurrence: () -> Unit,
+): List<MenuEntry> {
+    val d = data.detail
+    val installments = d.purchase?.installments?.size ?: 0
+    return buildList {
+        if (canChangeIcon) add(MenuEntry(stringResource(R.string.detail_menu_change_icon), false, onChangeIcon))
+        data.actions.filterIsInstance<LinkedAction.NewRefund>().forEach { add(MenuEntry(stringResource(R.string.linked_refund), false) { onOpenAction(it) }) }
+        data.actions.filterIsInstance<LinkedAction.OccurrenceInvoice>().filter { it.confirmed }
+            .forEach { add(MenuEntry(stringResource(R.string.linked_invoice_correct), false) { onOpenAction(it) }) }
+        data.actions.filterIsInstance<LinkedAction.Cancellation>().filter { !it.nonCharge }
+            .forEach { add(MenuEntry(stringResource(R.string.linked_cancel_request), false) { onOpenAction(it) }) }
+        if (data.canDelete) {
+            val label = if (installments > 1) stringResource(R.string.detail_menu_delete_purchase, installments) else stringResource(R.string.detail_menu_delete)
+            add(MenuEntry(label, true, onRequestDelete))
+        }
+        if (data.canDeleteOccurrence) add(MenuEntry(stringResource(R.string.detail_menu_delete_occurrence), true, onRequestDeleteOccurrence))
+    }
 }
 
 @Composable
 private fun ReadyDetail(
     data: DetailData,
-    onEdit: (String) -> Unit,
-    onRequestDelete: () -> Unit,
-    onRequestDeleteOccurrence: () -> Unit,
+    menu: List<MenuEntry>,
+    onChangeIcon: (() -> Unit)?,
     onOpenAction: (LinkedAction) -> Unit,
     onOpenCommitment: (String) -> Unit,
     onToggleSettle: (Boolean) -> Unit,
     onAdjustSettle: () -> Unit,
 ) {
     val d = data.detail
-    var choosingIcon by remember { mutableStateOf(false) }
-    if (choosingIcon) ChooseIconFlow(d.id, d.description) { choosingIcon = false }
-    Surface(color = Accord.colors.financeSurface, contentColor = Accord.colors.onFinanceSurface, shape = MaterialTheme.shapes.large) {
-        Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
-                EntryIdentityIcon(
-                    d.description,
-                    allowVendor = d.kind != EntryKind.Income && d.kind != EntryKind.InvoicePayment,
-                    entryId = d.id,
-                    onChange = if (LocalIconActions.current != null) ({ choosingIcon = true }) else null,
-                )
-                Text(d.description, style = MaterialTheme.typography.titleLarge,
-                    color = Accord.colors.onFinanceSurface, modifier = Modifier.weight(1f).semantics { heading() })
-            }
-            Text(d.amount.format(), style = Accord.typography.amountHero,
-                color = Accord.colors.onFinanceSurface)
-        }
-    }
+    Hero(data, menu, onChangeIcon)
     if (d.voided) {
         Surface(color = MaterialTheme.colorScheme.errorContainer, shape = MaterialTheme.shapes.small) {
             Row(Modifier.fillMaxWidth().padding(AccordSpacing.s3), horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
@@ -189,187 +268,271 @@ private fun ReadyDetail(
             }
         }
     }
-    AccordCard {
-        Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-            DatesAndAmounts(d)
 
-            val category = (d.classification as? app.accord.core.space.Classification.Category)?.id?.let(data.categories::get)
-            val incomeCategoryId = d.income?.incomeCategoryId ?: d.occurrence?.incomeCategoryId
-            val incomeCategory = incomeCategoryId?.let { id -> data.incomeCategories.firstOrNull { it.id == id } }
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                if (d.income != null || d.occurrence?.kind == app.accord.core.space.RecurrenceKind.Income) {
-                    // Renda tem categoria própria (ADR 0038); sem escolha, "a classificar" segue valendo.
-                    DecorativeIcon(lucideRes(incomeCategory?.iconKey ?: "tag"), tint = incomeCategory?.let { categoryColor(it.colorKey(data.incomeCategories)) } ?: categoryColor(data.categories, null))
-                    Text(
-                        incomeCategory?.let { incomeCategoryLabel(it, data.incomeCategories) } ?: stringResource(R.string.detail_category_unset),
-                        style = MaterialTheme.typography.bodyLarge,
-                    )
-                } else {
-                    DecorativeIcon(lucideRes(category?.iconKey ?: "tag"), tint = categoryColor(data.categories, category?.id))
-                    Text(category?.name ?: stringResource(R.string.detail_category_unset), style = MaterialTheme.typography.bodyLarge)
-                }
-            }
-            d.method?.let { Text(it.label(), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            if (d.method == app.accord.core.space.PaymentMethod.Cash) {
-                Text(stringResource(R.string.balance_wallet), style = MaterialTheme.typography.bodyMedium)
-            }
-            d.accountId?.let { id ->
-                data.accounts[id]?.let { account ->
-                    val bank = when (val b = account.bank) {
-                        is app.accord.core.space.BankRef.Catalog -> b.name
-                        is app.accord.core.space.BankRef.Other -> b.name
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-                        BankLogo(account.bank, size = 32.dp)
-                        Text(stringResource(R.string.detail_account, "$bank · ${account.nickname}"), style = MaterialTheme.typography.bodyMedium)
-                    }
-                }
-            }
-
-            val who = if (d.authorId == data.currentPersonId) stringResource(R.string.who_you) else stringResource(R.string.who_other)
-            d.origin?.let { Text(stringResource(R.string.detail_registered_by, who, it.label()), style = MaterialTheme.typography.bodyMedium) }
-            d.spentBy?.let {
-                val spender = if (it == data.currentPersonId) stringResource(R.string.who_you) else stringResource(R.string.who_other)
-                Text(stringResource(R.string.detail_spent_by, spender), style = MaterialTheme.typography.bodyMedium)
-            }
-            // Antes da sincronização (S2), o item está "salvo no aparelho" e nunca "sincronizado".
-            Text(stringResource(R.string.detail_status, d.sync.label()), style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+    // Ação do momento, sob o herói: o interruptor, o que resta de pagamento, a fatura a conferir e a confirmação de não cobrança.
+    data.settleSwitch?.let { SettleSwitchCard(it, d.amount, onToggleSettle, onAdjustSettle) }
+    data.actions.filterIsInstance<LinkedAction.Settle>().forEach { action ->
+        OutlinedButton(onClick = { onOpenAction(action) }, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+            Text(actionLabel(action))
         }
     }
+    data.actions.filterIsInstance<LinkedAction.OccurrenceInvoice>().filter { !it.confirmed }.forEach { action ->
+        Surface(color = Accord.colors.attentionContainer, shape = MaterialTheme.shapes.small) {
+            Column(Modifier.fillMaxWidth().padding(AccordSpacing.s3), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+                Text(
+                    stringResource(R.string.detail_invoice_estimated, action.estimated.format(DETAIL_INVOICE_MONTH)),
+                    style = MaterialTheme.typography.bodyLarge, color = Accord.colors.onAttentionContainer,
+                )
+                TextButton(onClick = { onOpenAction(action) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                    Text(actionLabel(action))
+                }
+            }
+        }
+    }
+    data.actions.filterIsInstance<LinkedAction.Cancellation>().filter { it.nonCharge }.forEach { action ->
+        OutlinedButton(onClick = { onOpenAction(action) }, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+            Text(actionLabel(action))
+        }
+    }
+
+    DetailsCard(data)
 
     d.purchase?.installments?.let { schedule ->
         val flags = schedule.flatMap { i ->
             listOfNotNull(
-                app.accord.core.space.EntrySituation.CancelRequested.takeIf { i.cancel == app.accord.core.space.CancelState.CancelRequested },
-                app.accord.core.space.EntrySituation.Cancelled.takeIf { i.cancel == app.accord.core.space.CancelState.Cancelled },
-                app.accord.core.space.EntrySituation.InvoiceLinkToConfirm.takeIf { i.assignment == app.accord.core.space.AssignmentState.ToConfirm },
+                EntrySituation.CancelRequested.takeIf { i.cancel == CancelState.CancelRequested },
+                EntrySituation.Cancelled.takeIf { i.cancel == CancelState.Cancelled },
+                EntrySituation.InvoiceLinkToConfirm.takeIf { i.assignment == AssignmentState.ToConfirm },
             )
         }.distinct()
         if (flags.isNotEmpty()) SituationTags(flags)
     }
 
-    if (d.refunds.isNotEmpty()) RefundsBlock(d.refunds)
+    if (d.kind == EntryKind.CardInstallment || d.kind == EntryKind.CardPurchase) {
+        InstallmentsSection(d, onSeeAll = { onOpenCommitment(d.id) })
+    }
+    if (d.refunds.isNotEmpty()) RefundsBlock(d.refunds, data.actions.filterIsInstance<LinkedAction.ConfirmRefundOf>().map { it.refund.id }.toSet()) { id ->
+        data.actions.filterIsInstance<LinkedAction.ConfirmRefundOf>().firstOrNull { it.refund.id == id }?.let(onOpenAction)
+    }
 
-    data.settleSwitch?.let { SettleSwitchCard(it, data.detail.amount, onToggleSettle, onAdjustSettle) }
-
-    LinkedActionsBlock(data.actions, onOpenAction)
-
-    // Parcela, ocorrência de série e boleto previsto são compromissos com cronograma próprio.
-    if (!d.voided && d.kind in setOf(EntryKind.CardInstallment, EntryKind.RecurrenceOccurrence, EntryKind.Boleto)) {
+    if (!d.voided && d.kind == EntryKind.RecurrenceOccurrence) {
         OutlinedButton(onClick = { onOpenCommitment(d.id) }, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
-            Text(stringResource(R.string.detail_see_commitment))
+            Text(stringResource(R.string.detail_see_recurrence))
+        }
+    }
+    if (!d.voided && d.kind == EntryKind.Boleto) {
+        OutlinedButton(onClick = { onOpenCommitment(d.id) }, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+            Text(stringResource(R.string.detail_see_boleto))
         }
     }
 
-    if (!d.voided) {
-        if (data.canEdit) {
-            Button(onClick = { onEdit(d.id) }, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
-                Text(stringResource(R.string.detail_edit))
+    // Antes da sincronização (S2), o item está "salvo no aparelho" e nunca "sincronizado".
+    Text(stringResource(R.string.detail_status, d.sync.label()), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+/** Herói: o que o valor é ("Parcela 2 de 6", "Compra de R$ 1.200,00 em 6×", "Ocorrência de …") e a situação de pagamento. */
+@Composable
+private fun Hero(data: DetailData, menu: List<MenuEntry>, onChangeIcon: (() -> Unit)?) {
+    val d = data.detail
+    val amount = when {
+        d.kind == EntryKind.InvoicePayment -> d.amount.format()
+        data.isIncome || d.kind == EntryKind.Refund -> "+" + d.amount.format()
+        d.amount.cents > 0 -> Money(-d.amount.cents).format()
+        else -> d.amount.format()
+    }
+    val purchase = d.purchase
+    val count = purchase?.installments?.size ?: 0
+    val number = d.id.substringAfter('#', "").toIntOrNull()
+    val lines = buildList {
+        when (d.kind) {
+            EntryKind.CardInstallment -> if (purchase != null && count > 1) {
+                number?.let { add(stringResource(R.string.detail_hero_installment_of, it, count)) }
+                add(stringResource(R.string.detail_hero_purchase_in, purchase.total.format(), count))
+            }
+            EntryKind.CardPurchase -> if (purchase != null && count > 1) {
+                add(stringResource(R.string.detail_hero_installments_of, count, purchase.installments.first().amount.format()))
+            }
+            EntryKind.RecurrenceOccurrence -> (d.dueDate ?: d.occurrence?.budgetMonth?.atDay(1))?.let {
+                add(stringResource(R.string.detail_hero_occurrence_of, it.fullLabel()))
+            }
+            else -> Unit
+        }
+    }
+    val settled = d.settledDate
+    val status = when {
+        d.voided -> null
+        d.kind == EntryKind.Boleto -> settled?.let { stringResource(R.string.detail_hero_paid_on, it.fullLabel()) } ?: stringResource(R.string.entries_status_to_pay)
+        d.kind == EntryKind.Income -> settled?.let { stringResource(R.string.detail_hero_received_on, it.fullLabel()) } ?: stringResource(R.string.entries_status_expected)
+        d.kind == EntryKind.RecurrenceOccurrence && d.occurrence?.form == RecurrenceForm.OffCard -> {
+            val received = d.occurrence?.kind == RecurrenceKind.Income
+            when {
+                d.occurrence?.paid == true && settled != null ->
+                    stringResource(if (received) R.string.detail_hero_received_on else R.string.detail_hero_paid_on, settled.fullLabel())
+                else -> stringResource(if (received) R.string.entries_status_expected else R.string.entries_status_to_pay)
             }
         }
-        if (data.canDelete) {
-            OutlinedButton(onClick = onRequestDelete, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
-                Text(stringResource(R.string.detail_delete), color = MaterialTheme.colorScheme.error)
+        else -> null
+    }
+    val actions = menu.map { entry -> CustomAccessibilityAction(entry.label) { entry.onClick(); true } }
+    Surface(
+        color = Accord.colors.financeSurface, contentColor = Accord.colors.onFinanceSurface, shape = MaterialTheme.shapes.large,
+        modifier = Modifier.semantics { customActions = actions },
+    ) {
+        Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
+                EntryIdentityIcon(
+                    d.description,
+                    allowVendor = d.kind != EntryKind.Income && d.kind != EntryKind.InvoicePayment,
+                    entryId = d.id,
+                    onChange = onChangeIcon,
+                )
+                Text(d.description, style = MaterialTheme.typography.titleLarge, color = Accord.colors.onFinanceSurface, modifier = Modifier.weight(1f).semantics { heading() })
             }
+            Text(amount, style = Accord.typography.amountHero, color = Accord.colors.onFinanceSurface)
+            lines.forEach { Text(it, style = MaterialTheme.typography.bodyLarge, color = Accord.colors.onFinanceSurface) }
+            status?.let { Text(it, style = MaterialTheme.typography.labelLarge, color = Accord.colors.onFinanceSurface) }
         }
-        if (data.canDeleteOccurrence) {
-            OutlinedButton(onClick = onRequestDeleteOccurrence, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
-                Text(stringResource(R.string.edit_delete_occurrence), color = MaterialTheme.colorScheme.error)
+    }
+}
+
+/** Pares rótulo/valor por tipo (spec 24); cada par é lido como "rótulo, valor". */
+@Composable
+private fun DetailsCard(data: DetailData) {
+    val d = data.detail
+    val purchase = d.purchase
+    val number = d.id.substringAfter('#', "").toIntOrNull()
+    val installment = number?.let { n -> purchase?.installments?.firstOrNull { it.number == n } } ?: purchase?.installments?.firstOrNull()
+    val receiving = data.isIncome
+    AccordCard {
+        Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3)) {
+            SectionHeader(stringResource(R.string.detail_section_details))
+            when (d.kind) {
+                EntryKind.CardInstallment, EntryKind.CardPurchase -> {
+                    d.purchaseDate?.let { LabelValue(stringResource(R.string.detail_l_purchase_date), it.fullLabel()) }
+                    installment?.let { LabelValue(stringResource(R.string.detail_l_invoice), it.invoiceMonth.format(DETAIL_INVOICE_MONTH)) }
+                    d.dueDate?.let { LabelValue(stringResource(R.string.detail_l_due), it.fullLabel()) }
+                }
+                EntryKind.DirectPayment -> d.purchaseDate?.let { LabelValue(stringResource(R.string.detail_l_date), it.fullLabel()) }
+                EntryKind.Boleto -> {
+                    d.dueDate?.let { LabelValue(stringResource(R.string.detail_l_due), it.fullLabel()) }
+                    d.settledDate?.let { LabelValue(stringResource(R.string.detail_l_paid), it.fullLabel()) }
+                    d.boleto?.let { b ->
+                        LabelValue(stringResource(R.string.detail_l_budget_month), b.budgetMonth.label())
+                        if (b.paidAmount != null && b.paidAmount != b.expectedAmount) {
+                            LabelValue(stringResource(R.string.detail_l_expected_value), b.expectedAmount.format())
+                            LabelValue(stringResource(R.string.detail_l_effective_value), b.paidAmount!!.format())
+                        }
+                    }
+                }
+                EntryKind.Income -> {
+                    d.dueDate?.let { LabelValue(stringResource(R.string.detail_l_expected_date), it.fullLabel()) }
+                    d.settledDate?.let { LabelValue(stringResource(R.string.detail_l_received), it.fullLabel()) }
+                    d.income?.let { i ->
+                        if (i.receivedAmount != null && i.receivedAmount != i.expectedAmount) {
+                            LabelValue(stringResource(R.string.detail_l_expected_value), i.expectedAmount.format())
+                            LabelValue(stringResource(R.string.detail_l_effective_value), i.receivedAmount!!.format())
+                        }
+                    }
+                }
+                EntryKind.RecurrenceOccurrence -> {
+                    d.dueDate?.let { LabelValue(stringResource(R.string.detail_l_due), it.fullLabel()) }
+                    d.settledDate?.let { LabelValue(stringResource(if (receiving) R.string.detail_l_received else R.string.detail_l_paid), it.fullLabel()) }
+                }
+                EntryKind.Refund, EntryKind.InvoicePayment -> d.settledDate?.let { LabelValue(stringResource(R.string.detail_l_date), it.fullLabel()) }
+            }
+
+            if (d.kind != EntryKind.InvoicePayment) {
+                if (receiving) {
+                    val incomeCategoryId = d.income?.incomeCategoryId ?: d.occurrence?.incomeCategoryId
+                    val incomeCategory = incomeCategoryId?.let { id -> data.incomeCategories.firstOrNull { it.id == id } }
+                    LabelValue(
+                        stringResource(R.string.detail_l_category),
+                        incomeCategory?.let { incomeCategoryLabel(it, data.incomeCategories) } ?: stringResource(R.string.detail_category_none),
+                    )
+                } else {
+                    val category = (d.classification as? Classification.Category)?.id?.let(data.categories::get)
+                    LabelValue(stringResource(R.string.detail_l_category), category?.name ?: stringResource(R.string.situation_to_classify))
+                }
+            }
+            if (d.method != null && d.method != PaymentMethod.Card) LabelValue(stringResource(R.string.detail_l_method), d.method!!.label())
+            d.cardId?.let { id -> data.cards[id]?.let { LabelValue(stringResource(R.string.detail_l_card), it.nickname) } }
+            if (d.method == PaymentMethod.Cash) LabelValue(stringResource(R.string.detail_l_account), stringResource(R.string.balance_wallet))
+            d.accountId?.let { id ->
+                data.accounts[id]?.let { account ->
+                    val bank = when (val b = account.bank) {
+                        is BankRef.Catalog -> b.name
+                        is BankRef.Other -> b.name
+                    }
+                    val value = "$bank · ${account.nickname}"
+                    val description = stringResource(R.string.detail_l_account) + ", " + value
+                    Row(
+                        Modifier.fillMaxWidth().clearAndSetSemantics { contentDescription = description },
+                        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2),
+                    ) {
+                        BankLogo(account.bank, size = 32.dp)
+                        Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+                            Text(stringResource(R.string.detail_l_account), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(value, style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
+                }
+            }
+
+            val who = if (d.authorId == data.currentPersonId) stringResource(R.string.who_you) else stringResource(R.string.who_other)
+            d.origin?.let { LabelValue(stringResource(R.string.detail_l_registered_by), stringResource(R.string.detail_registered_value, who, it.label())) }
+            d.spentBy?.let {
+                val spender = if (it == data.currentPersonId) stringResource(R.string.who_you) else stringResource(R.string.who_other)
+                LabelValue(stringResource(R.string.detail_l_spent_by), spender)
             }
         }
     }
 }
 
-/** Data da compra, vencimento/fatura e pagamento são campos diferentes, conforme o tipo (spec 08 §4). */
+/** Parcelas ao redor da atual (anterior, esta e próxima); a atual leva o texto "Esta", nunca só um marcador. */
 @Composable
-private fun DatesAndAmounts(d: EntryDetail) {
-    val body = MaterialTheme.typography.bodyMedium
-    val purchase = d.purchase
-    when (d.kind) {
-        EntryKind.CardInstallment -> {
-            val number = d.id.substringAfter('#').toIntOrNull()
-            val count = purchase?.installments?.size
-            if (purchase != null && count != null) {
-                val each = purchase.installments.first().amount
-                if (count > 1) {
-                    Text(stringResource(R.string.detail_total_and_installments, d.purchaseDate?.fullLabel().orEmpty(), count, each.format()), style = body)
-                } else {
-                    d.purchaseDate?.let { Text(stringResource(R.string.detail_purchase_on, it.fullLabel()), style = body) }
+private fun InstallmentsSection(d: EntryDetail, onSeeAll: () -> Unit) {
+    val schedule = d.purchase?.installments ?: return
+    if (schedule.isEmpty()) return
+    val current = d.id.substringAfter('#', "").toIntOrNull()
+    val at = schedule.indexOfFirst { it.number == current }.coerceAtLeast(0)
+    val first = (at - 1).coerceAtLeast(0).coerceAtMost((schedule.size - 3).coerceAtLeast(0))
+    AccordCard {
+        Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+            SectionHeader(stringResource(R.string.detail_section_installments))
+            schedule.drop(first).take(3).forEach { i ->
+                val here = i.number == current
+                val notes = listOfNotNull(
+                    stringResource(R.string.detail_installment_here_tag).takeIf { here },
+                    EntrySituation.Cancelled.label().takeIf { i.cancel == CancelState.Cancelled },
+                    EntrySituation.CancelRequested.label().takeIf { i.cancel == CancelState.CancelRequested },
+                    EntrySituation.InvoiceLinkToConfirm.label().takeIf { i.assignment == AssignmentState.ToConfirm },
+                )
+                val head = stringResource(R.string.detail_installment_row, i.number, schedule.size, i.invoiceMonth.format(DETAIL_INVOICE_MONTH))
+                val line = (listOf(head, i.amount.format()) + notes).joinToString(", ")
+                Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = line }) {
+                    AdaptiveRow(
+                        start = { Text(head, style = MaterialTheme.typography.bodyLarge) },
+                        end = { Text(i.amount.format(), style = Accord.typography.amountRow, textAlign = TextAlign.End) },
+                    )
+                    if (notes.isNotEmpty()) Text(notes.joinToString(" · "), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Text(stringResource(R.string.detail_purchase_total, purchase.total.format()), style = body)
-                val installment = number?.let { installmentNumber -> purchase.installments.firstOrNull { it.number == installmentNumber } }
-                if (count > 1 && number != null) {
-                    Text(stringResource(R.string.detail_installment_here, number, count, d.amount.format()), style = MaterialTheme.typography.bodyLarge)
-                }
-                installment?.let { InvoiceIndicator(it.invoiceMonth) }
             }
-            d.dueDate?.let { Text(stringResource(R.string.detail_due_on, it.fullLabel()), style = body) }
-        }
-        EntryKind.CardPurchase -> {
-            d.purchaseDate?.let { Text(stringResource(R.string.detail_purchase_on, it.fullLabel()), style = body) }
-            purchase?.let { p ->
-                if (p.installments.size > 1) {
-                    p.installments.firstOrNull()?.let { first ->
-                        Text(stringResource(R.string.detail_installment_count, p.installments.size, first.amount.format()), style = body)
-                    }
-                }
-                p.installments.firstOrNull()?.let { InvoiceIndicator(it.invoiceMonth) }
-            }
-        }
-        EntryKind.DirectPayment ->
-            d.purchaseDate?.let { Text(stringResource(R.string.detail_movement_on, it.fullLabel()), style = body) }
-        EntryKind.Boleto -> {
-            d.dueDate?.let { Text(stringResource(R.string.detail_due_on, it.fullLabel()), style = body) }
-            d.settledDate?.let { Text(stringResource(R.string.detail_paid_on, it.fullLabel()), style = body) }
-            d.boleto?.let { b ->
-                Text(stringResource(R.string.detail_budget_month, b.budgetMonth.label()), style = body)
-                if (b.paidAmount != null && b.paidAmount != b.expectedAmount) {
-                    Text(stringResource(R.string.detail_expected_value, b.expectedAmount.format()), style = body)
-                    Text(stringResource(R.string.detail_effective_value, b.paidAmount!!.format()), style = body)
+            if (!d.voided) {
+                TextButton(onClick = onSeeAll, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                    Text(stringResource(R.string.detail_see_installments))
                 }
             }
         }
-        EntryKind.Income -> {
-            d.dueDate?.let { Text(stringResource(R.string.detail_expected_on, it.fullLabel()), style = body) }
-            d.settledDate?.let { Text(stringResource(R.string.detail_received_on, it.fullLabel()), style = body) }
-            d.income?.let { i ->
-                if (i.receivedAmount != null && i.receivedAmount != i.expectedAmount) {
-                    Text(stringResource(R.string.detail_expected_value, i.expectedAmount.format()), style = body)
-                    Text(stringResource(R.string.detail_effective_value, i.receivedAmount!!.format()), style = body)
-                }
-            }
-        }
-        EntryKind.RecurrenceOccurrence -> {
-            d.dueDate?.let { Text(stringResource(R.string.detail_due_on, it.fullLabel()), style = body) }
-            d.settledDate?.let { Text(stringResource(R.string.detail_paid_on, it.fullLabel()), style = body) }
-        }
-        EntryKind.Refund, EntryKind.InvoicePayment ->
-            d.settledDate?.let { Text(stringResource(R.string.detail_paid_on, it.fullLabel()), style = body) }
     }
 }
 
 private val DETAIL_INVOICE_MONTH = DateTimeFormatter.ofPattern("MM/yy", Locale.forLanguageTag("pt-BR"))
 
 @Composable
-private fun InvoiceIndicator(month: YearMonth) {
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerHighest, shape = MaterialTheme.shapes.small) {
-        Row(
-            Modifier.padding(horizontal = AccordSpacing.s2, vertical = AccordSpacing.s1),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
-        ) {
-            DecorativeIcon(Lucide.drawable.lucide_ic_credit_card)
-            Text(stringResource(R.string.detail_invoice, month.format(DETAIL_INVOICE_MONTH)), style = MaterialTheme.typography.labelMedium)
-        }
-    }
-}
-
-@Composable
-private fun RefundsBlock(refunds: List<RefundView>) {
+private fun RefundsBlock(refunds: List<RefundView>, confirmable: Set<String>, onConfirm: (String) -> Unit) {
     AccordCard {
         Column(Modifier.fillMaxWidth().padding(AccordSpacing.s4), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
-            Text(stringResource(R.string.detail_refunds), style = MaterialTheme.typography.titleMedium)
+            SectionHeader(stringResource(R.string.detail_refunds))
             refunds.forEach { r ->
                 val state = if (r.status == RefundStatus.Confirmed) {
                     stringResource(R.string.refund_confirmed, r.date?.fullLabel().orEmpty())
@@ -380,6 +543,11 @@ private fun RefundsBlock(refunds: List<RefundView>) {
                     start = { Text(state, style = MaterialTheme.typography.bodyMedium) },
                     end = { Text(r.amount.format(), style = Accord.typography.amountRow, textAlign = TextAlign.End) },
                 )
+                if (r.id in confirmable) {
+                    TextButton(onClick = { onConfirm(r.id) }, modifier = Modifier.heightIn(min = AccordSpacing.touchMin)) {
+                        Text(stringResource(R.string.detail_refund_confirm))
+                    }
+                }
             }
         }
     }
