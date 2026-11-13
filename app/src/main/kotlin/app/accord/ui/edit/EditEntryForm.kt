@@ -4,19 +4,22 @@ import app.accord.core.Money
 import app.accord.core.MoneyParse
 import app.accord.core.RecurrenceFields
 import app.accord.core.RecurrenceScope
+import app.accord.core.space.ChangePaymentMethod
 import app.accord.core.space.Classification
 import app.accord.core.space.Command
 import app.accord.core.space.CorrectEntry
+import app.accord.core.space.DirectPaymentKind
 import app.accord.core.space.EditRecurrence
 import app.accord.core.space.EntryDetail
 import app.accord.core.space.EntryKind
+import app.accord.core.space.Origin
 import app.accord.core.space.PaymentMethod
 import app.accord.core.space.RecurrenceKind
 import app.accord.ui.register.FormError
 import java.time.LocalDate
 
 /** Campos editáveis na ordem visual; o foco vai para o primeiro com erro. */
-enum class EditField { Description, Amount, Date, Category, IncomeCategory, Account, Scope }
+enum class EditField { Amount, Description, Category, IncomeCategory, Date, Method, Account, Scope }
 
 /** O que a edição pode alterar em cada tipo de lançamento (S1 §4.2); o resto fica fixo e explicado na tela. */
 enum class EditTarget { Direct, CardPurchase, Boleto, Income, Occurrence }
@@ -44,7 +47,22 @@ data class EditOriginal(
     val incomeCategoryId: String? = null,
     /** Ocorrência de série de renda: o formulário pede a categoria de renda, nunca a de despesa. */
     val incomeSeries: Boolean = false,
+    /** Compra no cartão: o cartão, só para mostrar e para "excluir e registrar de novo". */
+    val cardId: String? = null,
+    /** Lançamento importado não troca a forma de pagamento por aqui (ADR 0029). */
+    val imported: Boolean = false,
+    /** Ocorrência de série: a data dela, só leitura ("definida pela recorrência"). */
+    val scheduledDate: LocalDate? = null,
 ) {
+    /** Pix, débito e dinheiro trocam entre si mantendo a identidade; cartão, boleto, renda, recorrência e importados não. */
+    val methodEditable: Boolean
+        get() = target == EditTarget.Direct && !imported && method in SWITCHABLE
+
+    /** A conta vale enquanto a forma escolhida for Pix ou débito; dinheiro não tem conta. */
+    fun accountEditableFor(chosen: PaymentMethod?): Boolean =
+        if (target == EditTarget.Direct) chosen == PaymentMethod.Pix || chosen == PaymentMethod.Debit else accountEditable
+
+
     val incomeCategoryEditable: Boolean get() = target == EditTarget.Income || (target == EditTarget.Occurrence && incomeSeries)
     val amountEditable: Boolean get() = !(target == EditTarget.CardPurchase && installments > 1)
     val categoryEditable: Boolean get() = target != EditTarget.Income && !incomeSeries
@@ -58,6 +76,8 @@ data class EditOriginal(
     val needsScope: Boolean get() = target == EditTarget.Occurrence
 
     companion object {
+        private val SWITCHABLE = setOf(PaymentMethod.Pix, PaymentMethod.Debit, PaymentMethod.Cash)
+
         /** Lançamentos que a tela de edição sabe corrigir; estorno e quitação têm outros caminhos. */
         fun of(detail: EntryDetail): EditOriginal? {
             if (detail.voided) return null
@@ -65,14 +85,14 @@ data class EditOriginal(
             return when (detail.kind) {
                 EntryKind.DirectPayment -> EditOriginal(
                     detail.id, EditTarget.Direct, detail.description, categoryId, detail.purchaseDate, detail.amount,
-                    detail.accountId, detail.revision, method = detail.method,
+                    detail.accountId, detail.revision, method = detail.method, imported = detail.origin == Origin.Import,
                 )
                 EntryKind.CardPurchase, EntryKind.CardInstallment -> {
                     val purchase = detail.purchase ?: return null
                     EditOriginal(
                         purchase.id, EditTarget.CardPurchase, purchase.description,
                         (purchase.classification as? Classification.Category)?.id, purchase.purchaseDate, purchase.total,
-                        null, purchase.revision, installments = purchase.installments.size,
+                        null, purchase.revision, installments = purchase.installments.size, cardId = detail.cardId,
                     )
                 }
                 EntryKind.Boleto -> EditOriginal(
@@ -89,7 +109,7 @@ data class EditOriginal(
                     EditOriginal(
                         detail.id, EditTarget.Occurrence, o.description, o.categoryId, null, o.expectedAmount, o.accountId,
                         detail.revision, recurrenceId = o.recurrenceId, occurrence = o.number, paid = o.paid,
-                        incomeSeries = o.kind == RecurrenceKind.Income, incomeCategoryId = o.incomeCategoryId,
+                        incomeSeries = o.kind == RecurrenceKind.Income, incomeCategoryId = o.incomeCategoryId, scheduledDate = detail.dueDate,
                     )
                 }
                 EntryKind.Refund, EntryKind.InvoicePayment -> null
@@ -108,9 +128,15 @@ data class EditForm(
     /** Alcance de uma recorrência; nulo até a pessoa escolher (sem opção pré-selecionada). */
     val scope: RecurrenceScope? = null,
     val incomeCategoryId: String? = null,
+    /** Forma de pagamento escolhida (só Pix, débito e dinheiro); nula onde a troca não existe. */
+    val method: PaymentMethod? = null,
 ) {
     sealed interface Built {
-        data class Ok(val command: Command, val changed: Boolean) : Built
+        /**
+         * [command] corrige os campos; [methodChange] troca a forma e vai antes dele, em outra operação (ADR 0029). [changed] vale para
+         * qualquer um dos dois; [fieldsChanged] só para o [command].
+         */
+        data class Ok(val command: Command, val changed: Boolean, val methodChange: ChangePaymentMethod? = null, val fieldsChanged: Boolean = changed) : Built
         data class Invalid(val errors: Map<EditField, FormError>) : Built
     }
 
@@ -137,7 +163,13 @@ data class EditForm(
         val newDescription = description.trim().takeIf { it != original.description }
         val newAmount = amount.takeIf { it != original.amount }
         val newCategory = categoryId.takeIf { original.categoryEditable && it != original.categoryId }
-        val newAccount = accountId.takeIf { original.accountEditable && it != original.accountId }
+        val methodChanged = original.methodEditable && method != null && method != original.method
+        // Trocando a forma, a conta viaja no comando de troca; o de campos só leva a conta quando a forma não muda.
+        val newAccount = accountId.takeIf { !methodChanged && original.accountEditable && it != original.accountId }
+        val methodChange = if (methodChanged) {
+            val kind = DirectPaymentKind.valueOf(method.name)
+            ChangePaymentMethod(original.entityId, kind, accountId = accountId.takeIf { kind != DirectPaymentKind.Cash }, expectedRevision = original.revision)
+        } else null
         val newDate = date.takeIf { original.dateEditable && it != original.date }
         // Sem categoria não é uma troca: o comando só leva uma categoria de renda existente.
         val newIncomeCategory = incomeCategoryId.takeIf { original.incomeCategoryEditable && it != null && it != original.incomeCategoryId }
@@ -154,14 +186,15 @@ data class EditForm(
                 changed = !fields.isEmpty,
             )
         }
-        val changed = newDescription != null || newAmount != null || newCategory != null || newAccount != null || newDate != null || newIncomeCategory != null
+        val fieldsChanged = newDescription != null || newAmount != null || newCategory != null || newAccount != null || newDate != null || newIncomeCategory != null
         return Built.Ok(
             CorrectEntry(
                 entityId = original.entityId, description = newDescription, category = newCategory?.let { Classification.Category(it) },
                 date = newDate, amount = newAmount, accountId = newAccount, confirmExtra = confirmExtra,
-                expectedRevision = original.revision, incomeCategoryId = newIncomeCategory,
+                // A troca de forma já subiu a revisão; o segundo comando não pode mais exigir a antiga.
+                expectedRevision = original.revision.takeIf { !methodChanged }, incomeCategoryId = newIncomeCategory,
             ),
-            changed = changed,
+            changed = fieldsChanged || methodChange != null, methodChange = methodChange, fieldsChanged = fieldsChanged,
         )
     }
 
@@ -169,6 +202,7 @@ data class EditForm(
         fun of(original: EditOriginal) = EditForm(
             description = original.description, amountText = original.amount.formatPlain(), date = original.date,
             categoryId = original.categoryId, accountId = original.accountId, incomeCategoryId = original.incomeCategoryId,
+            method = original.method.takeIf { original.methodEditable },
         )
 
         fun fieldOf(field: String): EditField? = when (field) {

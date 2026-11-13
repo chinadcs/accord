@@ -763,7 +763,15 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 val viewModel: EditEntryViewModel = viewModel(
                     factory = viewModelFactory { initializer { EditEntryViewModel(container, createSavedStateHandle()) } },
                 )
-                EditEntryRoute(viewModel, padding, onExit = { navController.popBackStack() })
+                EditEntryRoute(
+                    viewModel, padding, onExit = { navController.popBackStack() },
+                    onReRegister = { form, replaces ->
+                        // A edição sai da pilha: depois de salvar a nova, ela ficaria aberta sobre uma compra já excluída.
+                        navController.navigate("$ROUTE_REGISTER?$ARG_REGISTER_FORM=${Uri.encode(FormCodec.encode(form))}&${RegisterViewModel.ARG_REPLACES}=${Uri.encode(replaces)}") {
+                            popUpTo("$ROUTE_EDIT/{${EditEntryViewModel.ARG_ID}}") { inclusive = true }
+                        }
+                    },
+                )
             }
             composable(
                 "$ROUTE_FORECASTS?$ARG_MONTH={$ARG_MONTH}",
@@ -1356,8 +1364,9 @@ private fun MainApp(container: AppContainer, startRoute: String) {
                 )
             }
             composable(
-                "$ROUTE_REGISTER?$ARG_REGISTER_KIND={$ARG_REGISTER_KIND}&$ARG_REGISTER_FORM={$ARG_REGISTER_FORM}&$ARG_REGISTER_CHAT={$ARG_REGISTER_CHAT}&sourceDraft={sourceDraft}&${RegisterViewModel.ARG_SIM_INVOICE}={${RegisterViewModel.ARG_SIM_INVOICE}}",
+                "$ROUTE_REGISTER?$ARG_REGISTER_KIND={$ARG_REGISTER_KIND}&$ARG_REGISTER_FORM={$ARG_REGISTER_FORM}&$ARG_REGISTER_CHAT={$ARG_REGISTER_CHAT}&sourceDraft={sourceDraft}&${RegisterViewModel.ARG_SIM_INVOICE}={${RegisterViewModel.ARG_SIM_INVOICE}}&${RegisterViewModel.ARG_REPLACES}={${RegisterViewModel.ARG_REPLACES}}",
                 arguments = listOf(
+                    navArgument(RegisterViewModel.ARG_REPLACES) { type = NavType.StringType; nullable = true; defaultValue = null },
                     navArgument(RegisterViewModel.ARG_SIM_INVOICE) { type = NavType.StringType; nullable = true; defaultValue = null },
                     navArgument("sourceDraft") { type = NavType.StringType; nullable = true; defaultValue = null },
                     navArgument(ARG_REGISTER_KIND) { type = NavType.StringType; nullable = true; defaultValue = null },

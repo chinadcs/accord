@@ -170,12 +170,29 @@ fun RegisterScreen(
             Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
             verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
         ) {
-            DetailHeader(stringResource(R.string.register_title), onBack)
+            DetailHeader(
+                stringResource(
+                    when {
+                        form.kind == FormKind.Income -> R.string.register_title_income
+                        form.form == ExpenseForm.Card -> R.string.register_title_card
+                        else -> R.string.register_title_expense
+                    },
+                ),
+                onBack,
+            )
 
             if (state.loadFailed) {
                 Text(stringResource(R.string.register_load_failed), color = MaterialTheme.colorScheme.error)
             }
             if (state.recoveredDraft) RecoveredBanner(onDismissRecovered)
+            if (state.replacing) {
+                Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.small) {
+                    Text(
+                        stringResource(R.string.register_replacing_banner), style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.fillMaxWidth().padding(AccordSpacing.s3),
+                    )
+                }
+            }
             state.origin?.let { ConversionBanner(it, state.preview.firstOrNull()?.invoiceMonth) }
             state.generalError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
 
@@ -185,6 +202,47 @@ fun RegisterScreen(
                 error = state.errors[FormField.Amount], keyboard = KeyboardType.Decimal,
                 focus = focus.getValue(FormField.Amount), bring = bring.getValue(FormField.Amount),
                 emphasized = true, leadingIcon = Lucide.drawable.lucide_ic_banknote,
+            )
+
+            FormTextField(
+                value = form.description, onChange = { v -> onChange { it.copy(description = v) } },
+                label = stringResource(R.string.register_description), error = state.errors[FormField.Description],
+                focus = focus.getValue(FormField.Description), bring = bring.getValue(FormField.Description),
+                leadingIcon = Lucide.drawable.lucide_ic_file_text,
+            )
+
+            val selectedCategoryIcon = form.categoryId?.let { state.categories[it]?.iconKey }?.let { lucideRes(it) }
+            val selectedCategoryColor = categoryColor(state.categories, form.categoryId)
+            if (form.kind == FormKind.Expense) {
+                PickerField(
+                    label = stringResource(R.string.register_category),
+                    value = categoryPath(state.categories, form.categoryId) ?: stringResource(R.string.register_category_pick),
+                    error = state.errors[FormField.Category], bring = bring.getValue(FormField.Category),
+                    leadingContent = selectedCategoryIcon?.let { icon -> { DecorativeIcon(icon, tint = selectedCategoryColor) } },
+                ) { keyboard?.hide(); picking = Picker.Category }
+            }
+
+            if (form.kind == FormKind.Income) {
+                val chosen = state.incomeCategories.firstOrNull { it.id == form.incomeCategoryId }
+                PickerField(
+                    label = stringResource(R.string.register_income_category),
+                    value = chosen?.let { incomeCategoryLabel(it, state.incomeCategories) } ?: stringResource(R.string.register_income_category_pick),
+                    error = null, bring = remember { BringIntoViewRequester() },
+                    leadingContent = chosen?.let { node -> { DecorativeIcon(lucideRes(node.iconKey), tint = categoryColor(node.colorKey(state.incomeCategories))) } },
+                ) { keyboard?.hide(); picking = Picker.IncomeCategory }
+            }
+
+            val dateLabel = when {
+                form.kind == FormKind.Income -> R.string.register_date_expected_receipt
+                form.form == ExpenseForm.Boleto -> R.string.register_date_due
+                form.form == ExpenseForm.Card -> R.string.register_date_purchase
+                else -> R.string.register_date
+            }
+            DateChoices(
+                label = stringResource(dateLabel), date = form.date, today = state.today,
+                error = state.errors[FormField.Date], bring = bring.getValue(FormField.Date),
+                onPickOther = { picking = Picker.Date(DateTarget.Main) },
+                onSelectDate = { date -> onChange { it.copy(date = date) } },
             )
 
             if (form.kind == FormKind.Expense && form.form == ExpenseForm.Card) {
@@ -210,46 +268,6 @@ fun RegisterScreen(
                         )
                     }
                 }
-            }
-
-            FormTextField(
-                value = form.description, onChange = { v -> onChange { it.copy(description = v) } },
-                label = stringResource(R.string.register_description), error = state.errors[FormField.Description],
-                focus = focus.getValue(FormField.Description), bring = bring.getValue(FormField.Description),
-                leadingIcon = Lucide.drawable.lucide_ic_file_text,
-            )
-
-            val dateLabel = when {
-                form.kind == FormKind.Income -> R.string.register_date_expected
-                form.form == ExpenseForm.Boleto -> R.string.register_date_due
-                else -> R.string.register_date
-            }
-            DateChoices(
-                label = stringResource(dateLabel), date = form.date, today = state.today,
-                error = state.errors[FormField.Date], bring = bring.getValue(FormField.Date),
-                onPickOther = { picking = Picker.Date(DateTarget.Main) },
-                onSelectDate = { date -> onChange { it.copy(date = date) } },
-            )
-
-            val selectedCategoryIcon = form.categoryId?.let { state.categories[it]?.iconKey }?.let { lucideRes(it) }
-            val selectedCategoryColor = categoryColor(state.categories, form.categoryId)
-            if (form.kind == FormKind.Expense) {
-                PickerField(
-                    label = stringResource(R.string.register_category),
-                    value = categoryPath(state.categories, form.categoryId) ?: stringResource(R.string.register_category_pick),
-                    error = state.errors[FormField.Category], bring = bring.getValue(FormField.Category),
-                    leadingContent = selectedCategoryIcon?.let { icon -> { DecorativeIcon(icon, tint = selectedCategoryColor) } },
-                ) { keyboard?.hide(); picking = Picker.Category }
-            }
-
-            if (form.kind == FormKind.Income) {
-                val chosen = state.incomeCategories.firstOrNull { it.id == form.incomeCategoryId }
-                PickerField(
-                    label = stringResource(R.string.register_income_category),
-                    value = chosen?.let { incomeCategoryLabel(it, state.incomeCategories) } ?: stringResource(R.string.register_income_category_pick),
-                    error = null, bring = remember { BringIntoViewRequester() },
-                    leadingContent = chosen?.let { node -> { DecorativeIcon(lucideRes(node.iconKey), tint = categoryColor(node.colorKey(state.incomeCategories))) } },
-                ) { keyboard?.hide(); picking = Picker.IncomeCategory }
             }
 
             if (form.allowsAccount) {

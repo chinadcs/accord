@@ -12,6 +12,7 @@ import app.accord.core.space.CategoryNode
 import app.accord.core.space.CommandId
 import app.accord.core.space.CommandResult
 import app.accord.core.space.CreateIncomeCategory
+import app.accord.core.space.DeleteEntry
 import app.accord.core.space.EntityType
 import app.accord.core.space.IncomeCategoryNode
 import app.accord.core.space.Decision
@@ -65,6 +66,8 @@ data class RegisterUiState(
     val focusTick: Int = 0,
     /** Modo conversão (S7): a intenção de origem, quando o formulário nasceu de "Assumir compromisso". */
     val origin: ConversionOrigin? = null,
+    /** "Excluir e registrar de novo": a compra parcelada original só é excluída depois que esta for salva. */
+    val replacing: Boolean = false,
 ) {
     val previewToConfirm: Boolean get() = preview.firstOrNull()?.assignment == AssignmentState.ToConfirm
     val saving: Boolean get() = phase == RegisterPhase.Saving
@@ -102,6 +105,7 @@ class RegisterViewModel(
                 } ?: ExpenseForm.Pix,
             ),
             today = today,
+            replacing = saved.get<String>(ARG_REPLACES) != null,
             autoFocusAmount = saved.get<String>(KEY_FORM)?.contains('=') != true && saved.get<String>(KEY_DRAFT) == null,
         ),
     )
@@ -323,7 +327,20 @@ class RegisterViewModel(
         saved.remove<String>(KEY_DRAFT)
         provider.feedback.post(FeedbackEvent(R.string.feedback_saved, undoOperationId = operationId.takeIf { undoable }))
         _state.update { it.copy(phase = RegisterPhase.Saved) }
-        _exit.value = true
+        val replaces = saved.get<String>(ARG_REPLACES)
+        if (replaces == null) {
+            _exit.value = true
+        } else {
+            // A nova já está salva; só agora a original sai. Se a exclusão falhar ou pedir conferência extra, a nova permanece e o aviso diz o que restou.
+            viewModelScope.launch {
+                when (val result = provider.space().execute(Envelope(CommandId("${commandId.value}:delete"), Origin.Manual), DeleteEntry(replaces))) {
+                    is CommandResult.Applied -> provider.feedback.post(FeedbackEvent(R.string.feedback_deleted, undoOperationId = result.receipt.operationId.takeIf { result.receipt.undoable }))
+                    is CommandResult.AlreadyApplied -> Unit
+                    else -> provider.feedback.post(FeedbackEvent(R.string.feedback_original_kept))
+                }
+                _exit.value = true
+            }
+        }
     }
 
     // ---- sair sem salvar ----
@@ -394,6 +411,7 @@ class RegisterViewModel(
         const val KEY_DRAFT = "draftId"
         const val KEY_CHAT_MESSAGE = "chatMessage"
         const val ARG_SIM_INVOICE = "simInvoice"
+        const val ARG_REPLACES = "replaces"
         const val PREVIEW_DEBOUNCE_MS = 250L
     }
 }

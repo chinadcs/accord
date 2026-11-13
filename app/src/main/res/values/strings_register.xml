@@ -112,4 +112,11 @@
     <string name="error_account_required">Escolha a conta; você ainda não definiu uma conta padrão.</string>
     <string name="error_account_not_allowed">Esta forma de pagamento não usa conta.</string>
     <string name="error_category_required">Escolha a categoria.</string>
+    <string name="register_title_expense">Nova despesa</string>
+    <string name="register_title_card">Nova despesa no cartão</string>
+    <string name="register_title_income">Nova receita</string>
+    <string name="register_date_purchase">Data da compra</string>
+    <string name="register_date_expected_receipt">Data prevista do recebimento</string>
+    <string name="register_replacing_banner">Você está registrando de novo uma compra parcelada. A compra original só é excluída quando esta for salva.</string>
+    <string name="feedback_original_kept">A nova compra foi salva, mas a original continua. Exclua-a pelo detalhe, se quiser.</string>
 </resources>

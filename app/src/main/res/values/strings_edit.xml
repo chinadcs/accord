@@ -110,4 +110,28 @@
     <string name="error_amount_effective">Informe um valor válido ou deixe vazio.</string>
     <string name="error_refund_status">Escolha se o estorno já foi devolvido.</string>
     <string name="error_installments_pick">Marque ao menos uma parcela.</string>
+    <!-- Formulário único (spec 25) -->
+    <string name="edit_title_expense">Editar despesa</string>
+    <string name="edit_title_installment">Editar compra parcelada</string>
+    <string name="edit_title_card">Editar despesa no cartão</string>
+    <string name="edit_title_boleto">Editar boleto</string>
+    <string name="edit_title_income">Editar receita</string>
+    <string name="edit_title_recurring_expense">Editar despesa recorrente</string>
+    <string name="edit_title_recurring_income">Editar receita recorrente</string>
+    <string name="edit_notice_occurrence">Ocorrência de %1$s. Ao salvar, você escolhe quais ocorrências mudam.</string>
+    <string name="edit_notice_installments">Compra em %1$d parcelas. Descrição e categoria valem para todas as %1$d, inclusive as anteriores.</string>
+    <string name="edit_date_by_recurrence">Definido pela recorrência.</string>
+    <string name="edit_card_locked">Cartão: %1$s. O cartão da compra não muda.</string>
+    <string name="edit_save_installments">Salvar nas %1$d parcelas</string>
+    <string name="edit_reregister">Excluir e registrar de novo</string>
+    <string name="edit_reregister_note">Abre o registro preenchido. A compra original só é excluída quando a nova for salva.</string>
+    <string name="edit_changed_description">descrição</string>
+    <string name="edit_changed_amount">valor</string>
+    <string name="edit_changed_category">categoria</string>
+    <string name="edit_changed_income_category">categoria de receita</string>
+    <string name="edit_changed_account">conta</string>
+    <string name="edit_scope_changed">Você mudou: %1$s</string>
+    <string name="edit_scope_only_this_dated">Só esta ocorrência (%1$s)</string>
+    <string name="edit_scope_this_and_next_dated">Esta e as próximas (a partir de %1$s)</string>
+    <string name="edit_scope_save">Salvar</string>
 </resources>

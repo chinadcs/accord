@@ -8,6 +8,7 @@ import app.accord.R
 import app.accord.SpaceProvider
 import app.accord.core.RecurrenceScope
 import app.accord.core.space.AccountInfo
+import app.accord.core.space.CardInfo
 import app.accord.core.space.CategoryNode
 import app.accord.core.space.CommandId
 import app.accord.core.space.CommandResult
@@ -19,9 +20,13 @@ import app.accord.core.space.DeleteRecurrence
 import app.accord.core.space.Envelope
 import app.accord.core.space.ExtraReason
 import app.accord.core.space.Origin
+import app.accord.core.space.PaymentMethod
 import app.accord.core.space.PreviewResult
 import app.accord.core.space.QueryResult
+import app.accord.ui.register.ExpenseForm
 import app.accord.ui.register.FormError
+import app.accord.ui.register.FormKind
+import app.accord.ui.register.RegisterForm
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -59,6 +64,8 @@ data class EditUiState(
     val nothingChanged: Boolean = false,
     val categories: Map<String, CategoryNode> = emptyMap(),
     val accounts: List<AccountInfo> = emptyList(),
+    /** Só para mostrar o cartão de uma compra parcelada (somente leitura). */
+    val cards: List<CardInfo> = emptyList(),
     val incomeCategories: List<IncomeCategoryNode> = emptyList(),
     val saving: Boolean = false,
     val prompt: EditPrompt? = null,
@@ -68,6 +75,10 @@ data class EditUiState(
     val suggestedInvoice: YearMonth? = null,
     val focusField: EditField? = null,
     val focusTick: Int = 0,
+    /** Painel "Aplicar a quais ocorrências?" aberto ao salvar uma ocorrência com mudança (sem opção pré-marcada). */
+    val scopePanel: Boolean = false,
+    /** Conta padrão de quem edita: parte da troca de dinheiro para Pix ou débito, sempre corrigível. */
+    val defaultAccountId: String? = null,
 ) {
     val original: EditOriginal? get() = (content as? EditContent.Ready)?.original
 }
@@ -108,6 +119,7 @@ class EditEntryViewModel(
             val categories = (space.categories() as? QueryResult.Data)?.value
             val accounts = (space.accounts() as? QueryResult.Data)?.value
             val incomeCategories = (space.incomeCategories() as? QueryResult.Data)?.value.orEmpty()
+            val cards = (space.cards() as? QueryResult.Data)?.value.orEmpty()
             if (categories == null || accounts == null) {
                 _state.update { it.copy(content = EditContent.Failed) }
                 return@launch
@@ -120,7 +132,7 @@ class EditEntryViewModel(
                     content = original?.let(EditContent::Ready) ?: EditContent.NotEditable,
                     form = original?.let(EditForm::of),
                     categories = categories.associateBy { c -> c.id },
-                    accounts = accounts.accounts, incomeCategories = incomeCategories,
+                    accounts = accounts.accounts, incomeCategories = incomeCategories, cards = cards, defaultAccountId = accounts.myDefaultAccountId,
                     replacedOccurrences = emptyList(), suggestedInvoice = null,
                 )
             }
@@ -130,7 +142,12 @@ class EditEntryViewModel(
     fun update(change: (EditForm) -> EditForm) {
         _state.update { current ->
             val form = current.form ?: return@update current
-            val next = change(form)
+            var next = change(form)
+            // Dinheiro para Pix ou débito: a conta parte da padrão de quem edita, e a pessoa pode trocá-la.
+            val original = current.original
+            if (original != null && next.method != form.method && original.accountEditableFor(next.method) && next.accountId == null) {
+                next = next.copy(accountId = current.defaultAccountId)
+            }
             // Corrigir um campo apaga só o erro dele.
             val stillWrong = current.errors.filterKeys { field -> sameValue(field, form, next) }
             current.copy(form = next, errors = stillWrong, generalError = null, nothingChanged = false)
@@ -146,6 +163,7 @@ class EditEntryViewModel(
         EditField.IncomeCategory -> a.incomeCategoryId == b.incomeCategoryId
         EditField.Account -> a.accountId == b.accountId
         EditField.Scope -> a.scope == b.scope
+        EditField.Method -> a.method == b.method
     }
 
     val isDirty: Boolean
@@ -190,7 +208,31 @@ class EditEntryViewModel(
 
     // ---- salvar ----
 
-    fun save(confirmExtra: Boolean = false, confirmRealized: Boolean = false) {
+    /**
+     * Toque em Salvar. Numa ocorrência de série com mudança, abre o painel de alcance (sem opção marcada) em vez de gravar; o painel chama
+     * [saveWithScope]. Nos demais, grava direto.
+     */
+    fun save() {
+        val s = _state.value
+        val original = s.original ?: return
+        val form = s.form ?: return
+        if (s.saving) return
+        if (!original.needsScope) return doSave()
+        // O alcance ainda não existe: valida o resto com um provisório só para achar erros e saber se algo mudou.
+        when (val built = form.copy(scope = RecurrenceScope.OnlyThis).build(original)) {
+            is EditForm.Built.Invalid -> fail(built.errors)
+            is EditForm.Built.Ok -> if (built.changed) _state.update { it.copy(scopePanel = true) } else _state.update { it.copy(nothingChanged = true) }
+        }
+    }
+
+    fun saveWithScope(scope: RecurrenceScope) {
+        _state.update { it.copy(scopePanel = false, form = it.form?.copy(scope = scope)) }
+        doSave()
+    }
+
+    fun dismissScopePanel() = _state.update { it.copy(scopePanel = false) }
+
+    private fun doSave(confirmExtra: Boolean = false, confirmRealized: Boolean = false) {
         val s = _state.value
         val original = s.original ?: return
         val form = s.form ?: return
@@ -204,10 +246,38 @@ class EditEntryViewModel(
                 }
                 _state.update { it.copy(saving = true, errors = emptyMap(), generalError = null, prompt = null) }
                 viewModelScope.launch {
-                    handle(provider.space().execute(Envelope(commandId, Origin.Manual), built.command))
+                    // Troca de forma e correção de campos são duas operações, cada uma com o seu "Desfazer" (ADR 0029).
+                    val steps = buildList {
+                        built.methodChange?.let { add(it) }
+                        if (built.fieldsChanged) add(built.command)
+                    }
+                    var last: CommandResult? = null
+                    for ((index, command) in steps.withIndex()) {
+                        val id = if (index == 0) commandId else CommandId("${commandId.value}:$index")
+                        val result = provider.space().execute(Envelope(id, Origin.Manual), command)
+                        last = result
+                        if (result !is CommandResult.Applied && result !is CommandResult.AlreadyApplied) break
+                        if (index < steps.lastIndex) postSaved(result)
+                    }
+                    handle(last ?: return@launch)
                 }
             }
         }
+    }
+
+    private fun postSaved(result: CommandResult) {
+        val receipt = (result as? CommandResult.Applied)?.receipt ?: (result as? CommandResult.AlreadyApplied)?.receipt ?: return
+        provider.feedback.post(FeedbackEvent(R.string.feedback_saved_corrected, undoOperationId = receipt.operationId.takeIf { receipt.undoable }))
+    }
+
+    /** O formulário de despesa no cartão para "Excluir e registrar de novo": descrição, categoria, data e cartão da compra original. */
+    fun reRegisterForm(): RegisterForm? {
+        val original = _state.value.original?.takeIf { it.target == EditTarget.CardPurchase } ?: return null
+        val form = _state.value.form ?: return null
+        return RegisterForm(
+            kind = FormKind.Expense, form = ExpenseForm.Card, description = form.description, date = form.date ?: java.time.LocalDate.now(),
+            categoryId = form.categoryId, cardId = original.cardId,
+        )
     }
 
     private fun fail(errors: Map<EditField, FormError>) = _state.update {
@@ -254,8 +324,8 @@ class EditEntryViewModel(
 
     fun confirmPrompt() {
         when (val p = _state.value.prompt) {
-            is EditPrompt.Extra -> save(confirmExtra = true)
-            is EditPrompt.Realized -> save(confirmRealized = true)
+            is EditPrompt.Extra -> doSave(confirmExtra = true)
+            is EditPrompt.Realized -> doSave(confirmRealized = true)
             EditPrompt.Discard -> _exit.value = true
             EditPrompt.Stale -> load()
             null -> Unit

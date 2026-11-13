@@ -141,7 +141,7 @@ class EditFlowTest {
     private fun openEdit(description: String) {
         openDetail(description)
         tapEdit()
-        waitForText("Editar lançamento")
+        waitForText("Salvar") // só a edição tem este botão ("Salvar alterações" ou "Salvar nas N parcelas"); "Editar" também está no detalhe
         waitForText("Descrição") // o título aparece antes do formulário carregar; sem isso a rolagem corre contra o carregamento
     }
 
@@ -175,7 +175,7 @@ class EditFlowTest {
         openEdit(grocery)
         save()
         waitForText("Nada foi alterado ainda.")
-        compose.onNodeWithText("Editar lançamento").assertIsDisplayed()
+        compose.onNodeWithText("Editar despesa").assertIsDisplayed()
     }
 
     @Test
@@ -184,9 +184,10 @@ class EditFlowTest {
         scrollTo("Valor total")
         compose.onNodeWithText("Valor total: R$", substring = true).assertExists()
         assert(compose.onAllNodesWithText("Valor (R$)").fetchSemanticsNodes().isEmpty())
-        scrollTo("todas as parcelas")
+        compose.onNodeWithText("valem para todas as 6", substring = true).assertExists()
         replace("Descrição", "Notebook $tag")
-        save()
+        compose.onNodeWithText("Salvar nas 6 parcelas").performSemanticsAction(SemanticsActions.OnClick)
+        waitForText("Alteração salva no aparelho.")
         waitForText("Notebook $tag")
     }
 
@@ -198,13 +199,13 @@ class EditFlowTest {
         assert(compose.onAllNodesWithText("Descartar alterações?").fetchSemanticsNodes().isEmpty())
 
         tapEdit()
-        waitForText("Editar lançamento")
+        waitForText("Salvar")
         waitForText("Descrição")
         replace("Descrição", "Outra $tag")
         compose.onNode(hasContentDescription("Voltar")).performSemanticsAction(SemanticsActions.OnClick)
         waitForText("Descartar alterações?")
         compose.onNodeWithText("Continuar editando").performClick()
-        compose.onNodeWithText("Editar lançamento").assertIsDisplayed()
+        compose.onNodeWithText("Editar despesa").assertIsDisplayed()
 
         compose.onNode(hasContentDescription("Voltar")).performSemanticsAction(SemanticsActions.OnClick)
         waitForText("Descartar alterações?")
@@ -218,9 +219,11 @@ class EditFlowTest {
         openEdit(gym)
         replace("Valor (R$)", "95,00")
         save()
-        waitForText("Escolha a quais ocorrências")
-        tap("Esta e as próximas")
-        save()
+        // o alcance é escolhido no painel, sem opção marcada; Salvar só vale depois de escolher
+        waitForText("Aplicar a quais ocorrências?")
+        compose.onNode(hasText("Salvar") and androidx.compose.ui.test.hasClickAction()).assertIsNotEnabled()
+        compose.onNodeWithText("Esta e as próximas", substring = true).performClick()
+        compose.onNode(hasText("Salvar") and androidx.compose.ui.test.hasClickAction()).performClick()
         waitForText("Alteração salva no aparelho.")
         waitForText("95,00")
     }
@@ -264,5 +267,64 @@ class EditFlowTest {
         waitForText("Alteração salva no aparelho.")
         waitForText("Segunda $tag")
         assert(compose.onAllNodesWithText("Feira $tag").fetchSemanticsNodes().isEmpty())
+    }
+
+    @Test
+    fun trocarAFormaDoPixParaDebitoMantemOMesmoLancamento() {
+        openEdit(grocery)
+        tap("Débito")
+        save()
+        waitForText("Alteração salva no aparelho.")
+        // de volta ao detalhe do mesmo lançamento, agora no débito
+        waitForText("Situação:")
+        scrollTo("Situação:")
+        compose.onNode(hasContentDescription("Forma, Débito")).assertExists()
+    }
+
+    @Test
+    fun trocarAFormaECorrigirOutroCampoNoMesmoSalvarAplicaOsDois() {
+        openEdit(grocery)
+        tap("Dinheiro")
+        replace("Descrição", "Feira $tag")
+        save()
+        waitForText("Alteração salva no aparelho.")
+        waitForText("Situação:") // de volta ao detalhe; "Feira" também aparece no campo da edição
+        waitForText("Feira $tag")
+        scrollTo("Situação:")
+        compose.onNode(hasContentDescription("Forma, Dinheiro")).assertExists()
+    }
+
+    @Test
+    fun excluirERegistrarDeNovoSoExcluiAOriginalQuandoANovaForSalva() {
+        openEdit(gear)
+        tap("Excluir e registrar de novo")
+        waitForText("Nova despesa no cartão")
+        waitForText("A compra original só é excluída quando esta for salva")
+        compose.onNodeWithText("Valor (R$)").performTextInput("1500,00")
+        compose.onNodeWithText("Salvar lançamento").performClick()
+        waitForText("Este lançamento foi excluído.") // de volta ao detalhe da original, já excluída
+    }
+
+    @Test
+    fun desistirDoRegistrarDeNovoNaoExcluiAOriginal() {
+        openEdit(gear)
+        tap("Excluir e registrar de novo")
+        waitForText("Nova despesa no cartão")
+        compose.onNode(hasContentDescription("Voltar")).performSemanticsAction(SemanticsActions.OnClick)
+        waitForText("Sair sem salvar?")
+        compose.onNodeWithText("Descartar").performClick()
+        waitForText("Situação:")
+        assert(compose.onAllNodesWithText("Este lançamento foi excluído.").fetchSemanticsNodes().isEmpty())
+    }
+
+    @Test
+    fun cancelarOPainelDeAlcanceNaoSalvaNada() {
+        openEdit(gym)
+        replace("Valor (R$)", "95,00")
+        save()
+        waitForText("Aplicar a quais ocorrências?")
+        compose.onNodeWithText("Cancelar").performClick()
+        waitGone("Aplicar a quais ocorrências?")
+        compose.onNodeWithText("Salvar alterações").assertIsDisplayed()
     }
 }

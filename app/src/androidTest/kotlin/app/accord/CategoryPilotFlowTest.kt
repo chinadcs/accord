@@ -163,7 +163,7 @@ class CategoryPilotFlowTest {
         waitText("A classificar")
         val entryId = runBlocking { container.access.runtime.value!!.chatStore!!.snapshot().receipts.single().entryId }
         compose.onNodeWithText("Editar").performScrollTo().performClick()
-        waitText("Editar lançamento")
+        waitText("Editar despesa no cartão")
         compose.onNodeWithText("Descrição").assertIsDisplayed()
         compose.onNodeWithContentDescription("Voltar").performClick()
         waitText("Ver todas")

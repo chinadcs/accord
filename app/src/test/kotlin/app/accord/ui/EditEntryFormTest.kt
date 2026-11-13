@@ -2,8 +2,10 @@ package app.accord.ui
 
 import app.accord.core.Money
 import app.accord.core.RecurrenceScope
+import app.accord.core.space.ChangePaymentMethod
 import app.accord.core.space.Classification
 import app.accord.core.space.CorrectEntry
+import app.accord.core.space.DirectPaymentKind
 import app.accord.core.space.EditRecurrence
 import app.accord.core.space.PaymentMethod
 import app.accord.ui.edit.EditField
@@ -16,6 +18,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -130,7 +133,7 @@ class EditEntryFormTest {
         assertEquals(FormError.Required, invalid.errors[EditField.Description])
         assertEquals(FormError.AmountAmbiguous, invalid.errors[EditField.Amount])
         assertEquals(FormError.CategoryRequired, invalid.errors[EditField.Category])
-        assertEquals(listOf(EditField.Description, EditField.Amount, EditField.Category), invalid.errors.keys.toList())
+        assertEquals(listOf(EditField.Amount, EditField.Description, EditField.Category), invalid.errors.keys.toList())
     }
 
     @Test
@@ -203,5 +206,70 @@ class EditEntryFormTest {
         val direct = original()
         assertNull(assertIs<CorrectEntry>(ok(EditForm.of(direct).copy(incomeCategoryId = "extra", description = "x"), direct).command).incomeCategoryId)
         assertEquals(EditField.IncomeCategory, EditForm.fieldOf("incomeCategoryId"))
+    }
+
+    @Test
+    fun trocarPixPorDebitoGeraSoOComandoDeTrocaComAContaEAVersao() {
+        val o = original()
+        val built = ok(EditForm.of(o).copy(method = PaymentMethod.Debit), o)
+        val change = assertNotNull(built.methodChange)
+        assertEquals(ChangePaymentMethod("id", DirectPaymentKind.Debit, accountId = "conta", expectedRevision = 3), change)
+        assertTrue(built.changed)
+        assertFalse(built.fieldsChanged)
+    }
+
+    @Test
+    fun trocarParaDinheiroNaoLevaConta() {
+        val o = original()
+        val change = assertNotNull(ok(EditForm.of(o).copy(method = PaymentMethod.Cash), o).methodChange)
+        assertEquals(DirectPaymentKind.Cash, change.kind)
+        assertNull(change.accountId)
+    }
+
+    @Test
+    fun dinheiroParaPixLevaAContaEscolhida() {
+        val o = original(method = PaymentMethod.Cash, account = null)
+        val change = assertNotNull(ok(EditForm.of(o).copy(method = PaymentMethod.Pix, accountId = "nova"), o).methodChange)
+        assertEquals(DirectPaymentKind.Pix, change.kind)
+        assertEquals("nova", change.accountId)
+    }
+
+    @Test
+    fun trocarAFormaECorrigirOutroCampoSaoDoisComandosEOSegundoNaoExigeARevisaoAntiga() {
+        val o = original()
+        val built = ok(EditForm.of(o).copy(method = PaymentMethod.Debit, description = "Feira", accountId = "outra"), o)
+        assertNotNull(built.methodChange)
+        assertTrue(built.fieldsChanged)
+        val command = assertIs<CorrectEntry>(built.command)
+        assertEquals("Feira", command.description)
+        assertNull(command.accountId) // a conta viaja na troca
+        assertNull(command.expectedRevision) // a troca já subiu a revisão
+        assertEquals("outra", built.methodChange.accountId)
+    }
+
+    @Test
+    fun semTrocaACorrecaoSegueComAVersaoEsperadaECadaFormaIgualNaoVira() {
+        val o = original()
+        val built = ok(EditForm.of(o).copy(method = PaymentMethod.Pix, description = "Feira"), o)
+        assertNull(built.methodChange)
+        assertEquals(3, assertIs<CorrectEntry>(built.command).expectedRevision)
+    }
+
+    @Test
+    fun cartaoBoletoRendaRecorrenciaEImportadoNaoOferecemATroca() {
+        assertFalse(original(target = EditTarget.CardPurchase, method = PaymentMethod.Card).methodEditable)
+        assertFalse(original(target = EditTarget.Boleto, method = PaymentMethod.Boleto).methodEditable)
+        assertFalse(original(target = EditTarget.Income, method = null).methodEditable)
+        assertFalse(original(target = EditTarget.Occurrence, method = null).methodEditable)
+        assertFalse(original().copy(imported = true).methodEditable)
+        assertTrue(original().methodEditable)
+        assertNull(EditForm.of(original(target = EditTarget.Boleto, method = PaymentMethod.Boleto)).method)
+    }
+
+    @Test
+    fun contaSoValeParaPixEDebito() {
+        val o = original()
+        assertTrue(o.accountEditableFor(PaymentMethod.Debit))
+        assertFalse(o.accountEditableFor(PaymentMethod.Cash))
     }
 }

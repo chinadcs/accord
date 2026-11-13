@@ -188,7 +188,7 @@ class CharcoalVisualReviewTest {
         // O FAB abre as opções de registro; o lançamento só abre ao escolher uma delas.
         compose.onNodeWithTag("root-register-fab", useUnmergedTree = true).performClick()
         compose.onNodeWithText("Despesa").performClick()
-        waitFor("Novo lançamento")
+        waitFor("Nova despesa")
         compose.onNodeWithTag("root-register-fab", useUnmergedTree = true).assertDoesNotExist()
         compose.onNodeWithContentDescription("Voltar").performClick()
         compose.onNodeWithTag("root-register-fab", useUnmergedTree = true).assertIsDisplayed()

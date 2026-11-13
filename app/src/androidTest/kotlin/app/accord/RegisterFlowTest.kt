@@ -122,7 +122,7 @@ class RegisterFlowTest {
             compose.onNodeWithContentDescription("Abrir opções de registro").performClick()
             compose.onAllNodes(hasText("Despesa") and hasClickAction()).onFirst().performClick()
         }
-        waitForText("Novo lançamento")
+        waitForText("Nova despesa")
     }
 
     private fun fill(label: String, value: String) {
@@ -158,7 +158,7 @@ class RegisterFlowTest {
         compose.onAllNodes(hasText("Orçamento") and hasClickAction()).onFirst().performClick()
         compose.onNodeWithContentDescription("Abrir opções de registro").performClick()
         compose.onAllNodes(hasText(action) and hasClickAction()).onFirst().performClick()
-        waitForText("Novo lançamento")
+        waitForText("Nova ") // "Nova despesa", "Nova despesa no cartão" ou "Nova receita"
     }
 
     private fun findInEntries(text: String) {

@@ -75,7 +75,7 @@ class UiAuditLayoutRegressionTest {
         compose.onNodeWithTag("register-choice-expense").assertIsDisplayed()
         compose.onNodeWithTag("register-choice-card").assertIsDisplayed()
         compose.onNodeWithTag("register-choice-expense").performClick()
-        compose.onNodeWithText("Novo lançamento", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Nova despesa").assertIsDisplayed()
         compose.onNodeWithText("Pagamento").assertExists()
         compose.onNodeWithText("Pix").assertExists()
     }
@@ -83,15 +83,15 @@ class UiAuditLayoutRegressionTest {
     @Test fun seletorDeRegistroAbreRenda() {
         openEntriesChooser()
         compose.onNodeWithTag("register-choice-income").performClick()
-        compose.onNodeWithText("Novo lançamento", substring = true).assertIsDisplayed()
-        compose.onNodeWithText("Data prevista").assertExists()
+        compose.onNodeWithText("Nova receita").assertIsDisplayed()
+        compose.onNodeWithText("Data prevista do recebimento").assertExists()
         compose.onNodeWithText("Categoria de renda").assertExists()
     }
 
     @Test fun seletorDeRegistroAbreDespesaNoCartao() {
         openEntriesChooser()
         compose.onNodeWithTag("register-choice-card").performClick()
-        compose.onNodeWithText("Novo lançamento", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Nova despesa no cartão").assertIsDisplayed()
         compose.onNodeWithText("Categoria").assertExists()
         compose.onNodeWithText("Pagamento").assertDoesNotExist()
     }
@@ -139,7 +139,7 @@ class UiAuditLayoutRegressionTest {
         compose.onAllNodes(hasText("Lançamentos") and hasClickAction()).onFirst().performClick()
         compose.onNodeWithTag("entries-inline-new", useUnmergedTree = true).performClick()
         compose.onNodeWithTag("register-choice-expense").performClick()
-        compose.onNodeWithText("Novo lançamento", substring = true).assertIsDisplayed()
+        compose.onNodeWithText("Nova despesa").assertIsDisplayed()
         compose.onNodeWithText("Salvar lançamento").performClick()
         compose.waitUntil(12_000) {
             var visible = false

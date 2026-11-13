@@ -149,7 +149,7 @@ class UiAuditRegisterCaptureTest {
         }
 
         val destinations = listOf(
-            Triple("register-choice-income", "renda", "Data prevista"),
+            Triple("register-choice-income", "renda", "Data prevista do recebimento"),
             Triple("register-choice-expense", "despesa", "Pix"),
             Triple("register-choice-card", "cartao", "Escolher categoria"),
         )
@@ -161,7 +161,7 @@ class UiAuditRegisterCaptureTest {
             if (index == 0) capture("07_seletor_registro_200")
             compose.onNodeWithTag(choiceTag).performClick()
             compose.waitUntil(12_000) {
-                compose.onAllNodesWithText("Novo lançamento").fetchSemanticsNodes().isNotEmpty()
+                compose.onAllNodesWithText("Nova ", substring = true).fetchSemanticsNodes().isNotEmpty()
             }
             check(compose.onAllNodesWithText(marker).fetchSemanticsNodes().isNotEmpty()) {
                 "Destino $name nao exibiu $marker"

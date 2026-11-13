@@ -105,7 +105,7 @@ class RegisterUiTest {
     @Test
     fun formularioMinimoMostraOsCamposBasicosDeUmaDespesa() {
         show(base())
-        compose.onNodeWithText("Novo lançamento").assertIsDisplayed()
+        compose.onNodeWithText("Nova despesa no cartão").assertIsDisplayed()
         compose.onNodeWithText("Descrição").assertIsDisplayed()
         compose.onNodeWithText("Valor (R$)").assertIsDisplayed()
         compose.onNodeWithText("Salvar lançamento").assertIsDisplayed()
@@ -124,7 +124,7 @@ class RegisterUiTest {
     fun escolherRendaTiraPagamentoECategoria() {
         // o tipo vem do botão "+" (Renda, Despesa ou Despesa no cartão), não de chips no formulário
         show(base(form = RegisterForm(date = today, kind = FormKind.Income)))
-        compose.onNodeWithText("Data prevista").assertIsDisplayed()
+        compose.onNodeWithText("Data prevista do recebimento").assertIsDisplayed()
         assertEquals(0, compose.onAllNodes(hasText("Categoria", substring = true) and hasText("Escolher categoria", substring = true)).fetchSemanticsNodes().size)
         assertEquals(0, compose.onAllNodes(hasText("Pix")).fetchSemanticsNodes().size)
     }

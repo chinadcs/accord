@@ -5,6 +5,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.consumeWindowInsets
@@ -13,12 +15,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilterChip
 import app.accord.ui.components.AccordButton as Button
 import androidx.compose.material3.MaterialTheme
 import app.accord.ui.components.AccordOutlinedButton as OutlinedButton
@@ -38,32 +41,47 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import app.accord.ui.components.DetailHeader
 import app.accord.R
+import app.accord.core.BudgetClock
+import app.accord.ui.banks.BankLogo
 import app.accord.ui.categoryColor
 import app.accord.ui.colorKey
 import app.accord.ui.incomeCategoryLabel
+import app.accord.ui.components.AccordSheet
+import app.accord.ui.components.DateChoices
 import app.accord.ui.components.DecorativeIcon
 import app.accord.ui.components.lucideRes
 import app.accord.core.RecurrenceScope
 import app.accord.core.label
 import app.accord.core.space.ExtraReason
+import app.accord.core.space.PaymentMethod
 import app.accord.ui.categoryPath
 import app.accord.ui.fullLabel
+import app.accord.ui.label
 import app.accord.ui.register.AccountDialog
 import app.accord.ui.register.CategoryDialog
 import app.accord.ui.register.DatePickerSheet
 import app.accord.ui.register.IncomeCategoryDialog
 import app.accord.ui.components.FormTextField
 import app.accord.ui.components.PickerField
+import app.accord.ui.register.RegisterForm
 import app.accord.ui.register.accountLabel
 import app.accord.ui.theme.Accord
 import app.accord.ui.theme.AccordSpacing
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 @Composable
-fun EditEntryRoute(viewModel: EditEntryViewModel, padding: PaddingValues, onExit: () -> Unit) {
+fun EditEntryRoute(
+    viewModel: EditEntryViewModel,
+    padding: PaddingValues,
+    onExit: () -> Unit,
+    /** "Excluir e registrar de novo": abre o registro preenchido; a compra original só é excluída quando a nova for salva. */
+    onReRegister: (form: RegisterForm, replaces: String) -> Unit = { _, _ -> },
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val exit by viewModel.exit.collectAsStateWithLifecycle()
     LaunchedEffect(exit) { if (exit) onExit() }
@@ -74,6 +92,9 @@ fun EditEntryRoute(viewModel: EditEntryViewModel, padding: PaddingValues, onExit
         onConfirmPrompt = viewModel::confirmPrompt, onDismissPrompt = viewModel::dismissPrompt,
         onRetry = viewModel::load,
         onCreateIncomeCategory = viewModel::createIncomeCategory,
+        onSaveWithScope = viewModel::saveWithScope, onDismissScope = viewModel::dismissScopePanel,
+        // O id a excluir é o da compra (a rota pode ser o de uma parcela, "compra#n").
+        onReRegister = { viewModel.reRegisterForm()?.let { form -> viewModel.state.value.original?.let { onReRegister(form, it.entityId) } } },
     )
 }
 
@@ -89,6 +110,9 @@ fun EditEntryScreen(
     onDismissPrompt: () -> Unit,
     onRetry: () -> Unit,
     onCreateIncomeCategory: (String, String?, (String?) -> Unit) -> Unit = { _, _, _ -> },
+    onSaveWithScope: (RecurrenceScope) -> Unit = {},
+    onDismissScope: () -> Unit = {},
+    onReRegister: () -> Unit = {},
 ) {
     val focus = remember { EditField.entries.associateWith { FocusRequester() } }
     val bring = remember { EditField.entries.associateWith { BringIntoViewRequester() } }
@@ -108,7 +132,7 @@ fun EditEntryScreen(
             Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(AccordSpacing.s4),
             verticalArrangement = Arrangement.spacedBy(AccordSpacing.s3),
         ) {
-            DetailHeader(stringResource(R.string.register_edit_title), onBack)
+            DetailHeader(original?.let { stringResource(editTitle(it)) } ?: stringResource(R.string.register_edit_title), onBack)
 
             when (state.content) {
                 EditContent.Loading -> Text(stringResource(R.string.state_loading), style = MaterialTheme.typography.bodyLarge)
@@ -122,8 +146,10 @@ fun EditEntryScreen(
                 EditContent.NotEditable -> Text(stringResource(R.string.edit_not_editable), style = MaterialTheme.typography.bodyLarge)
                 is EditContent.Ready -> if (original != null && form != null) {
                     state.generalError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                    ContextNotice(original)
                     Fields(state, original, form, onChange, focus, bring) { picking = it }
                     Notes(state, original, form)
+                    if (original.target == EditTarget.CardPurchase && original.installments > 1) ReRegister(onReRegister)
                 }
             }
         }
@@ -134,10 +160,15 @@ fun EditEntryScreen(
                     if (state.nothingChanged) {
                         Text(stringResource(R.string.edit_nothing_changed), style = MaterialTheme.typography.bodyMedium)
                     }
+                    val saveLabel = when {
+                        state.saving -> stringResource(R.string.edit_saving)
+                        original.target == EditTarget.CardPurchase && original.installments > 1 -> stringResource(R.string.edit_save_installments, original.installments)
+                        else -> stringResource(R.string.edit_save)
+                    }
                     Button(
                         onClick = onSave, enabled = !state.saving,
                         modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin),
-                    ) { Text(stringResource(if (state.saving) R.string.edit_saving else R.string.edit_save)) }
+                    ) { Text(saveLabel) }
                 }
             }
         }
@@ -147,7 +178,7 @@ fun EditEntryScreen(
         when (picking) {
             null -> Unit
             Picker.Date -> DatePickerSheet(
-                initial = form.date ?: java.time.LocalDate.now(),
+                initial = form.date ?: LocalDate.now(),
                 onPick = { picked -> onChange { it.copy(date = picked) }; picking = null },
                 onDismiss = { picking = null },
             )
@@ -166,12 +197,41 @@ fun EditEntryScreen(
         }
     }
 
+    if (state.scopePanel && original != null && form != null) {
+        ScopePanel(original, changedNames(original, form), onSave = onSaveWithScope, onCancel = onDismissScope)
+    }
+
     PromptDialogs(state, onConfirmPrompt, onDismissPrompt)
 }
 
 private enum class Picker { Date, Category, IncomeCategory, Account }
 
-@OptIn(ExperimentalFoundationApi::class)
+/** Título pelo tipo (spec 25). */
+private fun editTitle(o: EditOriginal): Int = when (o.target) {
+    EditTarget.Direct -> R.string.edit_title_expense
+    EditTarget.CardPurchase -> if (o.installments > 1) R.string.edit_title_installment else R.string.edit_title_card
+    EditTarget.Boleto -> R.string.edit_title_boleto
+    EditTarget.Income -> R.string.edit_title_income
+    EditTarget.Occurrence -> if (o.incomeSeries) R.string.edit_title_recurring_income else R.string.edit_title_recurring_expense
+}
+
+/** Aviso do alto: o que esta edição alcança, antes de qualquer campo. */
+@Composable
+private fun ContextNotice(original: EditOriginal) {
+    val text = when {
+        original.target == EditTarget.Occurrence ->
+            stringResource(R.string.edit_notice_occurrence, original.scheduledDate?.fullLabel().orEmpty())
+        original.target == EditTarget.CardPurchase && original.installments > 1 ->
+            stringResource(R.string.edit_notice_installments, original.installments)
+        else -> return
+    }
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.small) {
+        Text(text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.fillMaxWidth().padding(AccordSpacing.s3))
+    }
+}
+
+/** Mesma ordem do registro: Valor, Descrição, Categoria, Data, Pagamento, Conta (spec 25). */
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 private fun Fields(
     state: EditUiState,
@@ -182,17 +242,13 @@ private fun Fields(
     bring: Map<EditField, BringIntoViewRequester>,
     onPick: (Picker) -> Unit,
 ) {
-    FormTextField(
-        value = form.description, onChange = { v -> onChange { it.copy(description = v) } },
-        label = stringResource(R.string.register_description), error = state.errors[EditField.Description],
-        focus = focus.getValue(EditField.Description), bring = bring.getValue(EditField.Description),
-    )
     if (original.amountEditable) {
         FormTextField(
             value = form.amountText, onChange = { v -> onChange { it.copy(amountText = v) } },
             label = stringResource(R.string.register_amount), hint = stringResource(R.string.register_amount_hint),
             error = state.errors[EditField.Amount], keyboard = KeyboardType.Decimal,
             focus = focus.getValue(EditField.Amount), bring = bring.getValue(EditField.Amount),
+            emphasized = true, leadingIcon = com.composables.icons.lucide.R.drawable.lucide_ic_banknote,
         )
     } else {
         Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
@@ -203,17 +259,12 @@ private fun Fields(
             )
         }
     }
-    if (original.dateEditable) {
-        val label = when (original.target) {
-            EditTarget.Boleto -> R.string.register_date_due
-            EditTarget.Income -> R.string.register_date_expected
-            else -> R.string.register_date
-        }
-        PickerField(
-            label = stringResource(label), value = form.date?.fullLabel().orEmpty(), error = state.errors[EditField.Date],
-            bring = bring.getValue(EditField.Date),
-        ) { onPick(Picker.Date) }
-    }
+    FormTextField(
+        value = form.description, onChange = { v -> onChange { it.copy(description = v) } },
+        label = stringResource(R.string.register_description), error = state.errors[EditField.Description],
+        focus = focus.getValue(EditField.Description), bring = bring.getValue(EditField.Description),
+        leadingIcon = com.composables.icons.lucide.R.drawable.lucide_ic_file_text,
+    )
     if (original.categoryEditable) {
         PickerField(
             label = stringResource(R.string.register_category),
@@ -233,34 +284,99 @@ private fun Fields(
             leadingContent = chosen?.let { node -> { DecorativeIcon(lucideRes(node.iconKey), tint = categoryColor(node.colorKey(state.incomeCategories))) } },
         ) { onPick(Picker.IncomeCategory) }
     }
-    if (original.accountEditable) {
+    if (original.dateEditable) {
+        val label = when (original.target) {
+            EditTarget.Boleto -> R.string.register_date_due
+            EditTarget.Income -> R.string.register_date_expected_receipt
+            EditTarget.CardPurchase -> R.string.register_date_purchase
+            else -> R.string.register_date
+        }
+        val today = LocalDate.now(BudgetClock.ZONE)
+        DateChoices(
+            label = stringResource(label), date = form.date ?: today, today = today,
+            error = state.errors[EditField.Date], bring = bring.getValue(EditField.Date),
+            onPickOther = { onPick(Picker.Date) }, onSelectDate = { date -> onChange { it.copy(date = date) } },
+        )
+    } else if (original.target == EditTarget.Occurrence && original.scheduledDate != null) {
+        Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+            Text(stringResource(R.string.register_date_due), style = MaterialTheme.typography.titleSmall)
+            Text(original.scheduledDate.fullLabel(), style = MaterialTheme.typography.bodyLarge)
+            Text(
+                stringResource(R.string.edit_date_by_recurrence), style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+    if (original.methodEditable && form.method != null) {
+        Text(stringResource(R.string.register_payment), style = MaterialTheme.typography.titleLarge)
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), verticalArrangement = Arrangement.spacedBy(AccordSpacing.s2)) {
+            listOf(PaymentMethod.Pix, PaymentMethod.Debit, PaymentMethod.Cash).forEach { option ->
+                FilterChip(
+                    selected = form.method == option,
+                    onClick = { onChange { it.copy(method = option) } },
+                    label = { Text(option.label()) },
+                    modifier = Modifier.heightIn(min = AccordSpacing.touchMin),
+                )
+            }
+        }
+    }
+    if (original.target == EditTarget.CardPurchase) {
+        state.cards.firstOrNull { it.id == original.cardId }?.let { card ->
+            Text(stringResource(R.string.edit_card_locked, card.nickname), style = MaterialTheme.typography.bodyLarge)
+        }
+    }
+    if (original.accountEditableFor(form.method ?: original.method) && original.target != EditTarget.CardPurchase) {
         val account = state.accounts.firstOrNull { it.id == form.accountId }
         PickerField(
             label = stringResource(R.string.register_account),
             value = account?.let { accountLabel(it) } ?: stringResource(R.string.register_account_pick),
             error = state.errors[EditField.Account], bring = bring.getValue(EditField.Account),
+            leadingContent = account?.let { selected -> { BankLogo(selected.bank, size = 32.dp) } },
         ) { onPick(Picker.Account) }
-    }
-    if (original.needsScope) ScopeChoice(form.scope, state.errors[EditField.Scope] != null, bring.getValue(EditField.Scope)) { scope ->
-        onChange { it.copy(scope = scope) }
     }
 }
 
-/** Alcance da recorrência: sem opção pré-selecionada; a pessoa escolhe e o erro aparece junto do grupo. */
-@OptIn(ExperimentalFoundationApi::class)
+/** Nomes, em minúsculas, do que mudou: "Você mudou: valor e categoria". */
 @Composable
-private fun ScopeChoice(selected: RecurrenceScope?, error: Boolean, bring: BringIntoViewRequester, onPick: (RecurrenceScope) -> Unit) {
-    Column(
-        Modifier.fillMaxWidth().bringIntoViewRequester(bring),
-        verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1),
+private fun changedNames(original: EditOriginal, form: EditForm): String {
+    val names = buildList {
+        if (form.description.trim() != original.description) add(stringResource(R.string.edit_changed_description))
+        if (original.amountEditable && form.amountText.trim() != original.amount.formatPlain()) add(stringResource(R.string.edit_changed_amount))
+        if (original.categoryEditable && form.categoryId != original.categoryId) add(stringResource(R.string.edit_changed_category))
+        if (original.incomeCategoryEditable && form.incomeCategoryId != original.incomeCategoryId) add(stringResource(R.string.edit_changed_income_category))
+        if (original.accountEditable && form.accountId != original.accountId) add(stringResource(R.string.edit_changed_account))
+    }
+    return names.joinToString(", ")
+}
+
+/**
+ * Painel "Aplicar a quais ocorrências?": nenhuma opção marcada, Salvar inativo até escolher, e cada opção diz a data de corte.
+ * Nasce já como painel inferior (spec 25); a escolha fica aqui e só vira alcance do formulário ao salvar.
+ */
+@Composable
+private fun ScopePanel(original: EditOriginal, changed: String, onSave: (RecurrenceScope) -> Unit, onCancel: () -> Unit) {
+    var chosen by remember { mutableStateOf<RecurrenceScope?>(null) }
+    val date = original.scheduledDate?.fullLabel().orEmpty()
+    AccordSheet(
+        title = stringResource(R.string.edit_scope_title), onRequestClose = onCancel,
+        footer = {
+            Row(horizontalArrangement = Arrangement.spacedBy(AccordSpacing.s2), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = onCancel, modifier = Modifier.weight(1f).heightIn(min = AccordSpacing.touchMin)) {
+                    Text(stringResource(R.string.edit_cancel))
+                }
+                Button(
+                    onClick = { chosen?.let(onSave) }, enabled = chosen != null,
+                    modifier = Modifier.weight(1f).heightIn(min = AccordSpacing.touchMin),
+                ) { Text(stringResource(R.string.edit_scope_save)) }
+            }
+        },
     ) {
-        Text(stringResource(R.string.edit_scope_title), style = MaterialTheme.typography.titleMedium)
-        listOf(RecurrenceScope.OnlyThis to R.string.edit_scope_only_this, RecurrenceScope.ThisAndNext to R.string.edit_scope_this_and_next)
-            .forEach { (value, label) -> ScopeRow(stringResource(label), selected == value) { onPick(value) } }
+        if (changed.isNotBlank()) Text(stringResource(R.string.edit_scope_changed, changed), style = MaterialTheme.typography.bodyLarge)
+        listOf(
+            RecurrenceScope.OnlyThis to stringResource(R.string.edit_scope_only_this_dated, date),
+            RecurrenceScope.ThisAndNext to stringResource(R.string.edit_scope_this_and_next_dated, date),
+        ).forEach { (value, label) -> ScopeRow(label, chosen == value) { chosen = value } }
         Text(stringResource(R.string.edit_scope_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        if (error) {
-            Text(stringResource(R.string.error_scope_required), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-        }
     }
 }
 
@@ -275,13 +391,23 @@ private fun ScopeRow(label: String, selected: Boolean, onClick: () -> Unit) {
     }
 }
 
+/** "Excluir e registrar de novo": a compra parcelada não muda valor nem parcelas, então o caminho é registrar outra (spec 25). */
+@Composable
+private fun ReRegister(onClick: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(AccordSpacing.s1)) {
+        OutlinedButton(onClick = onClick, modifier = Modifier.fillMaxWidth().heightIn(min = AccordSpacing.touchMin)) {
+            Text(stringResource(R.string.edit_reregister))
+        }
+        Text(stringResource(R.string.edit_reregister_note), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
 /** O que a edição não muda, o que ela vai tocar e o que a data indicaria: tudo antes de gravar. */
 @Composable
 private fun Notes(state: EditUiState, original: EditOriginal, form: EditForm) {
     val body = MaterialTheme.typography.bodyMedium
     val muted = MaterialTheme.colorScheme.onSurfaceVariant
     if (original.target == EditTarget.CardPurchase && original.installments > 1) {
-        Text(stringResource(R.string.edit_scope_all_installments), style = body, color = muted)
         if (form.date != original.date) Text(stringResource(R.string.edit_date_installments_note), style = body, color = muted)
     }
     state.suggestedInvoice?.let {
